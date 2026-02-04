@@ -1,0 +1,15 @@
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\bin\Debug\net10.0\IdeatecAPI.Application.deps.json
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\bin\Debug\net10.0\IdeatecAPI.Application.dll
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\bin\Debug\net10.0\IdeatecAPI.Application.pdb
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\bin\Debug\net10.0\IdeatecAPI.Domain.dll
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\bin\Debug\net10.0\IdeatecAPI.Domain.pdb
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\IdeatecAPI.Application.csproj.AssemblyReference.cache
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\IdeatecAPI.Application.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\IdeatecAPI.Application.AssemblyInfoInputs.cache
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\IdeatecAPI.Application.AssemblyInfo.cs
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\IdeatecAPI.Application.csproj.CoreCompileInputs.cache
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\IdeatecA.59D3890F.Up2Date
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\IdeatecAPI.Application.dll
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\refint\IdeatecAPI.Application.dll
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\IdeatecAPI.Application.pdb
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\ref\IdeatecAPI.Application.dll
