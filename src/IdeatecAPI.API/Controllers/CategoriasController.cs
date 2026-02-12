@@ -21,9 +21,12 @@ public class CategoriasController : ControllerBase
         return Ok(categorias);
     }
 
+
+
     [HttpGet("{id}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+
     public async Task<IActionResult> GetById(int id)
     {
         var categoria = await _categoriaService.GetCategoriaByIdAsync(id);

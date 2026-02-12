@@ -42,3 +42,4 @@ C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.API\bin\Debug\net10.0\Swashbu
 C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.API\bin\Debug\net10.0\Swashbuckle.AspNetCore.SwaggerUI.dll
 C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.API\bin\Debug\net10.0\Dapper.dll
 C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.API\bin\Debug\net10.0\MySqlConnector.dll
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.API\obj\Debug\net10.0\IdeatecAPI.API.sourcelink.json

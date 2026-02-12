@@ -13,3 +13,4 @@ C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0
 C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\refint\IdeatecAPI.Application.dll
 C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\IdeatecAPI.Application.pdb
 C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\ref\IdeatecAPI.Application.dll
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\IdeatecAPI.Application.sourcelink.json
