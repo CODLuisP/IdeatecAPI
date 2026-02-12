@@ -13,6 +13,7 @@ C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0
 C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\refint\IdeatecAPI.Application.dll
 C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\IdeatecAPI.Application.pdb
 C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\ref\IdeatecAPI.Application.dll
+<<<<<<< HEAD
 C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Application\bin\Debug\net10.0\IdeatecAPI.Application.deps.json
 C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Application\bin\Debug\net10.0\IdeatecAPI.Application.dll
 C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Application\bin\Debug\net10.0\IdeatecAPI.Application.pdb
@@ -29,3 +30,6 @@ C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Application\o
 C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\refint\IdeatecAPI.Application.dll
 C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\IdeatecAPI.Application.pdb
 C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\ref\IdeatecAPI.Application.dll
+=======
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\IdeatecAPI.Application.sourcelink.json
+>>>>>>> 3048a4b55c0bb429019f682e7b5df55790768281
