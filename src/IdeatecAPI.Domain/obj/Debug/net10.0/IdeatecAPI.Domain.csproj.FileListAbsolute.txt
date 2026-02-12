@@ -9,3 +9,15 @@ C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Domain\obj\Debug\net10.0\Idea
 C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Domain\obj\Debug\net10.0\refint\IdeatecAPI.Domain.dll
 C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Domain\obj\Debug\net10.0\IdeatecAPI.Domain.pdb
 C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Domain\obj\Debug\net10.0\ref\IdeatecAPI.Domain.dll
+C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Domain\bin\Debug\net10.0\IdeatecAPI.Domain.deps.json
+C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Domain\bin\Debug\net10.0\IdeatecAPI.Domain.dll
+C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Domain\bin\Debug\net10.0\IdeatecAPI.Domain.pdb
+C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Domain\obj\Debug\net10.0\IdeatecAPI.Domain.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Domain\obj\Debug\net10.0\IdeatecAPI.Domain.AssemblyInfoInputs.cache
+C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Domain\obj\Debug\net10.0\IdeatecAPI.Domain.AssemblyInfo.cs
+C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Domain\obj\Debug\net10.0\IdeatecAPI.Domain.csproj.CoreCompileInputs.cache
+C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Domain\obj\Debug\net10.0\IdeatecAPI.Domain.sourcelink.json
+C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Domain\obj\Debug\net10.0\IdeatecAPI.Domain.dll
+C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Domain\obj\Debug\net10.0\refint\IdeatecAPI.Domain.dll
+C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Domain\obj\Debug\net10.0\IdeatecAPI.Domain.pdb
+C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Domain\obj\Debug\net10.0\ref\IdeatecAPI.Domain.dll

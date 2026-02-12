@@ -14,6 +14,7 @@ public class UnitOfWork : IUnitOfWork
     
     // Repositorios específicos
     private ICategoriaRepository? _categorias;
+    private IUsuarioRepository? _usuarios;
 
     public UnitOfWork(string connectionString)
     {
@@ -40,6 +41,16 @@ public class UnitOfWork : IUnitOfWork
         {
             _categorias ??= new CategoriaRepository(Connection, _transaction);
             return _categorias;
+        }
+    }
+
+    // Propiedad para acceder al repositorio de Usuarios
+    public IUsuarioRepository Usuarios
+    {
+        get
+        {
+            _usuarios ??= new UsuarioRepository(Connection, _transaction);
+            return _usuarios;
         }
     }
 

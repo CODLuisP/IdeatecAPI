@@ -4,6 +4,7 @@ public interface IUnitOfWork : IDisposable
 {
     // Repositorios específicos
     ICategoriaRepository Categorias { get; }
+    IUsuarioRepository Usuarios { get; } 
     
     // Transacciones
     void BeginTransaction();
