@@ -10,4 +10,6 @@ public class UsuarioDto
         public string? Ruc { get; set; }
         public string? RazonSocial { get; set; }
         public string? Imagen { get; set; }
+        public bool Estado { get; set; }                    // ← AGREGAR
+        public DateTime? FechaUltimoAcceso { get; set; } 
     }

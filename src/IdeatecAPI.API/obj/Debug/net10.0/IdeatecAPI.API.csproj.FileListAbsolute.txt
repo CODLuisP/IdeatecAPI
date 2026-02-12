@@ -43,6 +43,9 @@ C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.API\bin\Debug\net10.0\Swashbu
 C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.API\bin\Debug\net10.0\Dapper.dll
 C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.API\bin\Debug\net10.0\MySqlConnector.dll
 <<<<<<< HEAD
+=======
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.API\obj\Debug\net10.0\IdeatecAPI.API.sourcelink.json
+>>>>>>> 3048a4b55c0bb429019f682e7b5df55790768281
 C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.API\bin\Debug\net10.0\appsettings.Development.json
 C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.API\bin\Debug\net10.0\appsettings.json
 C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.API\bin\Debug\net10.0\IdeatecAPI.API.staticwebassets.endpoints.json
@@ -114,6 +117,3 @@ C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.API\obj\Debug
 C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.API\obj\Debug\net10.0\IdeatecAPI.API.pdb
 C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.API\obj\Debug\net10.0\IdeatecAPI.API.genruntimeconfig.cache
 C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.API\obj\Debug\net10.0\ref\IdeatecAPI.API.dll
-=======
-C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.API\obj\Debug\net10.0\IdeatecAPI.API.sourcelink.json
->>>>>>> 3048a4b55c0bb429019f682e7b5df55790768281

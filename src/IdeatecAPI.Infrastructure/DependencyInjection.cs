@@ -28,13 +28,14 @@ public static class DependencyInjection
         // ========================================
         // SERVICIOS DE AUTENTICACIÓN (NUEVO)
         // ========================================
-        services.AddScoped<ITokenService, TokenService>();                  // ← NUEVO
-        services.AddScoped<IAuthService, AuthService>();                    // ← NUEVO
+        services.AddScoped<ITokenService, TokenService>();
+        services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IUsuarioService, UsuarioService>(); 
 
         // ========================================
         // JWT AUTHENTICATION (NUEVO)
         // ========================================
-        var jwtSecret = configuration["JwtSettings:Secret"]                 // ← NUEVO
+        var jwtSecret = configuration["JwtSettings:Secret"] 
             ?? throw new InvalidOperationException("JWT Secret not configured in appsettings.json");
 
         var key = Encoding.UTF8.GetBytes(jwtSecret);
