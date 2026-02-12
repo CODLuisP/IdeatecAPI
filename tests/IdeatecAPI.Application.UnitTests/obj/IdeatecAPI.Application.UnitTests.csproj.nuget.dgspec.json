@@ -1,23 +1,23 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\Usuario\\Desktop\\BackFacturacion\\IdeatecAPI\\tests\\IdeatecAPI.Application.UnitTests\\IdeatecAPI.Application.UnitTests.csproj": {}
+    "C:\\Users\\USUARIO\\Desktop\\IdeatecAPI\\tests\\IdeatecAPI.Application.UnitTests\\IdeatecAPI.Application.UnitTests.csproj": {}
   },
   "projects": {
-    "C:\\Users\\Usuario\\Desktop\\BackFacturacion\\IdeatecAPI\\tests\\IdeatecAPI.Application.UnitTests\\IdeatecAPI.Application.UnitTests.csproj": {
+    "C:\\Users\\USUARIO\\Desktop\\IdeatecAPI\\tests\\IdeatecAPI.Application.UnitTests\\IdeatecAPI.Application.UnitTests.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Usuario\\Desktop\\BackFacturacion\\IdeatecAPI\\tests\\IdeatecAPI.Application.UnitTests\\IdeatecAPI.Application.UnitTests.csproj",
+        "projectUniqueName": "C:\\Users\\USUARIO\\Desktop\\IdeatecAPI\\tests\\IdeatecAPI.Application.UnitTests\\IdeatecAPI.Application.UnitTests.csproj",
         "projectName": "IdeatecAPI.Application.UnitTests",
-        "projectPath": "C:\\Users\\Usuario\\Desktop\\BackFacturacion\\IdeatecAPI\\tests\\IdeatecAPI.Application.UnitTests\\IdeatecAPI.Application.UnitTests.csproj",
-        "packagesPath": "C:\\Users\\Usuario\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Usuario\\Desktop\\BackFacturacion\\IdeatecAPI\\tests\\IdeatecAPI.Application.UnitTests\\obj\\",
+        "projectPath": "C:\\Users\\USUARIO\\Desktop\\IdeatecAPI\\tests\\IdeatecAPI.Application.UnitTests\\IdeatecAPI.Application.UnitTests.csproj",
+        "packagesPath": "C:\\Users\\USUARIO\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\USUARIO\\Desktop\\IdeatecAPI\\tests\\IdeatecAPI.Application.UnitTests\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-          "C:\\Users\\Usuario\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\USUARIO\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
@@ -26,6 +26,7 @@
         ],
         "sources": {
           "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "C:\\Program Files\\dotnet\\library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -83,7 +84,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.103/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.102/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.CSharp": "(,4.7.32767]",
             "Microsoft.VisualBasic": "(,10.4.32767]",

@@ -1,20 +1,3 @@
-C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Infrastructure\bin\Debug\net10.0\IdeatecAPI.Infrastructure.deps.json
-C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Infrastructure\bin\Debug\net10.0\IdeatecAPI.Infrastructure.dll
-C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Infrastructure\bin\Debug\net10.0\IdeatecAPI.Infrastructure.pdb
-C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Infrastructure\bin\Debug\net10.0\IdeatecAPI.Application.dll
-C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Infrastructure\bin\Debug\net10.0\IdeatecAPI.Domain.dll
-C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Infrastructure\bin\Debug\net10.0\IdeatecAPI.Application.pdb
-C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Infrastructure\bin\Debug\net10.0\IdeatecAPI.Domain.pdb
-C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Infrastructure\obj\Debug\net10.0\IdeatecAPI.Infrastructure.csproj.AssemblyReference.cache
-C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Infrastructure\obj\Debug\net10.0\IdeatecAPI.Infrastructure.GeneratedMSBuildEditorConfig.editorconfig
-C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Infrastructure\obj\Debug\net10.0\IdeatecAPI.Infrastructure.AssemblyInfoInputs.cache
-C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Infrastructure\obj\Debug\net10.0\IdeatecAPI.Infrastructure.AssemblyInfo.cs
-C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Infrastructure\obj\Debug\net10.0\IdeatecAPI.Infrastructure.csproj.CoreCompileInputs.cache
-C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Infrastructure\obj\Debug\net10.0\IdeatecA.E671B29C.Up2Date
-C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Infrastructure\obj\Debug\net10.0\IdeatecAPI.Infrastructure.dll
-C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Infrastructure\obj\Debug\net10.0\refint\IdeatecAPI.Infrastructure.dll
-C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Infrastructure\obj\Debug\net10.0\IdeatecAPI.Infrastructure.pdb
-C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Infrastructure\obj\Debug\net10.0\ref\IdeatecAPI.Infrastructure.dll
 <<<<<<< HEAD
 C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Infrastructure\bin\Debug\net10.0\IdeatecAPI.Infrastructure.deps.json
 C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Infrastructure\bin\Debug\net10.0\IdeatecAPI.Infrastructure.dll
@@ -35,5 +18,22 @@ C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Infrastructur
 C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Infrastructure\obj\Debug\net10.0\IdeatecAPI.Infrastructure.pdb
 C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Infrastructure\obj\Debug\net10.0\ref\IdeatecAPI.Infrastructure.dll
 =======
-C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Infrastructure\obj\Debug\net10.0\IdeatecAPI.Infrastructure.sourcelink.json
 >>>>>>> 3048a4b55c0bb429019f682e7b5df55790768281
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Infrastructure\bin\Debug\net10.0\IdeatecAPI.Infrastructure.deps.json
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Infrastructure\bin\Debug\net10.0\IdeatecAPI.Infrastructure.dll
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Infrastructure\bin\Debug\net10.0\IdeatecAPI.Infrastructure.pdb
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Infrastructure\bin\Debug\net10.0\IdeatecAPI.Application.dll
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Infrastructure\bin\Debug\net10.0\IdeatecAPI.Domain.dll
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Infrastructure\bin\Debug\net10.0\IdeatecAPI.Application.pdb
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Infrastructure\bin\Debug\net10.0\IdeatecAPI.Domain.pdb
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Infrastructure\obj\Debug\net10.0\IdeatecAPI.Infrastructure.csproj.AssemblyReference.cache
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Infrastructure\obj\Debug\net10.0\IdeatecAPI.Infrastructure.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Infrastructure\obj\Debug\net10.0\IdeatecAPI.Infrastructure.AssemblyInfoInputs.cache
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Infrastructure\obj\Debug\net10.0\IdeatecAPI.Infrastructure.AssemblyInfo.cs
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Infrastructure\obj\Debug\net10.0\IdeatecAPI.Infrastructure.csproj.CoreCompileInputs.cache
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Infrastructure\obj\Debug\net10.0\IdeatecAPI.Infrastructure.sourcelink.json
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Infrastructure\obj\Debug\net10.0\IdeatecA.E671B29C.Up2Date
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Infrastructure\obj\Debug\net10.0\IdeatecAPI.Infrastructure.dll
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Infrastructure\obj\Debug\net10.0\refint\IdeatecAPI.Infrastructure.dll
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Infrastructure\obj\Debug\net10.0\IdeatecAPI.Infrastructure.pdb
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Infrastructure\obj\Debug\net10.0\ref\IdeatecAPI.Infrastructure.dll
