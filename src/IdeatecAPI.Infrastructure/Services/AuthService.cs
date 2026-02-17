@@ -1,6 +1,7 @@
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Application.Features.Auth.DTOs;
 using BCrypt.Net;
+using IdeatecAPI.Domain.Entities;
 
 namespace IdeatecAPI.Infrastructure.Services;
 
@@ -134,4 +135,6 @@ public class AuthService : IAuthService
             return false;
         }
     }
+
+
 }

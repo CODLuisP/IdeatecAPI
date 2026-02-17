@@ -14,6 +14,7 @@ namespace IdeatecAPI.Domain.Entities
         public string? Imagen { get; set; }
         public int TokenVersion { get; set; } = 0;
         public DateTime FechaCreacion { get; set; }
+        public DateTime FechaActualizacion { get; set; }
         public DateTime? FechaUltimoAcceso { get; set; }
     }
 }
