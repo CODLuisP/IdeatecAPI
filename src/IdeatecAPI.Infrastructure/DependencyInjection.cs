@@ -7,7 +7,7 @@ using IdeatecAPI.Infrastructure.Persistence.UnitOfWork;
 using IdeatecAPI.Infrastructure.Services;                              
 using Microsoft.AspNetCore.Authentication.JwtBearer;                       
 using Microsoft.IdentityModel.Tokens;
-using IdeatecAPI.Application.Features.Empresas.Services;                                       
+using IdeatecAPI.Application.Features.Empresas.Services;
 
 namespace IdeatecAPI.Infrastructure;
 
