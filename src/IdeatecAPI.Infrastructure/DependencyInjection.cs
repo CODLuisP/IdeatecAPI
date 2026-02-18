@@ -1,12 +1,13 @@
-using System.Text;                                                          // ← NUEVO
+using System.Text;                                                         
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Application.Features.Categorias.Services;
 using IdeatecAPI.Infrastructure.Persistence.UnitOfWork;
-using IdeatecAPI.Infrastructure.Services;                                   // ← NUEVO
-using Microsoft.AspNetCore.Authentication.JwtBearer;                        // ← NUEVO
-using Microsoft.IdentityModel.Tokens;                                       // ← NUEVO
+using IdeatecAPI.Infrastructure.Services;                              
+using Microsoft.AspNetCore.Authentication.JwtBearer;                       
+using Microsoft.IdentityModel.Tokens;
+using IdeatecAPI.Application.Features.Empresas.Services;                                       
 
 namespace IdeatecAPI.Infrastructure;
 
@@ -31,7 +32,9 @@ public static class DependencyInjection
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IUsuarioService, UsuarioService>(); 
+        
 
+        services.AddScoped<IEmpresaService, EmpresaService>();
         // ========================================
         // JWT AUTHENTICATION (NUEVO)
         // ========================================
@@ -47,7 +50,7 @@ public static class DependencyInjection
         })
         .AddJwtBearer(options =>
         {
-            options.RequireHttpsMetadata = false; // En producción cambiar a true
+            options.RequireHttpsMetadata = false;
             options.SaveToken = true;
             options.TokenValidationParameters = new TokenValidationParameters
             {
@@ -62,7 +65,7 @@ public static class DependencyInjection
             };
         });
 
-        services.AddAuthorization();                                        // ← NUEVO
+        services.AddAuthorization();                                        
 
         return services;
     }

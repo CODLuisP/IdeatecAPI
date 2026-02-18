@@ -16,6 +16,9 @@ public class UnitOfWork : IUnitOfWork
     private ICategoriaRepository? _categorias;
     private IUsuarioRepository? _usuarios;
 
+    private IEmpresaRepository? _empresas;
+
+
     public UnitOfWork(string connectionString)
     {
         _connectionString = connectionString;
@@ -53,6 +56,16 @@ public class UnitOfWork : IUnitOfWork
             return _usuarios;
         }
     }
+
+    public IEmpresaRepository Empresas
+    {
+        get
+        {
+            _empresas ??= new EmpresaRepository(Connection, _transaction);
+            return _empresas;
+        }
+    }
+
 
     public void BeginTransaction()
     {
