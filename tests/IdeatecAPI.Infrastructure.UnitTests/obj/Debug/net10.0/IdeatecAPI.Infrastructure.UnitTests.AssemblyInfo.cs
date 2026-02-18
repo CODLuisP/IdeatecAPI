@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("IdeatecAPI.Infrastructure.UnitTests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+90753a65300f56b2653506eadfb3760a2e264724")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f55b8988d89c49820555c3731c6898da47a35eb9")]
 [assembly: System.Reflection.AssemblyProductAttribute("IdeatecAPI.Infrastructure.UnitTests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("IdeatecAPI.Infrastructure.UnitTests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
