@@ -1,6 +1,5 @@
 <<<<<<< HEAD
 =======
-C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.API\obj\Debug\net10.0\IdeatecAPI.API.sourcelink.json
 >>>>>>> 3048a4b55c0bb429019f682e7b5df55790768281
 C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.API\bin\Debug\net10.0\appsettings.Development.json
 C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.API\bin\Debug\net10.0\appsettings.json
@@ -73,6 +72,7 @@ C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.API\obj\Debug
 C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.API\obj\Debug\net10.0\IdeatecAPI.API.pdb
 C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.API\obj\Debug\net10.0\IdeatecAPI.API.genruntimeconfig.cache
 C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.API\obj\Debug\net10.0\ref\IdeatecAPI.API.dll
+>>>>>>> 5fe3001b3dceb6aad9dfa0977c717a655cf4e435
 C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.API\bin\Debug\net10.0\appsettings.Development.json
 C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.API\bin\Debug\net10.0\appsettings.json
 C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.API\bin\Debug\net10.0\IdeatecAPI.API.staticwebassets.endpoints.json
@@ -128,6 +128,7 @@ C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.API\obj\Debug\net10.0\Ideatec
 C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.API\obj\Debug\net10.0\IdeatecAPI.API.csproj.CoreCompileInputs.cache
 C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.API\obj\Debug\net10.0\IdeatecAPI.API.MvcApplicationPartsAssemblyInfo.cs
 C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.API\obj\Debug\net10.0\IdeatecAPI.API.MvcApplicationPartsAssemblyInfo.cache
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.API\obj\Debug\net10.0\IdeatecAPI.API.sourcelink.json
 C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.API\obj\Debug\net10.0\rjimswa.dswa.cache.json
 C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.API\obj\Debug\net10.0\rjsmrazor.dswa.cache.json
 C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.API\obj\Debug\net10.0\rjsmcshtml.dswa.cache.json
@@ -143,4 +144,3 @@ C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.API\obj\Debug\net10.0\refint\
 C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.API\obj\Debug\net10.0\IdeatecAPI.API.pdb
 C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.API\obj\Debug\net10.0\IdeatecAPI.API.genruntimeconfig.cache
 C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.API\obj\Debug\net10.0\ref\IdeatecAPI.API.dll
->>>>>>> 5fe3001b3dceb6aad9dfa0977c717a655cf4e435

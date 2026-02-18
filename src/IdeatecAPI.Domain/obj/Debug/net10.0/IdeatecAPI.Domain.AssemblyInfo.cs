@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("IdeatecAPI.Domain")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+3f8d9024f5cb35ad9b2efad437433f7217ac374f")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7e2edb62916f8b3c75ca288237d896e8ff702eb8")]
 [assembly: System.Reflection.AssemblyProductAttribute("IdeatecAPI.Domain")]
 [assembly: System.Reflection.AssemblyTitleAttribute("IdeatecAPI.Domain")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
