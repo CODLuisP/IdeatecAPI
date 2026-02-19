@@ -1,15 +1,19 @@
-using System.Text;                                                         
+using System.Text;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Application.Features.Categorias.Services;
 using IdeatecAPI.Infrastructure.Persistence.UnitOfWork;
-using IdeatecAPI.Infrastructure.Services;                                   // ← NUEVO
-using Microsoft.AspNetCore.Authentication.JwtBearer;                        // ← NUEVO
+using IdeatecAPI.Infrastructure.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using IdeatecAPI.Application.Features.Empresas.Services;
 using IdeatecAPI.Application.Features.Notas.Services;
+<<<<<<< HEAD
 using IdeatecAPI.Application.Features.Clientes.Services;                                       // ← NUEVO
+=======
+using IdeatecAPI.Application.Features.Clientes.Services;
+>>>>>>> 69be5bd52a6a446f8c33d023d17045181f77844a
 using IdeatecAPI.Application.Features.Direccion.Services;
 
 namespace IdeatecAPI.Infrastructure;
@@ -17,33 +21,25 @@ namespace IdeatecAPI.Infrastructure;
 public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(
-        this IServiceCollection services, 
+        this IServiceCollection services,
         IConfiguration configuration)
     {
         var connectionString = configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("Connection string not found");
 
-        // Registrar UnitOfWork
         services.AddScoped<IUnitOfWork>(provider => new UnitOfWork(connectionString));
-        
-        // Registrar Servicios de Categorías
+
         services.AddScoped<ICategoriaService, CategoriaService>();
         services.AddScoped<IClienteService, ClienteService>();
         services.AddScoped<IDireccionService, DireccionService>();
-
-        // ========================================
-        // SERVICIOS DE AUTENTICACIÓN (NUEVO)
-        // ========================================
-        services.AddScoped<ITokenService, TokenService>();
-        services.AddScoped<IAuthService, AuthService>();
-        services.AddScoped<IUsuarioService, UsuarioService>(); 
-        
         services.AddScoped<IEmpresaService, EmpresaService>();
         services.AddScoped<INoteService, NoteService>();
-        // ========================================
-        // JWT AUTHENTICATION (NUEVO)
-        // ========================================
-        var jwtSecret = configuration["JwtSettings:Secret"] 
+
+        services.AddScoped<ITokenService, TokenService>();
+        services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IUsuarioService, UsuarioService>();
+
+        var jwtSecret = configuration["JwtSettings:Secret"]
             ?? throw new InvalidOperationException("JWT Secret not configured in appsettings.json");
 
         var key = Encoding.UTF8.GetBytes(jwtSecret);
@@ -70,7 +66,7 @@ public static class DependencyInjection
             };
         });
 
-        services.AddAuthorization();                                        
+        services.AddAuthorization();
 
         return services;
     }
