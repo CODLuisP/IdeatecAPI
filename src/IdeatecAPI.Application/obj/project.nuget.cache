@@ -1,14 +1,18 @@
 {
   "version": 2,
-<<<<<<< HEAD
   "dgSpecHash": "DPt9ebyqlzw=",
   "success": true,
   "projectFilePath": "C:\\Users\\HP\\source\\repos\\IdeatecAPI\\src\\IdeatecAPI.Application\\IdeatecAPI.Application.csproj",
-=======
-  "dgSpecHash": "kEyYmJI/kPc=",
-  "success": true,
-  "projectFilePath": "C:\\Users\\Usuario\\Desktop\\BackFacturacion\\IdeatecAPI\\src\\IdeatecAPI.Application\\IdeatecAPI.Application.csproj",
->>>>>>> da9220907266fa87052a45d1d39c9f0da1a8a1b2
   "expectedPackageFiles": [],
-  "logs": []
+  "logs": [
+    {
+      "code": "Undefined",
+      "level": "Warning",
+      "message": "Problema al leer el archivo de caché C:\\Users\\HP\\source\\repos\\IdeatecAPI\\src\\IdeatecAPI.Application\\obj\\project.nuget.cache : '<' is an invalid start of a property name. Expected a '\"'. Path: $ | LineNumber: 2 | BytePositionInLine: 0.",
+      "projectPath": "C:\\Users\\HP\\source\\repos\\IdeatecAPI\\src\\IdeatecAPI.Application\\IdeatecAPI.Application.csproj",
+      "warningLevel": 1,
+      "filePath": "C:\\Users\\HP\\source\\repos\\IdeatecAPI\\src\\IdeatecAPI.Application\\IdeatecAPI.Application.csproj",
+      "targetGraphs": []
+    }
+  ]
 }
