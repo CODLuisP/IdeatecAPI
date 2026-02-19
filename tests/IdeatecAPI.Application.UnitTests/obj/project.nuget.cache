@@ -19,15 +19,5 @@
     "C:\\Users\\HP\\.nuget\\packages\\xunit.extensibility.execution\\2.9.3\\xunit.extensibility.execution.2.9.3.nupkg.sha512",
     "C:\\Users\\HP\\.nuget\\packages\\xunit.runner.visualstudio\\3.1.4\\xunit.runner.visualstudio.3.1.4.nupkg.sha512"
   ],
-  "logs": [
-    {
-      "code": "Undefined",
-      "level": "Warning",
-      "message": "Problema al leer el archivo de caché C:\\Users\\HP\\source\\repos\\IdeatecAPI\\tests\\IdeatecAPI.Application.UnitTests\\obj\\project.nuget.cache : '<' is an invalid start of a property name. Expected a '\"'. Path: $ | LineNumber: 2 | BytePositionInLine: 0.",
-      "projectPath": "C:\\Users\\HP\\source\\repos\\IdeatecAPI\\tests\\IdeatecAPI.Application.UnitTests\\IdeatecAPI.Application.UnitTests.csproj",
-      "warningLevel": 1,
-      "filePath": "C:\\Users\\HP\\source\\repos\\IdeatecAPI\\tests\\IdeatecAPI.Application.UnitTests\\IdeatecAPI.Application.UnitTests.csproj",
-      "targetGraphs": []
-    }
-  ]
+  "logs": []
 }

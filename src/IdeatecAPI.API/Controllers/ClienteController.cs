@@ -25,6 +25,7 @@ namespace IdeatecAPI.API.Controllers
     {
         var clientes = await _clienteService.GetAllClientesAsync();
         return Ok(clientes);
+        
     }
     }
 }

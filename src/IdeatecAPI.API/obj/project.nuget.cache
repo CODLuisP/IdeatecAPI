@@ -34,15 +34,5 @@
     "C:\\Users\\HP\\.nuget\\packages\\system.windows.extensions\\8.0.0\\system.windows.extensions.8.0.0.nupkg.sha512",
     "C:\\Users\\HP\\.nuget\\packages\\zstdsharp.port\\0.8.0\\zstdsharp.port.0.8.0.nupkg.sha512"
   ],
-  "logs": [
-    {
-      "code": "Undefined",
-      "level": "Warning",
-      "message": "Problema al leer el archivo de caché C:\\Users\\HP\\source\\repos\\IdeatecAPI\\src\\IdeatecAPI.API\\obj\\project.nuget.cache : '<' is an invalid start of a property name. Expected a '\"'. Path: $ | LineNumber: 2 | BytePositionInLine: 0.",
-      "projectPath": "C:\\Users\\HP\\source\\repos\\IdeatecAPI\\src\\IdeatecAPI.API\\IdeatecAPI.API.csproj",
-      "warningLevel": 1,
-      "filePath": "C:\\Users\\HP\\source\\repos\\IdeatecAPI\\src\\IdeatecAPI.API\\IdeatecAPI.API.csproj",
-      "targetGraphs": []
-    }
-  ]
+  "logs": []
 }
