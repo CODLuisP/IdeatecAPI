@@ -89,8 +89,6 @@ public class UnitOfWork : IUnitOfWork
         }
     }
 
-<<<<<<< HEAD
-=======
     // Agregar propiedades públicas:
     public INoteRepository Notes
     {
@@ -119,7 +117,6 @@ public class UnitOfWork : IUnitOfWork
         }
     }
 
->>>>>>> e14d2dbe1d2ba38aad9401ce548c62fa911aef41
     public void BeginTransaction()
     {
         _transaction = Connection.BeginTransaction();
