@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace IdeatecAPI.Application.Features.Direccion.DTOs
 {
-    public class RegistrarDireccionDTO
+    public class RegistrarDireccionClienteDTO
     {
         public string? Ubigeo { get; set; }
         public string? DireccionLineal { get; set; }
@@ -13,6 +13,5 @@ namespace IdeatecAPI.Application.Features.Direccion.DTOs
         public string? Provincia { get; set; }
         public string? Distrito { get; set; }
         public string? TipoDireccion { get; set; } //fiscal, almacen.
-        public int? ClienteId { get; set; }
     }
 }

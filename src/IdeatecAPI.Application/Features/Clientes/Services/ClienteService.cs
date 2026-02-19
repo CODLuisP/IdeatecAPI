@@ -6,10 +6,12 @@ using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Application.Features.CatalogoSunat.DTOs;
 using IdeatecAPI.Application.Features.Clientes.DTOs;
 using IdeatecAPI.Application.Features.Direccion.DTOs;
+using IdeatecAPI.Domain.Entities.Cliente;
 namespace IdeatecAPI.Application.Features.Clientes.Services;
 
 public interface IClienteService {
     Task<IEnumerable<ObtenerClientesDTO>> GetAllClientesAsync();
+    Task<int> RegistrarClienteAsync(RegistrarClienteDTO cliente);
 }
 
 public class ClienteService : IClienteService
@@ -38,6 +40,7 @@ public class ClienteService : IClienteService
             .Select(d => new DireccionDTO
             {
                 DireccionId = d.DireccionId,
+                DireccionLineal = d.DireccionLineal,
                 Ubigeo = d.Ubigeo,
                 Departamento = d.Departamento,
                 Provincia = d.Provincia,
@@ -52,5 +55,47 @@ public class ClienteService : IClienteService
             }
             });
     }
+
+    public async Task<int> RegistrarClienteAsync(RegistrarClienteDTO dto)
+{
+    _unitOfWork.BeginTransaction();
+    try
+    {
+        var cliente = new Cliente
+        {
+            TipoDocumentoId = dto.TipoDocumentoId,
+            NumeroDocumento = dto.NumeroDocumento,
+            RazonSocialNombre = dto.RazonSocialNombre,
+            NombreComercial = dto.NombreComercial,
+            Telefono = dto.Telefono,
+            Correo = dto.Correo,
+            FechaCreacion = DateTime.Now,
+            Estado = true
+        };
+
+        int clienteId = await _unitOfWork.Clientes.RegistrarClienteAsync(cliente);
+
+        var direccion = new Domain.Entities.Cliente.Direccion
+        {
+            ClienteId = clienteId,
+            Ubigeo = dto.Direccion?.Ubigeo,
+            DireccionLineal = dto.Direccion?.DireccionLineal,
+            Departamento = dto.Direccion?.Departamento,
+            Provincia = dto.Direccion?.Provincia,
+            Distrito = dto.Direccion?.Distrito,
+            TipoDireccion = dto.Direccion?.TipoDireccion
+        };
+
+        await _unitOfWork.Direcciones.CrearDireccionAsync(direccion);
+
+        _unitOfWork.Commit();
+        return clienteId;
+    }
+    catch
+    {
+        _unitOfWork.Rollback();
+        throw;
+    }
+}
 }
 

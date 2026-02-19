@@ -8,6 +8,7 @@ namespace IdeatecAPI.Application.Features.Direccion.DTOs
     public class DireccionDTO
     {
         public int? DireccionId { get; set; }
+        public string? DireccionLineal { get; set; }
         public string? Ubigeo { get; set; }
         public string? Departamento { get; set; }
         public string? Provincia { get; set; }

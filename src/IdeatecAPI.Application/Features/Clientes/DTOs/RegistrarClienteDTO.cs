@@ -14,7 +14,8 @@ namespace IdeatecAPI.Application.Features.Clientes.DTOs
         public string? Telefono { get; set; }
         public string? Correo { get; set; }
         public string? TipoDocumentoId { get; set; } //Catalogo 06
-        public RegistrarDireccionDTO? Direccion { get; set; }
+        public RegistrarDireccionClienteDTO? Direccion { get; set; }
 
     }
+
 }

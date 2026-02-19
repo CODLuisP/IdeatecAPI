@@ -22,6 +22,7 @@ public class DireccionService : IDireccionService
         var direccion = new Domain.Entities.Cliente.Direccion
         {
             ClienteId = dto.ClienteId,
+            DireccionLineal = dto.DireccionLineal,
             Ubigeo = dto.Ubigeo,
             Departamento = dto.Departamento,
             Provincia = dto.Provincia,

@@ -19,8 +19,8 @@ public class DireccionRepository : DapperRepository<Direccion>, IDireccionReposi
         public async Task CrearDireccionAsync(Direccion direccion)
     {
         var sql = @"
-            INSERT INTO direccion (clienteID, ubigeo, departamento, provincia, distrito, tipoDireccion)
-            VALUES (@ClienteId, @Ubigeo, @Departamento, @Provincia, @Distrito, @TipoDireccion)";
+            INSERT INTO direccion (clienteID, direccionLineal, ubigeo, departamento, provincia, distrito, tipoDireccion)
+            VALUES (@ClienteId, @DireccionLineal, @Ubigeo, @Departamento, @Provincia, @Distrito, @TipoDireccion)";
 
         await _connection.ExecuteAsync(sql, direccion, _transaction);
     }

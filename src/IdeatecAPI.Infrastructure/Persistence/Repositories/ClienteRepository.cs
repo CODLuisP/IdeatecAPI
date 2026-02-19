@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Domain.Entities.Cliente;
 using IdeatecAPI.Domain.Entities.CatalogosSunat;
+using IdeatecAPI.Application.Features.Clientes.DTOs;
 
 namespace IdeatecAPI.Infrastructure.Persistence.Repositories.Clientes
 {
@@ -33,6 +34,7 @@ namespace IdeatecAPI.Infrastructure.Persistence.Repositories.Clientes
                         td.tipoDocumento     AS TipoDocumentoNombre,
 
                         d.direccionId        AS DireccionId,
+                        d.direccionLineal    AS DireccionLineal,
                         d.ubigeo             AS Ubigeo,
                         d.departamento       AS Departamento,
                         d.provincia          AS Provincia,
@@ -65,6 +67,16 @@ namespace IdeatecAPI.Infrastructure.Persistence.Repositories.Clientes
     );
 
     return clientes;
-        }
+    }
+    
+    public async Task<int> RegistrarClienteAsync(Cliente cliente)
+    {
+        var sql = @"
+            INSERT INTO cliente (tipoDocumentoId, numeroDocumento, razonSocial, nombreComercial, telefono, email)
+            VALUES (@TipoDocumentoId, @NumeroDocumento, @RazonSocialNombre, @NombreComercial, @Telefono, @Correo);
+            SELECT LAST_INSERT_ID();";
+
+        return await _connection.ExecuteScalarAsync<int>(sql, cliente, _transaction);
+    }
     }
 }

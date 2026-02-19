@@ -10,11 +10,7 @@ using Microsoft.IdentityModel.Tokens;
 using IdeatecAPI.Application.Features.Empresas.Services;
 using IdeatecAPI.Application.Features.Notas.Services;
 using IdeatecAPI.Application.Features.Clientes.Services;                                       // ← NUEVO
-<<<<<<< HEAD
-using IdeatecAPI.Application.Features.Empresas.Services;
 using IdeatecAPI.Application.Features.Direccion.Services;
-=======
->>>>>>> e14d2dbe1d2ba38aad9401ce548c62fa911aef41
 
 namespace IdeatecAPI.Infrastructure;
 
