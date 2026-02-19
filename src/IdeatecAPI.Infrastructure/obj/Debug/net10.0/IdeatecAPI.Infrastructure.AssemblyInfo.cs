@@ -10,12 +10,12 @@
 using System;
 using System.Reflection;
 
-[assembly: System.Reflection.AssemblyCompanyAttribute("IdeatecAPI.Domain")]
+[assembly: System.Reflection.AssemblyCompanyAttribute("IdeatecAPI.Infrastructure")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
 [assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+22f01f0ae3ca9dce96d0d056b994030dc4a43f3b")]
-[assembly: System.Reflection.AssemblyProductAttribute("IdeatecAPI.Domain")]
-[assembly: System.Reflection.AssemblyTitleAttribute("IdeatecAPI.Domain")]
+[assembly: System.Reflection.AssemblyProductAttribute("IdeatecAPI.Infrastructure")]
+[assembly: System.Reflection.AssemblyTitleAttribute("IdeatecAPI.Infrastructure")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
 
 // Generado por la clase WriteCodeFragment de MSBuild.

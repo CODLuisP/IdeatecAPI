@@ -36,9 +36,19 @@ C:\Users\HP\source\repos\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0
 C:\Users\HP\source\repos\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\IdeatecAPI.Application.pdb
 C:\Users\HP\source\repos\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\ref\IdeatecAPI.Application.dll
 >>>>>>> 4981bb4898f122372199cb065b3613abd4469e12
+C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Application\bin\Debug\net10.0\IdeatecAPI.Application.deps.json
+C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Application\bin\Debug\net10.0\IdeatecAPI.Application.dll
+C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Application\bin\Debug\net10.0\IdeatecAPI.Application.pdb
+C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Application\bin\Debug\net10.0\IdeatecAPI.Domain.dll
+C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Application\bin\Debug\net10.0\IdeatecAPI.Domain.pdb
 C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\IdeatecAPI.Application.csproj.AssemblyReference.cache
 C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\IdeatecAPI.Application.GeneratedMSBuildEditorConfig.editorconfig
 C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\IdeatecAPI.Application.AssemblyInfoInputs.cache
 C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\IdeatecAPI.Application.AssemblyInfo.cs
 C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\IdeatecAPI.Application.csproj.CoreCompileInputs.cache
 C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\IdeatecAPI.Application.sourcelink.json
+C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\IdeatecA.59D3890F.Up2Date
+C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\IdeatecAPI.Application.dll
+C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\refint\IdeatecAPI.Application.dll
+C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\IdeatecAPI.Application.pdb
+C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\ref\IdeatecAPI.Application.dll

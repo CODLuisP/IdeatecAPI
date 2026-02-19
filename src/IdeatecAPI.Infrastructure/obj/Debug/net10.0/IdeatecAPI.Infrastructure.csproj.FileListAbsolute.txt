@@ -40,3 +40,9 @@ C:\Users\HP\source\repos\IdeatecAPI\src\IdeatecAPI.Infrastructure\obj\Debug\net1
 C:\Users\HP\source\repos\IdeatecAPI\src\IdeatecAPI.Infrastructure\obj\Debug\net10.0\IdeatecAPI.Infrastructure.pdb
 C:\Users\HP\source\repos\IdeatecAPI\src\IdeatecAPI.Infrastructure\obj\Debug\net10.0\ref\IdeatecAPI.Infrastructure.dll
 >>>>>>> 4981bb4898f122372199cb065b3613abd4469e12
+C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Infrastructure\obj\Debug\net10.0\IdeatecAPI.Infrastructure.csproj.AssemblyReference.cache
+C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Infrastructure\obj\Debug\net10.0\IdeatecAPI.Infrastructure.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Infrastructure\obj\Debug\net10.0\IdeatecAPI.Infrastructure.AssemblyInfoInputs.cache
+C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Infrastructure\obj\Debug\net10.0\IdeatecAPI.Infrastructure.AssemblyInfo.cs
+C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Infrastructure\obj\Debug\net10.0\IdeatecAPI.Infrastructure.csproj.CoreCompileInputs.cache
+C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Infrastructure\obj\Debug\net10.0\IdeatecAPI.Infrastructure.sourcelink.json
