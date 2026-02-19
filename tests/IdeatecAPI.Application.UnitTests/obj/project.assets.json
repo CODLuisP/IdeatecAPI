@@ -914,23 +914,23 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\Usuario\\.nuget\\packages\\": {},
+    "C:\\Users\\HP\\.nuget\\packages\\": {},
     "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\Usuario\\Desktop\\BackFacturacion\\IdeatecAPI\\tests\\IdeatecAPI.Application.UnitTests\\IdeatecAPI.Application.UnitTests.csproj",
+      "projectUniqueName": "C:\\Users\\HP\\source\\repos\\IdeatecAPI\\tests\\IdeatecAPI.Application.UnitTests\\IdeatecAPI.Application.UnitTests.csproj",
       "projectName": "IdeatecAPI.Application.UnitTests",
-      "projectPath": "C:\\Users\\Usuario\\Desktop\\BackFacturacion\\IdeatecAPI\\tests\\IdeatecAPI.Application.UnitTests\\IdeatecAPI.Application.UnitTests.csproj",
-      "packagesPath": "C:\\Users\\Usuario\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\Usuario\\Desktop\\BackFacturacion\\IdeatecAPI\\tests\\IdeatecAPI.Application.UnitTests\\obj\\",
+      "projectPath": "C:\\Users\\HP\\source\\repos\\IdeatecAPI\\tests\\IdeatecAPI.Application.UnitTests\\IdeatecAPI.Application.UnitTests.csproj",
+      "packagesPath": "C:\\Users\\HP\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\HP\\source\\repos\\IdeatecAPI\\tests\\IdeatecAPI.Application.UnitTests\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
       ],
       "configFilePaths": [
-        "C:\\Users\\Usuario\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Users\\HP\\AppData\\Roaming\\NuGet\\NuGet.Config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
@@ -939,6 +939,7 @@
       ],
       "sources": {
         "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+        "C:\\Program Files\\dotnet\\library-packs": {},
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {

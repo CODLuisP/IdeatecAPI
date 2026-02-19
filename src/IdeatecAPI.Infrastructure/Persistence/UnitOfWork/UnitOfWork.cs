@@ -2,6 +2,7 @@ using System.Data;
 using MySqlConnector;
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Infrastructure.Persistence.Repositories;
+using IdeatecAPI.Infrastructure.Persistence.Repositories.Clientes;
 
 namespace IdeatecAPI.Infrastructure.Persistence.UnitOfWork;
 
@@ -15,6 +16,7 @@ public class UnitOfWork : IUnitOfWork
     // Repositorios específicos
     private ICategoriaRepository? _categorias;
     private IUsuarioRepository? _usuarios;
+    private IClienteRepository? _clientes;
 
     private IEmpresaRepository? _empresas;
     private INoteRepository? _notes;
@@ -46,6 +48,15 @@ public class UnitOfWork : IUnitOfWork
         {
             _categorias ??= new CategoriaRepository(Connection, _transaction);
             return _categorias;
+        }
+    }
+
+    public IClienteRepository clientes
+    {
+        get
+        {
+            _clientes ??= new ClienteRepository(Connection, _transaction);
+            return _clientes;
         }
     }
 
