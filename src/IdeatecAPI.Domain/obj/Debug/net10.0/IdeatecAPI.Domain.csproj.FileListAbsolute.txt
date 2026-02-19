@@ -1,4 +1,18 @@
 <<<<<<< HEAD
+=======
+>>>>>>> 3048a4b55c0bb429019f682e7b5df55790768281
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Domain\bin\Debug\net10.0\IdeatecAPI.Domain.deps.json
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Domain\bin\Debug\net10.0\IdeatecAPI.Domain.dll
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Domain\bin\Debug\net10.0\IdeatecAPI.Domain.pdb
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Domain\obj\Debug\net10.0\IdeatecAPI.Domain.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Domain\obj\Debug\net10.0\IdeatecAPI.Domain.AssemblyInfoInputs.cache
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Domain\obj\Debug\net10.0\IdeatecAPI.Domain.AssemblyInfo.cs
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Domain\obj\Debug\net10.0\IdeatecAPI.Domain.csproj.CoreCompileInputs.cache
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Domain\obj\Debug\net10.0\IdeatecAPI.Domain.dll
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Domain\obj\Debug\net10.0\refint\IdeatecAPI.Domain.dll
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Domain\obj\Debug\net10.0\IdeatecAPI.Domain.pdb
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Domain\obj\Debug\net10.0\ref\IdeatecAPI.Domain.dll
+>>>>>>> 5fe3001b3dceb6aad9dfa0977c717a655cf4e435
 C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Domain\bin\Debug\net10.0\IdeatecAPI.Domain.deps.json
 C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Domain\bin\Debug\net10.0\IdeatecAPI.Domain.dll
 C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Domain\bin\Debug\net10.0\IdeatecAPI.Domain.pdb
@@ -11,8 +25,9 @@ C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Domain\obj\De
 C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Domain\obj\Debug\net10.0\refint\IdeatecAPI.Domain.dll
 C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Domain\obj\Debug\net10.0\IdeatecAPI.Domain.pdb
 C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Domain\obj\Debug\net10.0\ref\IdeatecAPI.Domain.dll
+<<<<<<< HEAD
 =======
->>>>>>> 3048a4b55c0bb429019f682e7b5df55790768281
+>>>>>>> 5fe3001b3dceb6aad9dfa0977c717a655cf4e435
 C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Domain\bin\Debug\net10.0\IdeatecAPI.Domain.deps.json
 C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Domain\bin\Debug\net10.0\IdeatecAPI.Domain.dll
 C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Domain\bin\Debug\net10.0\IdeatecAPI.Domain.pdb
@@ -25,6 +40,7 @@ C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Domain\obj\Debug\net10.0\Idea
 C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Domain\obj\Debug\net10.0\refint\IdeatecAPI.Domain.dll
 C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Domain\obj\Debug\net10.0\IdeatecAPI.Domain.pdb
 C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Domain\obj\Debug\net10.0\ref\IdeatecAPI.Domain.dll
+<<<<<<< HEAD
 C:\Users\HP\source\repos\IdeatecAPI\src\IdeatecAPI.Domain\bin\Debug\net10.0\IdeatecAPI.Domain.deps.json
 C:\Users\HP\source\repos\IdeatecAPI\src\IdeatecAPI.Domain\bin\Debug\net10.0\IdeatecAPI.Domain.dll
 C:\Users\HP\source\repos\IdeatecAPI\src\IdeatecAPI.Domain\bin\Debug\net10.0\IdeatecAPI.Domain.pdb
@@ -37,3 +53,6 @@ C:\Users\HP\source\repos\IdeatecAPI\src\IdeatecAPI.Domain\obj\Debug\net10.0\Idea
 C:\Users\HP\source\repos\IdeatecAPI\src\IdeatecAPI.Domain\obj\Debug\net10.0\refint\IdeatecAPI.Domain.dll
 C:\Users\HP\source\repos\IdeatecAPI\src\IdeatecAPI.Domain\obj\Debug\net10.0\IdeatecAPI.Domain.pdb
 C:\Users\HP\source\repos\IdeatecAPI\src\IdeatecAPI.Domain\obj\Debug\net10.0\ref\IdeatecAPI.Domain.dll
+=======
+>>>>>>> a7398318f93b1741d7c543bbc112310314b294c7
+>>>>>>> da9220907266fa87052a45d1d39c9f0da1a8a1b2

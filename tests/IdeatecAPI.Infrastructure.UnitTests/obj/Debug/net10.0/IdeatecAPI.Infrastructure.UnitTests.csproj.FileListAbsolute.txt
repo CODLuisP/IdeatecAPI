@@ -95,6 +95,7 @@ C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\tests\IdeatecAPI.Infrastruct
 C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\tests\IdeatecAPI.Infrastructure.UnitTests\obj\Debug\net10.0\IdeatecAPI.Infrastructure.UnitTests.pdb
 C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\tests\IdeatecAPI.Infrastructure.UnitTests\obj\Debug\net10.0\IdeatecAPI.Infrastructure.UnitTests.genruntimeconfig.cache
 C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\tests\IdeatecAPI.Infrastructure.UnitTests\obj\Debug\net10.0\ref\IdeatecAPI.Infrastructure.UnitTests.dll
+<<<<<<< HEAD
 C:\Users\USUARIO\Desktop\IdeatecAPI\tests\IdeatecAPI.Infrastructure.UnitTests\bin\Debug\net10.0\testhost.dll
 C:\Users\USUARIO\Desktop\IdeatecAPI\tests\IdeatecAPI.Infrastructure.UnitTests\bin\Debug\net10.0\xunit.abstractions.dll
 C:\Users\USUARIO\Desktop\IdeatecAPI\tests\IdeatecAPI.Infrastructure.UnitTests\bin\Debug\net10.0\testhost.exe
@@ -289,3 +290,5 @@ C:\Users\HP\source\repos\IdeatecAPI\tests\IdeatecAPI.Infrastructure.UnitTests\ob
 C:\Users\HP\source\repos\IdeatecAPI\tests\IdeatecAPI.Infrastructure.UnitTests\obj\Debug\net10.0\IdeatecAPI.Infrastructure.UnitTests.pdb
 C:\Users\HP\source\repos\IdeatecAPI\tests\IdeatecAPI.Infrastructure.UnitTests\obj\Debug\net10.0\IdeatecAPI.Infrastructure.UnitTests.genruntimeconfig.cache
 C:\Users\HP\source\repos\IdeatecAPI\tests\IdeatecAPI.Infrastructure.UnitTests\obj\Debug\net10.0\ref\IdeatecAPI.Infrastructure.UnitTests.dll
+=======
+>>>>>>> da9220907266fa87052a45d1d39c9f0da1a8a1b2

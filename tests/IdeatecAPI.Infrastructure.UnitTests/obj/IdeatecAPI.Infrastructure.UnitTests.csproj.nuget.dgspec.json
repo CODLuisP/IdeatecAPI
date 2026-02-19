@@ -1,6 +1,7 @@
 {
   "format": 1,
   "restore": {
+<<<<<<< HEAD
     "C:\\Users\\HP\\source\\repos\\IdeatecAPI\\tests\\IdeatecAPI.Infrastructure.UnitTests\\IdeatecAPI.Infrastructure.UnitTests.csproj": {}
   },
   "projects": {
@@ -12,12 +13,29 @@
         "projectPath": "C:\\Users\\HP\\source\\repos\\IdeatecAPI\\tests\\IdeatecAPI.Infrastructure.UnitTests\\IdeatecAPI.Infrastructure.UnitTests.csproj",
         "packagesPath": "C:\\Users\\HP\\.nuget\\packages\\",
         "outputPath": "C:\\Users\\HP\\source\\repos\\IdeatecAPI\\tests\\IdeatecAPI.Infrastructure.UnitTests\\obj\\",
+=======
+    "C:\\Users\\Usuario\\Desktop\\BackFacturacion\\IdeatecAPI\\tests\\IdeatecAPI.Infrastructure.UnitTests\\IdeatecAPI.Infrastructure.UnitTests.csproj": {}
+  },
+  "projects": {
+    "C:\\Users\\Usuario\\Desktop\\BackFacturacion\\IdeatecAPI\\tests\\IdeatecAPI.Infrastructure.UnitTests\\IdeatecAPI.Infrastructure.UnitTests.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\Usuario\\Desktop\\BackFacturacion\\IdeatecAPI\\tests\\IdeatecAPI.Infrastructure.UnitTests\\IdeatecAPI.Infrastructure.UnitTests.csproj",
+        "projectName": "IdeatecAPI.Infrastructure.UnitTests",
+        "projectPath": "C:\\Users\\Usuario\\Desktop\\BackFacturacion\\IdeatecAPI\\tests\\IdeatecAPI.Infrastructure.UnitTests\\IdeatecAPI.Infrastructure.UnitTests.csproj",
+        "packagesPath": "C:\\Users\\Usuario\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Usuario\\Desktop\\BackFacturacion\\IdeatecAPI\\tests\\IdeatecAPI.Infrastructure.UnitTests\\obj\\",
+>>>>>>> da9220907266fa87052a45d1d39c9f0da1a8a1b2
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
+<<<<<<< HEAD
           "C:\\Users\\HP\\AppData\\Roaming\\NuGet\\NuGet.Config",
+=======
+          "C:\\Users\\Usuario\\AppData\\Roaming\\NuGet\\NuGet.Config",
+>>>>>>> da9220907266fa87052a45d1d39c9f0da1a8a1b2
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
@@ -26,7 +44,6 @@
         ],
         "sources": {
           "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-          "C:\\Program Files\\dotnet\\library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {

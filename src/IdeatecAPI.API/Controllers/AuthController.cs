@@ -17,27 +17,6 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Generar hash BCrypt
-    /// POST: api/auth/generate-hash
-    /// </summary>
-    [HttpPost("generate-hash")]
-    [AllowAnonymous]
-    public IActionResult GenerateHash([FromBody] string password)
-    {
-        var hash = BCrypt.Net.BCrypt.HashPassword(password);
-
-        // Verificar que el hash funciona
-        var verifies = BCrypt.Net.BCrypt.Verify(password, hash);
-
-        return Ok(new
-        {
-            password = password,
-            hash = hash,
-            verifies = verifies
-        });
-    }
-
-    /// <summary>
     /// Login de usuario
     /// POST: api/auth/login
     /// </summary>
@@ -143,37 +122,6 @@ public class AuthController : ControllerBase
         {
             success = true,
             message = "Sesión cerrada correctamente"
-        });
-    }
-
-    /// <summary>
-    /// Endpoint de prueba para verificar autenticación
-    /// GET: api/auth/me
-    /// </summary>
-    [HttpGet("me")]
-    [Authorize] // Solo usuarios autenticados
-    public IActionResult GetCurrentUser()
-    {
-        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-            ?? User.FindFirst("sub")?.Value;
-        var email = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
-        var username = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
-        var rol = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
-        var nombreCompleto = User.FindFirst("nombreCompleto")?.Value;
-        var ruc = User.FindFirst("ruc")?.Value;
-
-        return Ok(new
-        {
-            success = true,
-            user = new
-            {
-                usuarioID = userId,
-                username = username,
-                email = email,
-                rol = rol,
-                nombreCompleto = nombreCompleto,
-                ruc = ruc
-            }
         });
     }
 }

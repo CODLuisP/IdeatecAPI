@@ -1,13 +1,20 @@
-using System.Text;                                                          // ← NUEVO
+using System.Text;                                                         
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Application.Features.Categorias.Services;
 using IdeatecAPI.Infrastructure.Persistence.UnitOfWork;
+<<<<<<< HEAD
 using IdeatecAPI.Infrastructure.Services;                                   // ← NUEVO
 using Microsoft.AspNetCore.Authentication.JwtBearer;                        // ← NUEVO
 using Microsoft.IdentityModel.Tokens;
 using IdeatecAPI.Application.Features.Clientes.Services;                                       // ← NUEVO
+=======
+using IdeatecAPI.Infrastructure.Services;                              
+using Microsoft.AspNetCore.Authentication.JwtBearer;                       
+using Microsoft.IdentityModel.Tokens;
+using IdeatecAPI.Application.Features.Empresas.Services;                                       
+>>>>>>> da9220907266fa87052a45d1d39c9f0da1a8a1b2
 
 namespace IdeatecAPI.Infrastructure;
 
@@ -30,13 +37,16 @@ public static class DependencyInjection
         // ========================================
         // SERVICIOS DE AUTENTICACIÓN (NUEVO)
         // ========================================
-        services.AddScoped<ITokenService, TokenService>();                  // ← NUEVO
-        services.AddScoped<IAuthService, AuthService>();                    // ← NUEVO
+        services.AddScoped<ITokenService, TokenService>();
+        services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IUsuarioService, UsuarioService>(); 
+        
 
+        services.AddScoped<IEmpresaService, EmpresaService>();
         // ========================================
         // JWT AUTHENTICATION (NUEVO)
         // ========================================
-        var jwtSecret = configuration["JwtSettings:Secret"]                 // ← NUEVO
+        var jwtSecret = configuration["JwtSettings:Secret"] 
             ?? throw new InvalidOperationException("JWT Secret not configured in appsettings.json");
 
         var key = Encoding.UTF8.GetBytes(jwtSecret);
@@ -48,7 +58,7 @@ public static class DependencyInjection
         })
         .AddJwtBearer(options =>
         {
-            options.RequireHttpsMetadata = false; // En producción cambiar a true
+            options.RequireHttpsMetadata = false;
             options.SaveToken = true;
             options.TokenValidationParameters = new TokenValidationParameters
             {
@@ -63,7 +73,7 @@ public static class DependencyInjection
             };
         });
 
-        services.AddAuthorization();                                        // ← NUEVO
+        services.AddAuthorization();                                        
 
         return services;
     }

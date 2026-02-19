@@ -43,15 +43,11 @@ public class TokenService : ITokenService
             claims = claims.Append(new Claim("ruc", usuario.Ruc)).ToArray();
         }
 
-        var expirationMinutes = int.Parse(
-            _configuration["JwtSettings:AccessTokenExpirationMinutes"] ?? "30"
-        );
-
         var token = new JwtSecurityToken(
             issuer: _configuration["JwtSettings:Issuer"],
             audience: _configuration["JwtSettings:Audience"],
             claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(expirationMinutes),
+            expires: DateTime.UtcNow.AddHours(24),
             signingCredentials: credentials
         );
 
