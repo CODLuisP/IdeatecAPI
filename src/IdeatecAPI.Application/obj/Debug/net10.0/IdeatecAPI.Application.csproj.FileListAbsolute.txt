@@ -17,6 +17,8 @@ C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0
 C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\IdeatecAPI.Application.pdb
 C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\ref\IdeatecAPI.Application.dll
 >>>>>>> 5fe3001b3dceb6aad9dfa0977c717a655cf4e435
+C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\IdeatecAPI.Application.sourcelink.json
+>>>>>>> a7398318f93b1741d7c543bbc112310314b294c7
 C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Application\bin\Debug\net10.0\IdeatecAPI.Application.deps.json
 C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Application\bin\Debug\net10.0\IdeatecAPI.Application.dll
 C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Application\bin\Debug\net10.0\IdeatecAPI.Application.pdb
@@ -33,23 +35,3 @@ C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Application\o
 C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\refint\IdeatecAPI.Application.dll
 C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\IdeatecAPI.Application.pdb
 C:\Users\Usuario\Desktop\BackFacturacion\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\ref\IdeatecAPI.Application.dll
-<<<<<<< HEAD
-=======
->>>>>>> 5fe3001b3dceb6aad9dfa0977c717a655cf4e435
-C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\bin\Debug\net10.0\IdeatecAPI.Application.deps.json
-C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\bin\Debug\net10.0\IdeatecAPI.Application.dll
-C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\bin\Debug\net10.0\IdeatecAPI.Application.pdb
-C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\bin\Debug\net10.0\IdeatecAPI.Domain.dll
-C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\bin\Debug\net10.0\IdeatecAPI.Domain.pdb
-C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\IdeatecAPI.Application.csproj.AssemblyReference.cache
-C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\IdeatecAPI.Application.GeneratedMSBuildEditorConfig.editorconfig
-C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\IdeatecAPI.Application.AssemblyInfoInputs.cache
-C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\IdeatecAPI.Application.AssemblyInfo.cs
-C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\IdeatecAPI.Application.csproj.CoreCompileInputs.cache
-C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\IdeatecAPI.Application.sourcelink.json
-C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\IdeatecA.59D3890F.Up2Date
-C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\IdeatecAPI.Application.dll
-C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\refint\IdeatecAPI.Application.dll
-C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\IdeatecAPI.Application.pdb
-C:\Users\USUARIO\Desktop\IdeatecAPI\src\IdeatecAPI.Application\obj\Debug\net10.0\ref\IdeatecAPI.Application.dll
->>>>>>> a7398318f93b1741d7c543bbc112310314b294c7

@@ -7,7 +7,8 @@ using IdeatecAPI.Infrastructure.Persistence.UnitOfWork;
 using IdeatecAPI.Infrastructure.Services;                              
 using Microsoft.AspNetCore.Authentication.JwtBearer;                       
 using Microsoft.IdentityModel.Tokens;
-using IdeatecAPI.Application.Features.Empresas.Services;                                       
+using IdeatecAPI.Application.Features.Empresas.Services;
+using IdeatecAPI.Application.Features.Notas.Services;
 
 namespace IdeatecAPI.Infrastructure;
 
@@ -33,8 +34,8 @@ public static class DependencyInjection
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IUsuarioService, UsuarioService>(); 
         
-
         services.AddScoped<IEmpresaService, EmpresaService>();
+        services.AddScoped<INoteService, NoteService>();
         // ========================================
         // JWT AUTHENTICATION (NUEVO)
         // ========================================
