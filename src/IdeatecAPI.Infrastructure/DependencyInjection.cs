@@ -4,17 +4,11 @@ using Microsoft.Extensions.DependencyInjection;
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Application.Features.Categorias.Services;
 using IdeatecAPI.Infrastructure.Persistence.UnitOfWork;
-<<<<<<< HEAD
 using IdeatecAPI.Infrastructure.Services;                                   // ← NUEVO
 using Microsoft.AspNetCore.Authentication.JwtBearer;                        // ← NUEVO
 using Microsoft.IdentityModel.Tokens;
 using IdeatecAPI.Application.Features.Clientes.Services;                                       // ← NUEVO
-=======
-using IdeatecAPI.Infrastructure.Services;                              
-using Microsoft.AspNetCore.Authentication.JwtBearer;                       
-using Microsoft.IdentityModel.Tokens;
 using IdeatecAPI.Application.Features.Empresas.Services;                                       
->>>>>>> da9220907266fa87052a45d1d39c9f0da1a8a1b2
 
 namespace IdeatecAPI.Infrastructure;
 

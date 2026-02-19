@@ -193,9 +193,11 @@ C:\Users\USUARIO\Desktop\IdeatecAPI\tests\IdeatecAPI.Application.UnitTests\obj\D
 C:\Users\USUARIO\Desktop\IdeatecAPI\tests\IdeatecAPI.Application.UnitTests\obj\Debug\net10.0\IdeatecAPI.Application.UnitTests.pdb
 C:\Users\USUARIO\Desktop\IdeatecAPI\tests\IdeatecAPI.Application.UnitTests\obj\Debug\net10.0\IdeatecAPI.Application.UnitTests.genruntimeconfig.cache
 C:\Users\USUARIO\Desktop\IdeatecAPI\tests\IdeatecAPI.Application.UnitTests\obj\Debug\net10.0\ref\IdeatecAPI.Application.UnitTests.dll
-C:\Users\HP\source\repos\IdeatecAPI\tests\IdeatecAPI.Application.UnitTests\bin\Debug\net10.0\testhost.exe
+=======
+>>>>>>> da9220907266fa87052a45d1d39c9f0da1a8a1b2
 C:\Users\HP\source\repos\IdeatecAPI\tests\IdeatecAPI.Application.UnitTests\bin\Debug\net10.0\testhost.dll
 C:\Users\HP\source\repos\IdeatecAPI\tests\IdeatecAPI.Application.UnitTests\bin\Debug\net10.0\xunit.abstractions.dll
+C:\Users\HP\source\repos\IdeatecAPI\tests\IdeatecAPI.Application.UnitTests\bin\Debug\net10.0\testhost.exe
 C:\Users\HP\source\repos\IdeatecAPI\tests\IdeatecAPI.Application.UnitTests\bin\Debug\net10.0\xunit.runner.visualstudio.testadapter.dll
 C:\Users\HP\source\repos\IdeatecAPI\tests\IdeatecAPI.Application.UnitTests\bin\Debug\net10.0\IdeatecAPI.Application.UnitTests.deps.json
 C:\Users\HP\source\repos\IdeatecAPI\tests\IdeatecAPI.Application.UnitTests\bin\Debug\net10.0\IdeatecAPI.Application.UnitTests.runtimeconfig.json
@@ -290,5 +292,3 @@ C:\Users\HP\source\repos\IdeatecAPI\tests\IdeatecAPI.Application.UnitTests\obj\D
 C:\Users\HP\source\repos\IdeatecAPI\tests\IdeatecAPI.Application.UnitTests\obj\Debug\net10.0\IdeatecAPI.Application.UnitTests.pdb
 C:\Users\HP\source\repos\IdeatecAPI\tests\IdeatecAPI.Application.UnitTests\obj\Debug\net10.0\IdeatecAPI.Application.UnitTests.genruntimeconfig.cache
 C:\Users\HP\source\repos\IdeatecAPI\tests\IdeatecAPI.Application.UnitTests\obj\Debug\net10.0\ref\IdeatecAPI.Application.UnitTests.dll
-=======
->>>>>>> da9220907266fa87052a45d1d39c9f0da1a8a1b2
