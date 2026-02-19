@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using IdeatecAPI.Application.Features.Empresas.Services;
 using IdeatecAPI.Application.Features.Notas.Services;
-using IdeatecAPI.Application.Features.Clientes.Services;                                       // ← NUEVO
 using IdeatecAPI.Application.Features.Clientes.Services;
 using IdeatecAPI.Application.Features.Direccion.Services;
 
