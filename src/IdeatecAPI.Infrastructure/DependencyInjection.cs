@@ -4,12 +4,14 @@ using Microsoft.Extensions.DependencyInjection;
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Application.Features.Categorias.Services;
 using IdeatecAPI.Infrastructure.Persistence.UnitOfWork;
-using IdeatecAPI.Infrastructure.Services;                                   // ← NUEVO
-using Microsoft.AspNetCore.Authentication.JwtBearer;                        // ← NUEVO
+using IdeatecAPI.Infrastructure.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using IdeatecAPI.Application.Features.Empresas.Services;
 using IdeatecAPI.Application.Features.Notas.Services;
 using IdeatecAPI.Application.Features.Clientes.Services;                                       // ← NUEVO
+using IdeatecAPI.Application.Features.Clientes.Services;
+using IdeatecAPI.Application.Features.Direccion.Services;
 
 namespace IdeatecAPI.Infrastructure;
 
@@ -22,7 +24,6 @@ public static class DependencyInjection
         var connectionString = configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("Connection string not found");
 
-        // Registrar UnitOfWork
         services.AddScoped<IUnitOfWork>(provider => new UnitOfWork(connectionString));
 
         // HttpClient para SUNAT
@@ -49,6 +50,16 @@ public static class DependencyInjection
         // ========================================
         // JWT AUTHENTICATION (NUEVO)
         // ========================================
+        services.AddScoped<ICategoriaService, CategoriaService>();
+        services.AddScoped<IClienteService, ClienteService>();
+        services.AddScoped<IDireccionService, DireccionService>();
+        services.AddScoped<IEmpresaService, EmpresaService>();
+        services.AddScoped<INoteService, NoteService>();
+
+        services.AddScoped<ITokenService, TokenService>();
+        services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IUsuarioService, UsuarioService>();
+
         var jwtSecret = configuration["JwtSettings:Secret"]
             ?? throw new InvalidOperationException("JWT Secret not configured in appsettings.json");
 

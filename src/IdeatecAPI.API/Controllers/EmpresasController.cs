@@ -73,6 +73,7 @@ public class CompaniesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> FileToBase64([FromForm] FileUploadRequest request)
+
     {
         try
         {
@@ -90,4 +91,54 @@ public class CompaniesController : ControllerBase
             return BadRequest(new { message = ex.Message });
         }
     }
+
+
+    [HttpPost("certificate")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ConvertCertificado([FromBody] CertificadoRequestDto dto)
+    {
+        try
+        {
+            var result = await _empresaService.ConvertCertificadoAsync(dto);
+            return Ok(result);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+
+    [HttpPost("base64/file")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Base64ToFile([FromBody] Base64ToFileRequestDto dto)
+    {
+        try
+        {
+            var result = await _empresaService.ConvertBase64ToFileAsync(dto);
+            return File(result.Bytes, result.ContentType, result.FileName);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+[HttpPost("certificate/free")]
+[ProducesResponseType(StatusCodes.Status200OK)]
+[ProducesResponseType(StatusCodes.Status400BadRequest)]
+public async Task<IActionResult> GenerarCertificadoFree([FromBody] CertificadoFreeRequestDto dto)
+{
+    try
+    {
+        var result = await _empresaService.GenerarCertificadoFreeAsync(dto);
+        return File(result.Bytes, result.ContentType, result.FileName);
+    }
+    catch (ArgumentException ex)
+    {
+        return BadRequest(new { message = ex.Message });
+    }
+}
 }

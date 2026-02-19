@@ -31,46 +31,51 @@ public class EmpresaRepository : DapperRepository<Empresa>, IEmpresaRepository
         return count > 0;
     }
 
-    public async Task<int> CreateEmpresaAsync(Empresa empresa)
-    {
-        var sql = @"INSERT INTO empresa 
-            (ruc, razonSocial, nombreComercial, direccion, ubigeo, urbanizacion,
-             solUsuario, solClave, activo, creadoEn, telefono, email, logoBase64,
-             certificadoPem, certificadoPassword, clienteId, clientSecret, plan, environment)
-            VALUES 
-            (@Ruc, @RazonSocial, @NombreComercial, @Direccion, @Ubigeo, @Urbanizacion,
-             @SolUsuario, @SolClave, @Activo, @CreadoEn, @Telefono, @Email, @LogoBase64,
-             @CertificadoPem, @CertificadoPassword, @ClienteId, @ClientSecret, @Plan, @Environment);
-            SELECT LAST_INSERT_ID();";
+public async Task<int> CreateEmpresaAsync(Empresa empresa)
+{
+    var sql = @"INSERT INTO empresa 
+        (ruc, razonSocial, nombreComercial, direccion, ubigeo, urbanizacion,
+         provincia, departamento, distrito,
+         solUsuario, solClave, activo, creadoEn, telefono, email, logoBase64,
+         certificadoPem, certificadoPassword, clienteId, clientSecret, plan, environment)
+        VALUES 
+        (@Ruc, @RazonSocial, @NombreComercial, @Direccion, @Ubigeo, @Urbanizacion,
+         @Provincia, @Departamento, @Distrito,
+         @SolUsuario, @SolClave, @Activo, @CreadoEn, @Telefono, @Email, @LogoBase64,
+         @CertificadoPem, @CertificadoPassword, @ClienteId, @ClientSecret, @Plan, @Environment);
+        SELECT LAST_INSERT_ID();";
 
-        return await _connection.ExecuteScalarAsync<int>(sql, empresa, _transaction);
-    }
+    return await _connection.ExecuteScalarAsync<int>(sql, empresa, _transaction);
+}
 
-    public async Task UpdateEmpresaAsync(Empresa empresa)
-    {
-        var sql = @"UPDATE empresa SET
-            razonSocial = @RazonSocial,
-            nombreComercial = @NombreComercial,
-            direccion = @Direccion,
-            ubigeo = @Ubigeo,
-            urbanizacion = @Urbanizacion,
-            solUsuario = @SolUsuario,
-            solClave = @SolClave,
-            activo = @Activo,
-            telefono = @Telefono,
-            email = @Email,
-            logoBase64 = @LogoBase64,
-            certificadoPem = @CertificadoPem,
-            certificadoPassword = @CertificadoPassword,
-            clienteId = @ClienteId,
-            clientSecret = @ClientSecret,
-            plan = @Plan,
-            environment = @Environment,
-            actualizadoEn = @ActualizadoEn
-            WHERE empresaID = @Id";
+public async Task UpdateEmpresaAsync(Empresa empresa)
+{
+    var sql = @"UPDATE empresa SET
+        razonSocial = @RazonSocial,
+        nombreComercial = @NombreComercial,
+        direccion = @Direccion,
+        ubigeo = @Ubigeo,
+        urbanizacion = @Urbanizacion,
+        provincia = @Provincia,
+        departamento = @Departamento,
+        distrito = @Distrito,
+        solUsuario = @SolUsuario,
+        solClave = @SolClave,
+        activo = @Activo,
+        telefono = @Telefono,
+        email = @Email,
+        logoBase64 = @LogoBase64,
+        certificadoPem = @CertificadoPem,
+        certificadoPassword = @CertificadoPassword,
+        clienteId = @ClienteId,
+        clientSecret = @ClientSecret,
+        plan = @Plan,
+        environment = @Environment,
+        actualizadoEn = @ActualizadoEn
+        WHERE empresaID = @Id";
 
-        await _connection.ExecuteAsync(sql, empresa, _transaction);
-    }
+    await _connection.ExecuteAsync(sql, empresa, _transaction);
+}
 
     public async Task DeleteEmpresaAsync(int id)
     {
