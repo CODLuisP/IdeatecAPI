@@ -1,23 +1,23 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\HP\\source\\repos\\IdeatecAPI\\src\\IdeatecAPI.API\\IdeatecAPI.API.csproj": {}
+    "C:\\Users\\Usuario\\Desktop\\BackFacturacion\\IdeatecAPI\\src\\IdeatecAPI.API\\IdeatecAPI.API.csproj": {}
   },
   "projects": {
-    "C:\\Users\\HP\\source\\repos\\IdeatecAPI\\src\\IdeatecAPI.API\\IdeatecAPI.API.csproj": {
+    "C:\\Users\\Usuario\\Desktop\\BackFacturacion\\IdeatecAPI\\src\\IdeatecAPI.API\\IdeatecAPI.API.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\HP\\source\\repos\\IdeatecAPI\\src\\IdeatecAPI.API\\IdeatecAPI.API.csproj",
+        "projectUniqueName": "C:\\Users\\Usuario\\Desktop\\BackFacturacion\\IdeatecAPI\\src\\IdeatecAPI.API\\IdeatecAPI.API.csproj",
         "projectName": "IdeatecAPI.API",
-        "projectPath": "C:\\Users\\HP\\source\\repos\\IdeatecAPI\\src\\IdeatecAPI.API\\IdeatecAPI.API.csproj",
-        "packagesPath": "C:\\Users\\HP\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\HP\\source\\repos\\IdeatecAPI\\src\\IdeatecAPI.API\\obj\\",
+        "projectPath": "C:\\Users\\Usuario\\Desktop\\BackFacturacion\\IdeatecAPI\\src\\IdeatecAPI.API\\IdeatecAPI.API.csproj",
+        "packagesPath": "C:\\Users\\Usuario\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Usuario\\Desktop\\BackFacturacion\\IdeatecAPI\\src\\IdeatecAPI.API\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-          "C:\\Users\\HP\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\Usuario\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
@@ -26,18 +26,17 @@
         ],
         "sources": {
           "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-          "C:\\Program Files\\dotnet\\library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "net10.0": {
             "targetAlias": "net10.0",
             "projectReferences": {
-              "C:\\Users\\HP\\source\\repos\\IdeatecAPI\\src\\IdeatecAPI.Application\\IdeatecAPI.Application.csproj": {
-                "projectPath": "C:\\Users\\HP\\source\\repos\\IdeatecAPI\\src\\IdeatecAPI.Application\\IdeatecAPI.Application.csproj"
+              "C:\\Users\\Usuario\\Desktop\\BackFacturacion\\IdeatecAPI\\src\\IdeatecAPI.Application\\IdeatecAPI.Application.csproj": {
+                "projectPath": "C:\\Users\\Usuario\\Desktop\\BackFacturacion\\IdeatecAPI\\src\\IdeatecAPI.Application\\IdeatecAPI.Application.csproj"
               },
-              "C:\\Users\\HP\\source\\repos\\IdeatecAPI\\src\\IdeatecAPI.Infrastructure\\IdeatecAPI.Infrastructure.csproj": {
-                "projectPath": "C:\\Users\\HP\\source\\repos\\IdeatecAPI\\src\\IdeatecAPI.Infrastructure\\IdeatecAPI.Infrastructure.csproj"
+              "C:\\Users\\Usuario\\Desktop\\BackFacturacion\\IdeatecAPI\\src\\IdeatecAPI.Infrastructure\\IdeatecAPI.Infrastructure.csproj": {
+                "projectPath": "C:\\Users\\Usuario\\Desktop\\BackFacturacion\\IdeatecAPI\\src\\IdeatecAPI.Infrastructure\\IdeatecAPI.Infrastructure.csproj"
               }
             }
           }
@@ -508,20 +507,20 @@
         }
       }
     },
-    "C:\\Users\\HP\\source\\repos\\IdeatecAPI\\src\\IdeatecAPI.Application\\IdeatecAPI.Application.csproj": {
+    "C:\\Users\\Usuario\\Desktop\\BackFacturacion\\IdeatecAPI\\src\\IdeatecAPI.Application\\IdeatecAPI.Application.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\HP\\source\\repos\\IdeatecAPI\\src\\IdeatecAPI.Application\\IdeatecAPI.Application.csproj",
+        "projectUniqueName": "C:\\Users\\Usuario\\Desktop\\BackFacturacion\\IdeatecAPI\\src\\IdeatecAPI.Application\\IdeatecAPI.Application.csproj",
         "projectName": "IdeatecAPI.Application",
-        "projectPath": "C:\\Users\\HP\\source\\repos\\IdeatecAPI\\src\\IdeatecAPI.Application\\IdeatecAPI.Application.csproj",
-        "packagesPath": "C:\\Users\\HP\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\HP\\source\\repos\\IdeatecAPI\\src\\IdeatecAPI.Application\\obj\\",
+        "projectPath": "C:\\Users\\Usuario\\Desktop\\BackFacturacion\\IdeatecAPI\\src\\IdeatecAPI.Application\\IdeatecAPI.Application.csproj",
+        "packagesPath": "C:\\Users\\Usuario\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Usuario\\Desktop\\BackFacturacion\\IdeatecAPI\\src\\IdeatecAPI.Application\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-          "C:\\Users\\HP\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\Usuario\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
@@ -530,15 +529,14 @@
         ],
         "sources": {
           "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-          "C:\\Program Files\\dotnet\\library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "net10.0": {
             "targetAlias": "net10.0",
             "projectReferences": {
-              "C:\\Users\\HP\\source\\repos\\IdeatecAPI\\src\\IdeatecAPI.Domain\\IdeatecAPI.Domain.csproj": {
-                "projectPath": "C:\\Users\\HP\\source\\repos\\IdeatecAPI\\src\\IdeatecAPI.Domain\\IdeatecAPI.Domain.csproj"
+              "C:\\Users\\Usuario\\Desktop\\BackFacturacion\\IdeatecAPI\\src\\IdeatecAPI.Domain\\IdeatecAPI.Domain.csproj": {
+                "projectPath": "C:\\Users\\Usuario\\Desktop\\BackFacturacion\\IdeatecAPI\\src\\IdeatecAPI.Domain\\IdeatecAPI.Domain.csproj"
               }
             }
           }
@@ -852,20 +850,20 @@
         }
       }
     },
-    "C:\\Users\\HP\\source\\repos\\IdeatecAPI\\src\\IdeatecAPI.Domain\\IdeatecAPI.Domain.csproj": {
+    "C:\\Users\\Usuario\\Desktop\\BackFacturacion\\IdeatecAPI\\src\\IdeatecAPI.Domain\\IdeatecAPI.Domain.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\HP\\source\\repos\\IdeatecAPI\\src\\IdeatecAPI.Domain\\IdeatecAPI.Domain.csproj",
+        "projectUniqueName": "C:\\Users\\Usuario\\Desktop\\BackFacturacion\\IdeatecAPI\\src\\IdeatecAPI.Domain\\IdeatecAPI.Domain.csproj",
         "projectName": "IdeatecAPI.Domain",
-        "projectPath": "C:\\Users\\HP\\source\\repos\\IdeatecAPI\\src\\IdeatecAPI.Domain\\IdeatecAPI.Domain.csproj",
-        "packagesPath": "C:\\Users\\HP\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\HP\\source\\repos\\IdeatecAPI\\src\\IdeatecAPI.Domain\\obj\\",
+        "projectPath": "C:\\Users\\Usuario\\Desktop\\BackFacturacion\\IdeatecAPI\\src\\IdeatecAPI.Domain\\IdeatecAPI.Domain.csproj",
+        "packagesPath": "C:\\Users\\Usuario\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Usuario\\Desktop\\BackFacturacion\\IdeatecAPI\\src\\IdeatecAPI.Domain\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-          "C:\\Users\\HP\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\Usuario\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
@@ -874,7 +872,6 @@
         ],
         "sources": {
           "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-          "C:\\Program Files\\dotnet\\library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -1192,20 +1189,20 @@
         }
       }
     },
-    "C:\\Users\\HP\\source\\repos\\IdeatecAPI\\src\\IdeatecAPI.Infrastructure\\IdeatecAPI.Infrastructure.csproj": {
+    "C:\\Users\\Usuario\\Desktop\\BackFacturacion\\IdeatecAPI\\src\\IdeatecAPI.Infrastructure\\IdeatecAPI.Infrastructure.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\HP\\source\\repos\\IdeatecAPI\\src\\IdeatecAPI.Infrastructure\\IdeatecAPI.Infrastructure.csproj",
+        "projectUniqueName": "C:\\Users\\Usuario\\Desktop\\BackFacturacion\\IdeatecAPI\\src\\IdeatecAPI.Infrastructure\\IdeatecAPI.Infrastructure.csproj",
         "projectName": "IdeatecAPI.Infrastructure",
-        "projectPath": "C:\\Users\\HP\\source\\repos\\IdeatecAPI\\src\\IdeatecAPI.Infrastructure\\IdeatecAPI.Infrastructure.csproj",
-        "packagesPath": "C:\\Users\\HP\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\HP\\source\\repos\\IdeatecAPI\\src\\IdeatecAPI.Infrastructure\\obj\\",
+        "projectPath": "C:\\Users\\Usuario\\Desktop\\BackFacturacion\\IdeatecAPI\\src\\IdeatecAPI.Infrastructure\\IdeatecAPI.Infrastructure.csproj",
+        "packagesPath": "C:\\Users\\Usuario\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Usuario\\Desktop\\BackFacturacion\\IdeatecAPI\\src\\IdeatecAPI.Infrastructure\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-          "C:\\Users\\HP\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\Usuario\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
@@ -1214,15 +1211,14 @@
         ],
         "sources": {
           "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-          "C:\\Program Files\\dotnet\\library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "net10.0": {
             "targetAlias": "net10.0",
             "projectReferences": {
-              "C:\\Users\\HP\\source\\repos\\IdeatecAPI\\src\\IdeatecAPI.Application\\IdeatecAPI.Application.csproj": {
-                "projectPath": "C:\\Users\\HP\\source\\repos\\IdeatecAPI\\src\\IdeatecAPI.Application\\IdeatecAPI.Application.csproj"
+              "C:\\Users\\Usuario\\Desktop\\BackFacturacion\\IdeatecAPI\\src\\IdeatecAPI.Application\\IdeatecAPI.Application.csproj": {
+                "projectPath": "C:\\Users\\Usuario\\Desktop\\BackFacturacion\\IdeatecAPI\\src\\IdeatecAPI.Application\\IdeatecAPI.Application.csproj"
               }
             }
           }
