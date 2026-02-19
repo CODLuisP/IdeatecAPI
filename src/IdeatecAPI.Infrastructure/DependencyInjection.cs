@@ -8,7 +8,8 @@ using IdeatecAPI.Infrastructure.Services;                                   // �
 using Microsoft.AspNetCore.Authentication.JwtBearer;                        // ← NUEVO
 using Microsoft.IdentityModel.Tokens;
 using IdeatecAPI.Application.Features.Clientes.Services;                                       // ← NUEVO
-using IdeatecAPI.Application.Features.Empresas.Services;                                       
+using IdeatecAPI.Application.Features.Empresas.Services;
+using IdeatecAPI.Application.Features.Direccion.Services;
 
 namespace IdeatecAPI.Infrastructure;
 
@@ -27,6 +28,7 @@ public static class DependencyInjection
         // Registrar Servicios de Categorías
         services.AddScoped<ICategoriaService, CategoriaService>();
         services.AddScoped<IClienteService, ClienteService>();
+        services.AddScoped<IDireccionService, DireccionService>();
 
         // ========================================
         // SERVICIOS DE AUTENTICACIÓN (NUEVO)

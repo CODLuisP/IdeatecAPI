@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace IdeatecAPI.Application.Features.Clientes.DTOs
+namespace IdeatecAPI.Domain.Entities.Cliente
 {
-    public class ObtenerClientesDireccionDTO
+    public class Direccion
     {
         public int? DireccionId { get; set; }
         public string? Ubigeo { get; set; }
@@ -13,6 +13,7 @@ namespace IdeatecAPI.Application.Features.Clientes.DTOs
         public string? Provincia { get; set; }
         public string? Distrito { get; set; }
         public string? TipoDireccion { get; set; } //fiscal, almacen.
-
+        public bool Estado { get; set; }
+        public int? ClienteId { get; set; }
     }
 }

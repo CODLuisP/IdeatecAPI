@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
+using IdeatecAPI.Application.Features.CatalogoSunat.DTOs;
 using IdeatecAPI.Application.Features.Clientes.DTOs;
-
+using IdeatecAPI.Application.Features.Direccion.DTOs;
 namespace IdeatecAPI.Application.Features.Clientes.Services;
 
 public interface IClienteService {
@@ -21,11 +22,10 @@ public class ClienteService : IClienteService
     }
     public async Task<IEnumerable<ObtenerClientesDTO>> GetAllClientesAsync()
     {
-        var Clientes = await _unitOfWork.clientes.GetAllClientesAsync();
-        
-
+        var Clientes = await _unitOfWork.Clientes.GetAllClientesAsync();
         return Clientes.Select(c => new ObtenerClientesDTO
         {
+            ClienteId = c.ClienteId,
             RazonSocialNombre = c.RazonSocialNombre,
             NumeroDocumento = c.NumeroDocumento,
             NombreComercial = c.NombreComercial,
@@ -35,19 +35,22 @@ public class ClienteService : IClienteService
             Estado = c.Estado,
             
             Direccion = c.Direcciones
-            .Select(d => new ObtenerClientesDireccionDTO
+            .Select(d => new DireccionDTO
             {
+                DireccionId = d.DireccionId,
                 Ubigeo = d.Ubigeo,
                 Departamento = d.Departamento,
                 Provincia = d.Provincia,
                 Distrito = d.Distrito,
                 TipoDireccion = d.TipoDireccion
-            }).ToList() ?? new List<ObtenerClientesDireccionDTO>(),
+            }).ToList() ?? new List<DireccionDTO>(),
 
-            TipoDocumento = new ObtenerClientesTipoDocumentoDTO
+            TipoDocumento = new TipoDocumentoDTO
             {
+                TipoDocumentoId = c.TipoDocumentoCliente?.TipoDocumentoId,
                 TipoDocumentoNombre = c.TipoDocumentoCliente?.TipoDocumentoNombre
             }
             });
     }
 }
+

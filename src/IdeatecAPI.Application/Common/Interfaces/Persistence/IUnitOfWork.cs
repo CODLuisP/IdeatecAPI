@@ -4,7 +4,8 @@ public interface IUnitOfWork : IDisposable
 {
     ICategoriaRepository Categorias { get; }
     IUsuarioRepository Usuarios { get; } 
-    IClienteRepository clientes {get; }
+    IClienteRepository Clientes {get; }
+    IDireccionRepository Direcciones {get;}
     
     // Transacciones
     IEmpresaRepository Empresas { get; } 

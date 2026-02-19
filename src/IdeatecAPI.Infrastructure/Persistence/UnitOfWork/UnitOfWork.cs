@@ -17,6 +17,7 @@ public class UnitOfWork : IUnitOfWork
     private ICategoriaRepository? _categorias;
     private IUsuarioRepository? _usuarios;
     private IClienteRepository? _clientes;
+    private IDireccionRepository? _direccion;
 
     private IEmpresaRepository? _empresas;
 
@@ -49,12 +50,21 @@ public class UnitOfWork : IUnitOfWork
         }
     }
 
-    public IClienteRepository clientes
+    public IClienteRepository Clientes
     {
         get
         {
             _clientes ??= new ClienteRepository(Connection, _transaction);
             return _clientes;
+        }
+    }
+
+    public IDireccionRepository Direcciones
+    {
+        get
+        {
+            _direccion ??= new DireccionRepository(Connection, _transaction);
+            return _direccion;
         }
     }
 
@@ -76,7 +86,6 @@ public class UnitOfWork : IUnitOfWork
             return _empresas;
         }
     }
-
 
     public void BeginTransaction()
     {
