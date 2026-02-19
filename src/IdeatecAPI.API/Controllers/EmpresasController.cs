@@ -5,9 +5,14 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace IdeatecAPI.API.Controllers;
 
+public class FileUploadRequest
+{
+    public IFormFile File { get; set; } = null!;
+}
+
 [ApiController]
 [Route("api/companies")]
-[Authorize]
+// [Authorize]
 public class CompaniesController : ControllerBase
 {
     private readonly IEmpresaService _empresaService;
@@ -61,5 +66,28 @@ public class CompaniesController : ControllerBase
     {
         await _empresaService.DeleteEmpresaAsync(id);
         return NoContent();
+    }
+
+    [HttpPost("file/base64")]
+    [Consumes("multipart/form-data")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> FileToBase64([FromForm] FileUploadRequest request)
+    {
+        try
+        {
+            var file = request.File;
+            var result = await _empresaService.ConvertFileToBase64Async(
+                file.OpenReadStream(),
+                file.FileName,
+                file.ContentType,
+                file.Length
+            );
+            return Ok(result);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 }

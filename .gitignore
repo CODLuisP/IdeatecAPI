@@ -1,0 +1,49 @@
+# Build results
+bin/
+obj/
+
+# NuGet
+*.nuget.props
+*.nuget.dgspec.json
+nuget.g.props
+nuget.g.targets
+project.nuget.cache
+*.deps.json
+
+# Visual Studio cache/options
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Build logs
+*.log
+msbuild.log
+
+# Debug symbols
+*.pdb
+
+# Published output
+publish/
+PublishProfiles/
+
+# ASP.NET Scaffolding
+ScaffoldingReadMe.txt
+
+# Compiled assets
+*.dll
+*.exe
+
+# Cache files
+*.cache
+AssemblyInfo.*
+*.AssemblyReference.cache
+*.CoreCompileInputs.cache
+*.FileListAbsolute.txt
+*.genruntimeconfig.cache
+*.sourcelink.json
+
+# Razor/Blazor
+*.dwsa.cache.json
+rpswa.dswa.cache.json

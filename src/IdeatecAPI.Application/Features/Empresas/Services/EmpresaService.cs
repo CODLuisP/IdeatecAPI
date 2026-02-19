@@ -1,3 +1,4 @@
+using System.Text;
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Application.Features.Empresas.DTOs;
 using IdeatecAPI.Domain.Entities;
@@ -11,7 +12,11 @@ public interface IEmpresaService
     Task<EmpresaDto> CreateEmpresaAsync(CreateEmpresaDto dto);
     Task<EmpresaDto> UpdateEmpresaAsync(int id, UpdateEmpresaDto dto);
     Task DeleteEmpresaAsync(int id);
+    Task<FileToBase64Dto> ConvertFileToBase64Async(Stream fileStream, string fileName, string contentType, long sizeBytes);
+    Task<CertificadoResponseDto> ConvertCertificadoAsync(CertificadoRequestDto dto);
 }
+
+
 
 public class EmpresaService : IEmpresaService
 {
@@ -94,6 +99,116 @@ public class EmpresaService : IEmpresaService
         return MapToDto(empresa);
     }
 
+
+    public async Task<FileToBase64Dto> ConvertFileToBase64Async(Stream fileStream, string fileName, string contentType, long sizeBytes)
+    {
+        if (fileStream == null || sizeBytes == 0)
+            throw new ArgumentException("El archivo está vacío o no fue enviado");
+
+        var extensionesPermitidas = new[] { ".pfx", ".p12", ".png", ".jpg", ".jpeg" };
+        var extension = Path.GetExtension(fileName).ToLower();
+
+        if (!extensionesPermitidas.Any(e => e == extension))
+            throw new ArgumentException($"Extensión {extension} no permitida. Use: {string.Join(", ", extensionesPermitidas)}");
+
+        using var memoryStream = new MemoryStream();
+        await fileStream.CopyToAsync(memoryStream);
+        var base64 = Convert.ToBase64String(memoryStream.ToArray());
+
+        return new FileToBase64Dto
+        {
+            FileName = fileName,
+            ContentType = contentType,
+            Base64 = base64,
+            SizeBytes = sizeBytes
+        };
+    }
+    
+    
+
+
+    public Task<CertificadoResponseDto> ConvertCertificadoAsync(CertificadoRequestDto dto)
+{
+    try
+    {
+        // 1. Decodifica el Base64 a bytes del PFX
+        var pfxBytes = Convert.FromBase64String(dto.Cert);
+        var password = dto.CertPass.ToCharArray();
+
+        // 2. Carga el PFX con BouncyCastle
+        var pkcs12Store = new Org.BouncyCastle.Pkcs.Pkcs12StoreBuilder().Build();
+        using var stream = new MemoryStream(pfxBytes);
+
+        try
+        {
+            pkcs12Store.Load(stream, password);
+        }
+        catch
+        {
+            throw new ArgumentException("Contraseña del certificado incorrecta");
+        }
+
+        // 3. Extrae la clave privada y el certificado
+        string? alias = null;
+        foreach (string a in pkcs12Store.Aliases)
+        {
+            if (pkcs12Store.IsKeyEntry(a))
+            {
+                alias = a;
+                break;
+            }
+        }
+
+        if (alias == null)
+            throw new ArgumentException("No se encontró clave privada en el certificado");
+
+        var privateKey = pkcs12Store.GetKey(alias).Key;
+        var certChain = pkcs12Store.GetCertificateChain(alias);
+        var certificate = certChain[0].Certificate;
+
+        // 4. Construye el PEM (certificado + clave privada)
+        var pemBuilder = new StringBuilder();
+        var pemWriter = new Org.BouncyCastle.OpenSsl.PemWriter(new StringWriter(pemBuilder));
+        pemWriter.WriteObject(certificate);
+        pemWriter.WriteObject(privateKey);
+        pemWriter.Writer.Flush();
+
+        // 5. Construye el CER (solo certificado público)
+        var cerBuilder = new StringBuilder();
+        var cerWriter = new Org.BouncyCastle.OpenSsl.PemWriter(new StringWriter(cerBuilder));
+        cerWriter.WriteObject(certificate);
+        cerWriter.Writer.Flush();
+
+        // 6. Codifica ambos en Base64
+        var pemBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(pemBuilder.ToString()));
+        var cerBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(cerBuilder.ToString()));
+
+        return Task.FromResult(new CertificadoResponseDto
+        {
+            Pem = pemBase64,
+            Cer = cerBase64
+        });
+    }
+    catch (ArgumentException)
+    {
+        throw;
+    }
+    catch (Exception)
+    {
+        throw new ArgumentException("Error al procesar el certificado. Verifica que sea un archivo PFX/P12 válido");
+    }
+}
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
     public async Task DeleteEmpresaAsync(int id)
     {
         var empresa = await _unitOfWork.Empresas.GetEmpresaByIdAsync(id)
