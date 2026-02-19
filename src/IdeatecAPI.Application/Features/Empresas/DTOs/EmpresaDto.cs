@@ -9,6 +9,9 @@ public class EmpresaDto
     public string? Direccion { get; set; }
     public string? Ubigeo { get; set; }
     public string? Urbanizacion { get; set; }
+    public string? Provincia { get; set; }
+    public string? Departamento { get; set; }
+    public string? Distrito { get; set; }
     public string? Telefono { get; set; }
     public string? Email { get; set; }
     public string? LogoBase64 { get; set; }

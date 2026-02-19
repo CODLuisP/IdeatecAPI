@@ -12,7 +12,7 @@ public class UnitOfWork : IUnitOfWork
     private IDbConnection? _connection;
     private IDbTransaction? _transaction;
     private bool _disposed;
-    
+
     // Repositorios específicos
     private ICategoriaRepository? _categorias;
     private IUsuarioRepository? _usuarios;
@@ -20,7 +20,9 @@ public class UnitOfWork : IUnitOfWork
     private IDireccionRepository? _direccion;
 
     private IEmpresaRepository? _empresas;
-
+    private INoteRepository? _notes;
+    private INoteDetailRepository? _noteDetails;
+    private INoteLegendRepository? _noteLegends;
 
     public UnitOfWork(string connectionString)
     {
@@ -87,9 +89,42 @@ public class UnitOfWork : IUnitOfWork
         }
     }
 
+<<<<<<< HEAD
+=======
+    // Agregar propiedades públicas:
+    public INoteRepository Notes
+    {
+        get
+        {
+            _notes ??= new NoteRepository(Connection, _transaction);
+            return _notes;
+        }
+    }
+
+    public INoteDetailRepository NoteDetails
+    {
+        get
+        {
+            _noteDetails ??= new NoteDetailRepository(Connection, _transaction);
+            return _noteDetails;
+        }
+    }
+
+    public INoteLegendRepository NoteLegends
+    {
+        get
+        {
+            _noteLegends ??= new NoteLegendRepository(Connection, _transaction);
+            return _noteLegends;
+        }
+    }
+
+>>>>>>> e14d2dbe1d2ba38aad9401ce548c62fa911aef41
     public void BeginTransaction()
     {
         _transaction = Connection.BeginTransaction();
+        ResetRepositories(); // ← repos se crean con la transacción activa
+
     }
 
     public void Commit()
@@ -107,6 +142,8 @@ public class UnitOfWork : IUnitOfWork
         {
             _transaction?.Dispose();
             _transaction = null;
+            ResetRepositories(); // ← repos se recrean sin transacción
+
         }
     }
 
@@ -115,6 +152,19 @@ public class UnitOfWork : IUnitOfWork
         _transaction?.Rollback();
         _transaction?.Dispose();
         _transaction = null;
+        ResetRepositories(); // ← repos se recrean sin transacción
+
+    }
+
+    // Agregar este método privado al final de la clase
+    private void ResetRepositories()
+    {
+        _notes = null;
+        _noteDetails = null;
+        _noteLegends = null;
+        _empresas = null;
+        _usuarios = null;
+        _categorias = null;
     }
 
     public IRepository<T> Repository<T>() where T : class
