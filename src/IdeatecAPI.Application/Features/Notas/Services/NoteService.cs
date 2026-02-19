@@ -1,3 +1,4 @@
+using System.Text;
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Application.Features.Notas.DTOs;
 using IdeatecAPI.Domain.Entities;
@@ -10,16 +11,27 @@ public interface INoteService
     Task<NoteDto?> GetNoteByIdAsync(int comprobanteId);
     Task<NoteDto> CreateNoteAsync(int empresaId, int clienteId, CreateNoteDto dto);
     Task<NoteDto> UpdateEstadoSunatAsync(int comprobanteId, UpdateNoteEstadoDto dto);
+    Task<NoteDto> SendToSunatAsync(int comprobanteId, int empresaId);
     Task DeleteNoteAsync(int comprobanteId);
 }
 
 public class NoteService : INoteService
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IXmlNoteBuilderService _xmlBuilder;
+    private readonly IXmlSignerService _xmlSigner;
+    private readonly ISunatSenderService _sunatSender;
 
-    public NoteService(IUnitOfWork unitOfWork)
+    public NoteService(
+        IUnitOfWork unitOfWork,
+        IXmlNoteBuilderService xmlBuilder,
+        IXmlSignerService xmlSigner,
+        ISunatSenderService sunatSender)
     {
-        _unitOfWork = unitOfWork;
+        _unitOfWork  = unitOfWork;
+        _xmlBuilder  = xmlBuilder;
+        _xmlSigner   = xmlSigner;
+        _sunatSender = sunatSender;
     }
 
     public async Task<IEnumerable<NoteDto>> GetAllNotesAsync(int empresaId)
@@ -56,7 +68,7 @@ public class NoteService : INoteService
 
     public async Task<NoteDto> CreateNoteAsync(int empresaId, int clienteId, CreateNoteDto dto)
     {
-        // ── 1. Validaciones puras de negocio (sin tocar la BD) ───────────────
+        // ── 1. Validaciones puras de negocio (sin tocar la BD) ───────────
         if (dto.TipoDoc != "07" && dto.TipoDoc != "08")
             throw new InvalidOperationException("TipoDoc debe ser '07' (Nota de Crédito) o '08' (Nota de Débito)");
 
@@ -66,15 +78,15 @@ public class NoteService : INoteService
         if (dto.Details == null || dto.Details.Count == 0)
             throw new InvalidOperationException("La nota debe tener al menos un detalle");
 
-        // ── 2. BeginTransaction ANTES de cualquier acceso al repositorio ─────
+        // ── 2. BeginTransaction ANTES de cualquier acceso al repositorio ──
         _unitOfWork.BeginTransaction();
         try
         {
-            // ── 3. Validaciones que SÍ requieren BD (dentro de la transacción) ─
+            // ── 3. Validaciones que SÍ requieren BD ───────────────────────
             if (await _unitOfWork.Notes.ExisteNoteAsync(empresaId, dto.TipoDoc, dto.Serie, correlativoInt))
                 throw new InvalidOperationException($"Ya existe una nota {dto.Serie}-{dto.Correlativo}");
 
-            // ── 4. Crear la nota ─────────────────────────────────────────────
+            // ── 4. Crear la nota ──────────────────────────────────────────
             var note = new Note
             {
                 EmpresaId             = empresaId,
@@ -103,7 +115,6 @@ public class NoteService : INoteService
                 MtoOperGravadas       = dto.MtoOperGravadas,
                 MtoIGV                = dto.MtoIGV,
                 ValorVenta            = dto.ValorVenta,
-                TotalImpuestos        = dto.TotalImpuestos,
                 SubTotal              = dto.SubTotal,
                 MtoImpVenta           = dto.MtoImpVenta,
                 EstadoSunat           = "PENDIENTE",
@@ -113,7 +124,7 @@ public class NoteService : INoteService
             var newId = await _unitOfWork.Notes.CreateNoteAsync(note);
             note.ComprobanteId = newId;
 
-            // ── 5. Insertar detalles ─────────────────────────────────────────
+            // ── 5. Insertar detalles ──────────────────────────────────────
             for (int i = 0; i < dto.Details.Count; i++)
             {
                 var d = dto.Details[i];
@@ -121,6 +132,7 @@ public class NoteService : INoteService
                 {
                     ComprobanteId     = newId,
                     Item              = i + 1,
+                    ProductoId        = d.ProductoId,
                     CodProducto       = d.CodProducto,
                     Unidad            = d.Unidad,
                     Descripcion       = d.Descripcion,
@@ -131,14 +143,13 @@ public class NoteService : INoteService
                     PorcentajeIGV     = d.PorcentajeIgv,
                     Igv               = d.Igv,
                     TipAfeIgv         = d.TipAfeIgv,
-                    TotalImpuestos    = d.TotalImpuestos,
                     MtoPrecioUnitario = d.MtoPrecioUnitario,
                     TipoAfectacionIGV = d.TipAfeIgv.ToString()
                 };
                 await _unitOfWork.NoteDetails.CreateDetailAsync(detail);
             }
 
-            // ── 6. Insertar leyendas ─────────────────────────────────────────
+            // ── 6. Insertar leyendas ──────────────────────────────────────
             foreach (var l in dto.Legends)
             {
                 var legend = new NoteLegend
@@ -152,7 +163,7 @@ public class NoteService : INoteService
 
             _unitOfWork.Commit();
 
-            // ── 7. Recuperar con detalles y leyendas ya confirmados ──────────
+            // ── 7. Recuperar con detalles y leyendas ya confirmados ───────
             return await GetNoteByIdAsync(newId)
                 ?? throw new InvalidOperationException("Error al recuperar la nota creada");
         }
@@ -161,6 +172,71 @@ public class NoteService : INoteService
             _unitOfWork.Rollback();
             throw;
         }
+    }
+
+    public async Task<NoteDto> SendToSunatAsync(int comprobanteId, int empresaId)
+    {
+        // ── 1. Obtener la nota ────────────────────────────────────────────
+        var note = await _unitOfWork.Notes.GetNoteByIdAsync(comprobanteId)
+            ?? throw new KeyNotFoundException($"Nota {comprobanteId} no encontrada");
+
+        if (note.EstadoSunat == "ACEPTADO")
+            throw new InvalidOperationException("La nota ya fue aceptada por SUNAT");
+
+        // ── 2. Obtener empresa ────────────────────────────────────────────
+        var empresa = await _unitOfWork.Empresas.GetEmpresaByIdAsync(empresaId)
+            ?? throw new KeyNotFoundException($"Empresa {empresaId} no encontrada");
+
+        if (string.IsNullOrEmpty(empresa.CertificadoPem))
+            throw new InvalidOperationException("La empresa no tiene certificado digital configurado");
+
+        if (string.IsNullOrEmpty(empresa.SolUsuario) || string.IsNullOrEmpty(empresa.SolClave))
+            throw new InvalidOperationException("La empresa no tiene credenciales SOL configuradas");
+
+        // ── 3. Obtener detalles y leyendas ────────────────────────────────
+        var details = (await _unitOfWork.NoteDetails.GetByComprobanteIdAsync(comprobanteId)).ToList();
+        var legends = (await _unitOfWork.NoteLegends.GetByComprobanteIdAsync(comprobanteId)).ToList();
+
+        // ── 4. Generar XML ────────────────────────────────────────────────
+        var xmlSinFirmar = _xmlBuilder.BuildXml(note, empresa, details, legends);
+
+        // ── 5. Firmar XML → retorna bytes ─────────────────────────────────
+        var xmlFirmadoBytes = _xmlSigner.SignXmlToBytes(
+            xmlSinFirmar,
+            empresa.CertificadoPem!,
+            empresa.CertificadoPassword ?? "123456"
+        );
+
+        // Para guardar en BD convertimos a string
+        var xmlFirmadoString = Encoding.UTF8.GetString(xmlFirmadoBytes);
+
+        // ── 6. Nombre del archivo según SUNAT ─────────────────────────────
+        // Formato: RUC-TipoDoc-Serie-Correlativo
+        var nombreArchivo = $"{empresa.Ruc}-{note.TipoDoc}-{note.Serie}-{note.Correlativo}";
+
+        // ── 7. Enviar a SUNAT con bytes ───────────────────────────────────
+        var sunatResponse = await _sunatSender.SendNoteAsync(
+            xmlFirmadoBytes,
+            nombreArchivo,
+            empresa.SolUsuario!,
+            empresa.SolClave!,
+            empresa.Environment
+        );
+
+        // ── 8. Actualizar estado en BD ────────────────────────────────────
+        var nuevoEstado = sunatResponse.Success ? "ACEPTADO" : "RECHAZADO";
+
+        await _unitOfWork.Notes.UpdateEstadoSunatAsync(
+            comprobanteId,
+            nuevoEstado,
+            sunatResponse.CodigoRespuesta,
+            sunatResponse.Descripcion,
+            xmlFirmadoString,
+            sunatResponse.CdrBase64
+        );
+
+        return await GetNoteByIdAsync(comprobanteId)
+            ?? throw new InvalidOperationException("Error al recuperar la nota actualizada");
     }
 
     public async Task<NoteDto> UpdateEstadoSunatAsync(int comprobanteId, UpdateNoteEstadoDto dto)
@@ -187,7 +263,7 @@ public class NoteService : INoteService
             comprobanteId, "ANULADO", null, "Anulado por el usuario", null, null);
     }
 
-    // ── Mappers ──────────────────────────────────────────────────────────────
+    // ── Mappers ───────────────────────────────────────────────────────────
 
     private static NoteDto MapToDto(Note n) => new()
     {
@@ -229,7 +305,6 @@ public class NoteService : INoteService
         PorcentajeIgv     = d.PorcentajeIGV,
         Igv               = d.Igv,
         TipAfeIgv         = d.TipAfeIgv,
-        TotalImpuestos    = d.TotalImpuestos,
         MtoPrecioUnitario = d.MtoPrecioUnitario
     };
 

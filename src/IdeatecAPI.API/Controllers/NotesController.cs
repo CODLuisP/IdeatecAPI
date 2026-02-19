@@ -12,9 +12,25 @@ public class NotesController : ControllerBase
 {
     private readonly INoteService _noteService;
 
-    public NotesController(INoteService noteService)
+    public NotesController(
+    INoteService noteService
+    )
     {
         _noteService = noteService;
+
+    }
+
+    /// <summary>
+    /// Genera el XML, lo firma y lo envía a SUNAT
+    /// </summary>
+    [HttpPost("{comprobanteId}/send/{empresaId}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> SendToSunat(int comprobanteId, int empresaId)
+    {
+        var note = await _noteService.SendToSunatAsync(comprobanteId, empresaId);
+        return Ok(note);
     }
 
     /// <summary>

@@ -41,7 +41,6 @@ public class Note
     public decimal MtoOperGravadas { get; set; }
     public decimal MtoIGV { get; set; }
     public decimal? ValorVenta { get; set; }
-    public decimal TotalImpuestos { get; set; }
     public decimal? SubTotal { get; set; }
     public decimal MtoImpVenta { get; set; }
 

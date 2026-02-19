@@ -13,14 +13,33 @@ public class NoteDetailRepository : DapperRepository<NoteDetail>, INoteDetailRep
     }
 
     public async Task<IEnumerable<NoteDetail>> GetByComprobanteIdAsync(int comprobanteId)
-    {
-        var sql = @"
-            SELECT * FROM comprobanteDetalle 
-            WHERE comprobanteID = @ComprobanteId 
-            ORDER BY item";
+{
+    var sql = @"
+        SELECT
+            detalleID           AS DetalleId,
+            comprobanteID       AS ComprobanteId,
+            item                AS Item,
+            productoID          AS ProductoId,
+            codigo              AS CodProducto,
+            descripcion         AS Descripcion,
+            cantidad            AS Cantidad,
+            unidadMedida        AS Unidad,
+            precioUnitario      AS MtoValorUnitario,
+            valorVenta          AS MtoValorVenta,
+            precioVenta         AS MtoPrecioUnitario,
+            tipoAfectacionIGV   AS TipoAfectacionIGV,
+            porcentajeIGV       AS PorcentajeIGV,
+            montoIGV            AS Igv,
+            baseIgv             AS MtoBaseIgv,
+            descuentoUnitario   AS DescuentoUnitario,
+            descuentoTotal      AS DescuentoTotal
+        FROM comprobanteDetalle 
+        WHERE comprobanteID = @ComprobanteId 
+        ORDER BY item";
 
-        return await _connection.QueryAsync<NoteDetail>(sql, new { ComprobanteId = comprobanteId }, _transaction);
-    }
+    return await _connection.QueryAsync<NoteDetail>(sql, 
+        new { ComprobanteId = comprobanteId }, _transaction);
+}
 
     public async Task<int> CreateDetailAsync(NoteDetail detail)
     {
@@ -29,13 +48,13 @@ public class NoteDetailRepository : DapperRepository<NoteDetail>, INoteDetailRep
                 comprobanteID, item, productoID, codigo, descripcion,
                 cantidad, unidadMedida, precioUnitario,
                 tipoAfectacionIGV, porcentajeIGV, montoIGV,
-                descuentoUnitario, descuentoTotal,
+                baseIgv, descuentoUnitario, descuentoTotal,
                 valorVenta, precioVenta
             ) VALUES (
                 @ComprobanteId, @Item, @ProductoId, @CodProducto, @Descripcion,
                 @Cantidad, @Unidad, @MtoValorUnitario,
                 @TipoAfectacionIGV, @PorcentajeIGV, @Igv,
-                @DescuentoUnitario, @DescuentoTotal,
+                @MtoBaseIgv, @DescuentoUnitario, @DescuentoTotal,
                 @MtoValorVenta, @MtoPrecioUnitario
             );
             SELECT LAST_INSERT_ID();";

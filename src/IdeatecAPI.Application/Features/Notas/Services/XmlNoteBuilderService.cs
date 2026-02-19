@@ -1,4 +1,5 @@
 using System.Text;
+using System.Xml;
 using System.Xml.Linq;
 using IdeatecAPI.Domain.Entities;
 
@@ -18,19 +19,21 @@ public class XmlNoteBuilderService : IXmlNoteBuilderService
 
     public string BuildXml(Note note, Empresa empresa, List<NoteDetail> details, List<NoteLegend> legends)
     {
-        var ns = note.TipoDoc == "07" ? XNamespace.Get("urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2") : XNamespace.Get("urn:oasis:names:specification:ubl:schema:xsd:DebitNote-2");
+        var ns = note.TipoDoc == "07"
+            ? XNamespace.Get("urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2")
+            : XNamespace.Get("urn:oasis:names:specification:ubl:schema:xsd:DebitNote-2");
         var rootName = note.TipoDoc == "07" ? "CreditNote" : "DebitNote";
         var lineName = note.TipoDoc == "07" ? "CreditNoteLine" : "DebitNoteLine";
         var qtyName = note.TipoDoc == "07" ? "CreditedQuantity" : "DebitedQuantity";
 
         var doc = new XDocument(new XDeclaration("1.0", "UTF-8", null));
 
+        // ── 1. UBLExtensions + Signature + UBLVersionID + CustomizationID ────
         var root = new XElement(ns + rootName,
             new XAttribute(XNamespace.Xmlns + "cac", Cac),
             new XAttribute(XNamespace.Xmlns + "cbc", Cbc),
             new XAttribute(XNamespace.Xmlns + "ext", Ext),
 
-            // UBLExtensions (placeholder para la firma)
             new XElement(Ext + "UBLExtensions",
                 new XElement(Ext + "UBLExtension",
                     new XElement(Ext + "ExtensionContent"))),
@@ -39,11 +42,10 @@ public class XmlNoteBuilderService : IXmlNoteBuilderService
             new XElement(Cbc + "CustomizationID", "2.0"),
             new XElement(Cbc + "ID", $"{note.Serie}-{note.Correlativo}"),
             new XElement(Cbc + "IssueDate", note.FechaEmision.ToString("yyyy-MM-dd")),
-            new XElement(Cbc + "IssueTime", note.FechaEmision.ToString("HH:mm:ss")),
-            new XElement(Cbc + "DocumentCurrencyCode", note.TipoMoneda)
+            new XElement(Cbc + "IssueTime", note.FechaEmision.ToString("HH:mm:ss"))
         );
 
-        // Leyendas
+        // ── 2. Leyendas van después de IssueTime según guía SUNAT ────────────
         foreach (var legend in legends)
         {
             root.Add(new XElement(Cbc + "Note",
@@ -51,7 +53,11 @@ public class XmlNoteBuilderService : IXmlNoteBuilderService
                 legend.Value));
         }
 
-        // Referencia al comprobante afectado
+        // ── 3. DocumentCurrencyCode y LineCountNumeric ────────────────────────
+        root.Add(new XElement(Cbc + "DocumentCurrencyCode", note.TipoMoneda));
+        root.Add(new XElement(Cbc + "LineCountNumeric", details.Count));
+
+        // ── 4. Referencia al comprobante afectado ─────────────────────────────
         root.Add(
             new XElement(Cac + "DiscrepancyResponse",
                 new XElement(Cbc + "ReferenceID", note.NumDocAfectado),
@@ -64,19 +70,18 @@ public class XmlNoteBuilderService : IXmlNoteBuilderService
                     new XElement(Cbc + "DocumentTypeCode", note.TipDocAfectado)))
         );
 
-        // Firma (placeholder, se completa al firmar)
         root.Add(BuildSignatureSection(empresa));
 
-        // Emisor
+        // ── 5. Emisor ─────────────────────────────────────────────────────────
         root.Add(BuildSupplierParty(empresa));
 
-        // Cliente
+        // ── 6. Cliente ────────────────────────────────────────────────────────
         root.Add(BuildCustomerParty(note));
 
-        // Totales de impuestos
+        // ── 7. Totales de impuestos ───────────────────────────────────────────
         root.Add(BuildTaxTotal(note.MtoOperGravadas, note.MtoIGV, note.TipoMoneda));
 
-        // Total monetario
+        // ── 8. Total monetario ────────────────────────────────────────────────
         root.Add(new XElement(Cac + "LegalMonetaryTotal",
             new XElement(Cbc + "LineExtensionAmount",
                 new XAttribute("currencyID", note.TipoMoneda),
@@ -88,7 +93,7 @@ public class XmlNoteBuilderService : IXmlNoteBuilderService
                 new XAttribute("currencyID", note.TipoMoneda),
                 note.MtoImpVenta.ToString("F2"))));
 
-        // Líneas de detalle
+        // ── 9. Líneas de detalle ──────────────────────────────────────────────
         for (int i = 0; i < details.Count; i++)
         {
             root.Add(BuildDetailLine(details[i], i + 1, lineName, qtyName, note.TipoMoneda));
@@ -96,12 +101,16 @@ public class XmlNoteBuilderService : IXmlNoteBuilderService
 
         doc.Add(root);
 
-        var sb = new StringBuilder();
-        using var writer = new System.IO.StringWriter(sb);
-        doc.Save(writer);
-        return sb.ToString();
+        using var ms = new MemoryStream();
+        using var xw = XmlWriter.Create(ms, new XmlWriterSettings
+        {
+            Encoding = new UTF8Encoding(false),
+            Indent = true
+        });
+        doc.Save(xw);
+        xw.Flush();
+        return Encoding.UTF8.GetString(ms.ToArray());
     }
-
     private static XElement BuildSignatureSection(Empresa empresa) =>
         new(Cac + "Signature",
             new XElement(Cbc + "ID", "IDSignKG"),

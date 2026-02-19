@@ -1,4 +1,4 @@
-using System.Text;                                                         
+using System.Text;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
@@ -16,7 +16,7 @@ namespace IdeatecAPI.Infrastructure;
 public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(
-        this IServiceCollection services, 
+        this IServiceCollection services,
         IConfiguration configuration)
     {
         var connectionString = configuration.GetConnectionString("DefaultConnection")
@@ -24,7 +24,11 @@ public static class DependencyInjection
 
         // Registrar UnitOfWork
         services.AddScoped<IUnitOfWork>(provider => new UnitOfWork(connectionString));
-        
+
+        // HttpClient para SUNAT
+        services.AddHttpClient();
+
+
         // Registrar Servicios de Categorías
         services.AddScoped<ICategoriaService, CategoriaService>();
         services.AddScoped<IClienteService, ClienteService>();
@@ -34,14 +38,18 @@ public static class DependencyInjection
         // ========================================
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IAuthService, AuthService>();
-        services.AddScoped<IUsuarioService, UsuarioService>(); 
-        
+        services.AddScoped<IUsuarioService, UsuarioService>();
+
         services.AddScoped<IEmpresaService, EmpresaService>();
         services.AddScoped<INoteService, NoteService>();
+        services.AddScoped<IXmlNoteBuilderService, XmlNoteBuilderService>();
+        services.AddScoped<IXmlSignerService, XmlSignerService>();
+        services.AddScoped<ISunatSenderService, SunatSenderService>();
+
         // ========================================
         // JWT AUTHENTICATION (NUEVO)
         // ========================================
-        var jwtSecret = configuration["JwtSettings:Secret"] 
+        var jwtSecret = configuration["JwtSettings:Secret"]
             ?? throw new InvalidOperationException("JWT Secret not configured in appsettings.json");
 
         var key = Encoding.UTF8.GetBytes(jwtSecret);
@@ -68,7 +76,7 @@ public static class DependencyInjection
             };
         });
 
-        services.AddAuthorization();                                        
+        services.AddAuthorization();
 
         return services;
     }
