@@ -5,6 +5,7 @@ public interface IUnitOfWork : IDisposable
     // Repositorios específicos
     ICategoriaRepository Categorias { get; }
     IUsuarioRepository Usuarios { get; } 
+    IClienteRepository clientes {get; }
     
     // Transacciones
     void BeginTransaction();
