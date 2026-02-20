@@ -23,13 +23,13 @@ public class NotesController : ControllerBase
     /// <summary>
     /// Genera el XML, lo firma y lo envía a SUNAT
     /// </summary>
-    [HttpPost("{comprobanteId}/send/{empresaId}")]
+    [HttpPost("{comprobanteId}/send")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> SendToSunat(int comprobanteId, int empresaId)
+    public async Task<IActionResult> SendToSunat(int comprobanteId)
     {
-        var note = await _noteService.SendToSunatAsync(comprobanteId, empresaId);
+        var note = await _noteService.SendToSunatAsync(comprobanteId);
         return Ok(note);
     }
 
@@ -62,13 +62,13 @@ public class NotesController : ControllerBase
     /// <summary>
     /// Crea una nueva nota de crédito o débito
     /// </summary>
-    [HttpPost("{empresaId}/cliente/{clienteId}")]
+    [HttpPost]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> Create(int empresaId, int clienteId, [FromBody] CreateNoteDto dto)
+    public async Task<IActionResult> Create([FromBody] CreateNoteDto dto)
     {
-        var note = await _noteService.CreateNoteAsync(empresaId, clienteId, dto);
+        var note = await _noteService.CreateNoteAsync(dto);
         return CreatedAtAction(nameof(GetById), new { comprobanteId = note.ComprobanteId }, note);
     }
 

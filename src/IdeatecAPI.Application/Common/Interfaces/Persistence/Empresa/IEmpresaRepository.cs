@@ -10,6 +10,5 @@ public interface IEmpresaRepository : IRepository<Empresa>
     Task<int> CreateEmpresaAsync(Empresa empresa);
     Task UpdateEmpresaAsync(Empresa empresa);
     Task DeleteEmpresaAsync(int id);
-
-    
+    Task<Empresa?> GetEmpresaByRucAsync(string ruc);   
 }

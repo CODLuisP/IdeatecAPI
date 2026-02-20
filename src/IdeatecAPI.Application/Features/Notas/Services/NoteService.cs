@@ -9,9 +9,9 @@ public interface INoteService
 {
     Task<IEnumerable<NoteDto>> GetAllNotesAsync(int empresaId);
     Task<NoteDto?> GetNoteByIdAsync(int comprobanteId);
-    Task<NoteDto> CreateNoteAsync(int empresaId, int clienteId, CreateNoteDto dto);
+    Task<NoteDto> CreateNoteAsync(CreateNoteDto dto);
     Task<NoteDto> UpdateEstadoSunatAsync(int comprobanteId, UpdateNoteEstadoDto dto);
-    Task<NoteDto> SendToSunatAsync(int comprobanteId, int empresaId);
+    Task<NoteDto> SendToSunatAsync(int comprobanteId);
     Task DeleteNoteAsync(int comprobanteId);
 }
 
@@ -28,9 +28,9 @@ public class NoteService : INoteService
         IXmlSignerService xmlSigner,
         ISunatSenderService sunatSender)
     {
-        _unitOfWork  = unitOfWork;
-        _xmlBuilder  = xmlBuilder;
-        _xmlSigner   = xmlSigner;
+        _unitOfWork = unitOfWork;
+        _xmlBuilder = xmlBuilder;
+        _xmlSigner = xmlSigner;
         _sunatSender = sunatSender;
     }
 
@@ -66,11 +66,11 @@ public class NoteService : INoteService
         return dto;
     }
 
-    public async Task<NoteDto> CreateNoteAsync(int empresaId, int clienteId, CreateNoteDto dto)
+    public async Task<NoteDto> CreateNoteAsync(CreateNoteDto dto)
     {
-        // ── 1. Validaciones puras de negocio (sin tocar la BD) ───────────
+        // ── 1. Validaciones puras ─────────────────────────────────────────────
         if (dto.TipoDoc != "07" && dto.TipoDoc != "08")
-            throw new InvalidOperationException("TipoDoc debe ser '07' (Nota de Crédito) o '08' (Nota de Débito)");
+            throw new InvalidOperationException("TipoDoc debe ser '07' o '08'");
 
         if (!int.TryParse(dto.Correlativo, out var correlativoInt))
             throw new InvalidOperationException("El correlativo debe ser un número entero");
@@ -78,92 +78,98 @@ public class NoteService : INoteService
         if (dto.Details == null || dto.Details.Count == 0)
             throw new InvalidOperationException("La nota debe tener al menos un detalle");
 
-        // ── 2. BeginTransaction ANTES de cualquier acceso al repositorio ──
+        // ── 2. Buscar empresa por RUC ─────────────────────────────────────────
+        var empresa = await _unitOfWork.Empresas.GetEmpresaByRucAsync(dto.Company.Ruc)
+            ?? throw new KeyNotFoundException($"Empresa con RUC {dto.Company.Ruc} no encontrada");
+
+        // ── 3. ClienteId  ────────────
+        var cliente = await _unitOfWork.Clientes.GetByNumDocAsync(dto.Client.NumDoc);
+        var clienteId = cliente?.ClienteId;
+
+        // ── 4. BeginTransaction ───────────────────────────────────────────────
         _unitOfWork.BeginTransaction();
         try
         {
-            // ── 3. Validaciones que SÍ requieren BD ───────────────────────
-            if (await _unitOfWork.Notes.ExisteNoteAsync(empresaId, dto.TipoDoc, dto.Serie, correlativoInt))
+            if (await _unitOfWork.Notes.ExisteNoteAsync(empresa.Id, dto.TipoDoc, dto.Serie, correlativoInt))
                 throw new InvalidOperationException($"Ya existe una nota {dto.Serie}-{dto.Correlativo}");
 
-            // ── 4. Crear la nota ──────────────────────────────────────────
             var note = new Note
             {
-                EmpresaId             = empresaId,
-                ClienteId             = clienteId,
-                TipoDoc               = dto.TipoDoc,
-                Serie                 = dto.Serie,
-                Correlativo           = correlativoInt,
-                FechaEmision          = dto.FechaEmision,
-                TipoMoneda            = dto.TipoMoneda,
-                TipoOperacion         = dto.TipoOperacion,
+                EmpresaId = empresa.Id,
+                ClienteId = clienteId,
+                TipoDoc = dto.TipoDoc,
+                Serie = dto.Serie,
+                Correlativo = correlativoInt,
+                FechaEmision = dto.FechaEmision,
+                TipoMoneda = dto.TipoMoneda,
+                TipoOperacion = dto.TipoOperacion,
                 ComprobanteAfectadoId = dto.ComprobanteAfectadoId,
-                TipDocAfectado        = dto.TipDocAfectado,
-                NumDocAfectado        = dto.NumDocAfectado,
+                TipDocAfectado = dto.TipDocAfectado,
+                NumDocAfectado = dto.NumDocAfectado,
                 TipoNotaCreditoDebito = dto.CodMotivo,
-                MotivoNota            = dto.DesMotivo,
-                ClienteTipoDoc        = dto.Client.TipoDoc,
-                ClienteNumDoc         = dto.Client.NumDoc,
-                ClienteRznSocial      = dto.Client.RznSocial,
-                ClienteDireccion      = dto.Client.Address?.Direccion,
-                ClienteProvincia      = dto.Client.Address?.Provincia,
-                ClienteDepartamento   = dto.Client.Address?.Departamento,
-                ClienteDistrito       = dto.Client.Address?.Distrito,
-                ClienteUbigeo         = dto.Client.Address?.Ubigueo,
-                FormaPagoMoneda       = dto.FormaPago?.Moneda,
-                FormaPagoTipo         = dto.FormaPago?.Tipo,
-                MtoOperGravadas       = dto.MtoOperGravadas,
-                MtoIGV                = dto.MtoIGV,
-                ValorVenta            = dto.ValorVenta,
-                SubTotal              = dto.SubTotal,
-                MtoImpVenta           = dto.MtoImpVenta,
-                EstadoSunat           = "PENDIENTE",
-                FechaCreacion         = DateTime.UtcNow
+                MotivoNota = dto.DesMotivo,
+                ClienteTipoDoc = dto.Client.TipoDoc,
+                ClienteNumDoc = dto.Client.NumDoc,
+                ClienteRznSocial = dto.Client.RznSocial,
+                ClienteDireccion = dto.Client.Address?.Direccion,
+                ClienteProvincia = dto.Client.Address?.Provincia,
+                ClienteDepartamento = dto.Client.Address?.Departamento,
+                ClienteDistrito = dto.Client.Address?.Distrito,
+                ClienteUbigeo = dto.Client.Address?.Ubigueo,
+                EmpresaRuc = dto.Company.Ruc,
+                EmpresaRazonSocial = dto.Company.RazonSocial,
+                EmpresaNombreComercial = dto.Company.NombreComercial,
+                EmpresaDireccion = dto.Company.Address?.Direccion,
+                EmpresaProvincia = dto.Company.Address?.Provincia,
+                EmpresaDepartamento = dto.Company.Address?.Departamento,
+                EmpresaDistrito = dto.Company.Address?.Distrito,
+                EmpresaUbigeo = dto.Company.Address?.Ubigueo,
+                MtoOperGravadas = dto.MtoOperGravadas,
+                MtoIGV = dto.MtoIGV,
+                ValorVenta = dto.ValorVenta,
+                SubTotal = dto.SubTotal,
+                MtoImpVenta = dto.MtoImpVenta,
+                EstadoSunat = "PENDIENTE",
+                FechaCreacion = DateTime.UtcNow
             };
 
             var newId = await _unitOfWork.Notes.CreateNoteAsync(note);
-            note.ComprobanteId = newId;
 
-            // ── 5. Insertar detalles ──────────────────────────────────────
             for (int i = 0; i < dto.Details.Count; i++)
             {
                 var d = dto.Details[i];
-                var detail = new NoteDetail
-                {
-                    ComprobanteId     = newId,
-                    Item              = i + 1,
-                    ProductoId        = d.ProductoId,
-                    CodProducto       = d.CodProducto,
-                    Unidad            = d.Unidad,
-                    Descripcion       = d.Descripcion,
-                    Cantidad          = d.Cantidad,
-                    MtoValorUnitario  = d.MtoValorUnitario,
-                    MtoValorVenta     = d.MtoValorVenta,
-                    MtoBaseIgv        = d.MtoBaseIgv,
-                    PorcentajeIGV     = d.PorcentajeIgv,
-                    Igv               = d.Igv,
-                    TipAfeIgv         = d.TipAfeIgv,
-                    MtoPrecioUnitario = d.MtoPrecioUnitario,
-                    TipoAfectacionIGV = d.TipAfeIgv.ToString()
-                };
-                await _unitOfWork.NoteDetails.CreateDetailAsync(detail);
-            }
-
-            // ── 6. Insertar leyendas ──────────────────────────────────────
-            foreach (var l in dto.Legends)
-            {
-                var legend = new NoteLegend
+                await _unitOfWork.NoteDetails.CreateDetailAsync(new NoteDetail
                 {
                     ComprobanteId = newId,
-                    Code          = l.Code,
-                    Value         = l.Value
-                };
-                await _unitOfWork.NoteLegends.CreateLegendAsync(legend);
+                    Item = i + 1,
+                    ProductoId = d.ProductoId,
+                    CodProducto = d.CodProducto,
+                    Unidad = d.Unidad,
+                    Descripcion = d.Descripcion,
+                    Cantidad = d.Cantidad,
+                    MtoValorUnitario = d.MtoValorUnitario,
+                    MtoValorVenta = d.MtoValorVenta,
+                    MtoBaseIgv = d.MtoBaseIgv,
+                    PorcentajeIGV = d.PorcentajeIgv,
+                    Igv = d.Igv,
+                    TipAfeIgv = d.TipAfeIgv,
+                    MtoPrecioUnitario = d.MtoPrecioUnitario,
+                    TipoAfectacionIGV = d.TipAfeIgv.ToString()
+                });
+            }
+
+            foreach (var l in dto.Legends)
+            {
+                await _unitOfWork.NoteLegends.CreateLegendAsync(new NoteLegend
+                {
+                    ComprobanteId = newId,
+                    Code = l.Code,
+                    Value = l.Value
+                });
             }
 
             _unitOfWork.Commit();
 
-            // ── 7. Recuperar con detalles y leyendas ya confirmados ───────
             return await GetNoteByIdAsync(newId)
                 ?? throw new InvalidOperationException("Error al recuperar la nota creada");
         }
@@ -174,18 +180,17 @@ public class NoteService : INoteService
         }
     }
 
-    public async Task<NoteDto> SendToSunatAsync(int comprobanteId, int empresaId)
+    public async Task<NoteDto> SendToSunatAsync(int comprobanteId)
     {
-        // ── 1. Obtener la nota ────────────────────────────────────────────
         var note = await _unitOfWork.Notes.GetNoteByIdAsync(comprobanteId)
             ?? throw new KeyNotFoundException($"Nota {comprobanteId} no encontrada");
 
         if (note.EstadoSunat == "ACEPTADO")
             throw new InvalidOperationException("La nota ya fue aceptada por SUNAT");
 
-        // ── 2. Obtener empresa ────────────────────────────────────────────
-        var empresa = await _unitOfWork.Empresas.GetEmpresaByIdAsync(empresaId)
-            ?? throw new KeyNotFoundException($"Empresa {empresaId} no encontrada");
+        // ← Usar EmpresaId guardado en la nota, sin parámetro externo
+        var empresa = await _unitOfWork.Empresas.GetEmpresaByIdAsync(note.EmpresaId)
+            ?? throw new KeyNotFoundException($"Empresa {note.EmpresaId} no encontrada");
 
         if (string.IsNullOrEmpty(empresa.CertificadoPem))
             throw new InvalidOperationException("La empresa no tiene certificado digital configurado");
@@ -193,28 +198,20 @@ public class NoteService : INoteService
         if (string.IsNullOrEmpty(empresa.SolUsuario) || string.IsNullOrEmpty(empresa.SolClave))
             throw new InvalidOperationException("La empresa no tiene credenciales SOL configuradas");
 
-        // ── 3. Obtener detalles y leyendas ────────────────────────────────
         var details = (await _unitOfWork.NoteDetails.GetByComprobanteIdAsync(comprobanteId)).ToList();
         var legends = (await _unitOfWork.NoteLegends.GetByComprobanteIdAsync(comprobanteId)).ToList();
 
-        // ── 4. Generar XML ────────────────────────────────────────────────
-        var xmlSinFirmar = _xmlBuilder.BuildXml(note, empresa, details, legends);
+        var xmlSinFirmar = _xmlBuilder.BuildXml(note, details, legends);
 
-        // ── 5. Firmar XML → retorna bytes ─────────────────────────────────
         var xmlFirmadoBytes = _xmlSigner.SignXmlToBytes(
             xmlSinFirmar,
             empresa.CertificadoPem!,
             empresa.CertificadoPassword ?? "123456"
         );
 
-        // Para guardar en BD convertimos a string
         var xmlFirmadoString = Encoding.UTF8.GetString(xmlFirmadoBytes);
+        var nombreArchivo = $"{empresa.Ruc}-{note.TipoDoc}-{note.Serie}-{note.Correlativo:D8}";
 
-        // ── 6. Nombre del archivo según SUNAT ─────────────────────────────
-        // Formato: RUC-TipoDoc-Serie-Correlativo
-        var nombreArchivo = $"{empresa.Ruc}-{note.TipoDoc}-{note.Serie}-{note.Correlativo}";
-
-        // ── 7. Enviar a SUNAT con bytes ───────────────────────────────────
         var sunatResponse = await _sunatSender.SendNoteAsync(
             xmlFirmadoBytes,
             nombreArchivo,
@@ -223,7 +220,6 @@ public class NoteService : INoteService
             empresa.Environment
         );
 
-        // ── 8. Actualizar estado en BD ────────────────────────────────────
         var nuevoEstado = sunatResponse.Success ? "ACEPTADO" : "RECHAZADO";
 
         await _unitOfWork.Notes.UpdateEstadoSunatAsync(
@@ -267,50 +263,50 @@ public class NoteService : INoteService
 
     private static NoteDto MapToDto(Note n) => new()
     {
-        ComprobanteId         = n.ComprobanteId,
-        TipoDoc               = n.TipoDoc,
-        Serie                 = n.Serie,
-        Correlativo           = n.Correlativo,
-        NumeroCompleto        = n.NumeroCompleto,
-        FechaEmision          = n.FechaEmision,
-        TipoMoneda            = n.TipoMoneda,
+        ComprobanteId = n.ComprobanteId,
+        TipoDoc = n.TipoDoc,
+        Serie = n.Serie,
+        Correlativo = n.Correlativo,
+        NumeroCompleto = n.NumeroCompleto,
+        FechaEmision = n.FechaEmision,
+        TipoMoneda = n.TipoMoneda,
         ComprobanteAfectadoId = n.ComprobanteAfectadoId,
-        TipDocAfectado        = n.TipDocAfectado,
-        NumDocAfectado        = n.NumDocAfectado,
-        CodMotivo             = n.TipoNotaCreditoDebito,
-        DesMotivo             = n.MotivoNota,
-        ClienteTipoDoc        = n.ClienteTipoDoc,
-        ClienteNumDoc         = n.ClienteNumDoc,
-        ClienteRznSocial      = n.ClienteRznSocial,
-        MtoOperGravadas       = n.MtoOperGravadas,
-        MtoIGV                = n.MtoIGV,
-        MtoImpVenta           = n.MtoImpVenta,
-        EstadoSunat           = n.EstadoSunat,
-        CodigoRespuestaSunat  = n.CodigoRespuestaSunat,
+        TipDocAfectado = n.TipDocAfectado,
+        NumDocAfectado = n.NumDocAfectado,
+        CodMotivo = n.TipoNotaCreditoDebito,
+        DesMotivo = n.MotivoNota,
+        ClienteTipoDoc = n.ClienteTipoDoc,
+        ClienteNumDoc = n.ClienteNumDoc,
+        ClienteRznSocial = n.ClienteRznSocial,
+        MtoOperGravadas = n.MtoOperGravadas,
+        MtoIGV = n.MtoIGV,
+        MtoImpVenta = n.MtoImpVenta,
+        EstadoSunat = n.EstadoSunat,
+        CodigoRespuestaSunat = n.CodigoRespuestaSunat,
         MensajeRespuestaSunat = n.MensajeRespuestaSunat,
-        FechaEnvioSunat       = n.FechaEnvioSunat,
-        FechaCreacion         = n.FechaCreacion
+        FechaEnvioSunat = n.FechaEnvioSunat,
+        FechaCreacion = n.FechaCreacion
     };
 
     private static NoteDetailDto MapDetailToDto(NoteDetail d) => new()
     {
-        DetalleId         = d.DetalleId,
-        CodProducto       = d.CodProducto,
-        Unidad            = d.Unidad,
-        Descripcion       = d.Descripcion,
-        Cantidad          = d.Cantidad,
-        MtoValorUnitario  = d.MtoValorUnitario,
-        MtoValorVenta     = d.MtoValorVenta,
-        MtoBaseIgv        = d.MtoBaseIgv,
-        PorcentajeIgv     = d.PorcentajeIGV,
-        Igv               = d.Igv,
-        TipAfeIgv         = d.TipAfeIgv,
+        DetalleId = d.DetalleId,
+        CodProducto = d.CodProducto,
+        Unidad = d.Unidad,
+        Descripcion = d.Descripcion,
+        Cantidad = d.Cantidad,
+        MtoValorUnitario = d.MtoValorUnitario,
+        MtoValorVenta = d.MtoValorVenta,
+        MtoBaseIgv = d.MtoBaseIgv,
+        PorcentajeIgv = d.PorcentajeIGV,
+        Igv = d.Igv,
+        TipAfeIgv = d.TipAfeIgv,
         MtoPrecioUnitario = d.MtoPrecioUnitario
     };
 
     private static NoteLegendDto MapLegendToDto(NoteLegend l) => new()
     {
-        Code  = l.Code,
+        Code = l.Code,
         Value = l.Value
     };
 }

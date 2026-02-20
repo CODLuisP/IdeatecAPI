@@ -49,34 +49,40 @@ namespace IdeatecAPI.Infrastructure.Persistence.Repositories.Clientes
                         AND d.tipoDireccion = 'FISCAL'
                         AND d.estado = 1
                     ORDER BY c.clienteID;";
-    var clientes = await _connection.QueryAsync<Cliente, TipoDocumento, Direccion, Cliente>(
-        sql,
-        (cliente, tipoDoc, direccion) =>
+            var clientes = await _connection.QueryAsync<Cliente, TipoDocumento, Direccion, Cliente>(
+                sql,
+                (cliente, tipoDoc, direccion) =>
+                {
+                    cliente.TipoDocumentoCliente = tipoDoc;
+
+                    if (direccion != null && direccion.DireccionId != 0)
+                        cliente.Direcciones = new List<Direccion> { direccion };
+                    else
+                        cliente.Direcciones = new List<Direccion>();
+
+                    return cliente;
+                },
+                transaction: _transaction,
+                splitOn: "TipoDocumentoId,DireccionId"
+            );
+
+            return clientes;
+        }
+
+        public async Task<int> RegistrarClienteAsync(Cliente cliente)
         {
-            cliente.TipoDocumentoCliente = tipoDoc;
-
-            if (direccion != null && direccion.DireccionId != 0)
-                cliente.Direcciones = new List<Direccion> { direccion };
-            else
-                cliente.Direcciones = new List<Direccion>();
-
-            return cliente;
-        },
-        transaction: _transaction,
-        splitOn: "TipoDocumentoId,DireccionId"
-    );
-
-    return clientes;
-    }
-    
-    public async Task<int> RegistrarClienteAsync(Cliente cliente)
-    {
-        var sql = @"
+            var sql = @"
             INSERT INTO cliente (tipoDocumentoId, numeroDocumento, razonSocial, nombreComercial, telefono, email)
             VALUES (@TipoDocumentoId, @NumeroDocumento, @RazonSocialNombre, @NombreComercial, @Telefono, @Correo);
             SELECT LAST_INSERT_ID();";
 
-        return await _connection.ExecuteScalarAsync<int>(sql, cliente, _transaction);
-    }
+            return await _connection.ExecuteScalarAsync<int>(sql, cliente, _transaction);
+        }
+
+        public async Task<Cliente?> GetByNumDocAsync(string numeroDocumento)
+        {
+            var sql = "SELECT * FROM cliente WHERE numeroDocumento = @NumeroDocumento AND estado = 1";
+            return await _connection.QueryFirstOrDefaultAsync<Cliente>(sql, new { NumeroDocumento = numeroDocumento }, _transaction);
+        }
     }
 }

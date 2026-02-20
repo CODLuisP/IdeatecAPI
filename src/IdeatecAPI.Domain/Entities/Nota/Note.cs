@@ -4,7 +4,7 @@ public class Note
 {
     public int ComprobanteId { get; set; }
     public int EmpresaId { get; set; }
-    public int ClienteId { get; set; }
+    public int? ClienteId { get; set; }
 
     // Identificación del comprobante
     public string UblVersion { get; set; } = "2.1";
@@ -32,6 +32,16 @@ public class Note
     public string? ClienteDepartamento { get; set; }
     public string? ClienteDistrito { get; set; }
     public string? ClienteUbigeo { get; set; }
+
+    //Empresa (denormalizado para el XML)
+    public string? EmpresaRuc { get; set; }
+    public string? EmpresaRazonSocial { get; set; }
+    public string? EmpresaNombreComercial { get; set; }
+    public string? EmpresaDireccion { get; set; }
+    public string? EmpresaProvincia { get; set; }
+    public string? EmpresaDepartamento { get; set; }
+    public string? EmpresaDistrito { get; set; }
+    public string? EmpresaUbigeo { get; set; }
 
     // Forma de pago
     public string? FormaPagoMoneda { get; set; }

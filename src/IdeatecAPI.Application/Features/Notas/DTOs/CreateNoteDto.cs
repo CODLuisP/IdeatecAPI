@@ -21,6 +21,8 @@ public class CreateNoteDto
     // Cliente
     public CreateNoteClientDto Client { get; set; } = new();
 
+    public CreateNoteCompanyDto Company { get; set; } = new();
+
     // Forma de pago (opcional, aplica más a notas de débito)
     public CreateNoteFormaPagoDto? FormaPago { get; set; }
 

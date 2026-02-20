@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using IdeatecAPI.Domain.Entities.CatalogosSunat;
 
 namespace IdeatecAPI.Domain.Entities.Cliente

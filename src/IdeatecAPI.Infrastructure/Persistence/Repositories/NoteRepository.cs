@@ -50,7 +50,15 @@ public class NoteRepository : DapperRepository<Note>, INoteRepository
             clienteProvincia        AS ClienteProvincia,
             clienteDepartamento     AS ClienteDepartamento,
             clienteDistrito         AS ClienteDistrito,
-            clienteUbigeo           AS ClienteUbigeo
+            clienteUbigeo           AS ClienteUbigeo,
+            empresaRuc            AS EmpresaRuc,
+            empresaRazonSocial    AS EmpresaRazonSocial,
+            empresaNombreComercial AS EmpresaNombreComercial,
+            empresaDireccion      AS EmpresaDireccion,
+            empresaProvincia      AS EmpresaProvincia,
+            empresaDepartamento   AS EmpresaDepartamento,
+            empresaDistrito       AS EmpresaDistrito,
+            empresaUbigeo         AS EmpresaUbigeo,
         FROM comprobante 
             WHERE empresaID = @EmpresaId 
               AND tipoComprobante IN ('07', '08')
@@ -98,7 +106,15 @@ public class NoteRepository : DapperRepository<Note>, INoteRepository
             clienteProvincia        AS ClienteProvincia,
             clienteDepartamento     AS ClienteDepartamento,
             clienteDistrito         AS ClienteDistrito,
-            clienteUbigeo           AS ClienteUbigeo
+            clienteUbigeo           AS ClienteUbigeo,
+            empresaRuc            AS EmpresaRuc,
+            empresaRazonSocial    AS EmpresaRazonSocial,
+            empresaNombreComercial AS EmpresaNombreComercial,
+            empresaDireccion      AS EmpresaDireccion,
+            empresaProvincia      AS EmpresaProvincia,
+            empresaDepartamento   AS EmpresaDepartamento,
+            empresaDistrito       AS EmpresaDistrito,
+            empresaUbigeo         AS EmpresaUbigeo
         FROM comprobante 
         WHERE comprobanteID = @ComprobanteId 
           AND tipoComprobante IN ('07', '08')";
@@ -168,33 +184,49 @@ public class NoteRepository : DapperRepository<Note>, INoteRepository
     public async Task<int> CreateNoteAsync(Note note)
     {
         var sql = @"
-            INSERT INTO comprobante (
-                empresaID, clienteID, tipoComprobante, serie, correlativo,
-                fechaEmision, horaEmision, tipoMoneda,
-                totalOperacionesGravadas, totalIGV, totalDescuentos,
-                totalOtrosCargos, importeTotal,
-                comprobanteAfectadoID, tipDocAfectado, numDocAfectado,
-                tipoNotaCreditoDebito, motivoNota,
-                estadoSunat, usuarioCreacion, fechaCreacion, clienteTipoDoc, clienteNumDoc, clienteRznSocial,
-                clienteDireccion, clienteProvincia, clienteDepartamento,
-                clienteDistrito, clienteUbigeo
-            ) VALUES (
-                @EmpresaId, @ClienteId, @TipoDoc, @Serie, @Correlativo,
-                @FechaEmision, @HoraEmision, @TipoMoneda,
-                @MtoOperGravadas, @MtoIGV, @TotalDescuentos,
-                @TotalOtrosCargos, @MtoImpVenta,
-                @ComprobanteAfectadoId, @TipDocAfectado, @NumDocAfectado,
-                @TipoNotaCreditoDebito, @MotivoNota,
-                @EstadoSunat, @UsuarioCreacion, @FechaCreacion, @ClienteTipoDoc, @ClienteNumDoc, @ClienteRznSocial,
-                @ClienteDireccion, @ClienteProvincia, @ClienteDepartamento,
-                @ClienteDistrito, @ClienteUbigeo
-            );
-            SELECT LAST_INSERT_ID();";
+    INSERT INTO comprobante (
+        empresaID, empresaRuc, empresaRazonSocial, empresaNombreComercial,
+        empresaDireccion, empresaProvincia, empresaDepartamento, empresaDistrito, empresaUbigeo,
+        clienteID, clienteTipoDoc, clienteNumDoc, clienteRznSocial,
+        clienteDireccion, clienteProvincia, clienteDepartamento, clienteDistrito, clienteUbigeo,
+        tipoComprobante, serie, correlativo, fechaEmision, horaEmision, tipoMoneda,
+        totalOperacionesGravadas, totalIGV, totalDescuentos, totalOtrosCargos, importeTotal,
+        comprobanteAfectadoID, tipDocAfectado, numDocAfectado,
+        tipoNotaCreditoDebito, motivoNota,
+        estadoSunat, usuarioCreacion, fechaCreacion
+    ) VALUES (
+        @EmpresaId, @EmpresaRuc, @EmpresaRazonSocial, @EmpresaNombreComercial,
+        @EmpresaDireccion, @EmpresaProvincia, @EmpresaDepartamento, @EmpresaDistrito, @EmpresaUbigeo,
+        @ClienteId, @ClienteTipoDoc, @ClienteNumDoc, @ClienteRznSocial,
+        @ClienteDireccion, @ClienteProvincia, @ClienteDepartamento, @ClienteDistrito, @ClienteUbigeo,
+        @TipoDoc, @Serie, @Correlativo, @FechaEmision, @HoraEmision, @TipoMoneda,
+        @MtoOperGravadas, @MtoIGV, @TotalDescuentos, @TotalOtrosCargos, @MtoImpVenta,
+        @ComprobanteAfectadoId, @TipDocAfectado, @NumDocAfectado,
+        @TipoNotaCreditoDebito, @MotivoNota,
+        @EstadoSunat, @UsuarioCreacion, @FechaCreacion
+    );
+    SELECT LAST_INSERT_ID();";
 
         return await _connection.ExecuteScalarAsync<int>(sql, new
         {
             note.EmpresaId,
+            note.EmpresaRuc,
+            note.EmpresaRazonSocial,
+            note.EmpresaNombreComercial,
+            note.EmpresaDireccion,
+            note.EmpresaProvincia,
+            note.EmpresaDepartamento,
+            note.EmpresaDistrito,
+            note.EmpresaUbigeo,
             note.ClienteId,
+            note.ClienteTipoDoc,
+            note.ClienteNumDoc,
+            note.ClienteRznSocial,
+            note.ClienteDireccion,
+            note.ClienteProvincia,
+            note.ClienteDepartamento,
+            note.ClienteDistrito,
+            note.ClienteUbigeo,
             TipoDoc = note.TipoDoc,
             note.Serie,
             note.Correlativo,
@@ -213,15 +245,7 @@ public class NoteRepository : DapperRepository<Note>, INoteRepository
             note.MotivoNota,
             note.EstadoSunat,
             note.UsuarioCreacion,
-            FechaCreacion = DateTime.UtcNow,
-            note.ClienteTipoDoc,
-            note.ClienteNumDoc,
-            note.ClienteRznSocial,
-            note.ClienteDireccion,
-            note.ClienteProvincia,
-            note.ClienteDepartamento,
-            note.ClienteDistrito,
-            note.ClienteUbigeo
+            FechaCreacion = DateTime.UtcNow
         }, _transaction);
     }
 
