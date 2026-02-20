@@ -82,16 +82,18 @@ public class XmlNoteBuilderService : IXmlNoteBuilderService
         root.Add(BuildTaxTotal(note.MtoOperGravadas, note.MtoIGV, note.TipoMoneda));
 
         // ── 8. Total monetario ────────────────────────────────────────────────
-        root.Add(new XElement(Cac + "LegalMonetaryTotal",
-            new XElement(Cbc + "LineExtensionAmount",
-                new XAttribute("currencyID", note.TipoMoneda),
-                note.MtoOperGravadas.ToString("F2")),
-            new XElement(Cbc + "TaxInclusiveAmount",
-                new XAttribute("currencyID", note.TipoMoneda),
-                note.MtoImpVenta.ToString("F2")),
-            new XElement(Cbc + "PayableAmount",
-                new XAttribute("currencyID", note.TipoMoneda),
-                note.MtoImpVenta.ToString("F2"))));
+        var totalMonetarioTag = note.TipoDoc == "07" ? "LegalMonetaryTotal" : "RequestedMonetaryTotal";
+
+        root.Add(new XElement(Cac + totalMonetarioTag,
+    new XElement(Cbc + "LineExtensionAmount",
+        new XAttribute("currencyID", note.TipoMoneda),
+        note.MtoOperGravadas.ToString("F2")),
+    new XElement(Cbc + "TaxInclusiveAmount",
+        new XAttribute("currencyID", note.TipoMoneda),
+        note.MtoImpVenta.ToString("F2")),
+    new XElement(Cbc + "PayableAmount",
+        new XAttribute("currencyID", note.TipoMoneda),
+        note.MtoImpVenta.ToString("F2"))));
 
         // ── 9. Líneas de detalle ──────────────────────────────────────────────
         for (int i = 0; i < details.Count; i++)

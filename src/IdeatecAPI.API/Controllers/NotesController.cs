@@ -7,7 +7,7 @@ namespace IdeatecAPI.API.Controllers;
 
 [ApiController]
 [Route("api/notes")]
-[Authorize]
+//[Authorize]
 public class NotesController : ControllerBase
 {
     private readonly INoteService _noteService;
