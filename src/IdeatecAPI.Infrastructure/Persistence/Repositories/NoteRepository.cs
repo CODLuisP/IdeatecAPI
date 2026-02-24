@@ -58,7 +58,7 @@ public class NoteRepository : DapperRepository<Note>, INoteRepository
             empresaProvincia      AS EmpresaProvincia,
             empresaDepartamento   AS EmpresaDepartamento,
             empresaDistrito       AS EmpresaDistrito,
-            empresaUbigeo         AS EmpresaUbigeo,
+            empresaUbigeo         AS EmpresaUbigeo
         FROM comprobante 
             WHERE empresaID = @EmpresaId 
               AND tipoComprobante IN ('07', '08')

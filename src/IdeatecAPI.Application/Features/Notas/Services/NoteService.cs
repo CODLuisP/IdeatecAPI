@@ -2,6 +2,7 @@ using System.Text;
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Application.Features.Notas.DTOs;
 using IdeatecAPI.Domain.Entities;
+using Microsoft.Extensions.Configuration;
 
 namespace IdeatecAPI.Application.Features.Notas.Services;
 
@@ -21,17 +22,20 @@ public class NoteService : INoteService
     private readonly IXmlNoteBuilderService _xmlBuilder;
     private readonly IXmlSignerService _xmlSigner;
     private readonly ISunatSenderService _sunatSender;
+    private readonly IConfiguration _configuration;
 
     public NoteService(
         IUnitOfWork unitOfWork,
         IXmlNoteBuilderService xmlBuilder,
         IXmlSignerService xmlSigner,
-        ISunatSenderService sunatSender)
+        ISunatSenderService sunatSender,
+        IConfiguration configuration)
     {
         _unitOfWork = unitOfWork;
         _xmlBuilder = xmlBuilder;
         _xmlSigner = xmlSigner;
         _sunatSender = sunatSender;
+        _configuration = configuration;
     }
 
     public async Task<IEnumerable<NoteDto>> GetAllNotesAsync(int empresaId)
@@ -220,7 +224,14 @@ public class NoteService : INoteService
             empresa.Environment
         );
 
-        var nuevoEstado = sunatResponse.Success ? "ACEPTADO" : "RECHAZADO";
+        // ← Guardar archivos localmente
+        await GuardarArchivosAsync(
+            empresa.Ruc,
+            nombreArchivo,
+            xmlFirmadoBytes,
+            sunatResponse.CdrBase64);
+
+        var nuevoEstado = sunatResponse.Success ? (sunatResponse.TieneObservaciones ? "ACEPTADO_CON_OBSERVACIONES" : "ACEPTADO") : "RECHAZADO";
 
         await _unitOfWork.Notes.UpdateEstadoSunatAsync(
             comprobanteId,
@@ -309,4 +320,36 @@ public class NoteService : INoteService
         Code = l.Code,
         Value = l.Value
     };
+
+    private async Task GuardarArchivosAsync(string ruc, string nombreArchivo, byte[] xmlFirmadoBytes, string? cdrBase64)
+    {
+        var rutaBase = Path.Combine(
+            _configuration["Storage:RutaNotas"] ?? "C:/FacturacionStorage/Notas",
+            ruc,
+            DateTime.Now.Year.ToString()
+        );
+        Directory.CreateDirectory(rutaBase);
+
+        // ── Guardar ZIP enviado ───────────────────────────────────────────────
+        using var memStream = new MemoryStream();
+        using (var zip = new System.IO.Compression.ZipArchive(memStream,
+            System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
+        {
+            var entry = zip.CreateEntry(nombreArchivo + ".xml");
+            using var entryStream = entry.Open();
+            await entryStream.WriteAsync(xmlFirmadoBytes);
+        }
+        await File.WriteAllBytesAsync(
+            Path.Combine(rutaBase, $"{nombreArchivo}.zip"),
+            memStream.ToArray());
+
+        // ── Guardar CDR recibido ──────────────────────────────────────────────
+        if (!string.IsNullOrEmpty(cdrBase64))
+        {
+            var cdrBytes = Convert.FromBase64String(cdrBase64);
+            await File.WriteAllBytesAsync(
+                Path.Combine(rutaBase, $"R-{nombreArchivo}.zip"),
+                cdrBytes);
+        }
+    }
 }
