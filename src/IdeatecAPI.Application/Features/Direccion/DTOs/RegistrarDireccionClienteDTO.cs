@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace IdeatecAPI.Application.Features.Direccion.DTOs
-{
+namespace IdeatecAPI.Application.Features.Direccion.DTOs;
+
     public class RegistrarDireccionClienteDTO
     {
         public string? Ubigeo { get; set; }
@@ -14,4 +14,3 @@ namespace IdeatecAPI.Application.Features.Direccion.DTOs
         public string? Distrito { get; set; }
         public string? TipoDireccion { get; set; } //fiscal, almacen.
     }
-}

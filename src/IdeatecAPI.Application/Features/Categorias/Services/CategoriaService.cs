@@ -1,6 +1,5 @@
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Application.Features.Categorias.DTOs;
-using IdeatecAPI.Domain.Entities;
 
 namespace IdeatecAPI.Application.Features.Categorias.Services;
 
@@ -8,6 +7,9 @@ public interface ICategoriaService
 {
     Task<IEnumerable<CategoriaDto>> GetAllCategoriasAsync();
     Task<CategoriaDto?> GetCategoriaByIdAsync(int id);
+    Task<bool> RegistrarCategoriaAsync(RegistrarCategoriaDto categoria);
+    Task<bool> EditarCategoriaAsync(EditarCategoriaDto categoria);
+    Task<bool> EliminarCategoriaAsync(int CategoriaId);
 }
 
 public class CategoriaService : ICategoriaService
@@ -26,11 +28,10 @@ public class CategoriaService : ICategoriaService
 
         return categorias.Select(c => new CategoriaDto
         {
-            Id = c.Id,
-            NombreCategoria = c.NombreCategoria,
+            CategoriaId = c.CategoriaId,
+            CategoriaNombre = c.CategoriaNombre,
             Descripcion = c.Descripcion,
-            ImagenCatalogId = c.ImagenCatalogId,
-            IsContinue = c.IsContinue
+            Estado = c.Estado
         });
     }
 
@@ -43,11 +44,84 @@ public class CategoriaService : ICategoriaService
 
         return new CategoriaDto
         {
-            Id = categoria.Id,
-            NombreCategoria = categoria.NombreCategoria,
+            CategoriaId = categoria.CategoriaId,
+            CategoriaNombre = categoria.CategoriaNombre,
             Descripcion = categoria.Descripcion,
-            ImagenCatalogId = categoria.ImagenCatalogId,
-            IsContinue = categoria.IsContinue
+            Estado = categoria.Estado
         };
     }
+
+    public async Task<bool> RegistrarCategoriaAsync(RegistrarCategoriaDto dto)
+    {
+        _unitOfWork.BeginTransaction();
+
+        try
+        {
+            var categoria = new Domain.Entities.Categoria
+            {
+                CategoriaNombre = dto.CategoriaNombre,
+                Descripcion = dto.Descripcion,
+            };
+
+            var result = await _unitOfWork.Categorias.RegistrarCategoriaAsync(categoria);
+
+            _unitOfWork.Commit();
+            return result;
+        }
+        catch
+        {
+            _unitOfWork.Rollback();
+            throw;
+        }
+    }
+
+    public async Task<bool> EditarCategoriaAsync(EditarCategoriaDto dto)
+    {
+        if (dto.CategoriaId <= 0)
+            throw new ArgumentException("CategoriaId inválido");
+
+        _unitOfWork.BeginTransaction();
+
+        try
+        {
+            var categoria = new Domain.Entities.Categoria
+            {
+                CategoriaId = dto.CategoriaId,
+                CategoriaNombre = dto.CategoriaNombre,
+                Descripcion = dto.Descripcion,
+            };
+
+            var result = await _unitOfWork.Categorias.EditarCategoriaAsync(categoria);
+
+            _unitOfWork.Commit();
+            return result;
+        }
+        catch
+        {
+            _unitOfWork.Rollback();
+            throw;
+        }
+    }
+
+    public async Task<bool> EliminarCategoriaAsync(int categoriaId)
+    {
+        if (categoriaId <= 0)
+            throw new ArgumentException("CategoriaId inválido");
+
+        _unitOfWork.BeginTransaction();
+
+        try
+        {
+            var result = await _unitOfWork.Categorias.EliminarCategoriaAsync(categoriaId);
+
+            _unitOfWork.Commit();
+            return result;
+        }
+        catch
+        {
+            _unitOfWork.Rollback();
+            throw;
+        }
+    }
+
 }

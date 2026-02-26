@@ -1,13 +1,11 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using IdeatecAPI.Domain.Entities.Cliente;
 
-namespace IdeatecAPI.Application.Common.Interfaces.Persistence
-{
+using IdeatecAPI.Domain.Entities;
+
+namespace IdeatecAPI.Application.Common.Interfaces.Persistence;
+
     public interface IDireccionRepository : IRepository<Direccion>
     {
         Task CrearDireccionAsync(Direccion direccion);
+        Task<bool> EditarDireccionAsync(Direccion direccion);
+        Task<bool> EliminarDireccionAsync(int direccionId);
     }
-}

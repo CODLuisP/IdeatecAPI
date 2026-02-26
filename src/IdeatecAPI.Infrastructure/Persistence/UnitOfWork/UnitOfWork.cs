@@ -2,7 +2,7 @@ using System.Data;
 using MySqlConnector;
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Infrastructure.Persistence.Repositories;
-using IdeatecAPI.Infrastructure.Persistence.Repositories.Clientes;
+using IdeatecAPI.Infrastructure.Persistence.Repositories.Comprobantes;
 
 namespace IdeatecAPI.Infrastructure.Persistence.UnitOfWork;
 
@@ -23,6 +23,9 @@ public class UnitOfWork : IUnitOfWork
     private INoteRepository? _notes;
     private INoteDetailRepository? _noteDetails;
     private INoteLegendRepository? _noteLegends;
+    private IComprobanteRepository? _comprobantes;
+    private IProductoRepository? _productos;
+    private ISerieCorrelativoRepository? _serieCorrelativos;
 
     public UnitOfWork(string connectionString)
     {
@@ -114,6 +117,33 @@ public class UnitOfWork : IUnitOfWork
         {
             _noteLegends ??= new NoteLegendRepository(Connection, _transaction);
             return _noteLegends;
+        }
+    }
+
+    public IComprobanteRepository Comprobantes
+    {
+        get
+        {
+            _comprobantes ??= new ComprobanteRepository(Connection, _transaction);
+            return _comprobantes;
+        }
+    }
+
+    public IProductoRepository Productos
+    {
+        get
+        {
+            _productos ??= new ProductoRepository(Connection, _transaction);
+            return _productos;
+        }
+    }
+
+        public ISerieCorrelativoRepository SerieCorrelativo
+    {
+        get
+        {
+            _serieCorrelativos ??= new SerieCorrelativoRepository(Connection, _transaction);
+            return _serieCorrelativos;
         }
     }
 

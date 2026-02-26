@@ -9,12 +9,11 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using IdeatecAPI.Application.Features.Empresas.Services;
 using IdeatecAPI.Application.Features.Notas.Services;
-<<<<<<< HEAD
 using IdeatecAPI.Application.Features.Clientes.Services;                                       // ← NUEVO
-=======
-using IdeatecAPI.Application.Features.Clientes.Services;
->>>>>>> 69be5bd52a6a446f8c33d023d17045181f77844a
 using IdeatecAPI.Application.Features.Direccion.Services;
+using IdeatecAPI.Application.Features.Comprobante.Services;
+using IdeatecAPI.Application.Features.Productos.Services;
+using IdeatecAPI.Application.Features.SerieCorrelativo.Services;
 
 namespace IdeatecAPI.Infrastructure;
 
@@ -34,10 +33,14 @@ public static class DependencyInjection
         services.AddScoped<IDireccionService, DireccionService>();
         services.AddScoped<IEmpresaService, EmpresaService>();
         services.AddScoped<INoteService, NoteService>();
+        services.AddScoped<IComprobanteService, ComprobanteService>();
+        services.AddScoped<IComprobanteXmlService, GeneraXmlService>();
 
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IUsuarioService, UsuarioService>();
+        services.AddScoped<IProductoService, ProductoService>();
+        services.AddScoped<ISerieCorrelativoService, SerieCorrelativoService>();
 
         var jwtSecret = configuration["JwtSettings:Secret"]
             ?? throw new InvalidOperationException("JWT Secret not configured in appsettings.json");

@@ -5,7 +5,7 @@ using Dapper;
 using System.Linq;
 using System.Threading.Tasks;
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
-using IdeatecAPI.Domain.Entities.Cliente;
+using IdeatecAPI.Domain.Entities;
 
 namespace IdeatecAPI.Infrastructure.Persistence.Repositories;
 
@@ -24,4 +24,37 @@ public class DireccionRepository : DapperRepository<Direccion>, IDireccionReposi
 
         await _connection.ExecuteAsync(sql, direccion, _transaction);
     }
+
+    public async Task<bool> EditarDireccionAsync(Direccion direccion)
+    {
+        var sql = @"
+            UPDATE direccion
+            SET direccionLineal = @DireccionLineal,
+                ubigeo = @Ubigeo,
+                departamento = @Departamento,
+                provincia = @Provincia,
+                distrito = @Distrito,
+                tipoDireccion = @TipoDireccion
+            WHERE direccionId = @DireccionId";
+
+        var rows = await _connection.ExecuteAsync(sql, direccion, _transaction);
+
+        return rows > 0;
+    }
+
+    public async Task<bool> EliminarDireccionAsync(int direccionId)
+    {
+        var sql = @"
+            UPDATE direccion
+            SET estado = 0
+            WHERE direccionId = @DireccionId";
+
+        var rows = await _connection.ExecuteAsync(sql, new
+        {
+            DireccionId = direccionId
+        }, _transaction);
+
+        return rows > 0;
+    }
+
 }

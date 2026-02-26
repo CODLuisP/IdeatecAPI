@@ -4,8 +4,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using IdeatecAPI.Application.Features.Direccion.DTOs;
 
-namespace IdeatecAPI.Application.Features.Clientes.DTOs
-{
+namespace IdeatecAPI.Application.Features.Clientes.DTOs;
+
     public class RegistrarClienteDTO
     {
         public string? NumeroDocumento { get; set; }
@@ -18,4 +18,3 @@ namespace IdeatecAPI.Application.Features.Clientes.DTOs
 
     }
 
-}

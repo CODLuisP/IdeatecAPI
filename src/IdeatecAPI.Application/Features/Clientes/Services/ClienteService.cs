@@ -6,12 +6,14 @@ using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Application.Features.CatalogoSunat.DTOs;
 using IdeatecAPI.Application.Features.Clientes.DTOs;
 using IdeatecAPI.Application.Features.Direccion.DTOs;
-using IdeatecAPI.Domain.Entities.Cliente;
+using IdeatecAPI.Domain.Entities;
 namespace IdeatecAPI.Application.Features.Clientes.Services;
 
 public interface IClienteService {
     Task<IEnumerable<ObtenerClientesDTO>> GetAllClientesAsync();
     Task<int> RegistrarClienteAsync(RegistrarClienteDTO cliente);
+    Task<bool> EditarClienteAsync(EditarClienteDTO cliente);
+    Task<bool> EliminarClienteAsync(int clienteId);
 }
 
 public class ClienteService : IClienteService
@@ -22,6 +24,7 @@ public class ClienteService : IClienteService
     {
         _unitOfWork = unitOfWork;
     }
+
     public async Task<IEnumerable<ObtenerClientesDTO>> GetAllClientesAsync()
     {
         var Clientes = await _unitOfWork.Clientes.GetAllClientesAsync();
@@ -75,7 +78,7 @@ public class ClienteService : IClienteService
 
         int clienteId = await _unitOfWork.Clientes.RegistrarClienteAsync(cliente);
 
-        var direccion = new Domain.Entities.Cliente.Direccion
+        var direccion = new Domain.Entities.Direccion
         {
             ClienteId = clienteId,
             Ubigeo = dto.Direccion?.Ubigeo,
@@ -97,5 +100,58 @@ public class ClienteService : IClienteService
         throw;
     }
 }
+
+   public async Task<bool> EditarClienteAsync(EditarClienteDTO dto)
+    {
+        if (dto.ClienteId == null || dto.ClienteId <= 0)
+            throw new ArgumentException("ClienteId es obligatorio");
+
+        _unitOfWork.BeginTransaction();
+
+        try
+        {
+            var cliente = new Cliente
+            {
+                ClienteId = dto.ClienteId.Value,
+                RazonSocialNombre = dto.RazonSocialNombre,
+                NumeroDocumento = dto.NumeroDocumento,
+                NombreComercial = dto.NombreComercial,
+                Telefono = dto.Telefono,
+                Correo = dto.Correo
+            };
+
+            var result = await _unitOfWork.Clientes.EditarClienteAsync(cliente);
+
+            _unitOfWork.Commit();
+            return result;
+        }
+        catch
+        {
+            _unitOfWork.Rollback();
+            throw;
+        }
+    }
+
+    public async Task<bool> EliminarClienteAsync(int clienteId)
+    {
+        if (clienteId <= 0)
+            throw new ArgumentException("ClienteId inválido");
+
+        _unitOfWork.BeginTransaction();
+
+        try
+        {
+            await _unitOfWork.Clientes.EliminarClienteAsync(clienteId);
+
+            _unitOfWork.Commit();
+            return true;
+        }
+        catch
+        {
+            _unitOfWork.Rollback();
+            throw;
+        }
+    }
+
 }
 
