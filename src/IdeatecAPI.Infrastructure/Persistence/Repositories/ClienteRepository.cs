@@ -1,13 +1,10 @@
-using System;
-using System.Collections.Generic;
 using System.Data;
 using Dapper;
-using System.Linq;
-using System.Threading.Tasks;
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Domain.Entities;
 
 namespace IdeatecAPI.Infrastructure.Persistence.Repositories;
+
 public class ClienteRepository : DapperRepository<Cliente>, IClienteRepository
 {
     public ClienteRepository(IDbConnection connection, IDbTransaction? transaction = null) : base(connection, transaction)
@@ -71,7 +68,7 @@ public class ClienteRepository : DapperRepository<Cliente>, IClienteRepository
             splitOn: "TipoDocumentoId,DireccionId"
         );
 
-    return clienteDictionary.Values;
+        return clienteDictionary.Values;
     }
 
     public async Task<int> RegistrarClienteAsync(Cliente cliente)
@@ -119,5 +116,11 @@ public class ClienteRepository : DapperRepository<Cliente>, IClienteRepository
         );
 
         return result > 0;
+    }
+
+    public async Task<Cliente?> GetByNumDocAsync(string numeroDocumento)
+    {
+        var sql = "SELECT * FROM cliente WHERE numeroDocumento = @NumeroDocumento AND estado = 1";
+        return await _connection.QueryFirstOrDefaultAsync<Cliente>(sql, new { NumeroDocumento = numeroDocumento }, _transaction);
     }
 }

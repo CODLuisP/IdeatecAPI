@@ -3,10 +3,11 @@ using IdeatecAPI.Domain.Entities;
 
 namespace IdeatecAPI.Application.Common.Interfaces.Persistence;
 
-    public interface IClienteRepository : IRepository<Cliente>
-    {
-        Task<IEnumerable<Cliente>> GetAllClientesAsync();
-        Task<int> RegistrarClienteAsync(Cliente cliente);
-        Task<bool> EditarClienteAsync(Cliente cliente);
-        Task<bool> EliminarClienteAsync(int clienteId);
-    }
+public interface IClienteRepository : IRepository<Cliente>
+{
+    Task<IEnumerable<Cliente>> GetAllClientesAsync();
+    Task<int> RegistrarClienteAsync(Cliente cliente);
+    Task<bool> EditarClienteAsync(Cliente cliente);
+    Task<bool> EliminarClienteAsync(int clienteId);
+    Task<Cliente?> GetByNumDocAsync(string numeroDocumento);
+}
