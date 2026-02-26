@@ -11,6 +11,7 @@ using IdeatecAPI.Application.Features.Empresas.Services;
 using IdeatecAPI.Application.Features.Notas.Services;
 using IdeatecAPI.Application.Features.Clientes.Services;
 using IdeatecAPI.Application.Features.Direccion.Services;
+using IdeatecAPI.Application.Features.ComunicacionBaja.Services;
 
 namespace IdeatecAPI.Infrastructure;
 
@@ -28,37 +29,31 @@ public static class DependencyInjection
         // HttpClient para SUNAT
         services.AddHttpClient();
 
-
-        // Registrar Servicios de Categorías
+        // Categorías y Clientes
         services.AddScoped<ICategoriaService, CategoriaService>();
         services.AddScoped<IClienteService, ClienteService>();
+        services.AddScoped<IDireccionService, DireccionService>();
 
-        // ========================================
-        // SERVICIOS DE AUTENTICACIÓN (NUEVO)
-        // ========================================
+        // Autenticación
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IUsuarioService, UsuarioService>();
 
+        // Empresas
         services.AddScoped<IEmpresaService, EmpresaService>();
+
+        // Notas
         services.AddScoped<INoteService, NoteService>();
         services.AddScoped<IXmlNoteBuilderService, XmlNoteBuilderService>();
         services.AddScoped<IXmlSignerService, XmlSignerService>();
         services.AddScoped<ISunatSenderService, SunatSenderService>();
 
-        // ========================================
-        // JWT AUTHENTICATION (NUEVO)
-        // ========================================
-        services.AddScoped<ICategoriaService, CategoriaService>();
-        services.AddScoped<IClienteService, ClienteService>();
-        services.AddScoped<IDireccionService, DireccionService>();
-        services.AddScoped<IEmpresaService, EmpresaService>();
-        services.AddScoped<INoteService, NoteService>();
+        // Comunicación de Baja
+        services.AddScoped<IBajaService, BajaService>();
+        services.AddScoped<IXmlBajaBuilderService, XmlBajaBuilderService>();
+        services.AddScoped<ISunatBajaService, SunatBajaService>();
 
-        services.AddScoped<ITokenService, TokenService>();
-        services.AddScoped<IAuthService, AuthService>();
-        services.AddScoped<IUsuarioService, UsuarioService>();
-
+        // JWT
         var jwtSecret = configuration["JwtSettings:Secret"]
             ?? throw new InvalidOperationException("JWT Secret not configured in appsettings.json");
 

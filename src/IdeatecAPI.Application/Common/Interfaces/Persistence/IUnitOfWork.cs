@@ -10,7 +10,8 @@ public interface IUnitOfWork : IDisposable
     INoteRepository Notes { get; }
     INoteDetailRepository NoteDetails { get; }
     INoteLegendRepository NoteLegends { get; }
-    
+    IComunicacionBajaRepository Bajas { get; }
+    IComunicacionBajaDetalleRepository BajaDetalles { get; }
     // Transacciones
 
     void BeginTransaction();

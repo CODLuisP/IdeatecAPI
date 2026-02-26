@@ -24,6 +24,9 @@ public class UnitOfWork : IUnitOfWork
     private INoteDetailRepository? _noteDetails;
     private INoteLegendRepository? _noteLegends;
 
+    private IComunicacionBajaRepository? _bajas;
+    private IComunicacionBajaDetalleRepository? _bajaDetalles;
+
     public UnitOfWork(string connectionString)
     {
         _connectionString = connectionString;
@@ -42,7 +45,6 @@ public class UnitOfWork : IUnitOfWork
         }
     }
 
-    // Propiedad para acceder al repositorio de Categorias
     public ICategoriaRepository Categorias
     {
         get
@@ -70,7 +72,6 @@ public class UnitOfWork : IUnitOfWork
         }
     }
 
-    // Propiedad para acceder al repositorio de Usuarios
     public IUsuarioRepository Usuarios
     {
         get
@@ -89,7 +90,6 @@ public class UnitOfWork : IUnitOfWork
         }
     }
 
-    // Agregar propiedades públicas:
     public INoteRepository Notes
     {
         get
@@ -114,6 +114,24 @@ public class UnitOfWork : IUnitOfWork
         {
             _noteLegends ??= new NoteLegendRepository(Connection, _transaction);
             return _noteLegends;
+        }
+    }
+
+    public IComunicacionBajaRepository Bajas
+    {
+        get
+        {
+            _bajas ??= new ComunicacionBajaRepository(Connection, _transaction);
+            return _bajas;
+        }
+    }
+
+    public IComunicacionBajaDetalleRepository BajaDetalles
+    {
+        get
+        {
+            _bajaDetalles ??= new ComunicacionBajaDetalleRepository(Connection, _transaction);
+            return _bajaDetalles;
         }
     }
 
@@ -160,8 +178,12 @@ public class UnitOfWork : IUnitOfWork
         _noteDetails = null;
         _noteLegends = null;
         _empresas = null;
+        _direccion = null;
         _usuarios = null;
+        _clientes = null;
         _categorias = null;
+        _bajas = null;
+        _bajaDetalles = null;
     }
 
     public IRepository<T> Repository<T>() where T : class
