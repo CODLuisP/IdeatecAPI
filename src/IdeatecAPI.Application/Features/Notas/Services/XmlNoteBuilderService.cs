@@ -1,4 +1,5 @@
 using System.Text;
+using System.Xml;
 using System.Xml.Linq;
 using IdeatecAPI.Domain.Entities;
 
@@ -6,7 +7,7 @@ namespace IdeatecAPI.Application.Features.Notas.Services;
 
 public interface IXmlNoteBuilderService
 {
-    string BuildXml(Note note, Empresa empresa, List<NoteDetail> details, List<NoteLegend> legends);
+    string BuildXml(Note note, List<NoteDetail> details, List<NoteLegend> legends);
 }
 
 public class XmlNoteBuilderService : IXmlNoteBuilderService
@@ -16,34 +17,35 @@ public class XmlNoteBuilderService : IXmlNoteBuilderService
     private static readonly XNamespace Cbc = "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2";
     private static readonly XNamespace Ext = "urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2";
 
-    public string BuildXml(Note note, Empresa empresa, List<NoteDetail> details, List<NoteLegend> legends)
+    public string BuildXml(Note note, List<NoteDetail> details, List<NoteLegend> legends)
     {
-        var ns = note.TipoDoc == "07" ? XNamespace.Get("urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2") : XNamespace.Get("urn:oasis:names:specification:ubl:schema:xsd:DebitNote-2");
+        var ns = note.TipoDoc == "07"
+            ? XNamespace.Get("urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2")
+            : XNamespace.Get("urn:oasis:names:specification:ubl:schema:xsd:DebitNote-2");
         var rootName = note.TipoDoc == "07" ? "CreditNote" : "DebitNote";
         var lineName = note.TipoDoc == "07" ? "CreditNoteLine" : "DebitNoteLine";
         var qtyName = note.TipoDoc == "07" ? "CreditedQuantity" : "DebitedQuantity";
 
         var doc = new XDocument(new XDeclaration("1.0", "UTF-8", null));
 
+        // ── 1. UBLExtensions + Signature + UBLVersionID + CustomizationID ────
         var root = new XElement(ns + rootName,
             new XAttribute(XNamespace.Xmlns + "cac", Cac),
             new XAttribute(XNamespace.Xmlns + "cbc", Cbc),
             new XAttribute(XNamespace.Xmlns + "ext", Ext),
 
-            // UBLExtensions (placeholder para la firma)
             new XElement(Ext + "UBLExtensions",
                 new XElement(Ext + "UBLExtension",
                     new XElement(Ext + "ExtensionContent"))),
 
             new XElement(Cbc + "UBLVersionID", "2.1"),
             new XElement(Cbc + "CustomizationID", "2.0"),
-            new XElement(Cbc + "ID", $"{note.Serie}-{note.Correlativo}"),
+            new XElement(Cbc + "ID", $"{note.Serie}-{note.Correlativo:D8}"),
             new XElement(Cbc + "IssueDate", note.FechaEmision.ToString("yyyy-MM-dd")),
-            new XElement(Cbc + "IssueTime", note.FechaEmision.ToString("HH:mm:ss")),
-            new XElement(Cbc + "DocumentCurrencyCode", note.TipoMoneda)
+            new XElement(Cbc + "IssueTime", note.FechaEmision.ToString("HH:mm:ss"))
         );
 
-        // Leyendas
+        // ── 2. Leyendas van después de IssueTime según guía SUNAT ────────────
         foreach (var legend in legends)
         {
             root.Add(new XElement(Cbc + "Note",
@@ -51,7 +53,11 @@ public class XmlNoteBuilderService : IXmlNoteBuilderService
                 legend.Value));
         }
 
-        // Referencia al comprobante afectado
+        // ── 3. DocumentCurrencyCode y LineCountNumeric ────────────────────────
+        root.Add(new XElement(Cbc + "DocumentCurrencyCode", note.TipoMoneda));
+        root.Add(new XElement(Cbc + "LineCountNumeric", details.Count));
+
+        // ── 4. Referencia al comprobante afectado ─────────────────────────────
         root.Add(
             new XElement(Cac + "DiscrepancyResponse",
                 new XElement(Cbc + "ReferenceID", note.NumDocAfectado),
@@ -64,31 +70,32 @@ public class XmlNoteBuilderService : IXmlNoteBuilderService
                     new XElement(Cbc + "DocumentTypeCode", note.TipDocAfectado)))
         );
 
-        // Firma (placeholder, se completa al firmar)
-        root.Add(BuildSignatureSection(empresa));
+        root.Add(BuildSignatureSection(note));
 
-        // Emisor
-        root.Add(BuildSupplierParty(empresa));
+        // ── 5. Emisor ─────────────────────────────────────────────────────────
+        root.Add(BuildSupplierParty(note));
 
-        // Cliente
+        // ── 6. Cliente ────────────────────────────────────────────────────────
         root.Add(BuildCustomerParty(note));
 
-        // Totales de impuestos
+        // ── 7. Totales de impuestos ───────────────────────────────────────────
         root.Add(BuildTaxTotal(note.MtoOperGravadas, note.MtoIGV, note.TipoMoneda));
 
-        // Total monetario
-        root.Add(new XElement(Cac + "LegalMonetaryTotal",
-            new XElement(Cbc + "LineExtensionAmount",
-                new XAttribute("currencyID", note.TipoMoneda),
-                note.MtoOperGravadas.ToString("F2")),
-            new XElement(Cbc + "TaxInclusiveAmount",
-                new XAttribute("currencyID", note.TipoMoneda),
-                note.MtoImpVenta.ToString("F2")),
-            new XElement(Cbc + "PayableAmount",
-                new XAttribute("currencyID", note.TipoMoneda),
-                note.MtoImpVenta.ToString("F2"))));
+        // ── 8. Total monetario ────────────────────────────────────────────────
+        var totalMonetarioTag = note.TipoDoc == "07" ? "LegalMonetaryTotal" : "RequestedMonetaryTotal";
 
-        // Líneas de detalle
+        root.Add(new XElement(Cac + totalMonetarioTag,
+    new XElement(Cbc + "LineExtensionAmount",
+        new XAttribute("currencyID", note.TipoMoneda),
+        note.MtoOperGravadas.ToString("F2")),
+    new XElement(Cbc + "TaxInclusiveAmount",
+        new XAttribute("currencyID", note.TipoMoneda),
+        note.MtoImpVenta.ToString("F2")),
+    new XElement(Cbc + "PayableAmount",
+        new XAttribute("currencyID", note.TipoMoneda),
+        note.MtoImpVenta.ToString("F2"))));
+
+        // ── 9. Líneas de detalle ──────────────────────────────────────────────
         for (int i = 0; i < details.Count; i++)
         {
             root.Add(BuildDetailLine(details[i], i + 1, lineName, qtyName, note.TipoMoneda));
@@ -96,46 +103,50 @@ public class XmlNoteBuilderService : IXmlNoteBuilderService
 
         doc.Add(root);
 
-        var sb = new StringBuilder();
-        using var writer = new System.IO.StringWriter(sb);
-        doc.Save(writer);
-        return sb.ToString();
+        using var ms = new MemoryStream();
+        using var xw = XmlWriter.Create(ms, new XmlWriterSettings
+        {
+            Encoding = new UTF8Encoding(false),
+            Indent = true
+        });
+        doc.Save(xw);
+        xw.Flush();
+        return Encoding.UTF8.GetString(ms.ToArray());
     }
+    private static XElement BuildSignatureSection(Note note) =>
+    new(Cac + "Signature",
+        new XElement(Cbc + "ID", "IDSignKG"),
+        new XElement(Cac + "SignatoryParty",
+            new XElement(Cac + "PartyIdentification",
+                new XElement(Cbc + "ID", note.EmpresaRuc)),
+            new XElement(Cac + "PartyName",
+                new XElement(Cbc + "Name", note.EmpresaNombreComercial ?? note.EmpresaRazonSocial))),
+        new XElement(Cac + "DigitalSignatureAttachment",
+            new XElement(Cac + "ExternalReference",
+                new XElement(Cbc + "URI", "#SignatureKG"))));
 
-    private static XElement BuildSignatureSection(Empresa empresa) =>
-        new(Cac + "Signature",
-            new XElement(Cbc + "ID", "IDSignKG"),
-            new XElement(Cac + "SignatoryParty",
-                new XElement(Cac + "PartyIdentification",
-                    new XElement(Cbc + "ID", empresa.Ruc)),
-                new XElement(Cac + "PartyName",
-                    new XElement(Cbc + "Name", empresa.NombreComercial ?? empresa.RazonSocial))),
-            new XElement(Cac + "DigitalSignatureAttachment",
-                new XElement(Cac + "ExternalReference",
-                    new XElement(Cbc + "URI", "#SignatureKG"))));
-
-    private static XElement BuildSupplierParty(Empresa empresa) =>
-        new(Cac + "AccountingSupplierParty",
-            new XElement(Cac + "Party",
-                new XElement(Cac + "PartyIdentification",
-                    new XElement(Cbc + "ID",
-                        new XAttribute("schemeID", "6"),
-                        empresa.Ruc)),
-                new XElement(Cac + "PartyName",
-                    new XElement(Cbc + "Name", empresa.NombreComercial ?? empresa.RazonSocial)),
-                new XElement(Cac + "PartyLegalEntity",
-                    new XElement(Cbc + "RegistrationName", empresa.RazonSocial),
-                    new XElement(Cac + "RegistrationAddress",
-                        new XElement(Cbc + "ID", empresa.Ubigeo ?? "150101"),
-                        new XElement(Cbc + "AddressTypeCode", "0000"),
-                        new XElement(Cbc + "CitySubdivisionName", "NONE"),
-                        new XElement(Cbc + "CityName", empresa.Provincia ?? "LIMA"),
-                        new XElement(Cbc + "CountrySubentity", empresa.Departamento ?? "LIMA"),
-                        new XElement(Cbc + "District", empresa.Distrito ?? "LIMA"),
-                        new XElement(Cac + "AddressLine",
-                            new XElement(Cbc + "Line", empresa.Direccion ?? "-")),
-                        new XElement(Cac + "Country",
-                            new XElement(Cbc + "IdentificationCode", "PE"))))));
+    private static XElement BuildSupplierParty(Note note) =>
+    new(Cac + "AccountingSupplierParty",
+        new XElement(Cac + "Party",
+            new XElement(Cac + "PartyIdentification",
+                new XElement(Cbc + "ID",
+                    new XAttribute("schemeID", "6"),
+                    note.EmpresaRuc)),
+            new XElement(Cac + "PartyName",
+                new XElement(Cbc + "Name", note.EmpresaNombreComercial ?? note.EmpresaRazonSocial)),
+            new XElement(Cac + "PartyLegalEntity",
+                new XElement(Cbc + "RegistrationName", note.EmpresaRazonSocial),
+                new XElement(Cac + "RegistrationAddress",
+                    new XElement(Cbc + "ID", note.EmpresaUbigeo ?? "150101"),
+                    new XElement(Cbc + "AddressTypeCode", "0000"),
+                    new XElement(Cbc + "CitySubdivisionName", "NONE"),
+                    new XElement(Cbc + "CityName", note.EmpresaProvincia ?? "LIMA"),
+                    new XElement(Cbc + "CountrySubentity", note.EmpresaDepartamento ?? "LIMA"),
+                    new XElement(Cbc + "District", note.EmpresaDistrito ?? "LIMA"),
+                    new XElement(Cac + "AddressLine",
+                        new XElement(Cbc + "Line", note.EmpresaDireccion ?? "-")),
+                    new XElement(Cac + "Country",
+                        new XElement(Cbc + "IdentificationCode", "PE"))))));
 
     private static XElement BuildCustomerParty(Note note) =>
         new(Cac + "AccountingCustomerParty",

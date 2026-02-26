@@ -28,6 +28,30 @@ public static class DependencyInjection
 
         services.AddScoped<IUnitOfWork>(provider => new UnitOfWork(connectionString));
 
+        // HttpClient para SUNAT
+        services.AddHttpClient();
+
+
+        // Registrar Servicios de Categorías
+        services.AddScoped<ICategoriaService, CategoriaService>();
+        services.AddScoped<IClienteService, ClienteService>();
+
+        // ========================================
+        // SERVICIOS DE AUTENTICACIÓN (NUEVO)
+        // ========================================
+        services.AddScoped<ITokenService, TokenService>();
+        services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IUsuarioService, UsuarioService>();
+
+        services.AddScoped<IEmpresaService, EmpresaService>();
+        services.AddScoped<INoteService, NoteService>();
+        services.AddScoped<IXmlNoteBuilderService, XmlNoteBuilderService>();
+        services.AddScoped<IXmlSignerService, XmlSignerService>();
+        services.AddScoped<ISunatSenderService, SunatSenderService>();
+
+        // ========================================
+        // JWT AUTHENTICATION (NUEVO)
+        // ========================================
         services.AddScoped<ICategoriaService, CategoriaService>();
         services.AddScoped<IClienteService, ClienteService>();
         services.AddScoped<IDireccionService, DireccionService>();

@@ -20,6 +20,5 @@ public class NoteDetail
     public decimal MtoBaseIgv { get; set; }
     public decimal Igv { get; set; }
     public int TipAfeIgv { get; set; } = 10;
-    public decimal TotalImpuestos { get; set; }
     public decimal MtoPrecioUnitario { get; set; }
 }

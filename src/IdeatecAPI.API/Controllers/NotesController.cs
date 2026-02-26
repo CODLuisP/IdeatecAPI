@@ -7,14 +7,30 @@ namespace IdeatecAPI.API.Controllers;
 
 [ApiController]
 [Route("api/notes")]
-[Authorize]
+//[Authorize]
 public class NotesController : ControllerBase
 {
     private readonly INoteService _noteService;
 
-    public NotesController(INoteService noteService)
+    public NotesController(
+    INoteService noteService
+    )
     {
         _noteService = noteService;
+
+    }
+
+    /// <summary>
+    /// Genera el XML, lo firma y lo envía a SUNAT
+    /// </summary>
+    [HttpPost("{comprobanteId}/send")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> SendToSunat(int comprobanteId)
+    {
+        var note = await _noteService.SendToSunatAsync(comprobanteId);
+        return Ok(note);
     }
 
     /// <summary>
@@ -46,13 +62,13 @@ public class NotesController : ControllerBase
     /// <summary>
     /// Crea una nueva nota de crédito o débito
     /// </summary>
-    [HttpPost("{empresaId}/cliente/{clienteId}")]
+    [HttpPost]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> Create(int empresaId, int clienteId, [FromBody] CreateNoteDto dto)
+    public async Task<IActionResult> Create([FromBody] CreateNoteDto dto)
     {
-        var note = await _noteService.CreateNoteAsync(empresaId, clienteId, dto);
+        var note = await _noteService.CreateNoteAsync(dto);
         return CreatedAtAction(nameof(GetById), new { comprobanteId = note.ComprobanteId }, note);
     }
 

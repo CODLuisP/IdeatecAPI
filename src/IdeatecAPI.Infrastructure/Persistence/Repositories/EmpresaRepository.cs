@@ -20,8 +20,27 @@ public class EmpresaRepository : DapperRepository<Empresa>, IEmpresaRepository
 
     public async Task<Empresa?> GetEmpresaByIdAsync(int id)
     {
-        var sql = "SELECT * FROM empresa WHERE empresaID = @Id AND activo = 1";
+        var sql = @"SELECT empresaID AS Id, ruc AS Ruc, razonSocial AS RazonSocial,
+                nombreComercial AS NombreComercial, direccion AS Direccion,
+                ubigeo AS Ubigeo, provincia AS Provincia, departamento AS Departamento,
+                distrito AS Distrito, solUsuario AS SolUsuario, solClave AS SolClave,
+                certificadoPem AS CertificadoPem, certificadoPassword AS CertificadoPassword,
+                plan AS Plan, environment AS Environment, activo AS Activo,
+                creadoEn AS CreadoEn, actualizadoEn AS ActualizadoEn
+                FROM empresa WHERE empresaID = @Id AND activo = 1";
         return await _connection.QueryFirstOrDefaultAsync<Empresa>(sql, new { Id = id }, _transaction);
+    }
+    public async Task<Empresa?> GetEmpresaByRucAsync(string ruc)
+    {
+        var sql = @"SELECT empresaID AS Id, ruc AS Ruc, razonSocial AS RazonSocial,
+                nombreComercial AS NombreComercial, direccion AS Direccion,
+                ubigeo AS Ubigeo, provincia AS Provincia, departamento AS Departamento,
+                distrito AS Distrito, solUsuario AS SolUsuario, solClave AS SolClave,
+                certificadoPem AS CertificadoPem, certificadoPassword AS CertificadoPassword,
+                plan AS Plan, environment AS Environment, activo AS Activo,
+                creadoEn AS CreadoEn, actualizadoEn AS ActualizadoEn
+                FROM empresa WHERE ruc = @Ruc AND activo = 1";
+        return await _connection.QueryFirstOrDefaultAsync<Empresa>(sql, new { Ruc = ruc }, _transaction);
     }
 
     public async Task<bool> ExisteRucAsync(string ruc)
@@ -31,9 +50,9 @@ public class EmpresaRepository : DapperRepository<Empresa>, IEmpresaRepository
         return count > 0;
     }
 
-public async Task<int> CreateEmpresaAsync(Empresa empresa)
-{
-    var sql = @"INSERT INTO empresa 
+    public async Task<int> CreateEmpresaAsync(Empresa empresa)
+    {
+        var sql = @"INSERT INTO empresa 
         (ruc, razonSocial, nombreComercial, direccion, ubigeo, urbanizacion,
          provincia, departamento, distrito,
          solUsuario, solClave, activo, creadoEn, telefono, email, logoBase64,
@@ -45,12 +64,12 @@ public async Task<int> CreateEmpresaAsync(Empresa empresa)
          @CertificadoPem, @CertificadoPassword, @ClienteId, @ClientSecret, @Plan, @Environment);
         SELECT LAST_INSERT_ID();";
 
-    return await _connection.ExecuteScalarAsync<int>(sql, empresa, _transaction);
-}
+        return await _connection.ExecuteScalarAsync<int>(sql, empresa, _transaction);
+    }
 
-public async Task UpdateEmpresaAsync(Empresa empresa)
-{
-    var sql = @"UPDATE empresa SET
+    public async Task UpdateEmpresaAsync(Empresa empresa)
+    {
+        var sql = @"UPDATE empresa SET
         razonSocial = @RazonSocial,
         nombreComercial = @NombreComercial,
         direccion = @Direccion,
@@ -74,8 +93,8 @@ public async Task UpdateEmpresaAsync(Empresa empresa)
         actualizadoEn = @ActualizadoEn
         WHERE empresaID = @Id";
 
-    await _connection.ExecuteAsync(sql, empresa, _transaction);
-}
+        await _connection.ExecuteAsync(sql, empresa, _transaction);
+    }
 
     public async Task DeleteEmpresaAsync(int id)
     {

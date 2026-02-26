@@ -21,6 +21,8 @@ public class CreateNoteDto
     // Cliente
     public CreateNoteClientDto Client { get; set; } = new();
 
+    public CreateNoteCompanyDto Company { get; set; } = new();
+
     // Forma de pago (opcional, aplica más a notas de débito)
     public CreateNoteFormaPagoDto? FormaPago { get; set; }
 
@@ -28,7 +30,6 @@ public class CreateNoteDto
     public decimal MtoOperGravadas { get; set; }
     public decimal MtoIGV { get; set; }
     public decimal? ValorVenta { get; set; }
-    public decimal TotalImpuestos { get; set; }
     public decimal? SubTotal { get; set; }
     public decimal MtoImpVenta { get; set; }
 
@@ -53,6 +54,7 @@ public class CreateNoteFormaPagoDto
 
 public class CreateNoteDetailDto
 {
+    public int ProductoId { get; set; }
     public string? CodProducto { get; set; }
     public string Unidad { get; set; } = "NIU";
     public string Descripcion { get; set; } = string.Empty;
@@ -63,6 +65,5 @@ public class CreateNoteDetailDto
     public decimal PorcentajeIgv { get; set; } = 18;
     public decimal Igv { get; set; }
     public int TipAfeIgv { get; set; } = 10;
-    public decimal TotalImpuestos { get; set; }
     public decimal MtoPrecioUnitario { get; set; }
 }
