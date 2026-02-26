@@ -1,5 +1,8 @@
+using System.IO.Compression;
+using System.Text;
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Application.Features.Comprobante.DTOs;
+using Microsoft.Extensions.Configuration;
 
 namespace IdeatecAPI.Application.Features.Comprobante.Services;
 
@@ -15,17 +18,20 @@ public class ComprobanteResponse
     public int? ComprobanteId { get; set; }
     public string? XmlBase64 { get; set; }
     public string? XmlString { get; set; }
+    public string? RutaZip { get; set; }
 }
 
 public class ComprobanteService : IComprobanteService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IComprobanteXmlService _xmlService;
+    private readonly string _rutaXml;
 
-    public ComprobanteService(IUnitOfWork unitOfWork, IComprobanteXmlService xmlService)
+    public ComprobanteService(IUnitOfWork unitOfWork, IComprobanteXmlService xmlService, IConfiguration configuration)
     {
         _unitOfWork = unitOfWork;
         _xmlService = xmlService;
+        _rutaXml = configuration["Storage:RutaXml"] ?? Path.Combine(Directory.GetCurrentDirectory(), "XmlFiles");
     }
     
     public async Task<ComprobanteResponse> GenerarComprobanteAsync(GenerarComprobanteDTO dto)
@@ -95,7 +101,7 @@ public class ComprobanteService : IComprobanteService
             MensajeRespuestaSunat      = null,
             FechaEnvioSunat            = null,
             UsuarioCreacion            = null,
-            XmlGenerado                = xmlResultado.XmlBase64,
+            XmlGenerado                = null,
             FechaCreacion              = DateTime.Now,
 
             Detalles = dto.Details.Select(d => new Domain.Entities.ComprobanteDetalle
@@ -162,6 +168,14 @@ public class ComprobanteService : IComprobanteService
             _unitOfWork.Rollback();
             throw;
         }
+        var rutaZip = GuardarXmlEnZip(
+            xmlString:       xmlResultado.XmlString!,
+            ruc:             dto.Company.NumeroDocumento!,
+            razonSocial:     dto.Company.RazonSocial!,
+            tipoComprobante: dto.TipoComprobante!,
+            serie:           dto.Serie,
+            correlativo:     dto.Correlativo
+        );
 
         return new ComprobanteResponse
         {
@@ -169,7 +183,54 @@ public class ComprobanteService : IComprobanteService
             Mensaje       = "Comprobante generado correctamente",
             ComprobanteId = comprobante.ComprobanteId,
             XmlBase64     = xmlResultado.XmlBase64,
-            XmlString     = xmlResultado.XmlString 
+            XmlString     = xmlResultado.XmlString,
+            RutaZip       = rutaZip
         };
+    }
+
+    private string GuardarXmlEnZip(string xmlString, string ruc, string razonSocial, string tipoComprobante, string serie, string correlativo)
+    {
+    // Limpiar razon social para nombre de carpeta (quitar caracteres inválidos)
+    var empresaCarpeta = string.Concat(razonSocial
+        .Replace("/", "")
+        .Replace("\\", "")
+        .Replace(":", "")
+        .Replace("*", "")
+        .Replace("?", "")
+        .Replace("\"", "")
+        .Replace("<", "")
+        .Replace(">", "")
+        .Replace("|", "")
+        .Trim());
+
+    // Tipo documento carpeta
+    var tipoCarpeta = tipoComprobante switch
+    {
+        "01" => "Facturas",
+        "03" => "Boletas",
+        "07" => "NotasCredito",
+        "08" => "NotasDebito",
+        _    => tipoComprobante
+    };
+
+    // Formato SUNAT: RUC-TipoDoc-Serie-Correlativo
+    var nombreArchivo = $"{ruc}-{tipoComprobante}-{serie}-{correlativo.PadLeft(8, '0')}";
+    var nombreXml     = $"{nombreArchivo}.xml";
+    var nombreZip     = $"{nombreArchivo}.zip";
+
+    // Ruta: FacturacionStorage/EmpresaRazonSocial/Facturas|Boletas/
+    var carpeta = Path.Combine(_rutaXml, empresaCarpeta, tipoCarpeta);
+    Directory.CreateDirectory(carpeta);
+
+    var rutaZip = Path.Combine(carpeta, nombreZip);
+
+    using var zipStream  = new FileStream(rutaZip, FileMode.Create);
+    using var zipArchive = new ZipArchive(zipStream, ZipArchiveMode.Create);
+    var entry            = zipArchive.CreateEntry(nombreXml);
+
+    using var writer = new StreamWriter(entry.Open(), Encoding.UTF8);
+    writer.Write(xmlString);
+
+    return rutaZip;
     }
 }
