@@ -1,10 +1,11 @@
 using System.Text;
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Application.Features.ComunicacionBaja.DTOs;
-using BajaEntity        = IdeatecAPI.Domain.Entities.ComunicacionBaja;
+using BajaEntity = IdeatecAPI.Domain.Entities.ComunicacionBaja;
 using BajaDetalleEntity = IdeatecAPI.Domain.Entities.ComunicacionBajaDetalle;
 using IdeatecAPI.Application.Features.Notas.Services;
 using Microsoft.Extensions.Configuration;
+using System.IO.Compression;
 
 namespace IdeatecAPI.Application.Features.ComunicacionBaja.Services;
 
@@ -23,7 +24,8 @@ public class BajaService : IBajaService
     private readonly IXmlBajaBuilderService _xmlBuilder;
     private readonly IXmlSignerService _xmlSigner;
     private readonly ISunatBajaService _sunatBaja;
-    private readonly IConfiguration _configuration;
+    private readonly string _rutaXml;
+
 
     public BajaService(
         IUnitOfWork unitOfWork,
@@ -32,16 +34,16 @@ public class BajaService : IBajaService
         ISunatBajaService sunatBaja,
         IConfiguration configuration)
     {
-        _unitOfWork    = unitOfWork;
-        _xmlBuilder    = xmlBuilder;
-        _xmlSigner     = xmlSigner;
-        _sunatBaja     = sunatBaja;
-        _configuration = configuration;
+        _unitOfWork = unitOfWork;
+        _xmlBuilder = xmlBuilder;
+        _xmlSigner = xmlSigner;
+        _sunatBaja = sunatBaja;
+        _rutaXml = configuration["Storage:RutaXml"] ?? "C:/FacturacionStorage";
     }
 
     public async Task<IEnumerable<BajaDto>> GetAllAsync(int empresaId)
     {
-        var bajas  = await _unitOfWork.Bajas.GetAllAsync(empresaId);
+        var bajas = await _unitOfWork.Bajas.GetAllAsync(empresaId);
         var result = new List<BajaDto>();
 
         foreach (var baja in bajas)
@@ -90,20 +92,20 @@ public class BajaService : IBajaService
         {
             var baja = new BajaEntity
             {
-                EmpresaId              = empresa.Id,
-                Correlativo            = dto.Correlativo,
-                FecGeneracion          = dto.FecGeneracion,
-                FecComunicacion        = dto.FecComunicacion,
-                EmpresaRuc             = dto.Company.Ruc,
-                EmpresaRazonSocial     = dto.Company.RazonSocial,
+                EmpresaId = empresa.Id,
+                Correlativo = dto.Correlativo,
+                FecGeneracion = dto.FecGeneracion,
+                FecComunicacion = dto.FecComunicacion,
+                EmpresaRuc = dto.Company.Ruc,
+                EmpresaRazonSocial = dto.Company.RazonSocial,
                 EmpresaNombreComercial = dto.Company.NombreComercial,
-                EmpresaDireccion       = dto.Company.Address?.Direccion,
-                EmpresaProvincia       = dto.Company.Address?.Provincia,
-                EmpresaDepartamento    = dto.Company.Address?.Departamento,
-                EmpresaDistrito        = dto.Company.Address?.Distrito,
-                EmpresaUbigeo          = dto.Company.Address?.Ubigueo,
-                EstadoSunat            = "PENDIENTE",
-                FechaCreacion          = DateTime.UtcNow
+                EmpresaDireccion = dto.Company.Address?.Direccion,
+                EmpresaProvincia = dto.Company.Address?.Provincia,
+                EmpresaDepartamento = dto.Company.Address?.Departamento,
+                EmpresaDistrito = dto.Company.Address?.Distrito,
+                EmpresaUbigeo = dto.Company.Address?.Ubigueo,
+                EstadoSunat = "PENDIENTE",
+                FechaCreacion = DateTime.UtcNow
             };
 
             var newId = await _unitOfWork.Bajas.CreateAsync(baja);
@@ -113,10 +115,10 @@ public class BajaService : IBajaService
                 var d = dto.Details[i];
                 await _unitOfWork.BajaDetalles.CreateAsync(new BajaDetalleEntity
                 {
-                    BajaId        = newId,
-                    TipoDoc       = d.TipoDoc,
-                    Serie         = d.Serie,
-                    Correlativo   = d.Correlativo,
+                    BajaId = newId,
+                    TipoDoc = d.TipoDoc,
+                    Serie = d.Serie,
+                    Correlativo = d.Correlativo,
                     DesMotivoBaja = d.DesMotivoBaja
                 });
             }
@@ -153,33 +155,31 @@ public class BajaService : IBajaService
         var details = (await _unitOfWork.BajaDetalles.GetByBajaIdAsync(bajaId)).ToList();
 
         // ── Construir y firmar XML ────────────────────────────────────────
-        var xmlSinFirmar   = _xmlBuilder.BuildXml(baja, details);
+        var xmlSinFirmar = _xmlBuilder.BuildXml(baja, details);
         var xmlFirmadoBytes = _xmlSigner.SignXmlToBytes(
             xmlSinFirmar,
             empresa.CertificadoPem!,
             empresa.CertificadoPassword ?? "123456"
         );
 
-        var xmlFirmadoString = Encoding.UTF8.GetString(xmlFirmadoBytes);
-        var serie            = baja.FecGeneracion.ToString("yyyyMMdd");
-        var nombreArchivo    = $"{empresa.Ruc}-RA-{serie}-{baja.Correlativo}";
+        var serie = baja.FecGeneracion.ToString("yyyyMMdd");
+        var nombreArchivo = $"{empresa.Ruc}-RA-{serie}-{baja.Correlativo}";
 
         // ── Guardar archivos localmente ───────────────────────────────────
-        await GuardarArchivosAsync(empresa.Ruc, nombreArchivo, xmlFirmadoBytes, null);
+        await GuardarArchivosAsync(empresa.Ruc, baja.EmpresaRazonSocial ?? empresa.RazonSocial, nombreArchivo, xmlFirmadoBytes, null);
 
         // ── Enviar a SUNAT ────────────────────────────────────────────────
         var sunatResponse = await _sunatBaja.SendBajaAsync(
-    xmlFirmadoBytes,
-    nombreArchivo,
-    empresa.Ruc,
-    empresa.SolUsuario!,
-    empresa.SolClave!,
-    empresa.Environment
-);
+            xmlFirmadoBytes,
+            nombreArchivo,
+            empresa.Ruc,
+            empresa.SolUsuario!,
+            empresa.SolClave!,
+            empresa.Environment);
 
         // ── Guardar CDR si existe ─────────────────────────────────────────
         if (!string.IsNullOrEmpty(sunatResponse.CdrBase64))
-            await GuardarArchivosAsync(empresa.Ruc, nombreArchivo, null, sunatResponse.CdrBase64);
+            await GuardarArchivosAsync(empresa.Ruc, baja.EmpresaRazonSocial ?? empresa.RazonSocial, nombreArchivo, null, sunatResponse.CdrBase64);
 
         var nuevoEstado = sunatResponse.Success ? "ACEPTADO" : "RECHAZADO";
 
@@ -212,37 +212,35 @@ public class BajaService : IBajaService
     // ── Helpers ───────────────────────────────────────────────────────────
 
     private async Task GuardarArchivosAsync(
-        string ruc, string nombreArchivo,
-        byte[]? xmlFirmadoBytes, string? cdrBase64)
+    string ruc, string razonSocial,
+    string nombreArchivo,
+    byte[]? xmlFirmadoBytes, string? cdrBase64)
     {
-        var rutaBase = Path.Combine(
-            _configuration["Storage:RutaBajas"] ?? "C:/FacturacionStorage/ComunicacionBaja",
-            ruc,
-            DateTime.Now.Year.ToString()
-        );
-        Directory.CreateDirectory(rutaBase);
+        var empresaCarpeta = string.Concat(razonSocial
+            .Replace("/", "").Replace("\\", "").Replace(":", "")
+            .Replace("*", "").Replace("?", "").Replace("\"", "")
+            .Replace("<", "").Replace(">", "").Replace("|", "").Trim());
 
+        var carpeta = Path.Combine(_rutaXml, empresaCarpeta, "ComunicacionBaja");
+        Directory.CreateDirectory(carpeta);
+
+        // ── Guardar ZIP enviado ───────────────────────────────────────────────
         if (xmlFirmadoBytes != null)
         {
-            using var memStream = new MemoryStream();
-            using (var zip = new System.IO.Compression.ZipArchive(memStream,
-                System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
-            {
-                var entry = zip.CreateEntry(nombreArchivo + ".xml");
-                using var entryStream = entry.Open();
-                await entryStream.WriteAsync(xmlFirmadoBytes);
-            }
-            await File.WriteAllBytesAsync(
-                Path.Combine(rutaBase, $"{nombreArchivo}.zip"),
-                memStream.ToArray());
+            var rutaZip = Path.Combine(carpeta, $"{nombreArchivo}.zip");
+            using var zipStream = new FileStream(rutaZip, FileMode.Create);
+            using var zipArchive = new ZipArchive(zipStream, ZipArchiveMode.Create);
+            var entry = zipArchive.CreateEntry($"{nombreArchivo}.xml");
+            using var entryStream = entry.Open();
+            await entryStream.WriteAsync(xmlFirmadoBytes);
         }
 
+        // ── Guardar CDR recibido ──────────────────────────────────────────────
         if (!string.IsNullOrEmpty(cdrBase64))
         {
             var cdrBytes = Convert.FromBase64String(cdrBase64);
-            await File.WriteAllBytesAsync(
-                Path.Combine(rutaBase, $"R-{nombreArchivo}.zip"),
-                cdrBytes);
+            var rutaCdr = Path.Combine(carpeta, $"R-{nombreArchivo}.zip");
+            await File.WriteAllBytesAsync(rutaCdr, cdrBytes);
         }
     }
 
@@ -250,26 +248,26 @@ public class BajaService : IBajaService
 
     private static BajaDto MapToDto(BajaEntity b) => new()
     {
-        BajaId               = b.BajaId,
-        Correlativo          = b.Correlativo,
-        FecGeneracion        = b.FecGeneracion,
-        FecComunicacion      = b.FecComunicacion,
-        EmpresaRuc           = b.EmpresaRuc,
-        EmpresaRazonSocial   = b.EmpresaRazonSocial,
-        EstadoSunat          = b.EstadoSunat,
+        BajaId = b.BajaId,
+        Correlativo = b.Correlativo,
+        FecGeneracion = b.FecGeneracion,
+        FecComunicacion = b.FecComunicacion,
+        EmpresaRuc = b.EmpresaRuc,
+        EmpresaRazonSocial = b.EmpresaRazonSocial,
+        EstadoSunat = b.EstadoSunat,
         CodigoRespuestaSunat = b.CodigoRespuestaSunat,
         MensajeRespuestaSunat = b.MensajeRespuestaSunat,
-        TicketSunat          = b.TicketSunat,
-        FechaEnvioSunat      = b.FechaEnvioSunat,
-        FechaCreacion        = b.FechaCreacion
+        TicketSunat = b.TicketSunat,
+        FechaEnvioSunat = b.FechaEnvioSunat,
+        FechaCreacion = b.FechaCreacion
     };
 
     private static BajaDetalleDto MapDetalleToDto(BajaDetalleEntity d) => new()
     {
-        DetalleId     = d.DetalleId,
-        TipoDoc       = d.TipoDoc,
-        Serie         = d.Serie,
-        Correlativo   = d.Correlativo,
+        DetalleId = d.DetalleId,
+        TipoDoc = d.TipoDoc,
+        Serie = d.Serie,
+        Correlativo = d.Correlativo,
         DesMotivoBaja = d.DesMotivoBaja
     };
 }

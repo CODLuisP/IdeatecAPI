@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using System.Text;
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Application.Features.Notas.DTOs;
@@ -22,7 +23,7 @@ public class NoteService : INoteService
     private readonly IXmlNoteBuilderService _xmlBuilder;
     private readonly IXmlSignerService _xmlSigner;
     private readonly ISunatSenderService _sunatSender;
-    private readonly IConfiguration _configuration;
+    private readonly string _rutaXml;
 
     public NoteService(
         IUnitOfWork unitOfWork,
@@ -35,7 +36,7 @@ public class NoteService : INoteService
         _xmlBuilder = xmlBuilder;
         _xmlSigner = xmlSigner;
         _sunatSender = sunatSender;
-        _configuration = configuration;
+        _rutaXml = configuration["Storage:RutaXml"] ?? "C:/FacturacionStorage";
     }
 
     public async Task<IEnumerable<NoteDto>> GetAllNotesAsync(int empresaId)
@@ -226,10 +227,13 @@ public class NoteService : INoteService
 
         // ← Guardar archivos localmente
         await GuardarArchivosAsync(
-            empresa.Ruc,
-            nombreArchivo,
-            xmlFirmadoBytes,
-            sunatResponse.CdrBase64);
+    empresa.Ruc,
+    note.EmpresaRazonSocial ?? empresa.RazonSocial,
+    note.TipoDoc,
+    note.Serie,
+    note.Correlativo.ToString(),
+    xmlFirmadoBytes,
+    sunatResponse.CdrBase64);
 
         var nuevoEstado = sunatResponse.Success ? (sunatResponse.TieneObservaciones ? "ACEPTADO_CON_OBSERVACIONES" : "ACEPTADO") : "RECHAZADO";
 
@@ -321,35 +325,43 @@ public class NoteService : INoteService
         Value = l.Value
     };
 
-    private async Task GuardarArchivosAsync(string ruc, string nombreArchivo, byte[] xmlFirmadoBytes, string? cdrBase64)
+    private async Task GuardarArchivosAsync(
+        string ruc, string razonSocial, string tipoComprobante,
+        string serie, string correlativo,
+        byte[] xmlFirmadoBytes, string? cdrBase64)
     {
-        var rutaBase = Path.Combine(
-            _configuration["Storage:RutaNotas"] ?? "C:/FacturacionStorage/Notas",
-            ruc,
-            DateTime.Now.Year.ToString()
-        );
-        Directory.CreateDirectory(rutaBase);
+        var empresaCarpeta = string.Concat(razonSocial
+            .Replace("/", "").Replace("\\", "").Replace(":", "")
+            .Replace("*", "").Replace("?", "").Replace("\"", "")
+            .Replace("<", "").Replace(">", "").Replace("|", "").Trim());
+
+        var tipoCarpeta = tipoComprobante switch
+        {
+            "07" => "NotasCredito",
+            "08" => "NotasDebito",
+            _ => tipoComprobante
+        };
+
+        var nombreArchivo = $"{ruc}-{tipoComprobante}-{serie}-{correlativo.PadLeft(8, '0')}";
+        var carpeta = Path.Combine(_rutaXml, empresaCarpeta, tipoCarpeta);
+        Directory.CreateDirectory(carpeta);
 
         // ── Guardar ZIP enviado ───────────────────────────────────────────────
-        using var memStream = new MemoryStream();
-        using (var zip = new System.IO.Compression.ZipArchive(memStream,
-            System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
+        var rutaZip = Path.Combine(carpeta, $"{nombreArchivo}.zip");
+        using (var zipStream = new FileStream(rutaZip, FileMode.Create))
+        using (var zipArchive = new ZipArchive(zipStream, ZipArchiveMode.Create))
         {
-            var entry = zip.CreateEntry(nombreArchivo + ".xml");
+            var entry = zipArchive.CreateEntry($"{nombreArchivo}.xml");
             using var entryStream = entry.Open();
             await entryStream.WriteAsync(xmlFirmadoBytes);
         }
-        await File.WriteAllBytesAsync(
-            Path.Combine(rutaBase, $"{nombreArchivo}.zip"),
-            memStream.ToArray());
 
         // ── Guardar CDR recibido ──────────────────────────────────────────────
         if (!string.IsNullOrEmpty(cdrBase64))
         {
             var cdrBytes = Convert.FromBase64String(cdrBase64);
-            await File.WriteAllBytesAsync(
-                Path.Combine(rutaBase, $"R-{nombreArchivo}.zip"),
-                cdrBytes);
+            var rutaCdr = Path.Combine(carpeta, $"R-{nombreArchivo}.zip");
+            await File.WriteAllBytesAsync(rutaCdr, cdrBytes);
         }
     }
 }
