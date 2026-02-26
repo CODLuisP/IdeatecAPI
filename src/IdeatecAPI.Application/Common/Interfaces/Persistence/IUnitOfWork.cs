@@ -12,6 +12,10 @@ public interface IUnitOfWork : IDisposable
     INoteLegendRepository NoteLegends { get; }
     IComunicacionBajaRepository Bajas { get; }
     IComunicacionBajaDetalleRepository BajaDetalles { get; }
+    IComprobanteRepository Comprobantes { get; }
+    IProductoRepository Productos { get; }
+    ISerieCorrelativoRepository SerieCorrelativo { get; }
+    
     // Transacciones
 
     void BeginTransaction();

@@ -3,11 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace IdeatecAPI.Domain.Entities.CatalogosSunat
-{
+namespace IdeatecAPI.Domain.Entities;
+
     public class TipoDocumento //Catalogo 06
     {
         public string? TipoDocumentoId { get; set; }
         public string? TipoDocumentoNombre { get; set; }
     }
-}
