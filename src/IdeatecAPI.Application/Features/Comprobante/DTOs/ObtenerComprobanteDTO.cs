@@ -1,0 +1,55 @@
+
+using IdeatecAPI.Application.Features.Notas.DTOs;
+
+namespace IdeatecAPI.Application.Features.Comprobante.DTOs;
+    public class ObtenerComprobanteDTO
+    {
+    public string UblVersion { get; set; } = "2.1"; 
+    public string TipoOperacion { get; set; } = "0101";
+    public string? TipoComprobante { get; set; }
+    public string Serie { get; set; } = string.Empty;
+    public string Correlativo { get; set; } = string.Empty;
+    public string NumeroCompleto { get; set; } = string.Empty;
+    public decimal TipoCambio { get; set; }
+    public DateTime FechaEmision { get; set; }
+    public DateTime HoraEmision { get; set; }
+    public DateTime FechaVencimiento { get; set; }
+    public string TipoMoneda { get; set; } = "PEN";
+    public string? TipoPago { get; set; } = "Contado";
+
+    public ClienteDTO Cliente { get; set; } = new();
+    public EmpresaDTO Company { get; set; } = new();
+
+    // Totales
+    public decimal MtoOperGravadas { get; set; }
+    public decimal MtoOperExoneradas { get; set; }
+    public decimal MtoOperInafectas { get; set; }
+    public decimal MtoIGV { get; set; }
+    public decimal TotalIcbper { get; set; } 
+    public decimal TotalImpuestos { get; set; }
+    public decimal ValorVenta { get; set; }  //Total antes de impuestos
+    public decimal SubTotal { get; set; }
+    public decimal MtoImpVenta { get; set; }
+    public decimal TotalDescuentos { get; set; } = 0;
+    public decimal TotalOtrosCargos { get; set; } = 0;
+    public decimal MontoCredito { get; set; } = 0; 
+
+    public List<DetalleFacturaDTO> Details { get; set; } = [];
+    public List<DetallePagosDTO>? Pagos { get; set; } = [];
+    public List<DetalleCuotasDTO>? Cuotas { get; set; } = [];
+    public NoteLegendDto? Legends { get; set; }
+
+    // Estado SUNAT
+    public string? EstadoSunat { get; set; }
+    public string? CodigoHashCPE { get; set; }
+    public string? CodigoRespuestaSunat { get; set; }
+    public string? MensajeRespuestaSunat { get; set; }
+    public DateTime? FechaEnvioSunat { get; set; }
+
+    // Auditoría
+    public string? UsuarioCreacion { get; set; }
+    public DateTime? FechaCreacion { get; set; }
+    public string? UsuarioModificacion { get; set; }
+    public DateTime? FechaModificacion { get; set; }
+}
+

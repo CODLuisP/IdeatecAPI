@@ -29,6 +29,19 @@ public class ClienteController : ControllerBase
         
     }
 
+    [HttpGet("{id}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetById(int id)
+    {
+        var cliente = await _clienteService.GetClienteByIdAsync(id);
+
+        if (cliente == null)
+            return NotFound(new { mensaje = "Cliente no encontrado" });
+
+        return Ok(cliente);
+    }
+
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]

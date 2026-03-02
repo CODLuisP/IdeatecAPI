@@ -11,9 +11,11 @@ namespace IdeatecAPI.Application.Features.Clientes.Services;
 
 public interface IClienteService {
     Task<IEnumerable<ObtenerClientesDTO>> GetAllClientesAsync();
+    Task<ObtenerClientesDTO?> GetClienteByIdAsync(int clienteId);
     Task<int> RegistrarClienteAsync(RegistrarClienteDTO cliente);
     Task<bool> EditarClienteAsync(EditarClienteDTO cliente);
     Task<bool> EliminarClienteAsync(int clienteId);
+
 }
 
 public class ClienteService : IClienteService
@@ -27,79 +29,64 @@ public class ClienteService : IClienteService
 
     public async Task<IEnumerable<ObtenerClientesDTO>> GetAllClientesAsync()
     {
-        var Clientes = await _unitOfWork.Clientes.GetAllClientesAsync();
-        return Clientes.Select(c => new ObtenerClientesDTO
-        {
-            ClienteId = c.ClienteId,
-            RazonSocialNombre = c.RazonSocialNombre,
-            NumeroDocumento = c.NumeroDocumento,
-            NombreComercial = c.NombreComercial,
-            FechaCreacion = c.FechaCreacion,
-            Telefono = c.Telefono,
-            Correo = c.Correo,
-            Estado = c.Estado,
-            
-            Direccion = c.Direcciones
-            .Select(d => new DireccionDTO
-            {
-                DireccionId = d.DireccionId,
-                DireccionLineal = d.DireccionLineal,
-                Ubigeo = d.Ubigeo,
-                Departamento = d.Departamento,
-                Provincia = d.Provincia,
-                Distrito = d.Distrito,
-                TipoDireccion = d.TipoDireccion
-            }).ToList() ?? new List<DireccionDTO>(),
-
-            TipoDocumento = new TipoDocumentoDTO
-            {
-                TipoDocumentoId = c.TipoDocumentoCliente?.TipoDocumentoId,
-                TipoDocumentoNombre = c.TipoDocumentoCliente?.TipoDocumentoNombre
-            }
-            });
+        var clientes = await _unitOfWork.Clientes.GetAllClientesAsync();
+        return clientes.Select(MapToDTO);
     }
+    
+    public async Task<ObtenerClientesDTO?> GetClienteByIdAsync(int clienteId)
+    {
+        if (clienteId <= 0)
+            throw new ArgumentException("ClienteId inválido");
 
+        var cliente = await _unitOfWork.Clientes.GetClienteByIdAsync(clienteId);
+
+        if (cliente == null)
+            return null;
+
+        return MapToDTO(cliente);
+    }   
+    
     public async Task<int> RegistrarClienteAsync(RegistrarClienteDTO dto)
-{
-    _unitOfWork.BeginTransaction();
-    try
     {
-        var cliente = new Cliente
+        _unitOfWork.BeginTransaction();
+        try
         {
-            TipoDocumentoId = dto.TipoDocumentoId,
-            NumeroDocumento = dto.NumeroDocumento,
-            RazonSocialNombre = dto.RazonSocialNombre,
-            NombreComercial = dto.NombreComercial,
-            Telefono = dto.Telefono,
-            Correo = dto.Correo,
-            FechaCreacion = DateTime.Now,
-            Estado = true
-        };
+            var cliente = new Cliente
+            {
+                TipoDocumentoId = dto.TipoDocumentoId,
+                NumeroDocumento = dto.NumeroDocumento,
+                RazonSocialNombre = dto.RazonSocialNombre,
+                NombreComercial = dto.NombreComercial,
+                Telefono = dto.Telefono,
+                Correo = dto.Correo,
+                FechaCreacion = DateTime.Now,
+                Estado = true
+            };
 
-        int clienteId = await _unitOfWork.Clientes.RegistrarClienteAsync(cliente);
+            int clienteId = await _unitOfWork.Clientes.RegistrarClienteAsync(cliente);
 
-        var direccion = new Domain.Entities.Direccion
+            var direccion = new Domain.Entities.Direccion
+            {
+                ClienteId = clienteId,
+                Ubigeo = dto.Direccion?.Ubigeo,
+                DireccionLineal = dto.Direccion?.DireccionLineal,
+                Departamento = dto.Direccion?.Departamento,
+                Provincia = dto.Direccion?.Provincia,
+                Distrito = dto.Direccion?.Distrito,
+                TipoDireccion = dto.Direccion?.TipoDireccion
+            };
+
+            await _unitOfWork.Direcciones.CrearDireccionAsync(direccion);
+
+            _unitOfWork.Commit();
+            return clienteId;
+        }
+        catch
         {
-            ClienteId = clienteId,
-            Ubigeo = dto.Direccion?.Ubigeo,
-            DireccionLineal = dto.Direccion?.DireccionLineal,
-            Departamento = dto.Direccion?.Departamento,
-            Provincia = dto.Direccion?.Provincia,
-            Distrito = dto.Direccion?.Distrito,
-            TipoDireccion = dto.Direccion?.TipoDireccion
-        };
-
-        await _unitOfWork.Direcciones.CrearDireccionAsync(direccion);
-
-        _unitOfWork.Commit();
-        return clienteId;
+            _unitOfWork.Rollback();
+            throw;
+        }
     }
-    catch
-    {
-        _unitOfWork.Rollback();
-        throw;
-    }
-}
 
    public async Task<bool> EditarClienteAsync(EditarClienteDTO dto)
     {
@@ -153,5 +140,41 @@ public class ClienteService : IClienteService
         }
     }
 
+    //Metodos privados
+    private ObtenerClientesDTO MapToDTO(Cliente c)
+    {
+        return new ObtenerClientesDTO
+        {
+            ClienteId = c.ClienteId,
+            RazonSocialNombre = c.RazonSocialNombre,
+            NumeroDocumento = c.NumeroDocumento,
+            NombreComercial = c.NombreComercial,
+            FechaCreacion = c.FechaCreacion,
+            Telefono = c.Telefono,
+            Correo = c.Correo,
+            Estado = c.Estado,
+
+            Direccion = c.Direcciones?
+                .Select(d => new DireccionDTO
+                {
+                    DireccionId = d.DireccionId,
+                    DireccionLineal = d.DireccionLineal,
+                    Ubigeo = d.Ubigeo,
+                    Departamento = d.Departamento,
+                    Provincia = d.Provincia,
+                    Distrito = d.Distrito,
+                    TipoDireccion = d.TipoDireccion
+                }).ToList() ?? new List<DireccionDTO>(),
+
+            TipoDocumento = c.TipoDocumentoCliente == null
+                ? null
+                : new TipoDocumentoDTO
+                {
+                    TipoDocumentoId = c.TipoDocumentoCliente.TipoDocumentoId,
+                    TipoDocumentoNombre = c.TipoDocumentoCliente.TipoDocumentoNombre
+                }
+        };
+    }
 }
+
 

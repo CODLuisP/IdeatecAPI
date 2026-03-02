@@ -1,5 +1,6 @@
 using System.Text;
-using IdeatecAPI.Application.Common.Interfaces.Persistence;
+using System.Xml;
+using System.Xml.Linq;
 using IdeatecAPI.Application.Features.Comprobante.DTOs;
 
 namespace IdeatecAPI.Application.Features.Comprobante.Services;
@@ -19,19 +20,18 @@ public class XmlResultado
 
 public class GeneraXmlService : IComprobanteXmlService
 {
+    private static readonly XNamespace Ns  = "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2";
+    private static readonly XNamespace Cac = "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2";
+    private static readonly XNamespace Cbc = "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2";
+    private static readonly XNamespace Ext = "urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2";
+
     public XmlResultado GenerarXml(GenerarComprobanteDTO dto)
     {
         try
         {
-            var xml = BuildXml(dto);
+            var xml       = BuildXml(dto);
             var xmlBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(xml));
-
-            return new XmlResultado
-            {
-                Exitoso   = true,
-                XmlString = xml,
-                XmlBase64 = xmlBase64
-            };
+            return new XmlResultado { Exitoso = true, XmlString = xml, XmlBase64 = xmlBase64 };
         }
         catch (Exception ex)
         {
@@ -44,270 +44,363 @@ public class GeneraXmlService : IComprobanteXmlService
         var emp    = dto.Company;
         var cli    = dto.Cliente;
         var moneda = dto.TipoMoneda;
+        var correlativo = dto.Correlativo.PadLeft(8, '0');
 
-        var sb = new StringBuilder();
+        var doc = new XDocument(new XDeclaration("1.0", "UTF-8", null));
 
-        sb.AppendLine("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
-        sb.AppendLine($@"<Invoice xmlns:xsi=""http://www.w3.org/2001/XMLSchema-instance""
-         xmlns:xsd=""http://www.w3.org/2001/XMLSchema""
-         xmlns:cac=""urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2""
-         xmlns:cbc=""urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2""
-         xmlns:ext=""urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2""
-         xmlns=""urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"">
-   <ext:UBLExtensions>
-      <ext:UBLExtension>
-         <ext:ExtensionContent/>
-      </ext:UBLExtension>
-   </ext:UBLExtensions>
-   <cbc:UBLVersionID>{dto.UblVersion}</cbc:UBLVersionID>
-   <cbc:CustomizationID schemeAgencyName=""PE:SUNAT"">2.0</cbc:CustomizationID>
-   <cbc:ProfileID schemeAgencyName=""PE:SUNAT"" schemeURI=""urn:pe:gob:sunat:cpe:see:gem:catalogos:catalogo17"">{dto.TipoOperacion}</cbc:ProfileID>
-   <cbc:ID>{dto.Serie}-{dto.Correlativo}</cbc:ID>
-   <cbc:IssueDate>{dto.FechaEmision:yyyy-MM-dd}</cbc:IssueDate>
-   <cbc:IssueTime>{dto.FechaEmision:HH:mm:ss}</cbc:IssueTime>
-   <cbc:DueDate>{dto.FechaVencimiento:yyyy-MM-dd}</cbc:DueDate>
-   <cbc:InvoiceTypeCode listAgencyName=""PE:SUNAT"" listURI=""urn:pe:gob:sunat:cpe:see:gem:catalogos:catalogo01"" listID=""{dto.TipoOperacion}"">{dto.TipoComprobante}</cbc:InvoiceTypeCode>
-   <cbc:DocumentCurrencyCode listID=""ISO 4217 Alpha"" listAgencyName=""United Nations Economic Commission for Europe"">{moneda}</cbc:DocumentCurrencyCode>
-   <cbc:LineCountNumeric>{dto.Details.Count}</cbc:LineCountNumeric>");
+        var root = new XElement(Ns + "Invoice",
+            new XAttribute(XNamespace.Xmlns + "xsi",  "http://www.w3.org/2001/XMLSchema-instance"),
+            new XAttribute(XNamespace.Xmlns + "xsd",  "http://www.w3.org/2001/XMLSchema"),
+            new XAttribute(XNamespace.Xmlns + "cac",  Cac),
+            new XAttribute(XNamespace.Xmlns + "cbc",  Cbc),
+            new XAttribute(XNamespace.Xmlns + "ext",  Ext),
 
-        // Firma placeholder
-        sb.AppendLine($@"   <cac:Signature>
-      <cbc:ID>{dto.Serie}-{dto.Correlativo}</cbc:ID>
-      <cac:SignatoryParty>
-         <cac:PartyIdentification>
-            <cbc:ID>{emp.NumeroDocumento}</cbc:ID>
-         </cac:PartyIdentification>
-         <cac:PartyName>
-            <cbc:Name><![CDATA[{emp.RazonSocial}]]></cbc:Name>
-         </cac:PartyName>
-      </cac:SignatoryParty>
-      <cac:DigitalSignatureAttachment>
-         <cac:ExternalReference>
-            <cbc:URI>#SignatureSP</cbc:URI>
-         </cac:ExternalReference>
-      </cac:DigitalSignatureAttachment>
-   </cac:Signature>");
+            // ── UBLExtensions ────────────────────────────────────────────
+            new XElement(Ext + "UBLExtensions",
+                new XElement(Ext + "UBLExtension",
+                    new XElement(Ext + "ExtensionContent"))),
 
-        // Emisor
-        sb.AppendLine($@"   <cac:AccountingSupplierParty>
-      <cac:Party>
-         <cac:PartyIdentification>
-            <cbc:ID schemeID=""6"" schemeAgencyName=""PE:SUNAT"" schemeURI=""urn:pe:gob:sunat:cpe:see:gem:catalogos:catalogo06"">{emp.NumeroDocumento}</cbc:ID>
-         </cac:PartyIdentification>
-         <cac:PartyName>
-            <cbc:Name><![CDATA[{emp.RazonSocial}]]></cbc:Name>
-         </cac:PartyName>
-         <cac:PartyTaxScheme>
-            <cbc:RegistrationName><![CDATA[{emp.RazonSocial}]]></cbc:RegistrationName>
-            <cbc:CompanyID schemeID=""6"" schemeAgencyName=""PE:SUNAT"">{emp.NumeroDocumento}</cbc:CompanyID>
-            <cac:TaxScheme>
-               <cbc:ID schemeID=""6"" schemeAgencyName=""PE:SUNAT"">{emp.NumeroDocumento}</cbc:ID>
-            </cac:TaxScheme>
-         </cac:PartyTaxScheme>
-         <cac:PartyLegalEntity>
-            <cbc:RegistrationName><![CDATA[{emp.RazonSocial}]]></cbc:RegistrationName>
-            <cac:RegistrationAddress>
-               <cbc:ID schemeName=""Ubigeos"" schemeAgencyName=""PE:INEI"">{emp.Ubigeo}</cbc:ID>
-               <cbc:AddressTypeCode listAgencyName=""PE:SUNAT"" listName=""Establecimientos anexos"">{emp.EstablecimientoAnexo}</cbc:AddressTypeCode>
-               <cbc:CityName><![CDATA[{emp.Provincia}]]></cbc:CityName>
-               <cbc:CountrySubentity><![CDATA[{emp.Departamento}]]></cbc:CountrySubentity>
-               <cbc:District><![CDATA[{emp.Distrito}]]></cbc:District>
-               <cac:AddressLine>
-                  <cbc:Line><![CDATA[{emp.DireccionLineal}]]></cbc:Line>
-               </cac:AddressLine>
-               <cac:Country>
-                  <cbc:IdentificationCode>PE</cbc:IdentificationCode>
-               </cac:Country>
-            </cac:RegistrationAddress>
-         </cac:PartyLegalEntity>
-      </cac:Party>
-   </cac:AccountingSupplierParty>");
+            // ── Cabecera ─────────────────────────────────────────────────
+            new XElement(Cbc + "UBLVersionID", dto.UblVersion),
+            new XElement(Cbc + "CustomizationID",
+                new XAttribute("schemeAgencyName", "PE:SUNAT"),
+                "2.0"),
+            new XElement(Cbc + "ProfileID",
+                new XAttribute("schemeAgencyName", "PE:SUNAT"),
+                new XAttribute("schemeURI", "urn:pe:gob:sunat:cpe:see:gem:catalogos:catalogo17"),
+                dto.TipoOperacion),
+            new XElement(Cbc + "ID", $"{dto.Serie}-{correlativo}"),
+            new XElement(Cbc + "IssueDate",  dto.FechaEmision.ToString("yyyy-MM-dd")),
+            new XElement(Cbc + "IssueTime",  dto.FechaEmision.ToString("HH:mm:ss")),
+            new XElement(Cbc + "DueDate",    dto.FechaVencimiento.ToString("yyyy-MM-dd")),
+            new XElement(Cbc + "InvoiceTypeCode",
+                new XAttribute("listAgencyName", "PE:SUNAT"),
+                new XAttribute("listURI", "urn:pe:gob:sunat:cpe:see:gem:catalogos:catalogo01"),
+                new XAttribute("listID", dto.TipoOperacion),
+                dto.TipoComprobante),
+            // ← LEYENDA AQUÍ, antes de DocumentCurrencyCode
+            dto.Legends != null
+               ? new XElement(Cbc + "Note",
+                     new XAttribute("languageLocaleID", dto.Legends.Code),
+                     dto.Legends.Value)
+               : null!,
+            new XElement(Cbc + "DocumentCurrencyCode",
+                new XAttribute("listID", "ISO 4217 Alpha"),
+                new XAttribute("listAgencyName", "United Nations Economic Commission for Europe"),
+                moneda),
+            new XElement(Cbc + "LineCountNumeric", dto.Details.Count)
+        );
 
-        // Cliente
-        sb.AppendLine($@"   <cac:AccountingCustomerParty>
-      <cac:Party>
-         <cac:PartyIdentification>
-            <cbc:ID schemeID=""{cli.TipoDocumento}"" schemeAgencyName=""PE:SUNAT"">{cli.NumeroDocumento}</cbc:ID>
-         </cac:PartyIdentification>
-         <cac:PartyName>
-            <cbc:Name><![CDATA[{cli.RazonSocial}]]></cbc:Name>
-         </cac:PartyName>
-         <cac:PartyTaxScheme>
-            <cbc:RegistrationName><![CDATA[{cli.RazonSocial}]]></cbc:RegistrationName>
-            <cbc:CompanyID schemeID=""{cli.TipoDocumento}"" schemeAgencyName=""PE:SUNAT"">{cli.NumeroDocumento}</cbc:CompanyID>
-            <cac:TaxScheme>
-               <cbc:ID schemeID=""{cli.TipoDocumento}"">{cli.NumeroDocumento}</cbc:ID>
-            </cac:TaxScheme>
-         </cac:PartyTaxScheme>
-         <cac:PartyLegalEntity>
-            <cbc:RegistrationName><![CDATA[{cli.RazonSocial}]]></cbc:RegistrationName>
-            <cac:RegistrationAddress>
-               <cbc:ID schemeName=""Ubigeos"" schemeAgencyName=""PE:INEI"">{cli.Ubigeo}</cbc:ID>
-               <cbc:CityName><![CDATA[{cli.Provincia}]]></cbc:CityName>
-               <cbc:CountrySubentity><![CDATA[{cli.Departamento}]]></cbc:CountrySubentity>
-               <cbc:District><![CDATA[{cli.Distrito}]]></cbc:District>
-               <cac:AddressLine>
-                  <cbc:Line><![CDATA[{cli.DireccionLineal}]]></cbc:Line>
-               </cac:AddressLine>
-               <cac:Country>
-                  <cbc:IdentificationCode>PE</cbc:IdentificationCode>
-               </cac:Country>
-            </cac:RegistrationAddress>
-         </cac:PartyLegalEntity>
-      </cac:Party>
-   </cac:AccountingCustomerParty>");
+        // ── Firma placeholder ─────────────────────────────────────────────
+        root.Add(BuildSignatureSection(dto, correlativo));
 
-         // Forma de pago
-         if (dto.TipoPago?.ToLower() == "contado")
-         {
-            sb.AppendLine($@"   <cac:PaymentTerms>
-               <cbc:ID>FormaPago</cbc:ID>
-               <cbc:PaymentMeansID>Contado</cbc:PaymentMeansID>
-               <cbc:Amount currencyID=""{moneda}"">{dto.MtoImpVenta:F2}</cbc:Amount>
-            </cac:PaymentTerms>");
-         }
-         else
-         {
-            // Cabecera crédito
-            sb.AppendLine($@"   <cac:PaymentTerms>
-               <cbc:ID>FormaPago</cbc:ID>
-               <cbc:PaymentMeansID>Credito</cbc:PaymentMeansID>
-               <cbc:Amount currencyID=""{moneda}"">0.00</cbc:Amount>
-            </cac:PaymentTerms>");
+        // ── Emisor ────────────────────────────────────────────────────────
+        root.Add(BuildSupplierParty(emp, moneda));
 
-            // Una cuota por cada DetalleCuotas
-            if (dto.Cuotas != null && dto.Cuotas.Any())
+        // ── Cliente ───────────────────────────────────────────────────────
+        root.Add(BuildCustomerParty(cli, moneda));
+
+        // ── Forma de pago ─────────────────────────────────────────────────
+        if (dto.TipoPago?.ToLower() == "contado")
+        {
+            root.Add(new XElement(Cac + "PaymentTerms",
+                new XElement(Cbc + "ID", "FormaPago"),
+                new XElement(Cbc + "PaymentMeansID", "Contado"),
+                new XElement(Cbc + "Amount",
+                    new XAttribute("currencyID", moneda),
+                    dto.MtoImpVenta.ToString("F2"))));
+        }
+        else
+        {
+            root.Add(new XElement(Cac + "PaymentTerms",
+                new XElement(Cbc + "ID", "FormaPago"),
+                new XElement(Cbc + "PaymentMeansID", "Credito"),
+                new XElement(Cbc + "Amount",
+                    new XAttribute("currencyID", moneda),
+                    dto.MontoCredito.ToString("F2"))));
+
+            if (dto.TipoComprobante == "01" && dto.Cuotas != null && dto.Cuotas.Any())
             {
-               foreach (var cuota in dto.Cuotas)
-               {
-                     sb.AppendLine($@"   <cac:PaymentTerms>
-               <cbc:ID>{cuota.NumeroCuota}</cbc:ID>
-               <cbc:PaymentMeansID>Cuota</cbc:PaymentMeansID>
-               <cbc:Amount currencyID=""{moneda}"">{cuota.Monto:F2}</cbc:Amount>
-               <cbc:PaymentDueDate>{cuota.FechaVencimiento:yyyy-MM-dd}</cbc:PaymentDueDate>
-            </cac:PaymentTerms>");
-               }
+                foreach (var cuota in dto.Cuotas)
+                {
+                    root.Add(new XElement(Cac + "PaymentTerms",
+                        new XElement(Cbc + "ID", "FormaPago"),
+                        new XElement(Cbc + "PaymentMeansID", cuota.NumeroCuota),
+                        new XElement(Cbc + "Amount",
+                            new XAttribute("currencyID", moneda),
+                            (cuota.Monto ?? 0).ToString("F2")),
+                        new XElement(Cbc + "PaymentDueDate",
+                            cuota.FechaVencimiento.ToString("yyyy-MM-dd"))));
+                }
             }
-         }
+        }
 
-        // Impuestos cabecera
-        sb.AppendLine($@"   <cac:TaxTotal>
-      <cbc:TaxAmount currencyID=""{moneda}"">{dto.TotalImpuestos:F2}</cbc:TaxAmount>");
+        // ── Impuestos cabecera ────────────────────────────────────────────
+        root.Add(BuildTaxTotal(dto, moneda));
 
-        if (dto.MtoOperGravadas > 0)
-            sb.AppendLine($@"      <cac:TaxSubtotal>
-         <cbc:TaxableAmount currencyID=""{moneda}"">{dto.MtoOperGravadas:F2}</cbc:TaxableAmount>
-         <cbc:TaxAmount currencyID=""{moneda}"">{dto.MtoIGV:F2}</cbc:TaxAmount>
-         <cac:TaxCategory>
-            <cbc:ID schemeID=""UN/ECE 5305"" schemeAgencyName=""United Nations Economic Commission for Europe"">S</cbc:ID>
-            <cac:TaxScheme>
-               <cbc:ID schemeID=""UN/ECE 5153"" schemeAgencyID=""6"">1000</cbc:ID>
-               <cbc:Name>IGV</cbc:Name>
-               <cbc:TaxTypeCode>VAT</cbc:TaxTypeCode>
-            </cac:TaxScheme>
-         </cac:TaxCategory>
-      </cac:TaxSubtotal>");
+        // ── Totales monetarios ────────────────────────────────────────────
+        root.Add(BuildLegalMonetaryTotal(dto, moneda));
 
-        if (dto.MtoOperExoneradas > 0)
-            sb.AppendLine($@"      <cac:TaxSubtotal>
-         <cbc:TaxableAmount currencyID=""{moneda}"">{dto.MtoOperExoneradas:F2}</cbc:TaxableAmount>
-         <cbc:TaxAmount currencyID=""{moneda}"">0.00</cbc:TaxAmount>
-         <cac:TaxCategory>
-            <cbc:ID schemeID=""UN/ECE 5305"" schemeAgencyName=""United Nations Economic Commission for Europe"">E</cbc:ID>
-            <cac:TaxScheme>
-               <cbc:ID schemeID=""UN/ECE 5153"" schemeAgencyID=""6"">9997</cbc:ID>
-               <cbc:Name>EXO</cbc:Name>
-               <cbc:TaxTypeCode>VAT</cbc:TaxTypeCode>
-            </cac:TaxScheme>
-         </cac:TaxCategory>
-      </cac:TaxSubtotal>");
+        // ── Líneas de detalle ─────────────────────────────────────────────
+        for (int i = 0; i < dto.Details.Count; i++)
+        {
+            root.Add(BuildInvoiceLine(dto.Details[i], i + 1, moneda));
+        }
 
-        if (dto.MtoOperInafectas > 0)
-            sb.AppendLine($@"      <cac:TaxSubtotal>
-         <cbc:TaxableAmount currencyID=""{moneda}"">{dto.MtoOperInafectas:F2}</cbc:TaxableAmount>
-         <cbc:TaxAmount currencyID=""{moneda}"">0.00</cbc:TaxAmount>
-         <cac:TaxCategory>
-            <cbc:ID schemeID=""UN/ECE 5305"" schemeAgencyName=""United Nations Economic Commission for Europe"">O</cbc:ID>
-            <cac:TaxScheme>
-               <cbc:ID schemeID=""UN/ECE 5153"" schemeAgencyID=""6"">9998</cbc:ID>
-               <cbc:Name>INA</cbc:Name>
-               <cbc:TaxTypeCode>FRE</cbc:TaxTypeCode>
-            </cac:TaxScheme>
-         </cac:TaxCategory>
-      </cac:TaxSubtotal>");
+        doc.Add(root);
 
-        sb.AppendLine("   </cac:TaxTotal>");
-
-        // Totales monetarios
-        sb.AppendLine($@"   <cac:LegalMonetaryTotal>
-      <cbc:LineExtensionAmount currencyID=""{moneda}"">{dto.ValorVenta:F2}</cbc:LineExtensionAmount>
-      <cbc:TaxInclusiveAmount currencyID=""{moneda}"">{dto.SubTotal:F2}</cbc:TaxInclusiveAmount>
-      <cbc:PayableAmount currencyID=""{moneda}"">{dto.MtoImpVenta:F2}</cbc:PayableAmount>
-   </cac:LegalMonetaryTotal>");
-
-        // Líneas de detalle
-   for (int i = 0; i < dto.Details.Count; i++)
-{
-    var d = dto.Details[i];
-    var (catId, schemeId, taxName, taxType) = GetCodigosTributo(d.TipoAfectacionIGV);
-
-    sb.AppendLine($@"   <cac:InvoiceLine>
-      <cbc:ID>{i + 1}</cbc:ID>
-      <cbc:InvoicedQuantity unitCode=""{d.UnidadMedida}"" unitCodeListID=""UN/ECE rec 20"">{d.Cantidad:F2}</cbc:InvoicedQuantity>
-      <cbc:LineExtensionAmount currencyID=""{moneda}"">{d.ValorVenta:F2}</cbc:LineExtensionAmount>
-      <cac:PricingReference>
-         <cac:AlternativeConditionPrice>
-            <cbc:PriceAmount currencyID=""{moneda}"">{d.PrecioVenta:F2}</cbc:PriceAmount>
-            <cbc:PriceTypeCode listAgencyName=""PE:SUNAT"" listURI=""urn:pe:gob:sunat:cpe:see:gem:catalogos:catalogo16"">01</cbc:PriceTypeCode>
-         </cac:AlternativeConditionPrice>
-      </cac:PricingReference>
-      <cac:TaxTotal>
-         <cbc:TaxAmount currencyID=""{moneda}"">{d.MontoIGV:F2}</cbc:TaxAmount>
-         <cac:TaxSubtotal>
-            <cbc:TaxableAmount currencyID=""{moneda}"">{d.BaseIgv:F2}</cbc:TaxableAmount>
-            <cbc:TaxAmount currencyID=""{moneda}"">{d.MontoIGV:F2}</cbc:TaxAmount>
-            <cac:TaxCategory>
-               <cbc:ID schemeID=""UN/ECE 5305"" schemeAgencyName=""United Nations Economic Commission for Europe"">{catId}</cbc:ID>
-               <cbc:Percent>{d.PorcentajeIGV:F2}</cbc:Percent>
-               <cbc:TaxExemptionReasonCode listAgencyName=""PE:SUNAT"" listURI=""urn:pe:gob:sunat:cpe:see:gem:catalogos:catalogo07"">{d.TipoAfectacionIGV}</cbc:TaxExemptionReasonCode>
-               <cac:TaxScheme>
-                  <cbc:ID schemeID=""UN/ECE 5153"" schemeAgencyName=""PE:SUNAT"">{schemeId}</cbc:ID>
-                  <cbc:Name>{taxName}</cbc:Name>
-                  <cbc:TaxTypeCode>{taxType}</cbc:TaxTypeCode>
-               </cac:TaxScheme>
-            </cac:TaxCategory>
-         </cac:TaxSubtotal>
-      </cac:TaxTotal>
-      <cac:Item>
-         <cbc:Description><![CDATA[{d.Descripcion}]]></cbc:Description>
-         <cac:SellersItemIdentification>
-            <cbc:ID><![CDATA[{d.Codigo}]]></cbc:ID>
-         </cac:SellersItemIdentification>
-         <cac:CommodityClassification>
-            <cbc:ItemClassificationCode listID=""UNSPSC"" listAgencyName=""GS1 US"">10191509</cbc:ItemClassificationCode>
-         </cac:CommodityClassification>
-      </cac:Item>
-      <cac:Price>
-         <cbc:PriceAmount currencyID=""{moneda}"">{d.PrecioUnitario:F2}</cbc:PriceAmount>
-      </cac:Price>
-   </cac:InvoiceLine>");
-}
-        // Leyenda
-        if (dto.Legends != null)
-            sb.AppendLine($@"   <cbc:Note languageLocaleID=""{dto.Legends.Code}""><![CDATA[{dto.Legends.Value}]]></cbc:Note>");
-
-        sb.AppendLine("</Invoice>");
-        return sb.ToString();
+        using var ms = new MemoryStream();
+        using var xw = XmlWriter.Create(ms, new XmlWriterSettings
+        {
+            Encoding           = new UTF8Encoding(false),
+            Indent             = true,
+            OmitXmlDeclaration = false
+        });
+        doc.Save(xw);
+        xw.Flush();
+        return Encoding.UTF8.GetString(ms.ToArray());
     }
 
-   private (string catId, string schemeId, string taxName, string taxType) GetCodigosTributo(string? tipAfeIgv)
-   {
-      return tipAfeIgv switch
-      {
-         "10" => ("S", "1000", "IGV", "VAT"),
-         "20" => ("E", "9997", "EXO", "VAT"),
-         "30" => ("O", "9998", "INA", "FRE"),
-         _    => ("S", "1000", "IGV", "VAT")
-      };
-   }
+    // ── Firma ─────────────────────────────────────────────────────────────────
+    private static XElement BuildSignatureSection(GenerarComprobanteDTO dto, string correlativo) =>
+        new(Cac + "Signature",
+            new XElement(Cbc + "ID", $"{dto.Serie}-{correlativo}"),
+            new XElement(Cac + "SignatoryParty",
+                new XElement(Cac + "PartyIdentification",
+                    new XElement(Cbc + "ID", dto.Company.NumeroDocumento)),
+                new XElement(Cac + "PartyName",
+                    new XElement(Cbc + "Name", dto.Company.RazonSocial))),
+            new XElement(Cac + "DigitalSignatureAttachment",
+                new XElement(Cac + "ExternalReference",
+                    new XElement(Cbc + "URI", "#SignatureSP"))));
+
+    // ── Emisor ────────────────────────────────────────────────────────────────
+    private static XElement BuildSupplierParty(EmpresaDTO emp, string moneda) =>
+        new(Cac + "AccountingSupplierParty",
+            new XElement(Cac + "Party",
+                new XElement(Cac + "PartyIdentification",
+                    new XElement(Cbc + "ID",
+                        new XAttribute("schemeID", "6"),
+                        new XAttribute("schemeAgencyName", "PE:SUNAT"),
+                        new XAttribute("schemeURI", "urn:pe:gob:sunat:cpe:see:gem:catalogos:catalogo06"),
+                        emp.NumeroDocumento)),
+                new XElement(Cac + "PartyName",
+                    new XElement(Cbc + "Name", emp.RazonSocial)),
+                new XElement(Cac + "PartyTaxScheme",
+                    new XElement(Cbc + "RegistrationName", emp.RazonSocial),
+                    new XElement(Cbc + "CompanyID",
+                        new XAttribute("schemeID", "6"),
+                        new XAttribute("schemeAgencyName", "PE:SUNAT"),
+                        emp.NumeroDocumento),
+                    new XElement(Cac + "TaxScheme",
+                        new XElement(Cbc + "ID",
+                            new XAttribute("schemeID", "UN/ECE 5153"),
+                            new XAttribute("schemeAgencyName", "PE:SUNAT"),
+                            "1000"),
+                        new XElement(Cbc + "Name", "IGV"),
+                        new XElement(Cbc + "TaxTypeCode", "VAT"))),
+                new XElement(Cac + "PartyLegalEntity",
+                    new XElement(Cbc + "RegistrationName", emp.RazonSocial),
+                    new XElement(Cac + "RegistrationAddress",
+                        new XElement(Cbc + "ID",
+                            new XAttribute("schemeName", "Ubigeos"),
+                            new XAttribute("schemeAgencyName", "PE:INEI"),
+                            emp.Ubigeo),
+                        new XElement(Cbc + "AddressTypeCode",
+                            new XAttribute("listAgencyName", "PE:SUNAT"),
+                            new XAttribute("listName", "Establecimientos anexos"),
+                            emp.EstablecimientoAnexo),
+                        new XElement(Cbc + "CityName", emp.Provincia),
+                        new XElement(Cbc + "CountrySubentity", emp.Departamento),
+                        new XElement(Cbc + "District", emp.Distrito),
+                        new XElement(Cac + "AddressLine",
+                            new XElement(Cbc + "Line", emp.DireccionLineal)),
+                        new XElement(Cac + "Country",
+                            new XElement(Cbc + "IdentificationCode", "PE"))))));
+
+    // ── Cliente ───────────────────────────────────────────────────────────────
+    private static XElement BuildCustomerParty(ClienteDTO cli, string moneda) =>
+        new(Cac + "AccountingCustomerParty",
+            new XElement(Cac + "Party",
+                new XElement(Cac + "PartyIdentification",
+                    new XElement(Cbc + "ID",
+                        new XAttribute("schemeID", cli.TipoDocumento ?? "00"),
+                        new XAttribute("schemeAgencyName", "PE:SUNAT"),
+                        new XAttribute("schemeURI", "urn:pe:gob:sunat:cpe:see:gem:catalogos:catalogo06"),
+                        cli.NumeroDocumento ?? "-")),
+                new XElement(Cac + "PartyName",
+                    new XElement(Cbc + "Name", cli.RazonSocial ?? "-")),
+                new XElement(Cac + "PartyTaxScheme",
+                    new XElement(Cbc + "RegistrationName", cli.RazonSocial ?? "-"),
+                    new XElement(Cbc + "CompanyID",
+                        new XAttribute("schemeID", cli.TipoDocumento ?? "00"),
+                        new XAttribute("schemeAgencyName", "PE:SUNAT"),
+                        cli.NumeroDocumento),
+                    new XElement(Cac + "TaxScheme",
+                        new XElement(Cbc + "ID",
+                            new XAttribute("schemeID", "UN/ECE 5153"),
+                            new XAttribute("schemeAgencyName", "PE:SUNAT"),
+                            "1000"),
+                        new XElement(Cbc + "Name", "IGV"),
+                        new XElement(Cbc + "TaxTypeCode", "VAT"))),
+                new XElement(Cac + "PartyLegalEntity",
+                    new XElement(Cbc + "RegistrationName", cli.RazonSocial ?? "-"),
+                    new XElement(Cac + "RegistrationAddress",
+                        new XElement(Cbc + "ID",
+                            new XAttribute("schemeName", "Ubigeos"),
+                            new XAttribute("schemeAgencyName", "PE:INEI"),
+                            cli.Ubigeo ?? "-"),
+                        new XElement(Cbc + "CityName", cli.Provincia ?? "-"),
+                        new XElement(Cbc + "CountrySubentity", cli.Departamento ?? "-"),
+                        new XElement(Cbc + "District", cli.Distrito ?? "-"),
+                        new XElement(Cac + "AddressLine",
+                            new XElement(Cbc + "Line", cli.DireccionLineal ?? "-")),
+                        new XElement(Cac + "Country",
+                            new XElement(Cbc + "IdentificationCode", "PE"))))));
+
+    // ── Impuestos cabecera ────────────────────────────────────────────────────
+    private static XElement BuildTaxTotal(GenerarComprobanteDTO dto, string moneda)
+    {
+        var taxTotal = new XElement(Cac + "TaxTotal",
+            new XElement(Cbc + "TaxAmount",
+                new XAttribute("currencyID", moneda),
+                dto.TotalImpuestos.ToString("F2")));
+
+        if (dto.MtoOperGravadas > 0)
+            taxTotal.Add(BuildTaxSubtotal(moneda, dto.MtoOperGravadas, dto.MtoIGV, "S", "1000", "IGV", "VAT"));
+
+        if (dto.MtoOperExoneradas > 0)
+            taxTotal.Add(BuildTaxSubtotal(moneda, dto.MtoOperExoneradas, 0, "E", "9997", "EXO", "VAT"));
+
+        if (dto.MtoOperInafectas > 0)
+            taxTotal.Add(BuildTaxSubtotal(moneda, dto.MtoOperInafectas, 0, "O", "9998", "INA", "FRE"));
+
+        return taxTotal;
+    }
+
+    private static XElement BuildTaxSubtotal(string moneda, decimal taxable, decimal tax,
+        string catId, string schemeId, string taxName, string taxType) =>
+        new(Cac + "TaxSubtotal",
+            new XElement(Cbc + "TaxableAmount",
+                new XAttribute("currencyID", moneda),
+                taxable.ToString("F2")),
+            new XElement(Cbc + "TaxAmount",
+                new XAttribute("currencyID", moneda),
+                tax.ToString("F2")),
+            new XElement(Cac + "TaxCategory",
+                new XElement(Cbc + "ID",
+                    new XAttribute("schemeID", "UN/ECE 5305"),
+                    new XAttribute("schemeAgencyName", "United Nations Economic Commission for Europe"),
+                    catId),
+                new XElement(Cac + "TaxScheme",
+                    new XElement(Cbc + "ID",
+                        new XAttribute("schemeID", "UN/ECE 5153"),
+                        new XAttribute("schemeAgencyName", "PE:SUNAT"),
+                        schemeId),
+                    new XElement(Cbc + "Name", taxName),
+                    new XElement(Cbc + "TaxTypeCode", taxType))));
+
+    // ── Totales monetarios ────────────────────────────────────────────────────
+    private static XElement BuildLegalMonetaryTotal(GenerarComprobanteDTO dto, string moneda)
+    {
+        var total = new XElement(Cac + "LegalMonetaryTotal",
+            new XElement(Cbc + "LineExtensionAmount",
+                new XAttribute("currencyID", moneda),
+                dto.ValorVenta.ToString("F2")));
+
+        if (dto.TotalDescuentos > 0)
+            total.Add(new XElement(Cbc + "AllowanceTotalAmount",
+                new XAttribute("currencyID", moneda),
+                dto.TotalDescuentos.ToString("F2")));
+
+        if (dto.TotalOtrosCargos > 0)
+            total.Add(new XElement(Cbc + "ChargeTotalAmount",
+                new XAttribute("currencyID", moneda),
+                dto.TotalOtrosCargos.ToString("F2")));
+
+        total.Add(new XElement(Cbc + "TaxInclusiveAmount",
+            new XAttribute("currencyID", moneda),
+            dto.SubTotal.ToString("F2")));
+
+        total.Add(new XElement(Cbc + "PayableAmount",
+            new XAttribute("currencyID", moneda),
+            dto.MtoImpVenta.ToString("F2")));
+
+        return total;
+    }
+
+    // ── Línea de detalle ──────────────────────────────────────────────────────
+    private static XElement BuildInvoiceLine(DetalleFacturaDTO d, int item, string moneda)
+    {
+        var (catId, schemeId, taxName, taxType) = GetCodigosTributo(d.TipoAfectacionIGV);
+
+        return new XElement(Cac + "InvoiceLine",
+            new XElement(Cbc + "ID", item.ToString()),
+            new XElement(Cbc + "InvoicedQuantity",
+                new XAttribute("unitCode", d.UnidadMedida ?? "NIU"),
+                new XAttribute("unitCodeListID", "UN/ECE rec 20"),
+                d.Cantidad.ToString("F2")),
+            new XElement(Cbc + "LineExtensionAmount",
+                new XAttribute("currencyID", moneda),
+                d.ValorVenta.ToString("F2")),
+            new XElement(Cac + "PricingReference",
+                new XElement(Cac + "AlternativeConditionPrice",
+                    new XElement(Cbc + "PriceAmount",
+                        new XAttribute("currencyID", moneda),
+                        d.PrecioVenta.ToString("F2")),
+                    new XElement(Cbc + "PriceTypeCode",
+                        new XAttribute("listAgencyName", "PE:SUNAT"),
+                        new XAttribute("listURI", "urn:pe:gob:sunat:cpe:see:gem:catalogos:catalogo16"),
+                        "01"))),
+            new XElement(Cac + "TaxTotal",
+                new XElement(Cbc + "TaxAmount",
+                    new XAttribute("currencyID", moneda),
+                    d.MontoIGV.ToString("F2")),
+                new XElement(Cac + "TaxSubtotal",
+                    new XElement(Cbc + "TaxableAmount",
+                        new XAttribute("currencyID", moneda),
+                        d.BaseIgv.ToString("F2")),
+                    new XElement(Cbc + "TaxAmount",
+                        new XAttribute("currencyID", moneda),
+                        d.MontoIGV.ToString("F2")),
+                    new XElement(Cac + "TaxCategory",
+                        new XElement(Cbc + "ID",
+                            new XAttribute("schemeID", "UN/ECE 5305"),
+                            new XAttribute("schemeAgencyName", "United Nations Economic Commission for Europe"),
+                            catId),
+                        new XElement(Cbc + "Percent", d.PorcentajeIGV.ToString("F2")),
+                        new XElement(Cbc + "TaxExemptionReasonCode",
+                            new XAttribute("listAgencyName", "PE:SUNAT"),
+                            new XAttribute("listURI", "urn:pe:gob:sunat:cpe:see:gem:catalogos:catalogo07"),
+                            d.TipoAfectacionIGV),
+                        new XElement(Cac + "TaxScheme",
+                            new XElement(Cbc + "ID",
+                                new XAttribute("schemeID", "UN/ECE 5153"),
+                                new XAttribute("schemeAgencyName", "PE:SUNAT"),
+                                schemeId),
+                            new XElement(Cbc + "Name", taxName),
+                            new XElement(Cbc + "TaxTypeCode", taxType))))),
+            new XElement(Cac + "Item",
+                new XElement(Cbc + "Description", d.Descripcion),
+                new XElement(Cac + "SellersItemIdentification",
+                    new XElement(Cbc + "ID", d.Codigo)),
+                new XElement(Cac + "CommodityClassification",
+                    new XElement(Cbc + "ItemClassificationCode",
+                        new XAttribute("listID", "UNSPSC"),
+                        new XAttribute("listAgencyName", "GS1 US"),
+                        "10191509"))),
+            new XElement(Cac + "Price",
+                new XElement(Cbc + "PriceAmount",
+                    new XAttribute("currencyID", moneda),
+                    d.PrecioUnitario.ToString("F2"))));
+    }
+
+    private static (string catId, string schemeId, string taxName, string taxType) GetCodigosTributo(string? tipAfeIgv) =>
+        tipAfeIgv switch
+        {
+            "10" => ("S", "1000", "IGV", "VAT"),
+            "20" => ("E", "9997", "EXO", "VAT"),
+            "30" => ("O", "9998", "INA", "FRE"),
+            _    => ("S", "1000", "IGV", "VAT")
+        };
 }

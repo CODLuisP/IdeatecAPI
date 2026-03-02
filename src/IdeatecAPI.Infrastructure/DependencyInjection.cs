@@ -65,6 +65,8 @@ public static class DependencyInjection
         services.AddScoped<IDireccionService, DireccionService>();
         services.AddScoped<IEmpresaService, EmpresaService>();
         services.AddScoped<INoteService, NoteService>();
+
+        // Comprobante
         services.AddScoped<IComprobanteService, ComprobanteService>();
         services.AddScoped<IComprobanteXmlService, GeneraXmlService>();
 

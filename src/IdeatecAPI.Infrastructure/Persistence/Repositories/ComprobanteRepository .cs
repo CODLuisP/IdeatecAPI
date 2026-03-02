@@ -10,7 +10,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
     public ComprobanteRepository(IDbConnection connection, IDbTransaction? transaction = null)
         : base(connection, transaction) { }
 
-    public async Task<int> GenerarComprobanteAsync(Comprobante comprobante)
+    public async Task<int> GenerarComprobanteAsync(Comprobante comprobante) //guardar comprobante en BD
     {
         var sql = @"
             INSERT INTO comprobante (
@@ -196,4 +196,193 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
 
         await _connection.ExecuteAsync(sql, parameters, _transaction);
     }
+
+
+     // ── NUEVO: Obtener comprobante por ID ────────────────────────────────────
+    public new async Task<Comprobante?> GetByIdAsync(int comprobanteId)
+    {
+        var sql = BaseSelect + " WHERE comprobanteID = @ComprobanteId";
+
+        return await _connection.QueryFirstOrDefaultAsync<Comprobante>(
+            sql,
+            new { ComprobanteId = comprobanteId },
+            _transaction
+        );
+    }
+
+    public async Task<IEnumerable<Comprobante>> GetByEstadoAsync(string estadoSunat)
+    {
+        var sql = BaseSelect + " WHERE estadoSunat = @EstadoSunat";
+
+        return await _connection.QueryAsync<Comprobante>(
+            sql,
+            new { EstadoSunat = estadoSunat },
+            _transaction
+        );
+    }
+
+    public async Task<IEnumerable<ComprobanteDetalle>> GetDetallesByIdAsync(int comprobanteId)
+    {
+        var sql = @"
+            SELECT 
+                comprobanteId, item, productoId, codigo, descripcion, cantidad,
+                unidadMedida, precioUnitario, tipoAfectacionIGV, porcentajeIGV,
+                montoIGV, baseIgv, descuentoUnitario, descuentoTotal,
+                valorVenta, precioVenta, icbper, factorIcbper
+            FROM comprobantedetalle
+            WHERE comprobanteId = @ComprobanteId";
+
+        return await _connection.QueryAsync<ComprobanteDetalle>(
+            sql, new { ComprobanteId = comprobanteId }, _transaction);
+    }
+
+    public async Task<IEnumerable<Cuota>> GetCuotasByIdAsync(int comprobanteId)
+    {
+        var sql = @"
+            SELECT 
+                cuotaId, comprobanteId, numeroCuota, monto,
+                fechaVencimiento, montoPagado, fechaPago, estado
+            FROM cuota
+            WHERE comprobanteId = @ComprobanteId";
+
+        return await _connection.QueryAsync<Cuota>(
+            sql, new { ComprobanteId = comprobanteId }, _transaction);
+    }
+
+    public async Task<IEnumerable<Pago>> GetPagosByIdAsync(int comprobanteId)
+    {
+        var sql = @"
+            SELECT 
+                pagoID         AS PagoId,
+                comprobanteID  AS ComprobanteId,
+                medioPago      AS MedioPago,
+                monto          AS Monto,
+                fechaPago      AS FechaPago,
+                numeroOperacion AS NumeroOperacion,
+                entidadFinanciera AS EntidadFinanciera,
+                observaciones  AS Observaciones
+            FROM pago
+            WHERE comprobanteID = @ComprobanteId";
+
+        return await _connection.QueryAsync<Pago>(
+            sql,
+            new { ComprobanteId = comprobanteId },
+            _transaction
+        );
+    }
+    public async Task<IEnumerable<NoteLegend>> GetLeyendasByIdAsync(int comprobanteId)
+    {
+        var sql = @"
+            SELECT comprobanteId, code, value
+            FROM notelegend
+            WHERE comprobanteId = @ComprobanteId";
+
+        return await _connection.QueryAsync<NoteLegend>(
+            sql, new { ComprobanteId = comprobanteId }, _transaction);
+    }
+
+        // ── NUEVO: Actualizar estado SUNAT ───────────────────────────────────────
+    public async Task UpdateEstadoSunatAsync(
+        int comprobanteId,
+        string estado,
+        string? codigo,
+        string? mensaje,
+        string? xmlFirmado,
+        string? cdrBase64)
+    {
+        var sql = @"
+            UPDATE comprobante SET
+                estadoSunat           = @Estado,
+                codigoRespuestaSunat  = @Codigo,
+                mensajeRespuestaSunat = @Mensaje,
+                xmlRespuestaSunat     = @XmlFirmado,
+                cdrSunat              = @CdrBase64,
+                fechaEnvioSunat       = @FechaEnvio
+            WHERE comprobanteID = @ComprobanteId";
+
+        await _connection.ExecuteAsync(sql, new
+        {
+            ComprobanteId = comprobanteId,
+            Estado        = estado,
+            Codigo        = codigo,
+            Mensaje       = mensaje,
+            XmlFirmado    = xmlFirmado,
+            CdrBase64     = cdrBase64,
+            FechaEnvio    = DateTime.Now
+        }, _transaction);
+    }
+
+    public Task<Comprobante?> GetComprobanteByIdAsync(int comprobanteId)
+    {
+        return GetByIdAsync(comprobanteId);
+    }
+
+    public Task<IEnumerable<Comprobante>> GetComprobanteByEstadoAsync(string estado)
+    {
+        return GetByEstadoAsync(estado);
+    }
+
+    private const string BaseSelect = @"
+    SELECT 
+        comprobanteID           AS ComprobanteId,
+        tipoOperacion           AS TipoOperacion,
+        tipoComprobante         AS TipoComprobante,
+        serie                   AS Serie,
+        correlativo             AS Correlativo,
+        numeroCompleto          AS NumeroCompleto,
+        tipoCambio              AS TipoCambio,
+        fechaEmision            AS FechaEmision,
+        fechaVencimiento        AS FechaVencimiento,
+        tipoMoneda              AS TipoMoneda,
+        tipoPago                AS TipoPago,
+
+        empresaID               AS EmpresaId,
+        empresaRuc              AS EmpresaRuc,
+        empresaRazonSocial      AS EmpresaRazonSocial,
+        empresaNombreComercial  AS EmpresaNombreComercial,
+        establecimientoAnexo    AS EmpresaEstablecimientoAnexo,
+        empresaDireccion        AS EmpresaDireccion,
+        empresaProvincia        AS EmpresaProvincia,
+        empresaDepartamento     AS EmpresaDepartamento,
+        empresaDistrito         AS EmpresaDistrito,
+        empresaUbigeo           AS EmpresaUbigeo,
+
+        clienteID               AS ClienteId,
+        clienteTipoDoc          AS ClienteTipoDoc,
+        clienteNumDoc           AS ClienteNumDoc,
+        clienteRznSocial        AS ClienteRazonSocial,
+        clienteDireccion        AS ClienteDireccion,
+        clienteProvincia        AS ClienteProvincia,
+        clienteDepartamento     AS ClienteDepartamento,
+        clienteDistrito         AS ClienteDistrito,
+        clienteUbigeo           AS ClienteUbigeo,
+
+        totalOperacionesGravadas   AS TotalOperacionesGravadas,
+        totalOperacionesExoneradas AS TotalOperacionesExoneradas,
+        totalOperacionesInafectas  AS TotalOperacionesInafectas,
+        totalIGV                AS TotalIGV,
+        totalImpuestos          AS TotalImpuestos,
+        totalDescuentos         AS TotalDescuentos,
+        totalOtrosCargos        AS TotalOtrosCargos,
+        totalIcbper             AS TotalIcbper,
+        valorVenta              AS ValorVenta,
+        subTotal                AS SubTotal,
+        importeTotal            AS ImporteTotal,
+
+        estadoSunat             AS EstadoSunat,
+        codigoHashCPE           AS CodigoHashCPE,
+        codigoRespuestaSunat    AS CodigoRespuestaSunat,
+        mensajeRespuestaSunat   AS MensajeRespuestaSunat,
+        fechaEnvioSunat         AS FechaEnvioSunat,
+
+        xmlGenerado             AS XmlGenerado,
+
+        usuarioCreacion         AS UsuarioCreacion,
+        fechaCreacion           AS FechaCreacion,
+        usuarioModificacion     AS UsuarioModificacion,
+        fechaModificacion       AS FechaModificacion
+
+    FROM comprobante
+    ";
+
 }

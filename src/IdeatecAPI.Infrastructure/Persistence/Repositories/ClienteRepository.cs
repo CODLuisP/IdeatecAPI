@@ -71,6 +71,69 @@ public class ClienteRepository : DapperRepository<Cliente>, IClienteRepository
         return clienteDictionary.Values;
     }
 
+    public async Task<Cliente?> GetClienteByIdAsync(int clienteId)
+    {
+        var sql = @"
+            SELECT
+                c.clienteID          AS ClienteId,
+                c.numeroDocumento    AS NumeroDocumento,
+                c.razonSocial        AS RazonSocialNombre,
+                c.nombreComercial    AS NombreComercial,
+                c.fechaCreacion      AS FechaCreacion,
+                c.telefono           AS Telefono,
+                c.email              AS Correo,
+                c.estado             AS Estado,
+
+                td.tipoDocumentoId   AS TipoDocumentoId,
+                td.tipoDocumento     AS TipoDocumentoNombre,
+
+                d.direccionId        AS DireccionId,
+                d.direccionLineal    AS DireccionLineal,
+                d.ubigeo             AS Ubigeo,
+                d.departamento       AS Departamento,
+                d.provincia          AS Provincia,
+                d.distrito           AS Distrito,
+                d.tipoDireccion      AS TipoDireccion
+
+            FROM cliente c
+            LEFT JOIN tipodocumento td 
+                ON td.tipoDocumentoId = c.tipoDocumentoId
+            LEFT JOIN direccion d 
+                ON d.clienteID = c.clienteID
+                AND d.estado = 1
+            WHERE c.clienteID = @ClienteId
+            AND c.estado = 1;";
+
+        var clienteDictionary = new Dictionary<int, Cliente>();
+
+        await _connection.QueryAsync<Cliente, TipoDocumento, Direccion, Cliente>(
+            sql,
+            (cliente, tipoDoc, direccion) =>
+            {
+                if (!clienteDictionary.TryGetValue(cliente.ClienteId, out var clienteEntry))
+                {
+                    clienteEntry = cliente;
+                    clienteEntry.TipoDocumentoCliente = tipoDoc;
+                    clienteEntry.Direcciones = new List<Direccion>();
+
+                    clienteDictionary.Add(clienteEntry.ClienteId, clienteEntry);
+                }
+
+                if (direccion != null && direccion.DireccionId != 0)
+                {
+                    clienteEntry.Direcciones.Add(direccion);
+                }
+
+                return clienteEntry;
+            },
+            new { ClienteId = clienteId },
+            transaction: _transaction,
+            splitOn: "TipoDocumentoId,DireccionId"
+        );
+
+        return clienteDictionary.Values.FirstOrDefault();
+    }
+        
     public async Task<int> RegistrarClienteAsync(Cliente cliente)
     {
         var sql = @"

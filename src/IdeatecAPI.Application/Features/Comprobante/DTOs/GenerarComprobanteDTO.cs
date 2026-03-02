@@ -61,7 +61,7 @@ public class DetalleCuotasDTO
 
 public class EmpresaDTO
 {
-    public int? EmpresaId { get; set; }
+    public int EmpresaId { get; set; }
     public string? NumeroDocumento { get; set; }
     public string? RazonSocial { get; set; }
     public string? NombreComercial { get; set; }

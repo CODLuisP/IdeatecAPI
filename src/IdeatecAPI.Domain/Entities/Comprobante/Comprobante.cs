@@ -4,7 +4,7 @@ public class Comprobante
 {
     public int ComprobanteId { get; set; }
     // Empresa (aplanado)
-    public int? EmpresaId { get; set; }
+    public int EmpresaId { get; set; }
     public string? EmpresaRuc { get; set; }
     public string? EmpresaRazonSocial { get; set; }
     public string? EmpresaNombreComercial { get; set; }
