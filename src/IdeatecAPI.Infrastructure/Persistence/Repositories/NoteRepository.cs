@@ -207,7 +207,7 @@ public class NoteRepository : DapperRepository<Note>, INoteRepository
     );
     SELECT LAST_INSERT_ID();";
 
-        return await _connection.ExecuteScalarAsync<int>(sql, new
+        var newId = await _connection.ExecuteScalarAsync<int>(sql, new
         {
             note.EmpresaId,
             note.EmpresaRuc,
@@ -246,6 +246,31 @@ public class NoteRepository : DapperRepository<Note>, INoteRepository
             note.EstadoSunat,
             note.UsuarioCreacion,
             FechaCreacion = DateTime.UtcNow
+        }, _transaction);
+
+        // ← Actualizar serie y correlativo actual
+        await ActualizarSerieCorrelativoAsync(note);
+
+        return newId;
+    }
+
+    private async Task ActualizarSerieCorrelativoAsync(Note note)
+    {
+        var sql = @"
+        UPDATE serie
+        SET serie              = @Serie,
+            correlativoActual  = @Correlativo,
+            fechaActualizacion = NOW()
+        WHERE empresaID        = @EmpresaId 
+          AND tipoComprobante  = @TipoDoc
+          AND serie            = @Serie";
+
+        await _connection.ExecuteAsync(sql, new
+        {
+            note.Serie,
+            note.Correlativo,
+            note.EmpresaId,
+            note.TipoDoc
         }, _transaction);
     }
 

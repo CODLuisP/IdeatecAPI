@@ -50,9 +50,9 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
             comprobante.TipoComprobante,
             comprobante.Serie,
             comprobante.Correlativo,
-            FechaEmision              = comprobante.FechaEmision.Date,
-            HoraEmision               = comprobante.HoraEmision.TimeOfDay,
-            FechaVencimiento          = comprobante.FechaVencimiento.Date,
+            FechaEmision = comprobante.FechaEmision.Date,
+            HoraEmision = comprobante.HoraEmision.TimeOfDay,
+            FechaVencimiento = comprobante.FechaVencimiento.Date,
             comprobante.TipoMoneda,
             comprobante.TipoPago,
             comprobante.EmpresaId,
@@ -197,8 +197,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         await _connection.ExecuteAsync(sql, parameters, _transaction);
     }
 
-
-     // ── NUEVO: Obtener comprobante por ID ────────────────────────────────────
+    // ── NUEVO: Obtener comprobante por ID ────────────────────────────────────
     public new async Task<Comprobante?> GetByIdAsync(int comprobanteId)
     {
         var sql = BaseSelect + " WHERE comprobanteID = @ComprobanteId";
@@ -281,7 +280,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
             sql, new { ComprobanteId = comprobanteId }, _transaction);
     }
 
-        // ── NUEVO: Actualizar estado SUNAT ───────────────────────────────────────
+    // ── NUEVO: Actualizar estado SUNAT ───────────────────────────────────────
     public async Task UpdateEstadoSunatAsync(
         int comprobanteId,
         string estado,
@@ -303,12 +302,12 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         await _connection.ExecuteAsync(sql, new
         {
             ComprobanteId = comprobanteId,
-            Estado        = estado,
-            Codigo        = codigo,
-            Mensaje       = mensaje,
-            XmlFirmado    = xmlFirmado,
-            CdrBase64     = cdrBase64,
-            FechaEnvio    = DateTime.Now
+            Estado = estado,
+            Codigo = codigo,
+            Mensaje = mensaje,
+            XmlFirmado = xmlFirmado,
+            CdrBase64 = cdrBase64,
+            FechaEnvio = DateTime.Now
         }, _transaction);
     }
 

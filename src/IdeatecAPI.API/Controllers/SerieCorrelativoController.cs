@@ -36,5 +36,4 @@ public class SerieCorrelativoController : ControllerBase
         var id = await _serieCorrelativoService.RegistrarSerieCorrelativoAsync(dto);
         return Ok(new { serieId = id });
     }
-
 }

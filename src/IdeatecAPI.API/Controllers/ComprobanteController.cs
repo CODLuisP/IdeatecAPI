@@ -26,7 +26,7 @@ public class ComprobantesController : ControllerBase
         return Ok(resultado);
     }
 
-        // POST api/comprobantes/{id}/enviar-sunat
+    // POST api/comprobantes/{id}/enviar-sunat
     [HttpPost("{id}/enviar-sunat")]
     public async Task<IActionResult> EnviarSunat(int id)
     {
@@ -45,7 +45,7 @@ public class ComprobantesController : ControllerBase
         }
     }
 
-        [HttpGet("{id}")]
+    [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)
     {
         var comprobante = await _comprobanteService.GetComprobanteByIdAsync(id);
