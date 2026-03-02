@@ -64,7 +64,7 @@ public class ComprobanteService : IComprobanteService
         if (dto.Details == null || dto.Details.Count == 0)
         throw new InvalidOperationException("El comprobante debe tener al menos un detalle");
 
-        if (dto.Cuotas == null || dto.Cuotas.Count == 0 || dto.Pagos == null || dto.Pagos.Count == 0)
+        if (dto.Cuotas?.Count == 0 && dto.Pagos?.Count == 0)
         throw new InvalidOperationException("El comprobante debe tener al menos un pago o una cuota");
 
         // ── 2. Buscar empresa por RUC ─────────────────────────────────────────
