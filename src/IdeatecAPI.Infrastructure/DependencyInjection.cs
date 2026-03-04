@@ -16,6 +16,7 @@ using IdeatecAPI.Application.Features.Productos.Services;
 using IdeatecAPI.Application.Features.SerieCorrelativo.Services;
 using IdeatecAPI.Application.Features.ComunicacionBaja.Services;
 using IdeatecAPI.Application.Features.GuiaRemision.Services;
+using IdeatecAPI.Application.Features.ResumenComprobante.Services;
 
 namespace IdeatecAPI.Infrastructure;
 
@@ -70,6 +71,11 @@ public static class DependencyInjection
         // Comprobante
         services.AddScoped<IComprobanteService, ComprobanteService>();
         services.AddScoped<IComprobanteXmlService, GeneraXmlService>();
+
+        //Resumen de comprobantes
+        services.AddScoped<IResumenComprobanteService, ResumenComprobanteService>();
+        services.AddScoped<IResumenXmlService, GeneraResumenXmlService>();
+        services.AddScoped<ISunatResumenService, SunatResumenService>();
 
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IAuthService, AuthService>();

@@ -29,6 +29,7 @@ public class UnitOfWork : IUnitOfWork
 
     private IComunicacionBajaRepository? _bajas;
     private IComunicacionBajaDetalleRepository? _bajaDetalles;
+    private IResumenComprobanteRepository? _resumenComprobante;
 
     private IGuiaRemisionRepository? _guias;
     private IGuiaRemisionDetalleRepository? _guiaDetalles;
@@ -182,7 +183,14 @@ public class UnitOfWork : IUnitOfWork
         get
         {
             _guiaDetalles ??= new GuiaRemisionDetalleRepository(Connection, _transaction);
-            return _guiaDetalles;
+            return _guiaDetalles;}
+    }
+    public IResumenComprobanteRepository ResumenComprobante
+    {
+        get
+        {
+            _resumenComprobante ??= new ResumenComprobanteRepository(Connection, _transaction);
+            return _resumenComprobante;
         }
     }
 

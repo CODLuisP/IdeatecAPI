@@ -331,6 +331,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         numeroCompleto          AS NumeroCompleto,
         tipoCambio              AS TipoCambio,
         fechaEmision            AS FechaEmision,
+        TIMESTAMP(fechaEmision, horaEmision) AS HoraEmision,
         fechaVencimiento        AS FechaVencimiento,
         tipoMoneda              AS TipoMoneda,
         tipoPago                AS TipoPago,

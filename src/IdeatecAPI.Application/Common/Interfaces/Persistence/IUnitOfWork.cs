@@ -17,6 +17,7 @@ public interface IUnitOfWork : IDisposable
     ISerieCorrelativoRepository SerieCorrelativo { get; }
     IGuiaRemisionRepository Guias { get; }
     IGuiaRemisionDetalleRepository GuiaDetalles { get; }
+    IResumenComprobanteRepository ResumenComprobante { get; }
     
     // Transacciones
 

@@ -71,10 +71,6 @@ public class ComprobanteService : IComprobanteService
         var empresa = await _unitOfWork.Empresas.GetEmpresaByRucAsync(dto.Company.NumeroDocumento ?? "")
             ?? throw new KeyNotFoundException($"Empresa con RUC {dto.Company.NumeroDocumento} no encontrada");
 
-        // ── 3. ClienteId  ────────────
-        var cliente = await _unitOfWork.Clientes.GetByNumDocAsync(dto.Cliente.NumeroDocumento ?? "");
-        var clienteId = cliente?.ClienteId;
-
         // ── 4. BeginTransaction ───────────────────────────────────────────────
         _unitOfWork.BeginTransaction();
         try
@@ -115,15 +111,15 @@ public class ComprobanteService : IComprobanteService
                 EmpresaDepartamento         = dto.Company.Departamento,
                 EmpresaDistrito             = dto.Company.Distrito,
                 EmpresaUbigeo               = dto.Company.Ubigeo,
-                ClienteId                   = dto.Cliente.ClienteId,
-                ClienteTipoDoc              = dto.Cliente.TipoDocumento,
-                ClienteNumDoc               = dto.Cliente.NumeroDocumento,
-                ClienteRazonSocial          = dto.Cliente.RazonSocial,
-                ClienteDireccion            = dto.Cliente.DireccionLineal,
-                ClienteProvincia            = dto.Cliente.Provincia,
-                ClienteDepartamento         = dto.Cliente.Departamento,
-                ClienteDistrito             = dto.Cliente.Distrito,
-                ClienteUbigeo               = dto.Cliente.Ubigeo,
+                ClienteId                   = dto.Cliente?.ClienteId,
+                ClienteTipoDoc              = dto.Cliente?.TipoDocumento,
+                ClienteNumDoc               = dto.Cliente?.NumeroDocumento,
+                ClienteRazonSocial          = dto.Cliente?.RazonSocial,
+                ClienteDireccion            = dto.Cliente?.DireccionLineal,
+                ClienteProvincia            = dto.Cliente?.Provincia,
+                ClienteDepartamento         = dto.Cliente?.Departamento,
+                ClienteDistrito             = dto.Cliente?.Distrito,
+                ClienteUbigeo               = dto.Cliente?.Ubigeo,
                 TotalOperacionesGravadas    = dto.MtoOperGravadas,
                 TotalOperacionesExoneradas  = dto.MtoOperExoneradas,
                 TotalOperacionesInafectas   = dto.MtoOperInafectas,
@@ -197,7 +193,7 @@ public class ComprobanteService : IComprobanteService
             return new ComprobanteResponse
             {
                 Exitoso       = true,
-                Mensaje       = "Comprobante generado correctamente",
+                Mensaje       = "Comprobante guardado correctamente",
                 ComprobanteId = newComprobanteId,
                 EstadoSunat   = "PENDIENTE"
             };
@@ -243,6 +239,7 @@ public class ComprobanteService : IComprobanteService
             Serie            = comprobante.Serie!,
             Correlativo      = comprobante.Correlativo?.ToString() ?? "0",
             FechaEmision     = comprobante.FechaEmision,
+            HoraEmision      = comprobante.HoraEmision,
             FechaVencimiento = comprobante.FechaVencimiento,
             TipoMoneda       = comprobante.TipoMoneda!,
             TipoPago         = comprobante.TipoPago,
@@ -502,6 +499,7 @@ public class ComprobanteService : IComprobanteService
             NumeroCompleto  = comprobante.NumeroCompleto ?? "",
             TipoCambio      = 0, // si luego manejas TC lo puedes mapear aquí
             FechaEmision    = comprobante.FechaEmision,
+            HoraEmision     = comprobante.HoraEmision,
             FechaVencimiento= comprobante.FechaVencimiento,
             TipoMoneda      = comprobante.TipoMoneda ?? "PEN",
             TipoPago        = comprobante.TipoPago,
