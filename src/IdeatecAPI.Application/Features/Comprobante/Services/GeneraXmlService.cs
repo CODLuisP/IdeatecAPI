@@ -71,7 +71,7 @@ public class GeneraXmlService : IComprobanteXmlService
                 dto.TipoOperacion),
             new XElement(Cbc + "ID", $"{dto.Serie}-{correlativo}"),
             new XElement(Cbc + "IssueDate",  dto.FechaEmision.ToString("yyyy-MM-dd")),
-            new XElement(Cbc + "IssueTime",  dto.FechaEmision.ToString("HH:mm:ss")),
+            new XElement(Cbc + "IssueTime",  dto.HoraEmision.ToString("HH:mm:ss")),
             new XElement(Cbc + "DueDate",    dto.FechaVencimiento.ToString("yyyy-MM-dd")),
             new XElement(Cbc + "InvoiceTypeCode",
                 new XAttribute("listAgencyName", "PE:SUNAT"),
@@ -95,12 +95,17 @@ public class GeneraXmlService : IComprobanteXmlService
         root.Add(BuildSignatureSection(dto, correlativo));
 
         // ── Emisor ────────────────────────────────────────────────────────
-        root.Add(BuildSupplierParty(emp, moneda));
+        root.Add(BuildSupplierParty(emp));
 
         // ── Cliente ───────────────────────────────────────────────────────
-        root.Add(BuildCustomerParty(cli, moneda));
+        root.Add(BuildCustomerParty(cli));
 
         // ── Forma de pago ─────────────────────────────────────────────────
+
+        var MontoCredito = dto.Cuotas?
+            .Sum(p => p.Monto ?? 0m) ?? 0m;
+        
+
         if (dto.TipoPago?.ToLower() == "contado")
         {
             root.Add(new XElement(Cac + "PaymentTerms",
@@ -117,7 +122,7 @@ public class GeneraXmlService : IComprobanteXmlService
                 new XElement(Cbc + "PaymentMeansID", "Credito"),
                 new XElement(Cbc + "Amount",
                     new XAttribute("currencyID", moneda),
-                    dto.MontoCredito.ToString("F2"))));
+                    MontoCredito.ToString("F2"))));
 
             if (dto.TipoComprobante == "01" && dto.Cuotas != null && dto.Cuotas.Any())
             {
@@ -175,7 +180,7 @@ public class GeneraXmlService : IComprobanteXmlService
                     new XElement(Cbc + "URI", "#SignatureSP"))));
 
     // ── Emisor ────────────────────────────────────────────────────────────────
-    private static XElement BuildSupplierParty(EmpresaDTO emp, string moneda) =>
+    private static XElement BuildSupplierParty(EmpresaDTO emp) =>
         new(Cac + "AccountingSupplierParty",
             new XElement(Cac + "Party",
                 new XElement(Cac + "PartyIdentification",
@@ -219,23 +224,31 @@ public class GeneraXmlService : IComprobanteXmlService
                             new XElement(Cbc + "IdentificationCode", "PE"))))));
 
     // ── Cliente ───────────────────────────────────────────────────────────────
-    private static XElement BuildCustomerParty(ClienteDTO cli, string moneda) =>
-        new(Cac + "AccountingCustomerParty",
+   private static XElement BuildCustomerParty(ClienteDTO cli)
+    {
+        bool clienteVarios = cli.TipoDocumento == "0";
+        bool esDni = cli.TipoDocumento == "1";
+
+        return new XElement(Cac + "AccountingCustomerParty",
             new XElement(Cac + "Party",
                 new XElement(Cac + "PartyIdentification",
                     new XElement(Cbc + "ID",
-                        new XAttribute("schemeID", cli.TipoDocumento ?? "00"),
+                        new XAttribute("schemeID", clienteVarios ? "0" : cli.TipoDocumento ?? "0"),
                         new XAttribute("schemeAgencyName", "PE:SUNAT"),
                         new XAttribute("schemeURI", "urn:pe:gob:sunat:cpe:see:gem:catalogos:catalogo06"),
-                        cli.NumeroDocumento ?? "-")),
+                        clienteVarios ? "0" : cli.NumeroDocumento ?? "0")),
+
                 new XElement(Cac + "PartyName",
-                    new XElement(Cbc + "Name", cli.RazonSocial ?? "-")),
+                    new XElement(Cbc + "Name",
+                        clienteVarios ? "CLIENTES VARIOS" : cli.RazonSocial ?? "-")),
+
                 new XElement(Cac + "PartyTaxScheme",
-                    new XElement(Cbc + "RegistrationName", cli.RazonSocial ?? "-"),
+                    new XElement(Cbc + "RegistrationName",
+                        clienteVarios ? "CLIENTES VARIOS" : cli.RazonSocial ?? "-"),
                     new XElement(Cbc + "CompanyID",
-                        new XAttribute("schemeID", cli.TipoDocumento ?? "00"),
+                        new XAttribute("schemeID", clienteVarios ? "0" : cli.TipoDocumento ?? "0"),
                         new XAttribute("schemeAgencyName", "PE:SUNAT"),
-                        cli.NumeroDocumento),
+                        clienteVarios ? "0" : cli.NumeroDocumento ?? "0"),
                     new XElement(Cac + "TaxScheme",
                         new XElement(Cbc + "ID",
                             new XAttribute("schemeID", "UN/ECE 5153"),
@@ -243,9 +256,14 @@ public class GeneraXmlService : IComprobanteXmlService
                             "1000"),
                         new XElement(Cbc + "Name", "IGV"),
                         new XElement(Cbc + "TaxTypeCode", "VAT"))),
+
                 new XElement(Cac + "PartyLegalEntity",
-                    new XElement(Cbc + "RegistrationName", cli.RazonSocial ?? "-"),
-                    new XElement(Cac + "RegistrationAddress",
+                    new XElement(Cbc + "RegistrationName",
+                        clienteVarios ? "CLIENTES VARIOS" : cli.RazonSocial ?? "-"),
+
+                    // 🔹 Enviar dirección SOLO si NO es DNI y NO es cliente varios
+                    (!esDni && !clienteVarios)
+                    ? new XElement(Cac + "RegistrationAddress",
                         new XElement(Cbc + "ID",
                             new XAttribute("schemeName", "Ubigeos"),
                             new XAttribute("schemeAgencyName", "PE:INEI"),
@@ -256,7 +274,13 @@ public class GeneraXmlService : IComprobanteXmlService
                         new XElement(Cac + "AddressLine",
                             new XElement(Cbc + "Line", cli.DireccionLineal ?? "-")),
                         new XElement(Cac + "Country",
-                            new XElement(Cbc + "IdentificationCode", "PE"))))));
+                            new XElement(Cbc + "IdentificationCode", "PE")))
+                    : null
+                )
+            )
+        );
+    }
+
 
     // ── Impuestos cabecera ────────────────────────────────────────────────────
     private static XElement BuildTaxTotal(GenerarComprobanteDTO dto, string moneda)

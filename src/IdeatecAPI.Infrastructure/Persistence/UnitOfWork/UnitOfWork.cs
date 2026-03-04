@@ -29,6 +29,7 @@ public class UnitOfWork : IUnitOfWork
 
     private IComunicacionBajaRepository? _bajas;
     private IComunicacionBajaDetalleRepository? _bajaDetalles;
+    private IResumenComprobanteRepository? _resumenComprobante;
 
     public UnitOfWork(string connectionString)
     {
@@ -156,12 +157,21 @@ public class UnitOfWork : IUnitOfWork
         }
     }
 
-        public ISerieCorrelativoRepository SerieCorrelativo
+    public ISerieCorrelativoRepository SerieCorrelativo
     {
         get
         {
             _serieCorrelativos ??= new SerieCorrelativoRepository(Connection, _transaction);
             return _serieCorrelativos;
+        }
+    }
+
+    public IResumenComprobanteRepository ResumenComprobante
+    {
+        get
+        {
+            _resumenComprobante ??= new ResumenComprobanteRepository(Connection, _transaction);
+            return _resumenComprobante;
         }
     }
 

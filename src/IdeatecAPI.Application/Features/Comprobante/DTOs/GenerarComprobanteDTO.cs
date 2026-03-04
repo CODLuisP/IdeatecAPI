@@ -10,11 +10,12 @@ public class GenerarComprobanteDTO
     public string Serie { get; set; } = string.Empty;
     public string Correlativo { get; set; } = string.Empty;
     public DateTime FechaEmision { get; set; }
+    public DateTime HoraEmision { get; set; }
     public DateTime FechaVencimiento { get; set; }
     public string TipoMoneda { get; set; } = "PEN";
     public string? TipoPago { get; set; } = "Contado";
 
-    public ClienteDTO Cliente { get; set; } = new();
+    public ClienteDTO? Cliente { get; set; } = new();
     public EmpresaDTO Company { get; set; } = new();
 
     // Totales
