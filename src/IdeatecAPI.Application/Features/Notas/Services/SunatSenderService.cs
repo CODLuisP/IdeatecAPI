@@ -20,6 +20,7 @@ public interface ISunatSenderService
     Task<SunatResponse> SendNoteAsync(
         byte[] xmlFirmadoBytes,
         string nombreArchivo,
+        string ruc,
         string solUsuario,
         string solClave,
         string environment
@@ -41,6 +42,7 @@ public class SunatSenderService : ISunatSenderService
     public async Task<SunatResponse> SendNoteAsync(
         byte[] xmlFirmadoBytes,   // ← recibe bytes directamente
         string nombreArchivo,
+        string ruc,
         string solUsuario,
         string solClave,
         string environment)
@@ -53,7 +55,7 @@ public class SunatSenderService : ISunatSenderService
 
         // ── 3. Enviar a SUNAT ─────────────────────────────────────────────
         var url = environment.ToLower() == "beta" ? UrlBeta : UrlProduccion;
-        var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{solUsuario}:{solClave}"));
+        var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{ruc}{solUsuario}:{solClave}"));
 
         var client = _httpClientFactory.CreateClient();
         var request = new HttpRequestMessage(HttpMethod.Post, url);

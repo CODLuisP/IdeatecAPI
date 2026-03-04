@@ -30,6 +30,9 @@ public class UnitOfWork : IUnitOfWork
     private IComunicacionBajaRepository? _bajas;
     private IComunicacionBajaDetalleRepository? _bajaDetalles;
 
+    private IGuiaRemisionRepository? _guias;
+    private IGuiaRemisionDetalleRepository? _guiaDetalles;
+
     public UnitOfWork(string connectionString)
     {
         _connectionString = connectionString;
@@ -156,12 +159,30 @@ public class UnitOfWork : IUnitOfWork
         }
     }
 
-        public ISerieCorrelativoRepository SerieCorrelativo
+    public ISerieCorrelativoRepository SerieCorrelativo
     {
         get
         {
             _serieCorrelativos ??= new SerieCorrelativoRepository(Connection, _transaction);
             return _serieCorrelativos;
+        }
+    }
+
+    public IGuiaRemisionRepository Guias
+    {
+        get
+        {
+            _guias ??= new GuiaRemisionRepository(Connection, _transaction);
+            return _guias;
+        }
+    }
+
+    public IGuiaRemisionDetalleRepository GuiaDetalles
+    {
+        get
+        {
+            _guiaDetalles ??= new GuiaRemisionDetalleRepository(Connection, _transaction);
+            return _guiaDetalles;
         }
     }
 
@@ -214,6 +235,8 @@ public class UnitOfWork : IUnitOfWork
         _categorias = null;
         _bajas = null;
         _bajaDetalles = null;
+        _guias = null;
+        _guiaDetalles = null;
     }
 
     public IRepository<T> Repository<T>() where T : class

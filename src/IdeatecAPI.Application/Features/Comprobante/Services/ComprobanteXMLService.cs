@@ -350,6 +350,7 @@ public class ComprobanteService : IComprobanteService
         var sunatResponse = await _sunatSender.SendNoteAsync(
             xmlFirmadoBytes,
             nombreArchivo,
+            empresa.Ruc,
             empresa.SolUsuario!,
             empresa.SolClave!,
             empresa.Environment
