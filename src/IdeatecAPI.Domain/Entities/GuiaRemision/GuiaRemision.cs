@@ -67,6 +67,24 @@ public class GuiaRemision
     public string? ChoferNombres { get; set; }
     public string? ChoferApellidos { get; set; }
     public string? ChoferLicencia { get; set; }
+    // Vehículo secundario (remolque)
+    public string? PlacaSecundaria1 { get; set; }
+    public string? PlacaSecundaria2 { get; set; }
+    public string? PlacaSecundaria3 { get; set; }
+
+    // Conductor secundario (modo privado con remolque)
+    public string? ChoferSecundarioTipoDoc { get; set; }
+    public string? ChoferSecundarioDoc { get; set; }
+    public string? ChoferSecundarioNombres { get; set; }
+    public string? ChoferSecundarioApellidos { get; set; }
+    public string? ChoferSecundarioLicencia { get; set; }
+
+    // Conductor secundario 2
+    public string? ChoferSecundario2TipoDoc { get; set; }
+    public string? ChoferSecundario2Doc { get; set; }
+    public string? ChoferSecundario2Nombres { get; set; }
+    public string? ChoferSecundario2Apellidos { get; set; }
+    public string? ChoferSecundario2Licencia { get; set; }
 
     // Estado SUNAT
     public string EstadoSunat { get; set; } = "PENDIENTE";

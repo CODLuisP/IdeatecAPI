@@ -79,7 +79,8 @@ public class XmlNoteBuilderService : IXmlNoteBuilderService
         root.Add(BuildCustomerParty(note));
 
         // ── 7. Totales de impuestos ───────────────────────────────────────────
-        root.Add(BuildTaxTotal(note.MtoOperGravadas, note.MtoIGV, note.TipoMoneda));
+        var tipoAfectacion = details.FirstOrDefault()?.TipoAfectacionIGV ?? "10";
+        root.Add(BuildTaxTotal(note.MtoOperGravadas, note.MtoIGV, note.TipoMoneda, tipoAfectacion));
 
         // ── 8. Total monetario ────────────────────────────────────────────────
         var totalMonetarioTag = note.TipoDoc == "07" ? "LegalMonetaryTotal" : "RequestedMonetaryTotal";
@@ -158,8 +159,18 @@ public class XmlNoteBuilderService : IXmlNoteBuilderService
                 new XElement(Cac + "PartyLegalEntity",
                     new XElement(Cbc + "RegistrationName", note.ClienteRznSocial))));
 
-    private static XElement BuildTaxTotal(decimal baseImponible, decimal igv, string moneda) =>
-        new(Cac + "TaxTotal",
+    private static XElement BuildTaxTotal(decimal baseImponible, decimal igv,
+    string moneda, string tipoAfectacion = "10")
+    {
+        var (schemeId, schemeName, taxTypeCode, categoryId) = tipoAfectacion switch
+        {
+            "20" => ("9997", "EXO", "VAT", "E"),
+            "30" => ("9998", "INA", "FRE", "O"),
+            "40" => ("9995", "EXP", "FRE", "G"),
+            _ => ("1000", "IGV", "VAT", "S")  // 10 gravado
+        };
+
+        return new XElement(Cac + "TaxTotal",
             new XElement(Cbc + "TaxAmount",
                 new XAttribute("currencyID", moneda),
                 igv.ToString("F2")),
@@ -171,13 +182,14 @@ public class XmlNoteBuilderService : IXmlNoteBuilderService
                     new XAttribute("currencyID", moneda),
                     igv.ToString("F2")),
                 new XElement(Cac + "TaxCategory",
-                    new XElement(Cbc + "ID", "S"),
-                    new XElement(Cbc + "Percent", "18"),
-                    new XElement(Cbc + "TaxExemptionReasonCode", "10"),
+                    new XElement(Cbc + "ID", categoryId),
+                    new XElement(Cbc + "Percent", tipoAfectacion == "10" ? "18" : "0"),
+                    new XElement(Cbc + "TaxExemptionReasonCode", tipoAfectacion),
                     new XElement(Cac + "TaxScheme",
-                        new XElement(Cbc + "ID", "1000"),
-                        new XElement(Cbc + "Name", "IGV"),
-                        new XElement(Cbc + "TaxTypeCode", "VAT")))));
+                        new XElement(Cbc + "ID", schemeId),
+                        new XElement(Cbc + "Name", schemeName),
+                        new XElement(Cbc + "TaxTypeCode", taxTypeCode)))));
+    }
 
     private static XElement BuildDetailLine(NoteDetail d, int item, string lineName, string qtyName, string moneda) =>
         new(Cac + lineName,
@@ -208,7 +220,7 @@ public class XmlNoteBuilderService : IXmlNoteBuilderService
                     new XElement(Cac + "TaxCategory",
                         new XElement(Cbc + "ID", "S"),
                         new XElement(Cbc + "Percent", d.PorcentajeIGV.ToString("F0")),
-                        new XElement(Cbc + "TaxExemptionReasonCode", d.TipAfeIgv.ToString()),
+                        new XElement(Cbc + "TaxExemptionReasonCode", d.TipoAfectacionIGV),
                         new XElement(Cac + "TaxScheme",
                             new XElement(Cbc + "ID", "1000"),
                             new XElement(Cbc + "Name", "IGV"),
