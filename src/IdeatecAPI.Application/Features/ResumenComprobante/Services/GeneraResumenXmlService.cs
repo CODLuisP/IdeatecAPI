@@ -20,7 +20,7 @@ public class XmlResumenResultado
 
 public class GeneraResumenXmlService : IResumenXmlService
 {
-    private static readonly XNamespace Ns  = "urn:sunat:names:specification:ubl:peru:schema:xsd:SummaryDocuments-1";
+    private static readonly XNamespace Ns = "urn:sunat:names:specification:ubl:peru:schema:xsd:SummaryDocuments-1";
     private static readonly XNamespace Cac = "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2";
     private static readonly XNamespace Cbc = "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2";
     private static readonly XNamespace Ext = "urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2";
@@ -30,7 +30,7 @@ public class GeneraResumenXmlService : IResumenXmlService
     {
         try
         {
-            var xml       = BuildXml(dto);
+            var xml = BuildXml(dto);
             var xmlBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(xml));
             return new XmlResumenResultado { Exitoso = true, XmlString = xml, XmlBase64 = xmlBase64 };
         }
@@ -93,8 +93,8 @@ public class GeneraResumenXmlService : IResumenXmlService
         using var ms = new MemoryStream();
         using var xw = XmlWriter.Create(ms, new XmlWriterSettings
         {
-            Encoding           = new UTF8Encoding(false),
-            Indent             = true,
+            Encoding = new UTF8Encoding(false),
+            Indent = true,
             OmitXmlDeclaration = false
         });
         doc.Save(xw);
@@ -115,7 +115,7 @@ public class GeneraResumenXmlService : IResumenXmlService
     private static XElement BuildSummaryDocumentsLine(ObtenerResumenDetalleDTO d)
     {
         bool esAnulacion = d.CodigoCondicion == "3";
-        bool esGratuito  = d.TotalGratuito > 0 && d.MontoTotalVenta == 0;
+        bool esGratuito = d.TotalGratuito > 0 && d.MontoTotalVenta == 0;
 
         var linea = new XElement(Sac + "SummaryDocumentsLine",
             new XElement(Cbc + "LineID", d.LineID.ToString()),
@@ -124,12 +124,11 @@ public class GeneraResumenXmlService : IResumenXmlService
             new XElement(Cac + "Status",
                 new XElement(Cbc + "ConditionCode", d.CodigoCondicion)));
 
-        // ── TotalAmount ───────────────────────────────────────────────────
         linea.Add(new XElement(Sac + "TotalAmount",
             new XAttribute("currencyID", d.Moneda),
             (esAnulacion ? 0 : d.MontoTotalVenta).ToString("F2")));
 
-        // ── BillingPayments y TaxTotal (solo si NO es anulación) ─────────
+        // ── BillingPayments y TaxTotal ────────────────────────────────────
         if (!esAnulacion)
         {
             if (d.TotalGravado > 0)
@@ -146,6 +145,25 @@ public class GeneraResumenXmlService : IResumenXmlService
 
             linea.Add(BuildTaxTotal(d, esGratuito));
         }
+        else
+        {
+            // ← SUNAT exige TaxTotal aunque sea anulación, con IGV en 0
+            linea.Add(new XElement(Cac + "TaxTotal",
+                new XElement(Cbc + "TaxAmount",
+                    new XAttribute("currencyID", d.Moneda),
+                    "0.00"),
+                new XElement(Cac + "TaxSubtotal",
+                    new XElement(Cbc + "TaxAmount",
+                        new XAttribute("currencyID", d.Moneda),
+                        "0.00"),
+                    new XElement(Cac + "TaxCategory",
+                        new XElement(Cbc + "Percent", "18.00"),
+                        new XElement(Cac + "TaxScheme",
+                            new XElement(Cbc + "ID", "1000"),
+                            new XElement(Cbc + "Name", "IGV"),
+                            new XElement(Cbc + "TaxTypeCode", "VAT"))))));
+        }
+
         return linea;
     }
 
