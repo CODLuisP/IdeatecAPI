@@ -42,17 +42,19 @@ public class Comprobante
     public string? TipoPago { get; set; } 
 
     // Totales
+    public decimal? DescuentoGlobal { get; set; }
     public decimal? TotalOperacionesGravadas { get; set; }
     public decimal? TotalOperacionesExoneradas { get; set; }
     public decimal? TotalOperacionesInafectas { get; set; }
     public decimal? TotalIGV { get; set; }
-    public decimal? TotalImpuestos { get; set; }            // ✅ falta
-    public decimal? ValorVenta { get; set; }                // ✅ falta (sin IGV)
-    public decimal? SubTotal { get; set; }                  // ✅ falta
+    public decimal? TotalImpuestos { get; set; }
     public decimal? TotalDescuentos { get; set; }
     public decimal? TotalOtrosCargos { get; set; }
-    public decimal? TotalIcbper { get; set; }
+    public decimal? TotalIcbper { get; set; }          
+    public decimal? ValorVenta { get; set; }                
+    public decimal? SubTotal { get; set; }                 
     public decimal? ImporteTotal { get; set; }
+    public decimal? MontoCredito { get; set; }
 
     // Relaciones
     public ICollection<ComprobanteDetalle> Detalles { get; set; } = [];   // ✅ falta

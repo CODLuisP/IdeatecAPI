@@ -23,9 +23,9 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
                 clienteID, clienteTipoDoc, clienteNumDoc, clienteRznSocial,
                 clienteDireccion, clienteProvincia, clienteDepartamento,
                 clienteDistrito, clienteUbigeo,
-                totalOperacionesGravadas, totalOperacionesExoneradas, totalOperacionesInafectas,
+                descuentoGlobal, totalOperacionesGravadas, totalOperacionesExoneradas, totalOperacionesInafectas,
                 totalIGV, totalDescuentos, totalOtrosCargos,
-                totalIcbper, totalImpuestos, valorVenta, subTotal, importeTotal,
+                totalIcbper, totalImpuestos, valorVenta, subTotal, importeTotal, montoCredito,
                 estadoSunat, xmlGenerado, fechaCreacion
             ) VALUES (
                 @TipoOperacion, @TipoComprobante, @Serie, @Correlativo,
@@ -37,9 +37,9 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
                 @ClienteId, @ClienteTipoDoc, @ClienteNumDoc, @ClienteRazonSocial,
                 @ClienteDireccion, @ClienteProvincia, @ClienteDepartamento,
                 @ClienteDistrito, @ClienteUbigeo,
-                @TotalOperacionesGravadas, @TotalOperacionesExoneradas, @TotalOperacionesInafectas,
+                @DescuentoGlobal, @TotalOperacionesGravadas, @TotalOperacionesExoneradas, @TotalOperacionesInafectas,
                 @TotalIGV, @TotalDescuentos, @TotalOtrosCargos,
-                @TotalIcbper, @TotalImpuestos, @ValorVenta, @SubTotal, @ImporteTotal,
+                @TotalIcbper, @TotalImpuestos, @ValorVenta, @SubTotal, @ImporteTotal, @MontoCredito,
                 @EstadoSunat, @XmlGenerado, @FechaCreacion
             );
             SELECT LAST_INSERT_ID();";
@@ -74,6 +74,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
             comprobante.ClienteDepartamento,
             comprobante.ClienteDistrito,
             comprobante.ClienteUbigeo,
+            comprobante.DescuentoGlobal,
             comprobante.TotalOperacionesGravadas,
             comprobante.TotalOperacionesExoneradas,
             comprobante.TotalOperacionesInafectas,
@@ -85,6 +86,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
             comprobante.ValorVenta,
             comprobante.SubTotal,
             comprobante.ImporteTotal,
+            comprobante.MontoCredito,
             comprobante.EstadoSunat,
             comprobante.XmlGenerado,
             comprobante.FechaCreacion
@@ -128,12 +130,12 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
                 comprobanteId, item, productoId, codigo, descripcion, cantidad,
                 unidadMedida, precioUnitario, tipoAfectacionIGV, porcentajeIGV,
                 montoIGV, baseIgv, descuentoUnitario, descuentoTotal,
-                valorVenta, precioVenta, icbper, factorIcbper
+                valorVenta, precioVenta, totalVentaItem, icbper, factorIcbper
             ) VALUES (
                 @ComprobanteId, @Item, @ProductoId, @Codigo, @Descripcion, @Cantidad,
                 @UnidadMedida, @PrecioUnitario, @TipoAfectacionIGV, @PorcentajeIGV,
                 @MontoIGV, @BaseIgv, @DescuentoUnitario, @DescuentoTotal,
-                @ValorVenta, @PrecioVenta, @Icbper, @FactorIcbper
+                @ValorVenta, @PrecioVenta, @TotalVentaItem, @Icbper, @FactorIcbper
             );";
 
         await _connection.ExecuteAsync(sql, d, _transaction);
@@ -227,7 +229,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
                 comprobanteId, item, productoId, codigo, descripcion, cantidad,
                 unidadMedida, precioUnitario, tipoAfectacionIGV, porcentajeIGV,
                 montoIGV, baseIgv, descuentoUnitario, descuentoTotal,
-                valorVenta, precioVenta, icbper, factorIcbper
+                valorVenta, precioVenta, totalVentaItem, icbper, factorIcbper
             FROM comprobantedetalle
             WHERE comprobanteId = @ComprobanteId";
 
@@ -357,6 +359,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         clienteDistrito         AS ClienteDistrito,
         clienteUbigeo           AS ClienteUbigeo,
 
+        descuentoGlobal        AS DescuentoGlobal,
         totalOperacionesGravadas   AS TotalOperacionesGravadas,
         totalOperacionesExoneradas AS TotalOperacionesExoneradas,
         totalOperacionesInafectas  AS TotalOperacionesInafectas,
@@ -368,6 +371,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         valorVenta              AS ValorVenta,
         subTotal                AS SubTotal,
         importeTotal            AS ImporteTotal,
+        montoCredito            AS MontoCredito,
 
         estadoSunat             AS EstadoSunat,
         codigoHashCPE           AS CodigoHashCPE,
