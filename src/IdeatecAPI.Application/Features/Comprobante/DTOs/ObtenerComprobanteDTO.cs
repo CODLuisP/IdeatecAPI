@@ -21,18 +21,19 @@ namespace IdeatecAPI.Application.Features.Comprobante.DTOs;
     public EmpresaDTO Company { get; set; } = new();
 
     // Totales
-    public decimal MtoOperGravadas { get; set; }
-    public decimal MtoOperExoneradas { get; set; }
-    public decimal MtoOperInafectas { get; set; }
-    public decimal MtoIGV { get; set; }
-    public decimal TotalIcbper { get; set; } 
+    public decimal DescuentoGlobal { get; set; }
+    public decimal TotalOperacionesGravadas { get; set; }
+    public decimal TotalOperacionesExoneradas { get; set; }
+    public decimal TotalOperacionesInafectas { get; set; }
+    public decimal TotalIGV { get; set; }
     public decimal TotalImpuestos { get; set; }
-    public decimal ValorVenta { get; set; }  //Total antes de impuestos
-    public decimal SubTotal { get; set; }
-    public decimal MtoImpVenta { get; set; }
-    public decimal TotalDescuentos { get; set; } = 0;
-    public decimal TotalOtrosCargos { get; set; } = 0;
-    public decimal MontoCredito { get; set; } = 0; 
+    public decimal TotalDescuentos { get; set; }
+    public decimal TotalOtrosCargos { get; set; }
+    public decimal TotalIcbper { get; set; }          
+    public decimal ValorVenta { get; set; }                
+    public decimal SubTotal { get; set; }                 
+    public decimal ImporteTotal { get; set; }
+    public decimal MontoCredito { get; set; }
 
     public List<DetalleFacturaDTO> Details { get; set; } = [];
     public List<DetallePagosDTO>? Pagos { get; set; } = [];

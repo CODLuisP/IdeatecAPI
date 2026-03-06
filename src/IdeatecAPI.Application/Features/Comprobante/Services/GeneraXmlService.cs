@@ -98,14 +98,29 @@ public class GeneraXmlService : IComprobanteXmlService
         root.Add(BuildSupplierParty(emp));
 
         // ── Cliente ───────────────────────────────────────────────────────
-        root.Add(BuildCustomerParty(cli));
+        root.Add(BuildCustomerParty(cli!));
 
-        // ── Forma de pago ─────────────────────────────────────────────────
+        // ── Descuento global ─────────────────────────────────────────────
+        if (dto.TotalDescuentos > 0)
+        {
+            root.Add(
+                new XElement(Cac + "AllowanceCharge",
+                    new XElement(Cbc + "ChargeIndicator", "false"),
+                    new XElement(Cbc + "AllowanceChargeReasonCode",
+                        new XAttribute("listAgencyName", "PE:SUNAT"),
+                        new XAttribute("listURI", "urn:pe:gob:sunat:cpe:see:gem:catalogos:catalogo53"),
+                        "02"),
+                    new XElement(Cbc + "Amount",
+                        new XAttribute("currencyID", moneda),
+                        dto.TotalDescuentos.ToString("F2")),
+                    new XElement(Cbc + "BaseAmount",
+                        new XAttribute("currencyID", moneda),
+                        dto.ImporteTotal.ToString("F2"))
+                )
+            );
+        }
 
-        var MontoCredito = dto.Cuotas?
-            .Sum(p => p.Monto ?? 0m) ?? 0m;
-        
-
+        // ── Forma de pago ────────────────────────────────────────────────
         if (dto.TipoPago?.ToLower() == "contado")
         {
             root.Add(new XElement(Cac + "PaymentTerms",
@@ -113,7 +128,7 @@ public class GeneraXmlService : IComprobanteXmlService
                 new XElement(Cbc + "PaymentMeansID", "Contado"),
                 new XElement(Cbc + "Amount",
                     new XAttribute("currencyID", moneda),
-                    dto.MtoImpVenta.ToString("F2"))));
+                    dto.ImporteTotal.ToString("F2"))));
         }
         else
         {
@@ -122,7 +137,7 @@ public class GeneraXmlService : IComprobanteXmlService
                 new XElement(Cbc + "PaymentMeansID", "Credito"),
                 new XElement(Cbc + "Amount",
                     new XAttribute("currencyID", moneda),
-                    MontoCredito.ToString("F2"))));
+                    dto.MontoCredito.ToString("F2"))));
 
             if (dto.TipoComprobante == "01" && dto.Cuotas != null && dto.Cuotas.Any())
             {
@@ -290,14 +305,14 @@ public class GeneraXmlService : IComprobanteXmlService
                 new XAttribute("currencyID", moneda),
                 dto.TotalImpuestos.ToString("F2")));
 
-        if (dto.MtoOperGravadas > 0)
-            taxTotal.Add(BuildTaxSubtotal(moneda, dto.MtoOperGravadas, dto.MtoIGV, "S", "1000", "IGV", "VAT"));
+        if (dto.TotalOperacionesGravadas > 0)
+            taxTotal.Add(BuildTaxSubtotal(moneda, dto.TotalOperacionesGravadas, dto.TotalIGV, "S", "1000", "IGV", "VAT"));
 
-        if (dto.MtoOperExoneradas > 0)
-            taxTotal.Add(BuildTaxSubtotal(moneda, dto.MtoOperExoneradas, 0, "E", "9997", "EXO", "VAT"));
+        if (dto.TotalOperacionesExoneradas > 0)
+            taxTotal.Add(BuildTaxSubtotal(moneda, dto.TotalOperacionesExoneradas, 0, "E", "9997", "EXO", "VAT"));
 
-        if (dto.MtoOperInafectas > 0)
-            taxTotal.Add(BuildTaxSubtotal(moneda, dto.MtoOperInafectas, 0, "O", "9998", "INA", "FRE"));
+        if (dto.TotalOperacionesInafectas > 0)
+            taxTotal.Add(BuildTaxSubtotal(moneda, dto.TotalOperacionesInafectas, 0, "O", "9998", "INA", "FRE"));
 
         return taxTotal;
     }
@@ -325,40 +340,41 @@ public class GeneraXmlService : IComprobanteXmlService
                     new XElement(Cbc + "TaxTypeCode", taxType))));
 
     // ── Totales monetarios ────────────────────────────────────────────────────
-    private static XElement BuildLegalMonetaryTotal(GenerarComprobanteDTO dto, string moneda)
-    {
-        var total = new XElement(Cac + "LegalMonetaryTotal",
-            new XElement(Cbc + "LineExtensionAmount",
-                new XAttribute("currencyID", moneda),
-                dto.ValorVenta.ToString("F2")));
-
-        if (dto.TotalDescuentos > 0)
-            total.Add(new XElement(Cbc + "AllowanceTotalAmount",
-                new XAttribute("currencyID", moneda),
-                dto.TotalDescuentos.ToString("F2")));
-
-        if (dto.TotalOtrosCargos > 0)
-            total.Add(new XElement(Cbc + "ChargeTotalAmount",
-                new XAttribute("currencyID", moneda),
-                dto.TotalOtrosCargos.ToString("F2")));
-
-        total.Add(new XElement(Cbc + "TaxInclusiveAmount",
+private static XElement BuildLegalMonetaryTotal(GenerarComprobanteDTO dto, string moneda)
+{
+    var total = new XElement(Cac + "LegalMonetaryTotal",
+        new XElement(Cbc + "LineExtensionAmount",
             new XAttribute("currencyID", moneda),
-            dto.SubTotal.ToString("F2")));
+            dto.ValorVenta.ToString("F2")));
 
-        total.Add(new XElement(Cbc + "PayableAmount",
+    // TaxInclusiveAmount ANTES de AllowanceTotalAmount
+    total.Add(new XElement(Cbc + "TaxInclusiveAmount",
+        new XAttribute("currencyID", moneda),
+        dto.SubTotal.ToString("F2")));
+
+    if (dto.TotalDescuentos > 0)
+        total.Add(new XElement(Cbc + "AllowanceTotalAmount",
             new XAttribute("currencyID", moneda),
-            dto.MtoImpVenta.ToString("F2")));
+            dto.TotalDescuentos.ToString("F2")));
 
-        return total;
-    }
+    if (dto.TotalOtrosCargos > 0)
+        total.Add(new XElement(Cbc + "ChargeTotalAmount",
+            new XAttribute("currencyID", moneda),
+            dto.TotalOtrosCargos.ToString("F2")));
+
+    total.Add(new XElement(Cbc + "PayableAmount",
+        new XAttribute("currencyID", moneda),
+        dto.ImporteTotal.ToString("F2")));
+
+    return total;
+}
 
     // ── Línea de detalle ──────────────────────────────────────────────────────
     private static XElement BuildInvoiceLine(DetalleFacturaDTO d, int item, string moneda)
     {
         var (catId, schemeId, taxName, taxType) = GetCodigosTributo(d.TipoAfectacionIGV);
 
-        return new XElement(Cac + "InvoiceLine",
+        var invoiceLine = new XElement(Cac + "InvoiceLine",
             new XElement(Cbc + "ID", item.ToString()),
             new XElement(Cbc + "InvoicedQuantity",
                 new XAttribute("unitCode", d.UnidadMedida ?? "NIU"),
@@ -366,7 +382,27 @@ public class GeneraXmlService : IComprobanteXmlService
                 d.Cantidad.ToString("F2")),
             new XElement(Cbc + "LineExtensionAmount",
                 new XAttribute("currencyID", moneda),
-                d.ValorVenta.ToString("F2")),
+                d.ValorVenta.ToString("F2"))
+        );
+        if (d.DescuentoTotal > 0)
+        {
+            invoiceLine.Add(
+                new XElement(Cac + "AllowanceCharge",
+                    new XElement(Cbc + "ChargeIndicator", "false"),
+                    new XElement(Cbc + "AllowanceChargeReasonCode",
+                        new XAttribute("listAgencyName", "PE:SUNAT"),
+                        new XAttribute("listURI", "urn:pe:gob:sunat:cpe:see:gem:catalogos:catalogo53"),
+                        "00"),
+                    new XElement(Cbc + "Amount",
+                        new XAttribute("currencyID", moneda),
+                        d.DescuentoTotal.ToString("F2")),
+                    new XElement(Cbc + "BaseAmount",
+                        new XAttribute("currencyID", moneda),
+                        (d.PrecioUnitario * d.Cantidad).ToString("F2"))
+                )
+            );
+        }
+        invoiceLine.Add(
             new XElement(Cac + "PricingReference",
                 new XElement(Cac + "AlternativeConditionPrice",
                     new XElement(Cbc + "PriceAmount",
@@ -416,8 +452,12 @@ public class GeneraXmlService : IComprobanteXmlService
             new XElement(Cac + "Price",
                 new XElement(Cbc + "PriceAmount",
                     new XAttribute("currencyID", moneda),
-                    d.PrecioUnitario.ToString("F2"))));
+                    d.PrecioUnitario.ToString("F2")))
+        );
+
+        return invoiceLine;
     }
+
 
     private static (string catId, string schemeId, string taxName, string taxType) GetCodigosTributo(string? tipAfeIgv) =>
         tipAfeIgv switch
