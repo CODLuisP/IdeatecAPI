@@ -75,7 +75,7 @@ public class BajaService : IBajaService
         if (dto.Details == null || dto.Details.Count == 0)
             throw new InvalidOperationException("La baja debe tener al menos un documento");
 
-        var tiposValidos = new[] { "01", "03", "07", "08" };
+        var tiposValidos = new[] { "01", "07", "08" };
         foreach (var d in dto.Details)
         {
             if (!tiposValidos.Contains(d.TipoDoc))
@@ -140,8 +140,8 @@ public class BajaService : IBajaService
         var baja = await _unitOfWork.Bajas.GetByIdAsync(bajaId)
             ?? throw new KeyNotFoundException($"Baja {bajaId} no encontrada");
 
-        if (baja.EstadoSunat == "ACEPTADO")
-            throw new InvalidOperationException("La baja ya fue aceptada por SUNAT");
+        if (baja.EstadoSunat is "ACEPTADO" or "EN_PROCESO")
+            throw new InvalidOperationException($"La baja está en estado {baja.EstadoSunat}, no se puede reenviar");
 
         var empresa = await _unitOfWork.Empresas.GetEmpresaByIdAsync(baja.EmpresaId)
             ?? throw new KeyNotFoundException($"Empresa {baja.EmpresaId} no encontrada");

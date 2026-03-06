@@ -38,6 +38,20 @@ public class GuiaDto
     public string? TransportistaNumDoc { get; set; }
     public string? TransportistaRznSocial { get; set; }
     public string? TransportistaPlaca { get; set; }
+    public string? PlacaSecundaria1 { get; set; }
+    public string? PlacaSecundaria2 { get; set; }
+    public string? PlacaSecundaria3 { get; set; }
+
+    public string? ChoferSecundarioTipoDoc { get; set; }
+    public string? ChoferSecundarioDoc { get; set; }
+    public string? ChoferSecundarioNombres { get; set; }
+    public string? ChoferSecundarioApellidos { get; set; }
+    public string? ChoferSecundarioLicencia { get; set; }
+    public string? ChoferSecundario2TipoDoc { get; set; }
+    public string? ChoferSecundario2Doc { get; set; }
+    public string? ChoferSecundario2Nombres { get; set; }
+    public string? ChoferSecundario2Apellidos { get; set; }
+    public string? ChoferSecundario2Licencia { get; set; }
 
     public string EstadoSunat { get; set; } = string.Empty;
     public string? CodigoRespuestaSunat { get; set; }
@@ -45,6 +59,7 @@ public class GuiaDto
     public string? TicketSunat { get; set; }
     public DateTime? FechaEnvioSunat { get; set; }
     public DateTime FechaCreacion { get; set; }
+    public bool IndTransbordo { get; set; }  // ← nuevo
 
     public List<GuiaDetalleDto> Details { get; set; } = new();
 }

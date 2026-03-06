@@ -157,9 +157,8 @@ public class NoteService : INoteService
                     MtoBaseIgv = d.MtoBaseIgv,
                     PorcentajeIGV = d.PorcentajeIgv,
                     Igv = d.Igv,
-                    TipAfeIgv = d.TipAfeIgv,
+                    TipoAfectacionIGV = d.TipAfeIgv.ToString(),
                     MtoPrecioUnitario = d.MtoPrecioUnitario,
-                    TipoAfectacionIGV = d.TipAfeIgv.ToString()
                 });
             }
 
@@ -316,7 +315,7 @@ public class NoteService : INoteService
         MtoBaseIgv = d.MtoBaseIgv,
         PorcentajeIgv = d.PorcentajeIGV,
         Igv = d.Igv,
-        TipAfeIgv = d.TipAfeIgv,
+        TipoAfectacionIGV = d.TipoAfectacionIGV,
         MtoPrecioUnitario = d.MtoPrecioUnitario
     };
 

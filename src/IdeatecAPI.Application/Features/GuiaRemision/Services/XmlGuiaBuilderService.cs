@@ -152,23 +152,31 @@ public class XmlGuiaBuilderService : IXmlGuiaBuilderService
         var shipment = new XElement(Cac + "Shipment",
             new XElement(Cbc + "ID", "1"),
             new XElement(Cbc + "HandlingCode", guia.CodTraslado),
+            new XElement(Cbc + "HandlingInstructions", guia.DesTraslado),
             new XElement(Cbc + "GrossWeightMeasure",
                 new XAttribute("unitCode", guia.UndPesoTotal ?? "KGM"),
                 guia.PesoTotal?.ToString("F2") ?? "0.00"),
 
-            // ── ShipmentStage ─────────────────────────────────────────────
             BuildShipmentStage(guia),
-
-            // ── Delivery ──────────────────────────────────────────────────
             BuildDelivery(guia)
         );
 
-        // ── TransportHandlingUnit (solo modo privado) ─────────────────────
+
+        // ── TransportHandlingUnit (solo modo privado) ────────────────────
         if (guia.ModTraslado == "02" && !string.IsNullOrEmpty(guia.TransportistaPlaca))
         {
             shipment.Add(new XElement(Cac + "TransportHandlingUnit",
                 new XElement(Cac + "TransportEquipment",
                     new XElement(Cbc + "ID", guia.TransportistaPlaca))));
+
+            foreach (var placa in new[] { guia.PlacaSecundaria1, guia.PlacaSecundaria2 }
+
+                .Where(p => !string.IsNullOrEmpty(p)))
+            {
+                shipment.Add(new XElement(Cac + "TransportHandlingUnit",
+                    new XElement(Cac + "TransportEquipment",
+                        new XElement(Cbc + "ID", placa))));
+            }
         }
 
         return shipment;
@@ -180,9 +188,10 @@ public class XmlGuiaBuilderService : IXmlGuiaBuilderService
             new XElement(Cbc + "TransportModeCode", guia.ModTraslado),
             new XElement(Cac + "TransitPeriod",
                 new XElement(Cbc + "StartDate",
-                    guia.FecTraslado?.ToString("yyyy-MM-dd") ?? guia.FechaEmision.ToString("yyyy-MM-dd"))));
+                    guia.FecTraslado?.ToString("yyyy-MM-dd") ?? guia.FechaEmision.ToString("yyyy-MM-dd")))
+        );
 
-        // ── Modo público → CarrierParty (transportista) ───────────────────
+        // ── Modo público → CarrierParty ─────────────────────────────
         if (guia.ModTraslado == "01")
         {
             stage.Add(new XElement(Cac + "CarrierParty",
@@ -194,18 +203,46 @@ public class XmlGuiaBuilderService : IXmlGuiaBuilderService
                     new XElement(Cbc + "RegistrationName", guia.TransportistaRznSocial))));
         }
 
-        // ── Modo privado → DriverPerson (conductor) ───────────────────────
+        // ── Modo privado → Conductor principal ───────────────────────
         if (guia.ModTraslado == "02")
         {
             stage.Add(new XElement(Cac + "DriverPerson",
                 new XElement(Cbc + "ID",
                     new XAttribute("schemeID", guia.ChoferTipoDoc ?? "1"),
-                    guia.ChoferDoc!),
+                    guia.ChoferDoc),
                 new XElement(Cbc + "FirstName", guia.ChoferNombres ?? ""),
                 new XElement(Cbc + "FamilyName", guia.ChoferApellidos ?? ""),
                 new XElement(Cbc + "JobTitle", "Principal"),
                 new XElement(Cac + "IdentityDocumentReference",
                     new XElement(Cbc + "ID", guia.ChoferLicencia ?? ""))));
+        }
+
+        // ── Conductor secundario ─────────────────────────────────────
+        if (guia.ModTraslado == "02" && !string.IsNullOrEmpty(guia.ChoferSecundarioDoc))
+        {
+            stage.Add(new XElement(Cac + "DriverPerson",
+                new XElement(Cbc + "ID",
+                    new XAttribute("schemeID", guia.ChoferSecundarioTipoDoc ?? "1"),
+                    guia.ChoferSecundarioDoc),
+                new XElement(Cbc + "FirstName", guia.ChoferSecundarioNombres ?? ""),
+                new XElement(Cbc + "FamilyName", guia.ChoferSecundarioApellidos ?? ""),
+                new XElement(Cbc + "JobTitle", "Secundario"),
+                new XElement(Cac + "IdentityDocumentReference",
+                    new XElement(Cbc + "ID", guia.ChoferSecundarioLicencia ?? ""))));
+        }
+
+        // Conductor secundario 2  ← NUEVO
+        if (guia.ModTraslado == "02" && !string.IsNullOrEmpty(guia.ChoferSecundario2Doc))
+        {
+            stage.Add(new XElement(Cac + "DriverPerson",
+                new XElement(Cbc + "ID",
+                    new XAttribute("schemeID", guia.ChoferSecundario2TipoDoc ?? "1"),
+                    guia.ChoferSecundario2Doc),
+                new XElement(Cbc + "FirstName", guia.ChoferSecundario2Nombres ?? ""),
+                new XElement(Cbc + "FamilyName", guia.ChoferSecundario2Apellidos ?? ""),
+                new XElement(Cbc + "JobTitle", "Secundario"),
+                new XElement(Cac + "IdentityDocumentReference",
+                    new XElement(Cbc + "ID", guia.ChoferSecundario2Licencia ?? ""))));
         }
 
         return stage;

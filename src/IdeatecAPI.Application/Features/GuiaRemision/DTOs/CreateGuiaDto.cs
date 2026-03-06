@@ -87,11 +87,24 @@ public class CreateGuiaTransportistaDto
     public string NumDoc { get; set; } = string.Empty;
     public string RznSocial { get; set; } = string.Empty;
     public string? Placa { get; set; }
+    public string? PlacaSecundaria1 { get; set; }  // ← nuevo
+    public string? PlacaSecundaria2 { get; set; }  // ← nuevo
+    public string? PlacaSecundaria3 { get; set; }  // ← nuevo
     public string? ChoferTipoDoc { get; set; }
     public string? ChoferDoc { get; set; }
-    public string? ChoferNombres { get; set; }    // ← nuevo
-    public string? ChoferApellidos { get; set; }  // ← nuevo
-    public string? ChoferLicencia { get; set; }   // ← nuevo
+    public string? ChoferNombres { get; set; }
+    public string? ChoferApellidos { get; set; }
+    public string? ChoferLicencia { get; set; }
+    public string? ChoferSecundarioTipoDoc { get; set; }
+    public string? ChoferSecundarioDoc { get; set; }
+    public string? ChoferSecundarioNombres { get; set; }
+    public string? ChoferSecundarioApellidos { get; set; }
+    public string? ChoferSecundarioLicencia { get; set; }
+    public string? ChoferSecundario2TipoDoc { get; set; }
+    public string? ChoferSecundario2Doc { get; set; }
+    public string? ChoferSecundario2Nombres { get; set; }
+    public string? ChoferSecundario2Apellidos { get; set; }
+    public string? ChoferSecundario2Licencia { get; set; }
 }
 
 public class CreateGuiaDetalleDto
