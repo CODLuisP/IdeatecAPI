@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace IdeatecAPI.Domain.Entities.Invoice
-{
+namespace IdeatecAPI.Domain.Entities;
+
     public class Cuotas
     {
         public int IdCuota { get; set; }
@@ -14,4 +14,3 @@ namespace IdeatecAPI.Domain.Entities.Invoice
         public string? Estado { get; set; }
         public string? ComprobanteId { get; set; }
     }
-}

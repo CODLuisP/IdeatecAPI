@@ -10,6 +10,14 @@ public interface IUnitOfWork : IDisposable
     INoteRepository Notes { get; }
     INoteDetailRepository NoteDetails { get; }
     INoteLegendRepository NoteLegends { get; }
+    IComunicacionBajaRepository Bajas { get; }
+    IComunicacionBajaDetalleRepository BajaDetalles { get; }
+    IComprobanteRepository Comprobantes { get; }
+    IProductoRepository Productos { get; }
+    ISerieCorrelativoRepository SerieCorrelativo { get; }
+    IGuiaRemisionRepository Guias { get; }
+    IGuiaRemisionDetalleRepository GuiaDetalles { get; }
+    IResumenComprobanteRepository ResumenComprobante { get; }
     
     // Transacciones
 

@@ -5,8 +5,8 @@ using System.Threading.Tasks;
 using IdeatecAPI.Application.Features.CatalogoSunat.DTOs;
 using IdeatecAPI.Application.Features.Direccion.DTOs;
 
-namespace IdeatecAPI.Application.Features.Clientes.DTOs
-{
+namespace IdeatecAPI.Application.Features.Clientes.DTOs;
+
     public class ObtenerClientesDTO
     {
         public int? ClienteId { get; set; }
@@ -20,4 +20,3 @@ namespace IdeatecAPI.Application.Features.Clientes.DTOs
         public List<DireccionDTO>? Direccion { get; set; }
         public TipoDocumentoDTO? TipoDocumento { get; set; }
     }
-}

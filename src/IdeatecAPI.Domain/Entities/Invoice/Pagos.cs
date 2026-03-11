@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace IdeatecAPI.Domain.Entities.Invoice
-{
+namespace IdeatecAPI.Domain.Entities;
+
     public class Pagos
     {
         public int IdPago { get; set; }
@@ -16,4 +16,3 @@ namespace IdeatecAPI.Domain.Entities.Invoice
         public string? Observacion { get; set; }
     
     }
-}

@@ -2,7 +2,7 @@ using System.Data;
 using MySqlConnector;
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Infrastructure.Persistence.Repositories;
-using IdeatecAPI.Infrastructure.Persistence.Repositories.Clientes;
+using IdeatecAPI.Infrastructure.Persistence.Repositories.Comprobantes;
 
 namespace IdeatecAPI.Infrastructure.Persistence.UnitOfWork;
 
@@ -23,6 +23,16 @@ public class UnitOfWork : IUnitOfWork
     private INoteRepository? _notes;
     private INoteDetailRepository? _noteDetails;
     private INoteLegendRepository? _noteLegends;
+    private IComprobanteRepository? _comprobantes;
+    private IProductoRepository? _productos;
+    private ISerieCorrelativoRepository? _serieCorrelativos;
+
+    private IComunicacionBajaRepository? _bajas;
+    private IComunicacionBajaDetalleRepository? _bajaDetalles;
+    private IResumenComprobanteRepository? _resumenComprobante;
+
+    private IGuiaRemisionRepository? _guias;
+    private IGuiaRemisionDetalleRepository? _guiaDetalles;
 
     public UnitOfWork(string connectionString)
     {
@@ -42,7 +52,6 @@ public class UnitOfWork : IUnitOfWork
         }
     }
 
-    // Propiedad para acceder al repositorio de Categorias
     public ICategoriaRepository Categorias
     {
         get
@@ -70,7 +79,6 @@ public class UnitOfWork : IUnitOfWork
         }
     }
 
-    // Propiedad para acceder al repositorio de Usuarios
     public IUsuarioRepository Usuarios
     {
         get
@@ -89,7 +97,6 @@ public class UnitOfWork : IUnitOfWork
         }
     }
 
-    // Agregar propiedades públicas:
     public INoteRepository Notes
     {
         get
@@ -114,6 +121,76 @@ public class UnitOfWork : IUnitOfWork
         {
             _noteLegends ??= new NoteLegendRepository(Connection, _transaction);
             return _noteLegends;
+        }
+    }
+
+    public IComunicacionBajaRepository Bajas
+    {
+        get
+        {
+            _bajas ??= new ComunicacionBajaRepository(Connection, _transaction);
+            return _bajas;
+        }
+    }
+
+    public IComunicacionBajaDetalleRepository BajaDetalles
+    {
+        get
+        {
+            _bajaDetalles ??= new ComunicacionBajaDetalleRepository(Connection, _transaction);
+            return _bajaDetalles;
+        }
+    }
+
+    public IComprobanteRepository Comprobantes
+    {
+        get
+        {
+            _comprobantes ??= new ComprobanteRepository(Connection, _transaction);
+            return _comprobantes;
+        }
+    }
+
+    public IProductoRepository Productos
+    {
+        get
+        {
+            _productos ??= new ProductoRepository(Connection, _transaction);
+            return _productos;
+        }
+    }
+
+    public ISerieCorrelativoRepository SerieCorrelativo
+    {
+        get
+        {
+            _serieCorrelativos ??= new SerieCorrelativoRepository(Connection, _transaction);
+            return _serieCorrelativos;
+        }
+    }
+
+    public IGuiaRemisionRepository Guias
+    {
+        get
+        {
+            _guias ??= new GuiaRemisionRepository(Connection, _transaction);
+            return _guias;
+        }
+    }
+
+    public IGuiaRemisionDetalleRepository GuiaDetalles
+    {
+        get
+        {
+            _guiaDetalles ??= new GuiaRemisionDetalleRepository(Connection, _transaction);
+            return _guiaDetalles;}
+    }
+    public IResumenComprobanteRepository ResumenComprobante
+    {
+        get
+        {
+            _resumenComprobante ??= new ResumenComprobanteRepository(Connection, _transaction);
+            return _resumenComprobante;
         }
     }
 
@@ -160,8 +237,14 @@ public class UnitOfWork : IUnitOfWork
         _noteDetails = null;
         _noteLegends = null;
         _empresas = null;
+        _direccion = null;
         _usuarios = null;
+        _clientes = null;
         _categorias = null;
+        _bajas = null;
+        _bajaDetalles = null;
+        _guias = null;
+        _guiaDetalles = null;
     }
 
     public IRepository<T> Repository<T>() where T : class

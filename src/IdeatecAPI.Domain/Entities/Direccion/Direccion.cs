@@ -3,8 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace IdeatecAPI.Domain.Entities.Cliente
-{
+namespace IdeatecAPI.Domain.Entities;
     public class Direccion
     {
         public int? DireccionId { get; set; }
@@ -17,4 +16,3 @@ namespace IdeatecAPI.Domain.Entities.Cliente
         public bool Estado { get; set; }
         public int? ClienteId { get; set; }
     }
-}

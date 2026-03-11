@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace IdeatecAPI.Domain.Entities.Invoice
-{
+namespace IdeatecAPI.Domain.Entities;
+
     public class MetodoPago
     {
         public int IdMetodoPago { get; set; }
@@ -14,4 +14,3 @@ namespace IdeatecAPI.Domain.Entities.Invoice
         public string? Banco { get; set; }
         public string? Estado { get; set; }
     }
-}

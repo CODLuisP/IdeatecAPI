@@ -8,6 +8,8 @@ namespace IdeatecAPI.Application.Features.Notas.Services;
 public class SunatResponse
 {
     public bool Success { get; set; }
+    public bool TieneObservaciones { get; set; }
+
     public string? CodigoRespuesta { get; set; }
     public string? Descripcion { get; set; }
     public string? CdrBase64 { get; set; }
@@ -18,6 +20,7 @@ public interface ISunatSenderService
     Task<SunatResponse> SendNoteAsync(
         byte[] xmlFirmadoBytes,
         string nombreArchivo,
+        string ruc,
         string solUsuario,
         string solClave,
         string environment
@@ -39,6 +42,7 @@ public class SunatSenderService : ISunatSenderService
     public async Task<SunatResponse> SendNoteAsync(
         byte[] xmlFirmadoBytes,   // ← recibe bytes directamente
         string nombreArchivo,
+        string ruc,
         string solUsuario,
         string solClave,
         string environment)
@@ -51,7 +55,7 @@ public class SunatSenderService : ISunatSenderService
 
         // ── 3. Enviar a SUNAT ─────────────────────────────────────────────
         var url = environment.ToLower() == "beta" ? UrlBeta : UrlProduccion;
-        var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{solUsuario}:{solClave}"));
+        var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{ruc}{solUsuario}:{solClave}"));
 
         var client = _httpClientFactory.CreateClient();
         var request = new HttpRequestMessage(HttpMethod.Post, url);
@@ -139,11 +143,13 @@ public class SunatSenderService : ISunatSenderService
                 };
             }
 
-            var (codigo, descripcion) = ExtraerCodigoCdr(cdrBase64);
+            var (codigo, descripcion, tieneObservaciones) = ExtraerCodigoCdr(cdrBase64);
 
             return new SunatResponse
             {
                 Success = codigo == "0",  // ← codigo, no responseCode
+                TieneObservaciones = tieneObservaciones,
+
                 CodigoRespuesta = codigo,
                 Descripcion = descripcion,
                 CdrBase64 = cdrBase64
@@ -160,7 +166,7 @@ public class SunatSenderService : ISunatSenderService
         }
     }
 
-    private static (string codigo, string descripcion) ExtraerCodigoCdr(string cdrBase64)
+    private static (string codigo, string descripcion, bool tieneObservaciones) ExtraerCodigoCdr(string cdrBase64)
     {
         try
         {
@@ -183,12 +189,15 @@ public class SunatSenderService : ISunatSenderService
             var responseCode = response?.Element(cbc + "ResponseCode")?.Value ?? "???";
             var description = response?.Element(cbc + "Description")?.Value ?? "Sin descripción";
 
-            // ← return dentro del try
-            return (responseCode, description);
+            // Verificar observaciones (códigos 4000 en adelante) dentro del CDR
+            var tieneObservaciones = xCdr.Descendants(cbc + "ID")
+                .Any(e => int.TryParse(e.Value, out var cod) && cod >= 4000);
+
+            return (responseCode, description, tieneObservaciones);
         }
         catch (Exception ex)
         {
-            return ("CDR_ERROR", $"No se pudo leer el CDR: {ex.Message}");
+            return ("CDR_ERROR", $"No se pudo leer el CDR: {ex.Message}", false);
         }
     }
 }

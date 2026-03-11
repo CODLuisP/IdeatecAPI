@@ -1,7 +1,9 @@
+using System.IO.Compression;
 using System.Text;
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Application.Features.Notas.DTOs;
 using IdeatecAPI.Domain.Entities;
+using Microsoft.Extensions.Configuration;
 
 namespace IdeatecAPI.Application.Features.Notas.Services;
 
@@ -21,17 +23,20 @@ public class NoteService : INoteService
     private readonly IXmlNoteBuilderService _xmlBuilder;
     private readonly IXmlSignerService _xmlSigner;
     private readonly ISunatSenderService _sunatSender;
+    private readonly string _rutaXml;
 
     public NoteService(
         IUnitOfWork unitOfWork,
         IXmlNoteBuilderService xmlBuilder,
         IXmlSignerService xmlSigner,
-        ISunatSenderService sunatSender)
+        ISunatSenderService sunatSender,
+        IConfiguration configuration)
     {
         _unitOfWork = unitOfWork;
         _xmlBuilder = xmlBuilder;
         _xmlSigner = xmlSigner;
         _sunatSender = sunatSender;
+        _rutaXml = configuration["Storage:RutaXml"] ?? "C:/FacturacionStorage";
     }
 
     public async Task<IEnumerable<NoteDto>> GetAllNotesAsync(int empresaId)
@@ -152,9 +157,8 @@ public class NoteService : INoteService
                     MtoBaseIgv = d.MtoBaseIgv,
                     PorcentajeIGV = d.PorcentajeIgv,
                     Igv = d.Igv,
-                    TipAfeIgv = d.TipAfeIgv,
+                    TipoAfectacionIGV = d.TipAfeIgv.ToString(),
                     MtoPrecioUnitario = d.MtoPrecioUnitario,
-                    TipoAfectacionIGV = d.TipAfeIgv.ToString()
                 });
             }
 
@@ -215,12 +219,23 @@ public class NoteService : INoteService
         var sunatResponse = await _sunatSender.SendNoteAsync(
             xmlFirmadoBytes,
             nombreArchivo,
+            empresa.Ruc,
             empresa.SolUsuario!,
             empresa.SolClave!,
             empresa.Environment
         );
 
-        var nuevoEstado = sunatResponse.Success ? "ACEPTADO" : "RECHAZADO";
+        // ← Guardar archivos localmente
+        await GuardarArchivosAsync(
+    empresa.Ruc,
+    note.EmpresaRazonSocial ?? empresa.RazonSocial,
+    note.TipoDoc,
+    note.Serie,
+    note.Correlativo.ToString(),
+    xmlFirmadoBytes,
+    sunatResponse.CdrBase64);
+
+        var nuevoEstado = sunatResponse.Success ? (sunatResponse.TieneObservaciones ? "ACEPTADO_CON_OBSERVACIONES" : "ACEPTADO") : "RECHAZADO";
 
         await _unitOfWork.Notes.UpdateEstadoSunatAsync(
             comprobanteId,
@@ -300,7 +315,7 @@ public class NoteService : INoteService
         MtoBaseIgv = d.MtoBaseIgv,
         PorcentajeIgv = d.PorcentajeIGV,
         Igv = d.Igv,
-        TipAfeIgv = d.TipAfeIgv,
+        TipoAfectacionIGV = d.TipoAfectacionIGV,
         MtoPrecioUnitario = d.MtoPrecioUnitario
     };
 
@@ -309,4 +324,44 @@ public class NoteService : INoteService
         Code = l.Code,
         Value = l.Value
     };
+
+    private async Task GuardarArchivosAsync(
+        string ruc, string razonSocial, string tipoComprobante,
+        string serie, string correlativo,
+        byte[] xmlFirmadoBytes, string? cdrBase64)
+    {
+        var empresaCarpeta = string.Concat(razonSocial
+            .Replace("/", "").Replace("\\", "").Replace(":", "")
+            .Replace("*", "").Replace("?", "").Replace("\"", "")
+            .Replace("<", "").Replace(">", "").Replace("|", "").Trim());
+
+        var tipoCarpeta = tipoComprobante switch
+        {
+            "07" => "NotasCredito",
+            "08" => "NotasDebito",
+            _ => tipoComprobante
+        };
+
+        var nombreArchivo = $"{ruc}-{tipoComprobante}-{serie}-{correlativo.PadLeft(8, '0')}";
+        var carpeta = Path.Combine(_rutaXml, empresaCarpeta, tipoCarpeta);
+        Directory.CreateDirectory(carpeta);
+
+        // ── Guardar ZIP enviado ───────────────────────────────────────────────
+        var rutaZip = Path.Combine(carpeta, $"{nombreArchivo}.zip");
+        using (var zipStream = new FileStream(rutaZip, FileMode.Create))
+        using (var zipArchive = new ZipArchive(zipStream, ZipArchiveMode.Create))
+        {
+            var entry = zipArchive.CreateEntry($"{nombreArchivo}.xml");
+            using var entryStream = entry.Open();
+            await entryStream.WriteAsync(xmlFirmadoBytes);
+        }
+
+        // ── Guardar CDR recibido ──────────────────────────────────────────────
+        if (!string.IsNullOrEmpty(cdrBase64))
+        {
+            var cdrBytes = Convert.FromBase64String(cdrBase64);
+            var rutaCdr = Path.Combine(carpeta, $"R-{nombreArchivo}.zip");
+            await File.WriteAllBytesAsync(rutaCdr, cdrBytes);
+        }
+    }
 }
