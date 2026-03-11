@@ -1,4 +1,5 @@
 
+using IdeatecAPI.Application.Features.Detraccion.DTOs;
 using IdeatecAPI.Application.Features.Notas.DTOs;
 namespace IdeatecAPI.Application.Features.Comprobante.DTOs;
 
@@ -19,10 +20,12 @@ public class GenerarComprobanteDTO
     public EmpresaDTO Company { get; set; } = new();
 
     // Totales
+    public string CodigoTipoDescGlobal { get; set; } = string.Empty;
     public decimal DescuentoGlobal { get; set; }
     public decimal TotalOperacionesGravadas { get; set; }
     public decimal TotalOperacionesExoneradas { get; set; }
     public decimal TotalOperacionesInafectas { get; set; }
+    public decimal TotalOperacionesGratuitas { get; set; }
     public decimal TotalIGV { get; set; }
     public decimal TotalImpuestos { get; set; }
     public decimal TotalDescuentos { get; set; }
@@ -36,7 +39,9 @@ public class GenerarComprobanteDTO
     public List<DetalleFacturaDTO> Details { get; set; } = [];
     public List<DetallePagosDTO>? Pagos { get; set; } = [];
     public List<DetalleCuotasDTO>? Cuotas { get; set; } = [];
-    public NoteLegendDto? Legends { get; set; }
+    public List<NoteLegendDto>? Legends { get; set; } = [];
+    public List<GuiaComprobanteDTO>? Guias { get; set; } = [];
+    public List<DetraccionDTO>? Detracciones { get; set; } = [];
 }
 
 public class DetallePagosDTO
@@ -59,6 +64,13 @@ public class DetalleCuotasDTO
     public string? MontoPagado { get; set; }
     public DateTime? FechaPago { get; set; } 
     public string? Estado { get; set; }
+}
+
+public class GuiaComprobanteDTO
+{
+    public int ComprobanteId { get; set; }
+    public string? GuiaNumeroCompleto { get; set; }
+    public string? GuiaTipoDoc { get; set; }
 }
 
 public class EmpresaDTO
@@ -102,6 +114,7 @@ public class DetalleFacturaDTO
     public decimal PorcentajeIGV { get; set; }
     public decimal MontoIGV { get; set; }
     public decimal BaseIgv { get; set; }
+    public string? CodigoTipoDescuento { get; set; }
     public decimal DescuentoUnitario { get; set; }
     public decimal DescuentoTotal { get; set; }
     public decimal ValorVenta { get; set; }

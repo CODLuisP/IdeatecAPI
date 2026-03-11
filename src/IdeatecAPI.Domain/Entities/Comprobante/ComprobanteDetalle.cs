@@ -14,6 +14,7 @@ public class ComprobanteDetalle
     public decimal? PorcentajeIGV { get; set; }
     public decimal? MontoIGV { get; set; }
     public decimal? BaseIgv { get; set; } // total de venta sin igv = cantidad * (precioventa - descuentounitario)
+    public string? CodigoTipoDescuento { get; set; }
     public decimal? DescuentoUnitario { get; set; }
     public decimal? DescuentoTotal { get; set; }
     public decimal? ValorVenta { get; set; } // total venta sin igv = cantidad * precio unitario

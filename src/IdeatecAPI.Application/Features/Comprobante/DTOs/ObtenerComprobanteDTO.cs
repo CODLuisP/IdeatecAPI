@@ -1,4 +1,5 @@
 
+using IdeatecAPI.Application.Features.Detraccion.DTOs;
 using IdeatecAPI.Application.Features.Notas.DTOs;
 
 namespace IdeatecAPI.Application.Features.Comprobante.DTOs;
@@ -21,10 +22,12 @@ namespace IdeatecAPI.Application.Features.Comprobante.DTOs;
     public EmpresaDTO Company { get; set; } = new();
 
     // Totales
+    public string CodigoTipoDescGlobal { get; set; } = string.Empty;
     public decimal DescuentoGlobal { get; set; }
     public decimal TotalOperacionesGravadas { get; set; }
     public decimal TotalOperacionesExoneradas { get; set; }
     public decimal TotalOperacionesInafectas { get; set; }
+    public decimal TotalOperacionesGratuitas { get; set; }
     public decimal TotalIGV { get; set; }
     public decimal TotalImpuestos { get; set; }
     public decimal TotalDescuentos { get; set; }
@@ -38,7 +41,9 @@ namespace IdeatecAPI.Application.Features.Comprobante.DTOs;
     public List<DetalleFacturaDTO> Details { get; set; } = [];
     public List<DetallePagosDTO>? Pagos { get; set; } = [];
     public List<DetalleCuotasDTO>? Cuotas { get; set; } = [];
-    public NoteLegendDto? Legends { get; set; }
+    public List<NoteLegendDto>? Legends { get; set; } = [];
+    public List<GuiaComprobanteDTO>? Guias { get; set; } = [];
+    public List<DetraccionDTO>? Detracciones { get; set; } = [];
 
     // Estado SUNAT
     public string? EstadoSunat { get; set; }

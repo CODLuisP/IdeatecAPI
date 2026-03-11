@@ -42,10 +42,12 @@ public class Comprobante
     public string? TipoPago { get; set; } 
 
     // Totales
+    public string? CodigoTipoDescGlobal { get; set; }
     public decimal? DescuentoGlobal { get; set; }
     public decimal? TotalOperacionesGravadas { get; set; }
     public decimal? TotalOperacionesExoneradas { get; set; }
     public decimal? TotalOperacionesInafectas { get; set; }
+    public decimal? TotalOperacionesGratuitas { get; set; }
     public decimal? TotalIGV { get; set; }
     public decimal? TotalImpuestos { get; set; }
     public decimal? TotalDescuentos { get; set; }
@@ -61,6 +63,8 @@ public class Comprobante
     public ICollection<NoteLegend> Leyendas { get; set; } = [];   // ✅ falta
     public ICollection<Pago> Pagos { get; set; } = [];
     public ICollection<Cuota> Cuotas { get; set; } = [];
+    public ICollection<GuiaComprobante> Guias { get; set; } = [];
+    public ICollection<Detraccion> Detracciones { get; set; } = [];
 
     // Estado SUNAT
     public string? EstadoSunat { get; set; }
