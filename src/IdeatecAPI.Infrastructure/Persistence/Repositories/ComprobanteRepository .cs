@@ -24,7 +24,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
                 clienteDireccion, clienteProvincia, clienteDepartamento,
                 clienteDistrito, clienteUbigeo,
                 codigoTipoDescGlobal, descuentoGlobal, totalOperacionesGravadas, totalOperacionesExoneradas, 
-                totalOperacionesInafectas, totalOperacionesGratuitas, totalIGV, totalDescuentos, totalOtrosCargos,
+                totalOperacionesInafectas, totalOperacionesGratuitas, totalIgvGratuitas, totalIGV, totalDescuentos, totalOtrosCargos,
                 totalIcbper, totalImpuestos, valorVenta, subTotal, importeTotal, montoCredito,
                 estadoSunat, xmlGenerado, fechaCreacion
             ) VALUES (
@@ -38,7 +38,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
                 @ClienteDireccion, @ClienteProvincia, @ClienteDepartamento,
                 @ClienteDistrito, @ClienteUbigeo,
                 @codigoTipoDescGlobal,  @DescuentoGlobal, @TotalOperacionesGravadas, @TotalOperacionesExoneradas, 
-                @TotalOperacionesInafectas, @TotalOperacionesGratuitas, @TotalIGV, @TotalDescuentos, @TotalOtrosCargos,
+                @TotalOperacionesInafectas, @TotalOperacionesGratuitas, @TotalIgvGratuitas, @TotalIGV, @TotalDescuentos, @TotalOtrosCargos,
                 @TotalIcbper, @TotalImpuestos, @ValorVenta, @SubTotal, @ImporteTotal, @MontoCredito,
                 @EstadoSunat, @XmlGenerado, @FechaCreacion
             );
@@ -80,6 +80,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
             comprobante.TotalOperacionesExoneradas,
             comprobante.TotalOperacionesInafectas,
             comprobante.TotalOperacionesGratuitas,
+            comprobante.TotalIgvGratuitas,
             comprobante.TotalIGV,
             comprobante.TotalDescuentos,
             comprobante.TotalOtrosCargos,
@@ -438,6 +439,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         totalOperacionesExoneradas AS TotalOperacionesExoneradas,
         totalOperacionesInafectas  AS TotalOperacionesInafectas,
         totalOperacionesGratuitas  AS TotalOperacionesGratuitas,
+        totalIgvGratuitas       AS TotalIgvGratuitas,
         totalIGV                AS TotalIGV,
         totalImpuestos          AS TotalImpuestos,
         totalDescuentos         AS TotalDescuentos,

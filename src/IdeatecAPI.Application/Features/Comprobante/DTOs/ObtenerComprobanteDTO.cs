@@ -28,6 +28,7 @@ namespace IdeatecAPI.Application.Features.Comprobante.DTOs;
     public decimal TotalOperacionesExoneradas { get; set; }
     public decimal TotalOperacionesInafectas { get; set; }
     public decimal TotalOperacionesGratuitas { get; set; }
+    public decimal TotalIgvGratuitas { get; set; }
     public decimal TotalIGV { get; set; }
     public decimal TotalImpuestos { get; set; }
     public decimal TotalDescuentos { get; set; }
