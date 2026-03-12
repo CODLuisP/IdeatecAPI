@@ -100,6 +100,6 @@ public class XmlBajaBuilderService : IXmlBajaBuilderService
             new XElement(Cbc + "LineID", lineId.ToString()),
             new XElement(Cbc + "DocumentTypeCode", detalle.TipoDoc),
             new XElement(Sac + "DocumentSerialID", detalle.Serie),
-            new XElement(Sac + "DocumentNumberID", detalle.Correlativo),
+            new XElement(Sac + "DocumentNumberID", int.TryParse(detalle.Correlativo, out var num) ? num.ToString() : detalle.Correlativo),
             new XElement(Sac + "VoidReasonDescription", detalle.DesMotivoBaja));
 }

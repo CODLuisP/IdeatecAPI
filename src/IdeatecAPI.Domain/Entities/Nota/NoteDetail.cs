@@ -18,6 +18,7 @@ public class NoteDetail
     public decimal MtoValorUnitario { get; set; }
     public decimal MtoValorVenta { get; set; }
     public decimal MtoBaseIgv { get; set; }
+    public decimal? TotalVentaItem { get; set; }
     public decimal Igv { get; set; }
     public decimal MtoPrecioUnitario { get; set; }
 }

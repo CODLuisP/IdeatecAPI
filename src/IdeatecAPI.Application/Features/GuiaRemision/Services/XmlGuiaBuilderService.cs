@@ -155,14 +155,30 @@ public class XmlGuiaBuilderService : IXmlGuiaBuilderService
             new XElement(Cbc + "HandlingInstructions", guia.DesTraslado),
             new XElement(Cbc + "GrossWeightMeasure",
                 new XAttribute("unitCode", guia.UndPesoTotal ?? "KGM"),
-                guia.PesoTotal?.ToString("F2") ?? "0.00"),
-
-            BuildShipmentStage(guia),
-            BuildDelivery(guia)
+                guia.PesoTotal?.ToString("F2") ?? "0.00")
         );
 
+        // ── Transbordo (solo modo público) ──────────────────────────────────
+        if (guia.ModTraslado == "01" && guia.IndTransbordo)
+        {
+            shipment.Add(new XElement(Cbc + "SpecialInstructions", "TRANSBORDO"));
+        }
 
-        // ── TransportHandlingUnit (solo modo privado) ────────────────────
+        // ── Material peligroso ──────────────────────────────────────────────
+        if (!string.IsNullOrEmpty(guia.MatPeligrosoClase))
+        {
+            // Formato: "CODIGO_ONU|CLASE"  →  ej: "UN1203|3"
+            var valor = string.IsNullOrEmpty(guia.MatPeligrosoNroONU)
+                ? guia.MatPeligrosoClase
+                : $"{guia.MatPeligrosoNroONU}|{guia.MatPeligrosoClase}";
+
+            shipment.Add(new XElement(Cbc + "SpecialInstructions", valor));
+        }
+
+        shipment.Add(BuildShipmentStage(guia));
+        shipment.Add(BuildDelivery(guia));
+
+        // ── TransportHandlingUnit (modo privado) ────────────────────────────
         if (guia.ModTraslado == "02" && !string.IsNullOrEmpty(guia.TransportistaPlaca))
         {
             shipment.Add(new XElement(Cac + "TransportHandlingUnit",
@@ -170,7 +186,6 @@ public class XmlGuiaBuilderService : IXmlGuiaBuilderService
                     new XElement(Cbc + "ID", guia.TransportistaPlaca))));
 
             foreach (var placa in new[] { guia.PlacaSecundaria1, guia.PlacaSecundaria2 }
-
                 .Where(p => !string.IsNullOrEmpty(p)))
             {
                 shipment.Add(new XElement(Cac + "TransportHandlingUnit",

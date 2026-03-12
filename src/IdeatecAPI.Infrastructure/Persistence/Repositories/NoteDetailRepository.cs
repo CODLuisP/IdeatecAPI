@@ -32,7 +32,8 @@ public class NoteDetailRepository : DapperRepository<NoteDetail>, INoteDetailRep
             montoIGV            AS Igv,
             baseIgv             AS MtoBaseIgv,
             descuentoUnitario   AS DescuentoUnitario,
-            descuentoTotal      AS DescuentoTotal
+            descuentoTotal      AS DescuentoTotal,
+            totalVentaItem      AS TotalVentaItem
         FROM comprobanteDetalle 
         WHERE comprobanteID = @ComprobanteId 
         ORDER BY item";
@@ -49,13 +50,13 @@ public class NoteDetailRepository : DapperRepository<NoteDetail>, INoteDetailRep
                 cantidad, unidadMedida, precioUnitario,
                 tipoAfectacionIGV, porcentajeIGV, montoIGV,
                 baseIgv, descuentoUnitario, descuentoTotal,
-                valorVenta, precioVenta
+                valorVenta, precioVenta, totalVentaItem
             ) VALUES (
                 @ComprobanteId, @Item, @ProductoId, @CodProducto, @Descripcion,
                 @Cantidad, @Unidad, @MtoValorUnitario,
                 @TipoAfectacionIGV, @PorcentajeIGV, @Igv,
                 @MtoBaseIgv, @DescuentoUnitario, @DescuentoTotal,
-                @MtoValorVenta, @MtoPrecioUnitario
+                @MtoValorVenta, @MtoPrecioUnitario, @TotalVentaItem
             );
             SELECT LAST_INSERT_ID();";
 

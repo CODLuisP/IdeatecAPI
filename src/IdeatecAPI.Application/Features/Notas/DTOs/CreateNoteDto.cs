@@ -66,4 +66,5 @@ public class CreateNoteDetailDto
     public decimal Igv { get; set; }
     public int TipAfeIgv { get; set; } = 10;
     public decimal MtoPrecioUnitario { get; set; }
+    public decimal? TotalVentaItem { get; set; }
 }

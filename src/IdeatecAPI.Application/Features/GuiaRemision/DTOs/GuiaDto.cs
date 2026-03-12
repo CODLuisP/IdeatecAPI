@@ -59,7 +59,9 @@ public class GuiaDto
     public string? TicketSunat { get; set; }
     public DateTime? FechaEnvioSunat { get; set; }
     public DateTime FechaCreacion { get; set; }
-    public bool IndTransbordo { get; set; }  // ← nuevo
+    public bool IndTransbordo { get; set; } 
+    public string? MatPeligrosoClase { get; set; }
+    public string? MatPeligrosoNroONU { get; set; }  
 
     public List<GuiaDetalleDto> Details { get; set; } = new();
 }
