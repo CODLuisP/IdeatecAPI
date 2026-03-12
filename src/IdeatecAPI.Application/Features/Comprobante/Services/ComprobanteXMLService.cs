@@ -2,6 +2,7 @@ using System.IO.Compression;
 using System.Text;
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Application.Features.Comprobante.DTOs;
+using IdeatecAPI.Application.Features.Detraccion.DTOs;
 using IdeatecAPI.Application.Features.Notas.DTOs;
 using IdeatecAPI.Application.Features.Notas.Services;
 using Microsoft.Extensions.Configuration;
@@ -64,8 +65,8 @@ public class ComprobanteService : IComprobanteService
         if (dto.Details == null || dto.Details.Count == 0)
         throw new InvalidOperationException("El comprobante debe tener al menos un detalle");
 
-        if (dto.Cuotas?.Count == 0 && dto.Pagos?.Count == 0)
-        throw new InvalidOperationException("El comprobante debe tener al menos un pago o una cuota");
+        //if (dto.Cuotas?.Count == 0 && dto.Pagos?.Count == 0)
+        //throw new InvalidOperationException("El comprobante debe tener al menos un pago o una cuota");
 
         // ── 2. Buscar empresa por RUC ─────────────────────────────────────────
         var empresa = await _unitOfWork.Empresas.GetEmpresaByRucAsync(dto.Company.NumeroDocumento ?? "")
@@ -120,10 +121,13 @@ public class ComprobanteService : IComprobanteService
                 ClienteDepartamento         = dto.Cliente?.Departamento,
                 ClienteDistrito             = dto.Cliente?.Distrito,
                 ClienteUbigeo               = dto.Cliente?.Ubigeo,
+                CodigoTipoDescGlobal        = dto.CodigoTipoDescGlobal,
                 DescuentoGlobal             = dto.DescuentoGlobal,
                 TotalOperacionesGravadas    = dto.TotalOperacionesGravadas,
                 TotalOperacionesExoneradas  = dto.TotalOperacionesExoneradas,
                 TotalOperacionesInafectas   = dto.TotalOperacionesInafectas,
+                TotalOperacionesGratuitas   = dto.TotalOperacionesGratuitas,
+                TotalIgvGratuitas           = dto.TotalIgvGratuitas,
                 TotalIGV                    = dto.TotalIGV,
                 TotalImpuestos              = dto.TotalImpuestos,
                 TotalDescuentos             = dto.TotalDescuentos,
@@ -150,6 +154,7 @@ public class ComprobanteService : IComprobanteService
                     PorcentajeIGV     = d.PorcentajeIGV,
                     MontoIGV          = d.MontoIGV,
                     BaseIgv           = d.BaseIgv,
+                    CodigoTipoDescuento  = d.CodigoTipoDescuento,
                     DescuentoUnitario = d.DescuentoUnitario,
                     DescuentoTotal    = d.DescuentoTotal,
                     ValorVenta        = d.ValorVenta,
@@ -179,9 +184,27 @@ public class ComprobanteService : IComprobanteService
                     Estado           = c.Estado
                 }).ToList() ?? [],
 
-                Leyendas = dto.Legends != null
-                    ? [new Domain.Entities.NoteLegend { Code = dto.Legends.Code, Value = dto.Legends.Value }]
-                    : []
+                Leyendas = dto.Legends?.Select(l => new Domain.Entities.NoteLegend
+                {
+                    Code  = l.Code,
+                    Value = l.Value
+                }).ToList() ?? [],
+
+                Guias = dto.Guias?.Select(g => new Domain.Entities.GuiaComprobante
+                {
+                    GuiaTipoDoc        = g.GuiaTipoDoc,
+                    GuiaNumeroCompleto = g.GuiaNumeroCompleto,
+                }).ToList() ?? [],
+
+                Detracciones = dto.Detracciones?.Select(d => new Domain.Entities.Detraccion
+                {
+                    CodigoBienDetraccion  = d.CodigoBienDetraccion,
+                    CodigoMedioPago       = d.CodigoMedioPago,
+                    CuentaBancoDetraccion = d.CuentaBancoDetraccion,
+                    PorcentajeDetraccion  = d.PorcentajeDetraccion,
+                    MontoDetraccion       = d.MontoDetraccion,
+                    Observacion           = d.Observacion
+                }).ToList() ?? [],
             };
 
             int newComprobanteId;
@@ -232,6 +255,8 @@ public class ComprobanteService : IComprobanteService
         var detalles = (await _unitOfWork.Comprobantes.GetDetallesByIdAsync(comprobanteId)).ToList();
         var cuotas   = (await _unitOfWork.Comprobantes.GetCuotasByIdAsync(comprobanteId)).ToList();
         var leyendas = (await _unitOfWork.Comprobantes.GetLeyendasByIdAsync(comprobanteId)).ToList();
+        var guias    = (await _unitOfWork.Comprobantes.GetGuiasByIdAsync(comprobanteId)).ToList();
+        var detracciones = (await _unitOfWork.Comprobantes.GetDetraccionesByIdAsync(comprobanteId)).ToList();
 
         // 4. Reconstruir DTO completo — igual que cuando se generó originalmente
         var dto = new GenerarComprobanteDTO
@@ -247,10 +272,13 @@ public class ComprobanteService : IComprobanteService
             TipoMoneda       = comprobante.TipoMoneda!,
             TipoPago         = comprobante.TipoPago,
             // ← decimales nullable necesitan ?? 0
+            CodigoTipoDescGlobal  = comprobante.CodigoTipoDescGlobal  ?? "",
             DescuentoGlobal  = comprobante.DescuentoGlobal  ?? 0,
             TotalOperacionesGravadas  = comprobante.TotalOperacionesGravadas  ?? 0,
             TotalOperacionesExoneradas= comprobante.TotalOperacionesExoneradas ?? 0,
             TotalOperacionesInafectas = comprobante.TotalOperacionesInafectas  ?? 0,
+            TotalOperacionesGratuitas = comprobante.TotalOperacionesGratuitas  ?? 0,
+            TotalIgvGratuitas = comprobante.TotalIgvGratuitas  ?? 0,
             TotalIGV           = comprobante.TotalIGV           ?? 0,
             TotalImpuestos   = comprobante.TotalImpuestos      ?? 0,
             TotalDescuentos  = comprobante.TotalDescuentos     ?? 0,
@@ -301,6 +329,7 @@ public class ComprobanteService : IComprobanteService
                 PorcentajeIGV     = d.PorcentajeIGV     ?? 0,
                 MontoIGV          = d.MontoIGV           ?? 0,
                 BaseIgv           = d.BaseIgv            ?? 0,
+                CodigoTipoDescuento = d.CodigoTipoDescuento  ?? "",
                 DescuentoUnitario = d.DescuentoUnitario  ?? 0,
                 DescuentoTotal    = d.DescuentoTotal      ?? 0,
                 ValorVenta        = d.ValorVenta          ?? 0,
@@ -320,9 +349,28 @@ public class ComprobanteService : IComprobanteService
                 Estado           = c.Estado
             }).ToList(),
 
-            Legends = leyendas.FirstOrDefault() is { } ley
-                ? new NoteLegendDto { Code = ley.Code, Value = ley.Value }
-                : null
+            Legends = leyendas.Select(l => new NoteLegendDto
+            {
+                Code  = l.Code,
+                Value = l.Value
+            }).ToList(),
+
+            Guias = guias.Select(g => new GuiaComprobanteDTO
+            {
+                GuiaTipoDoc        = g.GuiaTipoDoc,
+                GuiaNumeroCompleto = g.GuiaNumeroCompleto,
+            }).ToList(),
+
+            Detracciones = detracciones.Select(d => new DetraccionDTO
+            {
+                ComprobanteID         = d.ComprobanteID,
+                CodigoBienDetraccion  = d.CodigoBienDetraccion,
+                CodigoMedioPago       = d.CodigoMedioPago,
+                CuentaBancoDetraccion = d.CuentaBancoDetraccion,
+                PorcentajeDetraccion  = d.PorcentajeDetraccion,
+                MontoDetraccion       = d.MontoDetraccion,
+                Observacion           = d.Observacion
+            }).ToList(),
         };
 
         // 5. Regenerar XML usando el mismo servicio que al crear
@@ -458,8 +506,10 @@ public class ComprobanteService : IComprobanteService
         var pagos    = (await _unitOfWork.Comprobantes.GetPagosByIdAsync(comprobanteId)).ToList();
         var cuotas   = (await _unitOfWork.Comprobantes.GetCuotasByIdAsync(comprobanteId)).ToList();
         var leyendas = (await _unitOfWork.Comprobantes.GetLeyendasByIdAsync(comprobanteId)).ToList();
+        var guias    = (await _unitOfWork.Comprobantes.GetGuiasByIdAsync(comprobanteId)).ToList();
+        var detracciones = (await _unitOfWork.Comprobantes.GetDetraccionesByIdAsync(comprobanteId)).ToList();
 
-        return MapToDto(comprobante, detalles, pagos, cuotas, leyendas);
+        return MapToDto(comprobante, detalles, pagos, cuotas, leyendas, guias, detracciones);
     }
 
     public async Task<IEnumerable<ObtenerComprobanteDTO>> GetComprobanteByEstadoAsync(string estado)
@@ -481,8 +531,15 @@ public class ComprobanteService : IComprobanteService
 
             var leyendas = (await _unitOfWork.Comprobantes
                 .GetLeyendasByIdAsync(comprobante.ComprobanteId)).ToList();
+            
+            var guias = (await _unitOfWork.Comprobantes
+                .GetGuiasByIdAsync(comprobante.ComprobanteId)).ToList();
+            
+            var detracciones = (await _unitOfWork.Comprobantes
+                .GetDetraccionesByIdAsync(comprobante.ComprobanteId)).ToList();
 
-            lista.Add(MapToDto(comprobante, detalles, pagos, cuotas, leyendas));
+
+            lista.Add(MapToDto(comprobante, detalles, pagos, cuotas, leyendas, guias, detracciones));
         }
 
         return lista;
@@ -493,7 +550,9 @@ public class ComprobanteService : IComprobanteService
     List<Domain.Entities.ComprobanteDetalle> detalles,
     List<Domain.Entities.Pago> pagos,
     List<Domain.Entities.Cuota> cuotas,
-    List<Domain.Entities.NoteLegend> leyendas)
+    List<Domain.Entities.NoteLegend> leyendas,
+    List<Domain.Entities.GuiaComprobante> guias,
+    List<Domain.Entities.Detraccion> detracciones)
     {
         return new ObtenerComprobanteDTO
         {
@@ -538,10 +597,13 @@ public class ComprobanteService : IComprobanteService
             },
 
             // Totales
+            CodigoTipoDescGlobal  = comprobante.CodigoTipoDescGlobal ?? "",
             DescuentoGlobal  = comprobante.DescuentoGlobal ?? 0,
             TotalOperacionesGravadas  = comprobante.TotalOperacionesGravadas ?? 0,
             TotalOperacionesExoneradas= comprobante.TotalOperacionesExoneradas ?? 0,
             TotalOperacionesInafectas = comprobante.TotalOperacionesInafectas ?? 0,
+            TotalOperacionesGratuitas = comprobante.TotalOperacionesGratuitas  ?? 0,
+            TotalIgvGratuitas = comprobante.TotalIgvGratuitas  ?? 0,
             TotalIGV           = comprobante.TotalIGV ?? 0,
             TotalImpuestos   = comprobante.TotalImpuestos ?? 0,
             TotalDescuentos  = comprobante.TotalDescuentos ?? 0,
@@ -566,6 +628,7 @@ public class ComprobanteService : IComprobanteService
                 PorcentajeIGV    = d.PorcentajeIGV ?? 0,
                 MontoIGV         = d.MontoIGV ?? 0,
                 BaseIgv          = d.BaseIgv ?? 0,
+                CodigoTipoDescuento= d.CodigoTipoDescuento ?? "",
                 DescuentoUnitario= d.DescuentoUnitario ?? 0,
                 DescuentoTotal   = d.DescuentoTotal ?? 0,
                 ValorVenta       = d.ValorVenta ?? 0,
@@ -597,13 +660,29 @@ public class ComprobanteService : IComprobanteService
                 Estado          = c.Estado
             }).ToList(),
 
-            Legends = leyendas.FirstOrDefault() is { } ley
-                ? new NoteLegendDto
-                {
-                    Code  = ley.Code,
-                    Value = ley.Value
-                }
-                : null,
+            Legends = leyendas.Select(l => new NoteLegendDto
+            {
+                Code  = l.Code,
+                Value = l.Value
+            }).ToList(),
+
+            Guias = guias.Select(g => new GuiaComprobanteDTO
+            {
+                ComprobanteId      = g.ComprobanteId,
+                GuiaTipoDoc        = g.GuiaTipoDoc,
+                GuiaNumeroCompleto = g.GuiaNumeroCompleto,
+            }).ToList(),
+
+            Detracciones = detracciones.Select(d => new DetraccionDTO
+            {
+                ComprobanteID         = d.ComprobanteID,
+                CodigoBienDetraccion  = d.CodigoBienDetraccion,
+                CodigoMedioPago       = d.CodigoMedioPago,
+                CuentaBancoDetraccion = d.CuentaBancoDetraccion,
+                PorcentajeDetraccion  = d.PorcentajeDetraccion,
+                MontoDetraccion       = d.MontoDetraccion,
+                Observacion           = d.Observacion
+            }).ToList(),
 
             EstadoSunat             = comprobante.EstadoSunat,
             CodigoRespuestaSunat    = comprobante.CodigoRespuestaSunat,

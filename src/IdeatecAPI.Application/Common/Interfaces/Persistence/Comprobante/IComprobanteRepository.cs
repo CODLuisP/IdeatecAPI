@@ -19,5 +19,7 @@ public interface IComprobanteRepository : IRepository<Comprobante>
     Task<IEnumerable<Pago>> GetPagosByIdAsync(int comprobanteId);
     Task<IEnumerable<Cuota>> GetCuotasByIdAsync(int comprobanteId);
     Task<IEnumerable<NoteLegend>> GetLeyendasByIdAsync(int comprobanteId);
+    Task<IEnumerable<GuiaComprobante>> GetGuiasByIdAsync(int comprobanteId);
+    Task<IEnumerable<Detraccion>> GetDetraccionesByIdAsync(int comprobanteId);
     Task UpdateEstadoSunatAsync(int comprobanteId, string estado, string? codigo, string? mensaje, string? xmlFirmado, string? cdrBase64);
 }

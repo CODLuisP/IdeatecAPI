@@ -23,8 +23,8 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
                 clienteID, clienteTipoDoc, clienteNumDoc, clienteRznSocial,
                 clienteDireccion, clienteProvincia, clienteDepartamento,
                 clienteDistrito, clienteUbigeo,
-                descuentoGlobal, totalOperacionesGravadas, totalOperacionesExoneradas, totalOperacionesInafectas,
-                totalIGV, totalDescuentos, totalOtrosCargos,
+                codigoTipoDescGlobal, descuentoGlobal, totalOperacionesGravadas, totalOperacionesExoneradas, 
+                totalOperacionesInafectas, totalOperacionesGratuitas, totalIgvGratuitas, totalIGV, totalDescuentos, totalOtrosCargos,
                 totalIcbper, totalImpuestos, valorVenta, subTotal, importeTotal, montoCredito,
                 estadoSunat, xmlGenerado, fechaCreacion
             ) VALUES (
@@ -37,8 +37,8 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
                 @ClienteId, @ClienteTipoDoc, @ClienteNumDoc, @ClienteRazonSocial,
                 @ClienteDireccion, @ClienteProvincia, @ClienteDepartamento,
                 @ClienteDistrito, @ClienteUbigeo,
-                @DescuentoGlobal, @TotalOperacionesGravadas, @TotalOperacionesExoneradas, @TotalOperacionesInafectas,
-                @TotalIGV, @TotalDescuentos, @TotalOtrosCargos,
+                @codigoTipoDescGlobal,  @DescuentoGlobal, @TotalOperacionesGravadas, @TotalOperacionesExoneradas, 
+                @TotalOperacionesInafectas, @TotalOperacionesGratuitas, @TotalIgvGratuitas, @TotalIGV, @TotalDescuentos, @TotalOtrosCargos,
                 @TotalIcbper, @TotalImpuestos, @ValorVenta, @SubTotal, @ImporteTotal, @MontoCredito,
                 @EstadoSunat, @XmlGenerado, @FechaCreacion
             );
@@ -74,10 +74,13 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
             comprobante.ClienteDepartamento,
             comprobante.ClienteDistrito,
             comprobante.ClienteUbigeo,
+            comprobante.CodigoTipoDescGlobal,
             comprobante.DescuentoGlobal,
             comprobante.TotalOperacionesGravadas,
             comprobante.TotalOperacionesExoneradas,
             comprobante.TotalOperacionesInafectas,
+            comprobante.TotalOperacionesGratuitas,
+            comprobante.TotalIgvGratuitas,
             comprobante.TotalIGV,
             comprobante.TotalDescuentos,
             comprobante.TotalOtrosCargos,
@@ -118,6 +121,18 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
             await RegistrarCuotaAsync(cuota);
         }
 
+        foreach (var guia in comprobante.Guias)
+        {
+            guia.ComprobanteId = comprobanteId;
+            await RegistrarGuiaAsync(guia);
+        }
+
+        foreach (var detraccion in comprobante.Detracciones)
+        {
+            detraccion.ComprobanteID = comprobanteId;
+            await RegistrarDetraccionAsync(detraccion);
+        }
+
         await ActualizarSerieCorrelativoAsync(comprobante);
 
         return comprobanteId;
@@ -129,12 +144,12 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
             INSERT INTO comprobantedetalle (
                 comprobanteId, item, productoId, codigo, descripcion, cantidad,
                 unidadMedida, precioUnitario, tipoAfectacionIGV, porcentajeIGV,
-                montoIGV, baseIgv, descuentoUnitario, descuentoTotal,
+                montoIGV, baseIgv, codigoTipoDescuento, descuentoUnitario, descuentoTotal,
                 valorVenta, precioVenta, totalVentaItem, icbper, factorIcbper
             ) VALUES (
                 @ComprobanteId, @Item, @ProductoId, @Codigo, @Descripcion, @Cantidad,
                 @UnidadMedida, @PrecioUnitario, @TipoAfectacionIGV, @PorcentajeIGV,
-                @MontoIGV, @BaseIgv, @DescuentoUnitario, @DescuentoTotal,
+                @MontoIGV, @BaseIgv, @codigoTipoDescuento, @DescuentoUnitario, @DescuentoTotal,
                 @ValorVenta, @PrecioVenta, @TotalVentaItem, @Icbper, @FactorIcbper
             );";
 
@@ -177,6 +192,31 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         await _connection.ExecuteAsync(sql, c, _transaction);
     }
 
+    private async Task RegistrarGuiaAsync(GuiaComprobante g)
+    {
+        var sql = @"
+            INSERT INTO guiacomprobante (
+                comprobanteID, guiaTipoDoc, guiaNumeroCompleto
+            ) VALUES (
+                @ComprobanteId, @GuiaTipoDoc, @GuiaNumeroCompleto
+            );";
+
+        await _connection.ExecuteAsync(sql, g, _transaction);
+    }
+    
+    private async Task RegistrarDetraccionAsync(Detraccion d)
+    {
+        var sql = @"
+            INSERT INTO detraccion (
+                comprobanteID, codigoBienDetraccion, codigoMedioPago,
+                cuentaBancoDetraccion, porcentajeDetraccion, montoDetraccion, observacion
+            ) VALUES (
+                @ComprobanteID, @CodigoBienDetraccion, @CodigoMedioPago,
+                @CuentaBancoDetraccion, @PorcentajeDetraccion, @MontoDetraccion, @Observacion
+            );";
+
+        await _connection.ExecuteAsync(sql, d, _transaction);
+    }
     private async Task ActualizarSerieCorrelativoAsync(Comprobante comprobante)
     {
         var sql = @"
@@ -228,7 +268,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
             SELECT 
                 comprobanteId, item, productoId, codigo, descripcion, cantidad,
                 unidadMedida, precioUnitario, tipoAfectacionIGV, porcentajeIGV,
-                montoIGV, baseIgv, descuentoUnitario, descuentoTotal,
+                montoIGV, baseIgv, codigoTipoDescuento, descuentoUnitario, descuentoTotal,
                 valorVenta, precioVenta, totalVentaItem, icbper, factorIcbper
             FROM comprobantedetalle
             WHERE comprobanteId = @ComprobanteId";
@@ -279,6 +319,40 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
             WHERE comprobanteId = @ComprobanteId";
 
         return await _connection.QueryAsync<NoteLegend>(
+            sql, new { ComprobanteId = comprobanteId }, _transaction);
+    }
+
+    public async Task<IEnumerable<GuiaComprobante>> GetGuiasByIdAsync(int comprobanteId)
+    {
+        var sql = @"
+            SELECT 
+                guiaComprobanteID  AS GuiaComprobanteId,
+                comprobanteID      AS ComprobanteId,
+                guiaTipoDoc        AS GuiaTipoDoc,
+                guiaNumeroCompleto AS GuiaNumeroCompleto
+            FROM guiacomprobante
+            WHERE comprobanteID = @ComprobanteId";
+
+        return await _connection.QueryAsync<GuiaComprobante>(
+            sql, new { ComprobanteId = comprobanteId }, _transaction);
+    }
+
+    public async Task<IEnumerable<Detraccion>> GetDetraccionesByIdAsync(int comprobanteId)
+    {
+        var sql = @"
+            SELECT 
+                detraccionID          AS DetraccionID,
+                comprobanteID         AS ComprobanteID,
+                codigoBienDetraccion  AS CodigoBienDetraccion,
+                codigoMedioPago       AS CodigoMedioPago,
+                cuentaBancoDetraccion AS CuentaBancoDetraccion,
+                porcentajeDetraccion  AS PorcentajeDetraccion,
+                montoDetraccion       AS MontoDetraccion,
+                observacion           AS Observacion
+            FROM detraccion
+            WHERE comprobanteID = @ComprobanteId";
+
+        return await _connection.QueryAsync<Detraccion>(
             sql, new { ComprobanteId = comprobanteId }, _transaction);
     }
 
@@ -359,10 +433,13 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         clienteDistrito         AS ClienteDistrito,
         clienteUbigeo           AS ClienteUbigeo,
 
+        codigoTipoDescGlobal        AS CodigoTipoDescGlobal,
         descuentoGlobal        AS DescuentoGlobal,
         totalOperacionesGravadas   AS TotalOperacionesGravadas,
         totalOperacionesExoneradas AS TotalOperacionesExoneradas,
         totalOperacionesInafectas  AS TotalOperacionesInafectas,
+        totalOperacionesGratuitas  AS TotalOperacionesGratuitas,
+        totalIgvGratuitas       AS TotalIgvGratuitas,
         totalIGV                AS TotalIGV,
         totalImpuestos          AS TotalImpuestos,
         totalDescuentos         AS TotalDescuentos,
