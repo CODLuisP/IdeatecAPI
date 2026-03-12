@@ -235,7 +235,7 @@ public class ResumenComprobanteService : IResumenComprobanteService
         // 9. Si no obtuvo ticket
         if (sunatResponse.CodigoRespuesta == "ERROR_ENVIO")
         {
-            await _unitOfWork.ResumenComprobante.UpdateEstadoSunatAsync(
+            await _unitOfWork.ResumenComprobante.UpdateEstadoResumenAsync(
                 resumenId, "RECHAZADO", string.Empty,
                 sunatResponse.CodigoRespuesta,
                 sunatResponse.Descripcion ?? string.Empty,
@@ -255,7 +255,7 @@ public class ResumenComprobanteService : IResumenComprobanteService
         // 10. Si SUNAT aún procesando tras reintentos
         if (sunatResponse.CodigoRespuesta == "98")
         {
-            await _unitOfWork.ResumenComprobante.UpdateEstadoSunatAsync(
+            await _unitOfWork.ResumenComprobante.UpdateEstadoResumenAsync(
                 resumenId, "EN_PROCESO",
                 sunatResponse.Ticket ?? string.Empty,
                 "98", "SUNAT aún procesando",
@@ -289,12 +289,29 @@ public class ResumenComprobanteService : IResumenComprobanteService
             ? (sunatResponse.TieneObservaciones ? "ACEPTADO_CON_OBSERVACIONES" : "ACEPTADO")
             : "RECHAZADO";
 
-        await _unitOfWork.ResumenComprobante.UpdateEstadoSunatAsync(
+        await _unitOfWork.ResumenComprobante.UpdateEstadoResumenAsync(
             resumenId, nuevoEstado,
             sunatResponse.Ticket          ?? string.Empty,
             sunatResponse.CodigoRespuesta ?? string.Empty,
             sunatResponse.Descripcion     ?? string.Empty,
             string.Empty, DateTime.Now);
+
+        // 13. Actualizar estado de comprobantes en tabla comprobantes
+        if (nuevoEstado == "ACEPTADO")
+        {
+            foreach (var detalle in resumen.DetallesResumen
+                .Where(d => d.ComprobanteId > 0))
+            {
+                await _unitOfWork.Comprobantes.UpdateEstadoSunatAsync(
+                    detalle.ComprobanteId,
+                    "ACEPTADO",
+                    "0",
+                    $"Aceptado mediante resumen diario {resumen.Identificador}",
+                    null,
+                    null
+                );
+            }
+        }
 
         return new ComprobanteResponse
         {
