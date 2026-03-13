@@ -17,6 +17,7 @@ using IdeatecAPI.Application.Features.SerieCorrelativo.Services;
 using IdeatecAPI.Application.Features.ComunicacionBaja.Services;
 using IdeatecAPI.Application.Features.GuiaRemision.Services;
 using IdeatecAPI.Application.Features.ResumenComprobante.Services;
+using System.Reflection;
 
 namespace IdeatecAPI.Infrastructure;
 
@@ -62,8 +63,6 @@ public static class DependencyInjection
         // ========================================
         // JWT AUTHENTICATION (NUEVO)
         // ========================================
-        services.AddScoped<ICategoriaService, CategoriaService>();
-        services.AddScoped<IClienteService, ClienteService>();
         services.AddScoped<IDireccionService, DireccionService>();
         services.AddScoped<IEmpresaService, EmpresaService>();
         services.AddScoped<INoteService, NoteService>();
@@ -87,6 +86,9 @@ public static class DependencyInjection
         services.AddScoped<IGuiaService, GuiaService>();
         services.AddScoped<IXmlGuiaBuilderService, XmlGuiaBuilderService>();
         services.AddScoped<ISunatGuiaService, SunatGuiaService>();
+
+        // ── Servicios de Email ──
+        services.AddScoped<IEmailService, EmailService>();
 
         var jwtSecret = configuration["JwtSettings:Secret"]
             ?? throw new InvalidOperationException("JWT Secret not configured in appsettings.json");
@@ -116,6 +118,10 @@ public static class DependencyInjection
         });
 
         services.AddAuthorization();
+
+         // ── CORREGIDO: MediatR debe escanear Application, no Infrastructure ──
+        services.AddMediatR(cfg =>
+            cfg.RegisterServicesFromAssemblyContaining<IdeatecAPI.Application.Features.Auth.ForgotPassword.ForgotPasswordCommand>());
 
         return services;
     }

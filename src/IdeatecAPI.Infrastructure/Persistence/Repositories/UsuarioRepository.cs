@@ -236,4 +236,84 @@ public class UsuarioRepository : DapperRepository<Usuario>, IUsuarioRepository
 
         return count > 0;
     }
+
+    // ── Recuperación de contraseña ─────────────────────────────────────────
+
+    public async Task<Usuario?> GetByEmailOrUsernameAsync(string emailOrUsername)
+    {
+        var sql = @"
+            SELECT 
+                usuarioID           AS UsuarioID,
+                username            AS Username,
+                nombreCompleto      AS NombreCompleto,
+                email               AS Email,
+                estado              AS Estado,
+                resetPasswordToken   AS ResetPasswordToken,
+                resetPasswordExpires AS ResetPasswordExpires
+            FROM usuario
+            WHERE (email = @valor OR username = @valor)
+              AND estado = 1
+            LIMIT 1";
+
+        return await _connection.QueryFirstOrDefaultAsync<Usuario>(
+            sql,
+            new { valor = emailOrUsername },
+            _transaction
+        );
+    }
+
+    public async Task<Usuario?> GetByResetTokenAsync(string token)
+    {
+        var sql = @"
+            SELECT 
+                usuarioID            AS UsuarioID,
+                nombreCompleto       AS NombreCompleto,
+                email                AS Email,
+                estado               AS Estado,
+                resetPasswordToken   AS ResetPasswordToken,
+                resetPasswordExpires AS ResetPasswordExpires
+            FROM usuario
+            WHERE resetPasswordToken = @token
+            LIMIT 1";
+
+        return await _connection.QueryFirstOrDefaultAsync<Usuario>(
+            sql,
+            new { token },
+            _transaction
+        );
+    }
+
+    public async Task SaveResetTokenAsync(int usuarioId, string token, DateTime expires)
+    {
+        var sql = @"
+            UPDATE usuario
+            SET resetPasswordToken   = @token,
+                resetPasswordExpires = @expires,
+                fechaActualizacion   = @now
+            WHERE usuarioID = @usuarioId";
+
+        await _connection.ExecuteAsync(
+            sql,
+            new { token, expires, now = DateTime.UtcNow, usuarioId },
+            _transaction
+        );
+    }
+
+    public async Task UpdatePasswordAsync(int usuarioId, string hashedPassword)
+    {
+        var sql = @"
+            UPDATE usuario
+            SET password             = @hashedPassword,
+                resetPasswordToken   = NULL,
+                resetPasswordExpires = NULL,
+                tokenVersion         = tokenVersion + 1,
+                fechaActualizacion   = @now
+            WHERE usuarioID = @usuarioId";
+
+        await _connection.ExecuteAsync(
+            sql,
+            new { hashedPassword, now = DateTime.UtcNow, usuarioId },
+            _transaction
+        );
+    }
 }
