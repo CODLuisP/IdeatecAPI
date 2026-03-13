@@ -15,4 +15,18 @@ public interface IUsuarioRepository
     Task<bool> DeleteAsync(int id); // Soft delete (cambiar estado a false)
     Task<bool> ExistsAsync(string username, string email, string? ruc = null, int? excludeId = null);
 
+     // ── Métodos para recuperación de contraseña ──
+ 
+    // Busca usuario por email o username (para forgot-password)
+    Task<Usuario?> GetByEmailOrUsernameAsync(string emailOrUsername);
+ 
+    // Busca usuario por el token de reset
+    Task<Usuario?> GetByResetTokenAsync(string token);
+ 
+    // Guarda el token de reset y su expiración
+    Task SaveResetTokenAsync(int usuarioId, string token, DateTime expires);
+ 
+    // Actualiza la contraseña y limpia el token
+    Task UpdatePasswordAsync(int usuarioId, string hashedPassword);
+
 }

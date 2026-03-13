@@ -2,6 +2,9 @@ using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Application.Features.Auth.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MediatR;                                                    // ← AGREGAR
+using IdeatecAPI.Application.Features.Auth.ForgotPassword;        // ← AGREGAR
+using IdeatecAPI.Application.Features.Auth.ResetPassword;  
 
 namespace IdeatecAPI.API.Controllers;
 
@@ -10,10 +13,13 @@ namespace IdeatecAPI.API.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
+    private readonly IMediator _mediator;     
 
-    public AuthController(IAuthService authService)
+    public AuthController(IAuthService authService, IMediator mediator)
     {
         _authService = authService;
+        _mediator = mediator;
+
     }
 
     /// <summary>
@@ -123,5 +129,41 @@ public class AuthController : ControllerBase
             success = true,
             message = "Sesión cerrada correctamente"
         });
+    }
+
+    /// <summary>
+    /// Solicitar enlace de recuperación de contraseña
+    /// POST: api/auth/forgot-password
+    /// </summary>
+    [HttpPost("forgot-password")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.EmailOrUsername))
+            return BadRequest(new { success = false, message = "El campo es requerido." });
+
+        var result = await _mediator.Send(new ForgotPasswordCommand(request.EmailOrUsername));
+
+        // Siempre 200 para no revelar si el email existe
+        return Ok(new { success = true, message = result.Message });
+    }
+
+    /// <summary>
+    /// Restablecer contraseña con token
+    /// POST: api/auth/reset-password
+    /// </summary>
+    [HttpPost("reset-password")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Token) || string.IsNullOrWhiteSpace(request.NewPassword))
+            return BadRequest(new { success = false, message = "Token y contraseña son requeridos." });
+
+        var result = await _mediator.Send(new ResetPasswordCommand(request.Token, request.NewPassword));
+
+        if (!result.Success)
+            return BadRequest(new { success = false, message = result.Message });
+
+        return Ok(new { success = true, message = result.Message });
     }
 }
