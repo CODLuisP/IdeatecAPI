@@ -4,7 +4,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MediatR;                                                    // ← AGREGAR
 using IdeatecAPI.Application.Features.Auth.ForgotPassword;        // ← AGREGAR
-using IdeatecAPI.Application.Features.Auth.ResetPassword;  
+using IdeatecAPI.Application.Features.Auth.ResetPassword;
+using IdeatecAPI.Application.Features.Demo.SendDemoRequest;
 
 namespace IdeatecAPI.API.Controllers;
 
@@ -13,7 +14,7 @@ namespace IdeatecAPI.API.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
-    private readonly IMediator _mediator;     
+    private readonly IMediator _mediator;
 
     public AuthController(IAuthService authService, IMediator mediator)
     {
@@ -163,6 +164,24 @@ public class AuthController : ControllerBase
 
         if (!result.Success)
             return BadRequest(new { success = false, message = result.Message });
+
+        return Ok(new { success = true, message = result.Message });
+    }
+
+    /// <summary>
+    /// Solicitar demostración
+    /// POST: api/auth/demo-request
+    /// </summary>
+    [HttpPost("demo-request")]
+    [AllowAnonymous]
+    public async Task<IActionResult> DemoRequest([FromBody] SendDemoRequestDto request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Name) ||
+            string.IsNullOrWhiteSpace(request.Company) ||
+            string.IsNullOrWhiteSpace(request.Phone))
+            return BadRequest(new { success = false, message = "Todos los campos son requeridos." });
+
+        var result = await _mediator.Send(new SendDemoRequestCommand(request.Name, request.Company, request.Phone));
 
         return Ok(new { success = true, message = result.Message });
     }

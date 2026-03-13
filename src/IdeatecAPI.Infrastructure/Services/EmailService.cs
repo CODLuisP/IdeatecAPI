@@ -9,59 +9,59 @@ namespace IdeatecAPI.Infrastructure.Services;
 
 public class EmailService : IEmailService
 {
-    private readonly IConfiguration _config;
-    private readonly ILogger<EmailService> _logger;
+  private readonly IConfiguration _config;
+  private readonly ILogger<EmailService> _logger;
 
-    public EmailService(IConfiguration config, ILogger<EmailService> logger)
+  public EmailService(IConfiguration config, ILogger<EmailService> logger)
+  {
+    _config = config;
+    _logger = logger;
+  }
+
+  public async Task SendPasswordResetEmailAsync(string toEmail, string toName, string resetLink)
+  {
+    try
     {
-        _config = config;
-        _logger = logger;
-    }
+      var smtpConfig = _config.GetSection("Smtp");
 
-    public async Task SendPasswordResetEmailAsync(string toEmail, string toName, string resetLink)
+      var message = new MimeMessage();
+      message.From.Add(new MailboxAddress(
+          smtpConfig["FromName"] ?? "IDEATEC Factus",
+          smtpConfig["FromEmail"] ?? "noreply@ideatec.pe"
+      ));
+      message.To.Add(new MailboxAddress(toName, toEmail));
+      message.Subject = "Recuperación de contraseña – IDEATEC Factus";
+
+      // ── Cuerpo del email (HTML) ────────────────────────────────────
+      var bodyBuilder = new BodyBuilder
+      {
+        HtmlBody = BuildEmailHtml(toName, resetLink),
+        TextBody = $"Hola {toName},\n\nHaz clic en el siguiente enlace para restablecer tu contraseña (válido por 30 minutos):\n{resetLink}\n\nSi no solicitaste este cambio, ignora este correo.\n\n— Equipo IDEATEC"
+      };
+      message.Body = bodyBuilder.ToMessageBody();
+
+      // ── Envío SMTP ─────────────────────────────────────────────────
+      using var client = new SmtpClient();
+      await client.ConnectAsync(
+          smtpConfig["Host"],
+          int.Parse(smtpConfig["Port"] ?? "587"),
+          SecureSocketOptions.StartTls
+      );
+      await client.AuthenticateAsync(smtpConfig["Username"], smtpConfig["Password"]);
+      await client.SendAsync(message);
+      await client.DisconnectAsync(true);
+
+      _logger.LogInformation("Email de reset enviado a {Email}", toEmail);
+    }
+    catch (Exception ex)
     {
-        try
-        {
-            var smtpConfig = _config.GetSection("Smtp");
-
-            var message = new MimeMessage();
-            message.From.Add(new MailboxAddress(
-                smtpConfig["FromName"] ?? "IDEATEC Factus",
-                smtpConfig["FromEmail"] ?? "noreply@ideatec.pe"
-            ));
-            message.To.Add(new MailboxAddress(toName, toEmail));
-            message.Subject = "Recuperación de contraseña – IDEATEC Factus";
-
-            // ── Cuerpo del email (HTML) ────────────────────────────────────
-            var bodyBuilder = new BodyBuilder
-            {
-                HtmlBody = BuildEmailHtml(toName, resetLink),
-                TextBody = $"Hola {toName},\n\nHaz clic en el siguiente enlace para restablecer tu contraseña (válido por 30 minutos):\n{resetLink}\n\nSi no solicitaste este cambio, ignora este correo.\n\n— Equipo IDEATEC"
-            };
-            message.Body = bodyBuilder.ToMessageBody();
-
-            // ── Envío SMTP ─────────────────────────────────────────────────
-            using var client = new SmtpClient();
-            await client.ConnectAsync(
-                smtpConfig["Host"],
-                int.Parse(smtpConfig["Port"] ?? "587"),
-                SecureSocketOptions.StartTls
-            );
-            await client.AuthenticateAsync(smtpConfig["Username"], smtpConfig["Password"]);
-            await client.SendAsync(message);
-            await client.DisconnectAsync(true);
-
-            _logger.LogInformation("Email de reset enviado a {Email}", toEmail);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error al enviar email de reset a {Email}", toEmail);
-            throw; // Re-lanzar para que el handler lo capture
-        }
+      _logger.LogError(ex, "Error al enviar email de reset a {Email}", toEmail);
+      throw; // Re-lanzar para que el handler lo capture
     }
+  }
 
-    // ── Template HTML del email ────────────────────────────────────────────
-    private static string BuildEmailHtml(string nombre, string resetLink) => $"""
+  // ── Template HTML del email ────────────────────────────────────────────
+  private static string BuildEmailHtml(string nombre, string resetLink) => $"""
         <!DOCTYPE html>
         <html lang="es">
         <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width"></head>
@@ -134,4 +134,40 @@ public class EmailService : IEmailService
         </body>
         </html>
         """;
+
+  public async Task SendEmailAsync(string toEmail, string subject, string htmlBody)
+  {
+    try
+    {
+      var smtpConfig = _config.GetSection("Smtp");
+
+      var message = new MimeMessage();
+      message.From.Add(new MailboxAddress(
+          smtpConfig["FromName"] ?? "IDEATEC Factus",
+          smtpConfig["FromEmail"] ?? "noreply@ideatec.pe"
+      ));
+      message.To.Add(new MailboxAddress(toEmail, toEmail));
+      message.Subject = subject;
+
+      var bodyBuilder = new BodyBuilder { HtmlBody = htmlBody };
+      message.Body = bodyBuilder.ToMessageBody();
+
+      using var client = new SmtpClient();
+      await client.ConnectAsync(
+          smtpConfig["Host"],
+          int.Parse(smtpConfig["Port"] ?? "587"),
+          SecureSocketOptions.StartTls
+      );
+      await client.AuthenticateAsync(smtpConfig["Username"], smtpConfig["Password"]);
+      await client.SendAsync(message);
+      await client.DisconnectAsync(true);
+
+      _logger.LogInformation("Email enviado a {Email}", toEmail);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error al enviar email a {Email}", toEmail);
+      throw;
+    }
+  }
 }
