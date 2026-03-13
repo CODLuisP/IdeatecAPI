@@ -65,19 +65,22 @@ public class ClienteService : IClienteService
 
             int clienteId = await _unitOfWork.Clientes.RegistrarClienteAsync(cliente);
 
-            var direccion = new Domain.Entities.Direccion
+            // ── SOLO SI ES RUC ──
+            if (dto.TipoDocumentoId == "06" && dto.Direccion != null)
             {
-                ClienteId = clienteId,
-                Ubigeo = dto.Direccion?.Ubigeo,
-                DireccionLineal = dto.Direccion?.DireccionLineal,
-                Departamento = dto.Direccion?.Departamento,
-                Provincia = dto.Direccion?.Provincia,
-                Distrito = dto.Direccion?.Distrito,
-                TipoDireccion = dto.Direccion?.TipoDireccion
-            };
+                var direccion = new Domain.Entities.Direccion
+                {
+                    ClienteId = clienteId,
+                    Ubigeo = dto.Direccion.Ubigeo,
+                    DireccionLineal = dto.Direccion.DireccionLineal,
+                    Departamento = dto.Direccion.Departamento,
+                    Provincia = dto.Direccion.Provincia,
+                    Distrito = dto.Direccion.Distrito,
+                    TipoDireccion = dto.Direccion.TipoDireccion
+                };
 
-            await _unitOfWork.Direcciones.CrearDireccionAsync(direccion);
-
+                await _unitOfWork.Direcciones.CrearDireccionAsync(direccion);
+            }
             _unitOfWork.Commit();
             return clienteId;
         }
