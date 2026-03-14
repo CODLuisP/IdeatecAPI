@@ -8,7 +8,7 @@ namespace IdeatecAPI.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize] // Todos los endpoints requieren autenticación
+//[Authorize] // Todos los endpoints requieren autenticación
 public class UsuarioController : ControllerBase
 {
     private readonly IUnitOfWork _unitOfWork;
@@ -26,7 +26,7 @@ public class UsuarioController : ControllerBase
     /// POST: api/usuario/register
     /// </summary>
     [HttpPost("register")]
-    [Authorize(Roles = "admin")]
+    //[Authorize(Roles = "admin")]
     public async Task<IActionResult> Register([FromBody] RegisterRequestDto request)
     {
         if (!ModelState.IsValid)
@@ -64,7 +64,7 @@ public class UsuarioController : ControllerBase
     /// GET: api/usuario
     /// </summary>
     [HttpGet]
-    [Authorize(Roles = "admin")] // Solo admins pueden ver todos los usuarios
+    //[Authorize(Roles = "admin")] // Solo admins pueden ver todos los usuarios
     public async Task<IActionResult> GetAll([FromQuery] bool incluirInactivos = false)
     {
         var usuarios = await _unitOfWork.Usuarios.GetAllAsync(!incluirInactivos);
@@ -73,12 +73,9 @@ public class UsuarioController : ControllerBase
         {
             UsuarioID = u.UsuarioID,
             Username = u.Username,
-            NombreCompleto = u.NombreCompleto,
             Email = u.Email,
             Rol = u.Rol,
             Ruc = u.Ruc,
-            RazonSocial = u.RazonSocial,
-            Imagen = u.Imagen,
             Estado = u.Estado,
             FechaUltimoAcceso = u.FechaUltimoAcceso
         });
@@ -158,10 +155,7 @@ public class UsuarioController : ControllerBase
         // Actualizar campos
         usuarioExistente.Username = dto.Username;
         usuarioExistente.Email = dto.Email;
-        usuarioExistente.NombreCompleto = dto.NombreCompleto;
         usuarioExistente.Ruc = dto.Ruc;
-        usuarioExistente.RazonSocial = dto.RazonSocial;
-        usuarioExistente.Imagen = dto.Imagen;
 
         // Solo admin puede cambiar el rol
         if (User.IsInRole("admin") && !string.IsNullOrEmpty(dto.Rol))
@@ -192,7 +186,7 @@ public class UsuarioController : ControllerBase
     /// DELETE: api/usuario/{id}
     /// </summary>
     [HttpDelete("{id}")]
-    [Authorize(Roles = "admin")] // Solo admins pueden eliminar usuarios
+    //[Authorize(Roles = "admin")] // Solo admins pueden eliminar usuarios
     public async Task<IActionResult> Delete(int id)
     {
         var usuario = await _unitOfWork.Usuarios.GetByIdAsync(id);
