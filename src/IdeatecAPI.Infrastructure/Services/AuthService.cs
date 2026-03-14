@@ -79,12 +79,9 @@ public class AuthService : IAuthService
                 {
                     UsuarioID = usuario.UsuarioID,
                     Username = usuario.Username,
-                    NombreCompleto = usuario.NombreCompleto,
                     Email = usuario.Email,
                     Rol = usuario.Rol,
                     Ruc = usuario.Ruc,
-                    RazonSocial = usuario.RazonSocial,
-                    Imagen = usuario.Imagen
                 }
             };
         }

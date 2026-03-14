@@ -245,6 +245,10 @@ public class UnitOfWork : IUnitOfWork
         _bajaDetalles = null;
         _guias = null;
         _guiaDetalles = null;
+        _productos = null;     
+        _comprobantes = null;    
+        _serieCorrelativos = null; 
+        _resumenComprobante = null; 
     }
 
     public IRepository<T> Repository<T>() where T : class

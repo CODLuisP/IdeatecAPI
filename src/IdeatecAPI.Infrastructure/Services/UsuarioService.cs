@@ -63,11 +63,9 @@ public class UsuarioService : IUsuarioService
                 Username = request.Username,
                 Email = request.Email,
                 Password = passwordHash,
-                NombreCompleto = request.NombreCompleto,
                 Rol = request.Rol ?? "usuario",
                 Estado = true,
                 Ruc = request.Ruc,
-                RazonSocial = request.RazonSocial,
                 TokenVersion = 0,
                 FechaCreacion = DateTime.UtcNow
             };
@@ -93,12 +91,9 @@ public class UsuarioService : IUsuarioService
                 {
                     UsuarioID = usuarioId,
                     Username = nuevoUsuario.Username,
-                    NombreCompleto = nuevoUsuario.NombreCompleto,
                     Email = nuevoUsuario.Email,
                     Rol = nuevoUsuario.Rol,
                     Ruc = nuevoUsuario.Ruc,
-                    RazonSocial = nuevoUsuario.RazonSocial,
-                    Imagen = nuevoUsuario.Imagen,
                     Estado = nuevoUsuario.Estado
                 }
             };
