@@ -159,6 +159,7 @@ public class NoteService : INoteService
                     Igv = d.Igv,
                     TipoAfectacionIGV = d.TipAfeIgv.ToString(),
                     MtoPrecioUnitario = d.MtoPrecioUnitario,
+                    TotalVentaItem = d.TotalVentaItem
                 });
             }
 
@@ -316,7 +317,8 @@ public class NoteService : INoteService
         PorcentajeIgv = d.PorcentajeIGV,
         Igv = d.Igv,
         TipoAfectacionIGV = d.TipoAfectacionIGV,
-        MtoPrecioUnitario = d.MtoPrecioUnitario
+        MtoPrecioUnitario = d.MtoPrecioUnitario,
+        TotalVentaItem = d.TotalVentaItem
     };
 
     private static NoteLegendDto MapLegendToDto(NoteLegend l) => new()

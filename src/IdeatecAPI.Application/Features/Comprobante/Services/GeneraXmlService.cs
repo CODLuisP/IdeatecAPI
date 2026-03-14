@@ -373,7 +373,7 @@ public class GeneraXmlService : IComprobanteXmlService
             taxTotal.Add(BuildTaxSubtotal(moneda, dto.TotalOperacionesInafectas, 0, "O", "9998", "INA", "FRE"));
         
         if (dto.TotalOperacionesGratuitas > 0)
-            taxTotal.Add(BuildTaxSubtotal(moneda, dto.TotalOperacionesGratuitas, dto.TotalIGV, "Z", "9996", "GRA", "FRE"));
+            taxTotal.Add(BuildTaxSubtotal(moneda, dto.TotalOperacionesGratuitas, dto.TotalIgvGratuitas, "Z", "9996", "GRA", "FRE"));
 
         return taxTotal;
     }

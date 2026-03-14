@@ -65,6 +65,8 @@ public class CreateGuiaEnvioDto
     public decimal PesoTotal { get; set; }
     public string UndPesoTotal { get; set; } = "KGM";
     public string? NumContenedor { get; set; }
+    public string? MatPeligrosoClase { get; set; }
+    public string? MatPeligrosoNroONU { get; set; }
 
     public CreateGuiaDireccionDto Llegada { get; set; } = new();
     public CreateGuiaDireccionDto Partida { get; set; } = new();

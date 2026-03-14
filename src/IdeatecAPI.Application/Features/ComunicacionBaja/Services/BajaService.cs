@@ -193,6 +193,21 @@ public class BajaService : IBajaService
             null
         );
 
+        if (nuevoEstado == "ACEPTADO")
+        {
+            foreach (var d in details)
+            {
+                if (int.TryParse(d.Correlativo, out var corrInt))
+                {
+                    var comp = await _unitOfWork.Notes.GetNoteByNumeroAsync(
+                        baja.EmpresaId, d.TipoDoc, d.Serie, corrInt);
+                    if (comp != null)
+                        await _unitOfWork.Notes.UpdateEstadoSunatAsync(
+                            comp.ComprobanteId, "BAJA", null, "Dado de baja por comunicación RA", null, null);
+                }
+            }
+        }
+
         return await GetByIdAsync(bajaId)
             ?? throw new InvalidOperationException("Error al recuperar la baja actualizada");
     }

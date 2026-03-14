@@ -80,7 +80,8 @@ public class XmlNoteBuilderService : IXmlNoteBuilderService
 
         // ── 7. Totales de impuestos ───────────────────────────────────────────
         var tipoAfectacion = details.FirstOrDefault()?.TipoAfectacionIGV ?? "10";
-        root.Add(BuildTaxTotal(note.MtoOperGravadas, note.MtoIGV, note.TipoMoneda, tipoAfectacion));
+        var porcentaje = details.FirstOrDefault()?.PorcentajeIGV ?? 18;
+        root.Add(BuildTaxTotal(note.MtoOperGravadas, note.MtoIGV, note.TipoMoneda, tipoAfectacion, porcentaje));
 
         // ── 8. Total monetario ────────────────────────────────────────────────
         var totalMonetarioTag = note.TipoDoc == "07" ? "LegalMonetaryTotal" : "RequestedMonetaryTotal";
@@ -160,7 +161,7 @@ public class XmlNoteBuilderService : IXmlNoteBuilderService
                     new XElement(Cbc + "RegistrationName", note.ClienteRznSocial))));
 
     private static XElement BuildTaxTotal(decimal baseImponible, decimal igv,
-    string moneda, string tipoAfectacion = "10")
+    string moneda, string tipoAfectacion = "10", decimal porcentaje = 18)
     {
         var (schemeId, schemeName, taxTypeCode, categoryId) = tipoAfectacion switch
         {
@@ -183,7 +184,7 @@ public class XmlNoteBuilderService : IXmlNoteBuilderService
                     igv.ToString("F2")),
                 new XElement(Cac + "TaxCategory",
                     new XElement(Cbc + "ID", categoryId),
-                    new XElement(Cbc + "Percent", tipoAfectacion == "10" ? "18" : "0"),
+                    new XElement(Cbc + "Percent", tipoAfectacion == "10" ? porcentaje.ToString("F0") : "0"),
                     new XElement(Cbc + "TaxExemptionReasonCode", tipoAfectacion),
                     new XElement(Cac + "TaxScheme",
                         new XElement(Cbc + "ID", schemeId),

@@ -220,7 +220,7 @@ public class ResumenComprobanteRepository : DapperRepository<ResumenComprobante>
     }
 
     // ResumenComprobanteRepository
-    public async Task UpdateEstadoSunatAsync(int resumenId, string estado, string ticket,
+    public async Task UpdateEstadoResumenAsync(int resumenId, string estado, string ticket,
         string codigoRespuesta, string mensajeRespuesta, string xmlGenerado, DateTime fechaEnvio)
     {
         const string sql = @"

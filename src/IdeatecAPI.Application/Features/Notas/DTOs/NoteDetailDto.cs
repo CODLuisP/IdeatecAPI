@@ -14,4 +14,6 @@ public class NoteDetailDto
     public decimal Igv { get; set; }
     public string TipoAfectacionIGV { get; set; } = "10";
     public decimal MtoPrecioUnitario { get; set; }
+    public decimal? TotalVentaItem { get; set; }
+
 }

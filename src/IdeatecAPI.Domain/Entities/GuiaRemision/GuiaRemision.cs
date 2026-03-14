@@ -9,6 +9,8 @@ public class GuiaRemision
     public string Serie { get; set; } = string.Empty;
     public int Correlativo { get; set; }
     public string? NumeroCompleto { get; set; }
+    public string? MatPeligrosoClase { get; set; }     // ej: "1.1A", "3"
+    public string? MatPeligrosoNroONU { get; set; }    // ej: "UN1203"
     public DateTime FechaEmision { get; set; }
 
     // Empresa denormalizada
