@@ -17,7 +17,7 @@ using IdeatecAPI.Application.Features.SerieCorrelativo.Services;
 using IdeatecAPI.Application.Features.ComunicacionBaja.Services;
 using IdeatecAPI.Application.Features.GuiaRemision.Services;
 using IdeatecAPI.Application.Features.ResumenComprobante.Services;
-using System.Reflection;
+using MediatR;
 
 namespace IdeatecAPI.Infrastructure;
 
@@ -120,8 +120,7 @@ public static class DependencyInjection
         services.AddAuthorization();
 
          // ── CORREGIDO: MediatR debe escanear Application, no Infrastructure ──
-        services.AddMediatR(cfg =>
-            cfg.RegisterServicesFromAssemblyContaining<IdeatecAPI.Application.Features.Auth.ForgotPassword.ForgotPasswordCommand>());
+        services.AddMediatR(typeof(IdeatecAPI.Application.Features.Auth.ForgotPassword.ForgotPasswordCommand).Assembly);
 
         return services;
     }
