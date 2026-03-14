@@ -134,14 +134,17 @@ public class ClienteRepository : DapperRepository<Cliente>, IClienteRepository
         return clienteDictionary.Values.FirstOrDefault();
     }
         
-    public async Task<int> RegistrarClienteAsync(Cliente cliente)
+    public async Task<Cliente> RegistrarClienteAsync(Cliente cliente)
     {
         var sql = @"
             INSERT INTO cliente (tipoDocumentoId, numeroDocumento, razonSocial, nombreComercial, telefono, email)
             VALUES (@TipoDocumentoId, @NumeroDocumento, @RazonSocialNombre, @NombreComercial, @Telefono, @Correo);
             SELECT LAST_INSERT_ID();";
 
-        return await _connection.ExecuteScalarAsync<int>(sql, cliente, _transaction);
+        var newId = await _connection.ExecuteScalarAsync<int>(sql, cliente, _transaction);
+        
+        cliente.ClienteId = newId;
+        return cliente;
     }
 
     public async Task<bool> EditarClienteAsync(Cliente cliente)
