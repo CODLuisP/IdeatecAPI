@@ -8,10 +8,10 @@ namespace IdeatecAPI.Application.Features.Empresas.Services;
 public interface IEmpresaService
 {
     Task<IEnumerable<EmpresaDto>> GetAllEmpresasAsync();
-    Task<EmpresaDto?> GetEmpresaByIdAsync(int id);
+    Task<EmpresaDto?> GetEmpresaByRucAsync(string ruc);
     Task<EmpresaDto> CreateEmpresaAsync(CreateEmpresaDto dto);
-    Task<EmpresaDto> UpdateEmpresaAsync(int id, UpdateEmpresaDto dto);
-    Task DeleteEmpresaAsync(int id);
+    Task<EmpresaDto> UpdateEmpresaAsync(string ruc, UpdateEmpresaDto dto);
+    Task DeleteEmpresaAsync(string ruc);
     Task<FileToBase64Dto> ConvertFileToBase64Async(Stream fileStream, string fileName, string contentType, long sizeBytes);
     Task<CertificadoResponseDto> ConvertCertificadoAsync(CertificadoRequestDto dto);
     Task<Base64ToFileResponseDto> ConvertBase64ToFileAsync(Base64ToFileRequestDto dto);
@@ -38,9 +38,9 @@ public class EmpresaService : IEmpresaService
         return empresas.Select(MapToDto);
     }
 
-    public async Task<EmpresaDto?> GetEmpresaByIdAsync(int id)
+    public async Task<EmpresaDto?> GetEmpresaByRucAsync(string ruc)
     {
-        var empresa = await _unitOfWork.Empresas.GetEmpresaByIdAsync(id);
+        var empresa = await _unitOfWork.Empresas.GetEmpresaByRucAsync(ruc);
         return empresa is null ? null : MapToDto(empresa);
     }
 
@@ -80,10 +80,10 @@ public class EmpresaService : IEmpresaService
         return MapToDto(empresa);
     }
 
-    public async Task<EmpresaDto> UpdateEmpresaAsync(int id, UpdateEmpresaDto dto)
+    public async Task<EmpresaDto> UpdateEmpresaAsync(string ruc, UpdateEmpresaDto dto)
     {
-        var empresa = await _unitOfWork.Empresas.GetEmpresaByIdAsync(id)
-            ?? throw new KeyNotFoundException($"Empresa {id} no encontrada");
+        var empresa = await _unitOfWork.Empresas.GetEmpresaByRucAsync(ruc)
+            ?? throw new KeyNotFoundException($"Empresa con RUC {ruc} no encontrada");
 
         empresa.RazonSocial = dto.RazonSocial ?? empresa.RazonSocial;
         empresa.NombreComercial = dto.NombreComercial ?? empresa.NombreComercial;
@@ -297,10 +297,10 @@ public class EmpresaService : IEmpresaService
         });
     }
 
-    public async Task DeleteEmpresaAsync(int id)
+    public async Task DeleteEmpresaAsync(string ruc)
     {
-        var empresa = await _unitOfWork.Empresas.GetEmpresaByIdAsync(id)
-            ?? throw new KeyNotFoundException($"Empresa {id} no encontrada");
+        var empresa = await _unitOfWork.Empresas.GetEmpresaByRucAsync(ruc)
+            ?? throw new KeyNotFoundException($"Empresa con RUC {ruc} no encontrada");
 
         // Soft delete
         empresa.Activo = false;

@@ -99,9 +99,9 @@ public class EmpresaRepository : DapperRepository<Empresa>, IEmpresaRepository
         await _connection.ExecuteAsync(sql, empresa, _transaction);
     }
 
-    public async Task DeleteEmpresaAsync(int id)
+    public async Task DeleteEmpresaAsync(string ruc)
     {
-        var sql = "DELETE FROM empresa WHERE empresaID = @Id";
-        await _connection.ExecuteAsync(sql, new { Id = id }, _transaction);
+        var sql = "DELETE FROM empresa WHERE ruc = @Ruc";
+        await _connection.ExecuteAsync(sql, new { Ruc = ruc }, _transaction);
     }
 }

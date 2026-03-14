@@ -30,14 +30,14 @@ public class CompaniesController : ControllerBase
         return Ok(empresas);
     }
 
-    [HttpGet("{id}")]
+    [HttpGet("{ruc}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetById(int id)
+    public async Task<IActionResult> GetByRuc(string ruc)
     {
-        var empresa = await _empresaService.GetEmpresaByIdAsync(id);
+        var empresa = await _empresaService.GetEmpresaByRucAsync(ruc);
         if (empresa is null)
-            return NotFound(new { message = $"Empresa con ID {id} no encontrada" });
+            return NotFound(new { message = $"Empresa con RUC {ruc} no encontrada" });
         return Ok(empresa);
     }
 
@@ -47,24 +47,24 @@ public class CompaniesController : ControllerBase
     public async Task<IActionResult> Create([FromBody] CreateEmpresaDto dto)
     {
         var empresa = await _empresaService.CreateEmpresaAsync(dto);
-        return CreatedAtAction(nameof(GetById), new { id = empresa.Id }, empresa);
+        return CreatedAtAction(nameof(GetByRuc), new { ruc = empresa.Ruc }, empresa);
     }
 
-    [HttpPut("{id}")]
+    [HttpPut("{ruc}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Update(int id, [FromBody] UpdateEmpresaDto dto)
+    public async Task<IActionResult> Update(string ruc, [FromBody] UpdateEmpresaDto dto)
     {
-        var empresa = await _empresaService.UpdateEmpresaAsync(id, dto);
+        var empresa = await _empresaService.UpdateEmpresaAsync(ruc, dto);
         return Ok(empresa);
     }
 
-    [HttpDelete("{id}")]
+    [HttpDelete("{ruc}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Delete(int id)
+    public async Task<IActionResult> Delete(string ruc)
     {
-        await _empresaService.DeleteEmpresaAsync(id);
+        await _empresaService.DeleteEmpresaAsync(ruc);
         return NoContent();
     }
 
