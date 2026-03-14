@@ -52,7 +52,7 @@ public class ForgotPasswordCommandHandler : IRequestHandler<ForgotPasswordComman
         // 5. Enviar correo
         await _emailService.SendPasswordResetEmailAsync(
             usuario.Email,
-            usuario.NombreCompleto,
+            usuario.Username,
             resetLink
         );
 
