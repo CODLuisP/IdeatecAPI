@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 
 namespace IdeatecAPI.API.Controllers; 
 
-[Route("[controller]")]
+[Route("api/[controller]")]
 public class ClienteController : ControllerBase
 {
     private readonly IClienteService _clienteService;
@@ -47,8 +47,15 @@ public class ClienteController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Registrar([FromBody] RegistrarClienteDTO dto)
     {
-        var clienteId = await _clienteService.RegistrarClienteAsync(dto);
-        return StatusCode(201, new { clienteId, mensaje = "Cliente registrado correctamente" });
+        try
+        {
+            var cliente = await _clienteService.RegistrarClienteAsync(dto);
+            return StatusCode(201, cliente);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { mensaje = ex.Message });
+        }
     }
 
     [HttpPut("{id}")]

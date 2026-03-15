@@ -14,35 +14,19 @@ public class EmpresaRepository : DapperRepository<Empresa>, IEmpresaRepository
 
     public async Task<IEnumerable<Empresa>> GetAllEmpresasAsync()
     {
-        var sql = "SELECT * FROM empresa WHERE activo = 1 ORDER BY razonSocial";
+        var sql = "SELECT *, empresaID AS Id FROM empresa WHERE activo = 1 ORDER BY razonSocial";
         return await _connection.QueryAsync<Empresa>(sql, transaction: _transaction);
     }
 
     public async Task<Empresa?> GetEmpresaByIdAsync(int id)
     {
-        var sql = @"SELECT empresaID AS Id, ruc AS Ruc, razonSocial AS RazonSocial,
-            nombreComercial AS NombreComercial, direccion AS Direccion,
-            ubigeo AS Ubigeo, provincia AS Provincia, departamento AS Departamento,
-            distrito AS Distrito, solUsuario AS SolUsuario, solClave AS SolClave,
-            certificadoPem AS CertificadoPem, certificadoPassword AS CertificadoPassword,
-            clienteId AS ClienteId, clientSecret AS ClientSecret,
-            plan AS Plan, environment AS Environment, activo AS Activo,
-            creadoEn AS CreadoEn, actualizadoEn AS ActualizadoEn
-            FROM empresa WHERE empresaID = @Id AND activo = 1";
+        var sql = "SELECT *, empresaID AS Id FROM empresa WHERE empresaID = @Id AND activo = 1";
         return await _connection.QueryFirstOrDefaultAsync<Empresa>(sql, new { Id = id }, _transaction);
     }
 
     public async Task<Empresa?> GetEmpresaByRucAsync(string ruc)
     {
-        var sql = @"SELECT empresaID AS Id, ruc AS Ruc, razonSocial AS RazonSocial,
-            nombreComercial AS NombreComercial, direccion AS Direccion,
-            ubigeo AS Ubigeo, provincia AS Provincia, departamento AS Departamento,
-            distrito AS Distrito, solUsuario AS SolUsuario, solClave AS SolClave,
-            certificadoPem AS CertificadoPem, certificadoPassword AS CertificadoPassword,
-            clienteId AS ClienteId, clientSecret AS ClientSecret,
-            plan AS Plan, environment AS Environment, activo AS Activo,
-            creadoEn AS CreadoEn, actualizadoEn AS ActualizadoEn
-            FROM empresa WHERE ruc = @Ruc AND activo = 1";
+        var sql = "SELECT *, empresaID AS Id FROM empresa WHERE ruc = @Ruc AND activo = 1";
         return await _connection.QueryFirstOrDefaultAsync<Empresa>(sql, new { Ruc = ruc }, _transaction);
     }
 
@@ -99,9 +83,9 @@ public class EmpresaRepository : DapperRepository<Empresa>, IEmpresaRepository
         await _connection.ExecuteAsync(sql, empresa, _transaction);
     }
 
-    public async Task DeleteEmpresaAsync(int id)
+    public async Task DeleteEmpresaAsync(string ruc)
     {
-        var sql = "DELETE FROM empresa WHERE empresaID = @Id";
-        await _connection.ExecuteAsync(sql, new { Id = id }, _transaction);
+        var sql = "DELETE FROM empresa WHERE ruc = @Ruc";
+        await _connection.ExecuteAsync(sql, new { Ruc = ruc }, _transaction);
     }
 }

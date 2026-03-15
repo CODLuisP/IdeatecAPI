@@ -102,24 +102,26 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
     public async Task<bool> ExisteProductoAsync(string codigo)
     {
         var sql = "SELECT COUNT(1) FROM producto WHERE codigo = @Codigo AND estado = 1";
-        var count = await _connection.ExecuteScalarAsync<int>(sql, new { Codigo = codigo }, _transaction);
+        var count = await _connection.ExecuteScalarAsync<int>(sql, new { Codigo = codigo }); // ← sin _transaction
         return count > 0;
     }
 
-    public async Task<bool> RegistrarProductoAsync(Producto producto)
+    public async Task<Producto> RegistrarProductoAsync(Producto producto)
     {
         var sql = @"
             INSERT INTO producto
             (codigo, tipoProducto, codigoSunat, descripcion, unidadMedida,
-             precioUnitario, tipoAfectacionIGV, incluirIGV, stock,
-             categoriaID, estado, fechaCreacion)
+            precioUnitario, tipoAfectacionIGV, incluirIGV, stock,
+            categoriaID, estado, fechaCreacion)
             VALUES
             (@Codigo, @TipoProducto, @CodigoSunat, @Descripcion, @UnidadMedida,
-             @PrecioUnitario, @TipoAfectacionIGV, @IncluirIGV, @Stock,
-             @CategoriaId, @Estado, @FechaCreacion);";
+            @PrecioUnitario, @TipoAfectacionIGV, @IncluirIGV, @Stock,
+            @CategoriaId, @Estado, @FechaCreacion);
+            SELECT LAST_INSERT_ID();";
 
-        var result = await _connection.ExecuteAsync(sql, producto, _transaction);
-        return result > 0;
+        var newId = await _connection.ExecuteScalarAsync<int>(sql, producto, _transaction);
+        producto.ProductoId = newId;
+        return producto;
     }
 
     public async Task<bool> EditarProductoAsync(Producto producto)

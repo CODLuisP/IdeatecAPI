@@ -13,7 +13,7 @@ public interface IProductoService
     Task<IEnumerable<ObtenerProductoDTO>> GetAllProductosAsync();
     Task<ObtenerProductoDTO?> GetProductoByIdAsync(int id);
     Task<bool> ExisteRucAsync(string codigo);
-    Task<bool> RegistrarProductoAsync(RegistrarProductoDTO producto);
+    Task<ObtenerProductoDTO> RegistrarProductoAsync(RegistrarProductoDTO producto);
     Task<bool> EditarProductoAsync(EditarProductoDTO producto);
     Task<bool> EliminarProductoAsync(int productoId);
 }
@@ -48,12 +48,12 @@ public class ProductoService : IProductoService
         throw new NotImplementedException();
     }
 
-    public async Task<bool> RegistrarProductoAsync(RegistrarProductoDTO dto)
+    public async Task<ObtenerProductoDTO> RegistrarProductoAsync(RegistrarProductoDTO dto)
     {
-        _unitOfWork.BeginTransaction();
-        
-         if (await _unitOfWork.Productos.ExisteProductoAsync(dto.Codigo))
+        if (await _unitOfWork.Productos.ExisteProductoAsync(dto.Codigo))
             throw new InvalidOperationException($"Ya existe un producto con código {dto.Codigo}");
+
+        _unitOfWork.BeginTransaction();
         try
         {
             var producto = new Producto
@@ -72,10 +72,13 @@ public class ProductoService : IProductoService
                 FechaCreacion = DateTime.Now
             };
 
-            var result = await _unitOfWork.Productos.RegistrarProductoAsync(producto);
+            var productoCreado = await _unitOfWork.Productos.RegistrarProductoAsync(producto);
 
             _unitOfWork.Commit();
-            return result;
+
+            // Recarga completo con relaciones (categoría, etc.)
+            var productoCompleto = await _unitOfWork.Productos.GetProductoByIdAsync(productoCreado.ProductoId);
+            return MapToDto(productoCompleto!);
         }
         catch
         {
@@ -83,7 +86,7 @@ public class ProductoService : IProductoService
             throw;
         }
     }
-
+    
     public async Task<bool> EditarProductoAsync(EditarProductoDTO dto)
     {
         if (dto.ProductoId <= 0)

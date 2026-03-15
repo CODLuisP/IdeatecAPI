@@ -12,7 +12,7 @@ namespace IdeatecAPI.Application.Features.Clientes.Services;
 public interface IClienteService {
     Task<IEnumerable<ObtenerClientesDTO>> GetAllClientesAsync();
     Task<ObtenerClientesDTO?> GetClienteByIdAsync(int clienteId);
-    Task<int> RegistrarClienteAsync(RegistrarClienteDTO cliente);
+    Task<ObtenerClientesDTO> RegistrarClienteAsync(RegistrarClienteDTO cliente);
     Task<bool> EditarClienteAsync(EditarClienteDTO cliente);
     Task<bool> EliminarClienteAsync(int clienteId);
 
@@ -46,8 +46,12 @@ public class ClienteService : IClienteService
         return MapToDTO(cliente);
     }   
     
-    public async Task<int> RegistrarClienteAsync(RegistrarClienteDTO dto)
+    public async Task<ObtenerClientesDTO> RegistrarClienteAsync(RegistrarClienteDTO dto)
     {
+        // Verifica si ya existe el documento
+        var existente = await _unitOfWork.Clientes.GetByNumDocAsync(dto.NumeroDocumento!);
+        if (existente != null)
+            throw new InvalidOperationException($"Ya existe un cliente con el documento {dto.NumeroDocumento}");
         _unitOfWork.BeginTransaction();
         try
         {
@@ -63,14 +67,14 @@ public class ClienteService : IClienteService
                 Estado = true
             };
 
-            int clienteId = await _unitOfWork.Clientes.RegistrarClienteAsync(cliente);
+        var clienteCreado = await _unitOfWork.Clientes.RegistrarClienteAsync(cliente);
 
             // ── SOLO SI ES RUC ──
             if (dto.TipoDocumentoId == "06" && dto.Direccion != null)
             {
                 var direccion = new Domain.Entities.Direccion
                 {
-                    ClienteId = clienteId,
+                    ClienteId = clienteCreado.ClienteId,
                     Ubigeo = dto.Direccion.Ubigeo,
                     DireccionLineal = dto.Direccion.DireccionLineal,
                     Departamento = dto.Direccion.Departamento,
@@ -82,7 +86,8 @@ public class ClienteService : IClienteService
                 await _unitOfWork.Direcciones.CrearDireccionAsync(direccion);
             }
             _unitOfWork.Commit();
-            return clienteId;
+            var clienteCompleto = await _unitOfWork.Clientes.GetClienteByIdAsync(clienteCreado.ClienteId);
+            return MapToDTO(clienteCompleto!);
         }
         catch
         {
