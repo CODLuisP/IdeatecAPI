@@ -2,8 +2,8 @@ using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Application.Features.Auth.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using MediatR;                                                    // ← AGREGAR
-using IdeatecAPI.Application.Features.Auth.ForgotPassword;        // ← AGREGAR
+using MediatR;
+using IdeatecAPI.Application.Features.Auth.ForgotPassword;
 using IdeatecAPI.Application.Features.Auth.ResetPassword;
 using IdeatecAPI.Application.Features.Demo.SendDemoRequest;
 
