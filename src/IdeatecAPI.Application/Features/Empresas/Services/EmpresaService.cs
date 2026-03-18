@@ -67,7 +67,7 @@ public class EmpresaService : IEmpresaService
             CertificadoPassword = dto.CertificadoPassword,
             SolUsuario = dto.SolUsuario,
             SolClave = dto.SolClave,
-            ClienteId = dto.ClienteId,
+            ClientId = dto.ClientId,
             ClientSecret = dto.ClientSecret,
             Plan = dto.Plan,
             Environment = dto.Environment,
@@ -100,7 +100,7 @@ public class EmpresaService : IEmpresaService
         empresa.CertificadoPassword = dto.CertificadoPassword ?? empresa.CertificadoPassword;
         empresa.SolUsuario = dto.SolUsuario ?? empresa.SolUsuario;
         empresa.SolClave = dto.SolClave ?? empresa.SolClave;
-        empresa.ClienteId = dto.ClienteId ?? empresa.ClienteId;
+        empresa.ClientId = dto.ClientId ?? empresa.ClientId;
         empresa.ClientSecret = dto.ClientSecret ?? empresa.ClientSecret;
         empresa.Plan = dto.Plan ?? empresa.Plan;
         empresa.Environment = dto.Environment ?? empresa.Environment;
@@ -316,19 +316,23 @@ public class EmpresaService : IEmpresaService
         NombreComercial = e.NombreComercial,
         Direccion = e.Direccion,
         Ubigeo = e.Ubigeo,
-        Urbanizacion = e.Urbanizacion,
         Provincia = e.Provincia,
         Departamento = e.Departamento,
         Distrito = e.Distrito,
+        Urbanizacion = e.Urbanizacion,
+        SolUsuario = e.SolUsuario,
+        SolClave = e.SolClave,
+        Activo = e.Activo,
+        CreadoEn = e.CreadoEn,
         Telefono = e.Telefono,
         Email = e.Email,
         LogoBase64 = e.LogoBase64,
+        CertificadoPem = e.CertificadoPem,
+        CertificadoPassword = e.CertificadoPassword,
+        ClientId = e.ClientId,
+        ClientSecret = e.ClientSecret,
         Plan = e.Plan,
         Environment = e.Environment,
-        TieneCertificado = !string.IsNullOrEmpty(e.CertificadoPem),
-        TieneCredencialesSunat = !string.IsNullOrEmpty(e.SolClave),
-        Activo = e.Activo,
-        CreadoEn = e.CreadoEn,
         ActualizadoEn = e.ActualizadoEn
     };
 }

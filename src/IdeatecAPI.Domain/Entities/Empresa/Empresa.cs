@@ -21,7 +21,7 @@ public class Empresa
     public string? LogoBase64 { get; set; }
     public string? CertificadoPem { get; set; }
     public string? CertificadoPassword { get; set; }
-    public string? ClienteId { get; set; }
+    public string? ClientId { get; set; }
     public string? ClientSecret { get; set; }
     public string Plan { get; set; } = "free";
     public string Environment { get; set; } = "beta";

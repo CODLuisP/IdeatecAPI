@@ -48,7 +48,7 @@ public class EmpresaRepository : DapperRepository<Empresa>, IEmpresaRepository
         (@Ruc, @RazonSocial, @NombreComercial, @Direccion, @Ubigeo, @Urbanizacion,
          @Provincia, @Departamento, @Distrito,
          @SolUsuario, @SolClave, @Activo, @CreadoEn, @Telefono, @Email, @LogoBase64,
-         @CertificadoPem, @CertificadoPassword, @ClienteId, @ClientSecret, @Plan, @Environment);
+         @CertificadoPem, @CertificadoPassword, @ClientId, @ClientSecret, @Plan, @Environment);
         SELECT LAST_INSERT_ID();";
 
         return await _connection.ExecuteScalarAsync<int>(sql, empresa, _transaction);
@@ -73,7 +73,7 @@ public class EmpresaRepository : DapperRepository<Empresa>, IEmpresaRepository
         logoBase64 = @LogoBase64,
         certificadoPem = @CertificadoPem,
         certificadoPassword = @CertificadoPassword,
-        clienteId = @ClienteId,
+        clienteId = @ClientId,
         clientSecret = @ClientSecret,
         plan = @Plan,
         environment = @Environment,

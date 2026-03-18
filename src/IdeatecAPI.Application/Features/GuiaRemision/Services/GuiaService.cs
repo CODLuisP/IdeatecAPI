@@ -204,7 +204,7 @@ public class GuiaService : IGuiaService
         if (string.IsNullOrEmpty(empresa.SolUsuario) || string.IsNullOrEmpty(empresa.SolClave))
             throw new InvalidOperationException("La empresa no tiene credenciales SOL configuradas");
 
-        if (string.IsNullOrEmpty(empresa.ClienteId) || string.IsNullOrEmpty(empresa.ClientSecret))
+        if (string.IsNullOrEmpty(empresa.ClientId) || string.IsNullOrEmpty(empresa.ClientSecret))
             throw new InvalidOperationException("La empresa no tiene client_id y client_secret configurados para GRE");
 
         var details = (await _unitOfWork.GuiaDetalles.GetByGuiaIdAsync(guiaId)).ToList();
@@ -234,7 +234,7 @@ public class GuiaService : IGuiaService
             empresa.Ruc,
             empresa.SolUsuario!,
             empresa.SolClave!,
-            empresa.ClienteId!,
+            empresa.ClientId!,
             empresa.ClientSecret!,
             empresa.Environment
         );
