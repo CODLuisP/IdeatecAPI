@@ -17,10 +17,7 @@ public interface IEmpresaService
     Task<Base64ToFileResponseDto> ConvertBase64ToFileAsync(Base64ToFileRequestDto dto);
 
     Task<Base64ToFileResponseDto> GenerarCertificadoFreeAsync(CertificadoFreeRequestDto dto);
-
-
 }
-
 
 
 public class EmpresaService : IEmpresaService
@@ -46,8 +43,10 @@ public class EmpresaService : IEmpresaService
 
     public async Task<EmpresaDto> CreateEmpresaAsync(CreateEmpresaDto dto)
     {
-        if (await _unitOfWork.Empresas.ExisteRucAsync(dto.Ruc))
-            throw new InvalidOperationException($"Ya existe una empresa con RUC {dto.Ruc}");
+         if (await _unitOfWork.Empresas.ExisteRucAsync(dto.Ruc)) {
+            Console.WriteLine($"Omitiendo creación de empresa: RUC {dto.Ruc} ya existe.");
+            return new EmpresaDto { Ruc = dto.Ruc }; // retorno vacío, sin excepción
+        }
 
         var empresa = new Empresa
         {

@@ -15,72 +15,71 @@ public class UsuarioService : IUsuarioService
     }
 
     public async Task<RegisterResponseDto> RegisterAsync(RegisterRequestDto request)
-{
-    try
     {
-        // 1. Verificar si el username ya existe
-        var usuarioExistente = await _unitOfWork.Usuarios.GetByIdentifierAsync(request.Username);
-        if (usuarioExistente != null)
+        try
         {
-            return new RegisterResponseDto
+            // 1. Verificar username
+            var usuarioExistente = await _unitOfWork.Usuarios.GetByIdentifierAsync(request.Username);
+            if (usuarioExistente != null)
+                return new RegisterResponseDto { Success = false, Message = "El username ya está registrado" };
+
+            // 2. Verificar email + RUC
+            usuarioExistente = await _unitOfWork.Usuarios.GetByIdentifierAsync(request.Email);
+            if (usuarioExistente != null && usuarioExistente.Ruc != request.Ruc)
+                return new RegisterResponseDto { Success = false, Message = "El email ya está registrado con otro RUC" };
+
+            // 3. Hashear la contraseña automáticamente
+            var passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
+
+            // 4. Crear el nuevo usuario
+            var nuevoUsuario = new Usuario
             {
-                Success = false,
-                Message = "El username ya está registrado"
+                Username = request.Username,
+                Email = request.Email,
+                Password = passwordHash,
+                Rol = request.Rol ?? "usuario",
+                Estado = true,
+                Ruc = request.Ruc,
+                TokenVersion = 0,
+                FechaCreacion = DateTime.UtcNow
             };
-        }
 
-        // 2. Hashear la contraseña automáticamente
-        var passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
+            // 5. Guardar en la base de datos
+            var usuarioId = await _unitOfWork.Usuarios.CreateAsync(nuevoUsuario);
 
-        // 3. Crear el nuevo usuario
-        var nuevoUsuario = new Usuario
-        {
-            Username = request.Username,
-            Email = request.Email,
-            Password = passwordHash,
-            Rol = request.Rol ?? "usuario",
-            Estado = true,
-            Ruc = request.Ruc,
-            TokenVersion = 0,
-            FechaCreacion = DateTime.UtcNow
-        };
-
-        // 4. Guardar en la base de datos
-        var usuarioId = await _unitOfWork.Usuarios.CreateAsync(nuevoUsuario);
-
-        if (usuarioId <= 0)
-        {
-            return new RegisterResponseDto
+            if (usuarioId <= 0)
             {
-                Success = false,
-                Message = "Error al crear el usuario"
-            };
-        }
-
-        return new RegisterResponseDto
-        {
-            Success = true,
-            Message = "Usuario registrado exitosamente",
-            User = new UsuarioDto
-            {
-                UsuarioID = usuarioId,
-                Username = nuevoUsuario.Username,
-                Email = nuevoUsuario.Email,
-                Rol = nuevoUsuario.Rol,
-                Ruc = nuevoUsuario.Ruc,
-                Estado = nuevoUsuario.Estado
+                return new RegisterResponseDto
+                {
+                    Success = false,
+                    Message = "Error al crear el usuario"
+                };
             }
-        };
-    }
-    catch (Exception)
-    {
-        return new RegisterResponseDto
+
+            return new RegisterResponseDto
+            {
+                Success = true,
+                Message = "Usuario registrado exitosamente",
+                User = new UsuarioDto
+                {
+                    UsuarioID = usuarioId,
+                    Username = nuevoUsuario.Username,
+                    Email = nuevoUsuario.Email,
+                    Rol = nuevoUsuario.Rol,
+                    Ruc = nuevoUsuario.Ruc,
+                    Estado = nuevoUsuario.Estado
+                }
+            };
+        }
+        catch (Exception)
         {
-            Success = false,
-            Message = "Error interno del servidor al registrar usuario"
-        };
+            return new RegisterResponseDto
+            {
+                Success = false,
+                Message = "Error interno del servidor al registrar usuario"
+            };
+        }
     }
-}
 
     public async Task<bool> ChangePasswordAsync(int usuarioId, string currentPassword, string newPassword)
     {
