@@ -17,7 +17,7 @@ public class UpdateEmpresaDto
     public string? CertificadoPassword { get; set; }
     public string? SolUsuario { get; set; }
     public string? SolClave { get; set; }
-    public string? ClienteId { get; set; }
+    public string? ClientId { get; set; }
     public string? ClientSecret { get; set; }
     public string? Plan { get; set; }
     public string? Environment { get; set; }
