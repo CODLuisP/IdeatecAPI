@@ -178,7 +178,7 @@ public static class EmailTemplateBuilder
                     {content}
                     <div style="background:#fef3c7;border:0.5px solid #fde68a;border-radius:8px;padding:12px 14px;margin-top:20px;">
                       <p style="margin:0;color:#92400e;font-size:12px;">
-                        Para consultas escríbenos a <strong>soporte@ideatec.pe</strong>
+                        Para consultas escríbenos a <strong>velsatsac823@gmail.com</strong>
                       </p>
                     </div>
                   </td>

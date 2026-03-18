@@ -18,46 +18,20 @@ public class UsuarioService : IUsuarioService
     {
         try
         {
-            // 1. Verificar si el username ya existe
+            // 1. Verificar username
             var usuarioExistente = await _unitOfWork.Usuarios.GetByIdentifierAsync(request.Username);
             if (usuarioExistente != null)
-            {
-                return new RegisterResponseDto
-                {
-                    Success = false,
-                    Message = "El username ya está registrado"
-                };
-            }
+                return new RegisterResponseDto { Success = false, Message = "El username ya está registrado" };
 
-            // 2. Verificar si el email ya existe
+            // 2. Verificar email + RUC
             usuarioExistente = await _unitOfWork.Usuarios.GetByIdentifierAsync(request.Email);
-            if (usuarioExistente != null)
-            {
-                return new RegisterResponseDto
-                {
-                    Success = false,
-                    Message = "El email ya está registrado"
-                };
-            }
+            if (usuarioExistente != null && usuarioExistente.Ruc != request.Ruc)
+                return new RegisterResponseDto { Success = false, Message = "El email ya está registrado con otro RUC" };
 
-            // 3. Verificar si el RUC ya existe (si fue proporcionado)
-            if (!string.IsNullOrEmpty(request.Ruc))
-            {
-                usuarioExistente = await _unitOfWork.Usuarios.GetByIdentifierAsync(request.Ruc);
-                if (usuarioExistente != null)
-                {
-                    return new RegisterResponseDto
-                    {
-                        Success = false,
-                        Message = "El RUC ya está registrado"
-                    };
-                }
-            }
-
-            // 4. Hashear la contraseña automáticamente
+            // 3. Hashear la contraseña automáticamente
             var passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
-            // 5. Crear el nuevo usuario
+            // 4. Crear el nuevo usuario
             var nuevoUsuario = new Usuario
             {
                 Username = request.Username,
@@ -70,7 +44,7 @@ public class UsuarioService : IUsuarioService
                 FechaCreacion = DateTime.UtcNow
             };
 
-            // 6. Guardar en la base de datos
+            // 5. Guardar en la base de datos
             var usuarioId = await _unitOfWork.Usuarios.CreateAsync(nuevoUsuario);
 
             if (usuarioId <= 0)
@@ -82,7 +56,6 @@ public class UsuarioService : IUsuarioService
                 };
             }
 
-            // 7. Retornar respuesta exitosa
             return new RegisterResponseDto
             {
                 Success = true,
