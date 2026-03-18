@@ -1,3 +1,4 @@
+using IdeatecAPI.Application.Features.Comprobante.Services;
 using IdeatecAPI.Application.Features.Empresas.DTOs;
 using IdeatecAPI.Application.Features.Empresas.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -16,10 +17,12 @@ public class FileUploadRequest
 public class CompaniesController : ControllerBase
 {
     private readonly IEmpresaService _empresaService;
+    private readonly IComprobanteService _comprobanteService;
 
-    public CompaniesController(IEmpresaService empresaService)
+    public CompaniesController(IEmpresaService empresaService, IComprobanteService comprobanteService)
     {
         _empresaService = empresaService;
+        _comprobanteService = comprobanteService;
     }
 
     [HttpGet]
@@ -39,6 +42,18 @@ public class CompaniesController : ControllerBase
         if (empresa is null)
             return NotFound(new { message = $"Empresa con RUC {ruc} no encontrada" });
         return Ok(empresa);
+    }
+
+    [HttpGet("{ruc}/comprobantes")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetComprobantes(
+    string ruc,
+    [FromQuery] DateTime fechaDesde,
+    [FromQuery] DateTime fechaHasta)
+    {
+        var comprobantes = await _comprobanteService.GetByRucAndFechasAsync(ruc, fechaDesde, fechaHasta);
+        return Ok(comprobantes);
     }
 
     [HttpPost]
@@ -126,19 +141,19 @@ public class CompaniesController : ControllerBase
         }
     }
 
-[HttpPost("certificate/free")]
-[ProducesResponseType(StatusCodes.Status200OK)]
-[ProducesResponseType(StatusCodes.Status400BadRequest)]
-public async Task<IActionResult> GenerarCertificadoFree([FromBody] CertificadoFreeRequestDto dto)
-{
-    try
+    [HttpPost("certificate/free")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> GenerarCertificadoFree([FromBody] CertificadoFreeRequestDto dto)
     {
-        var result = await _empresaService.GenerarCertificadoFreeAsync(dto);
-        return File(result.Bytes, result.ContentType, result.FileName);
+        try
+        {
+            var result = await _empresaService.GenerarCertificadoFreeAsync(dto);
+            return File(result.Bytes, result.ContentType, result.FileName);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
-    catch (ArgumentException ex)
-    {
-        return BadRequest(new { message = ex.Message });
-    }
-}
 }

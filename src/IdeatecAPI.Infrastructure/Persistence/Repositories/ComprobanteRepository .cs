@@ -203,7 +203,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
 
         await _connection.ExecuteAsync(sql, g, _transaction);
     }
-    
+
     private async Task RegistrarDetraccionAsync(Detraccion d)
     {
         var sql = @"
@@ -237,6 +237,18 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         };
 
         await _connection.ExecuteAsync(sql, parameters, _transaction);
+    }
+
+    public async Task<IEnumerable<Comprobante>> GetByRucAndFechasAsync(string ruc, DateTime fechaDesde, DateTime fechaHasta)
+    {
+        var sql = BaseSelect + @"
+        WHERE empresaRuc = @Ruc
+          AND fechaEmision >= @FechaDesde
+          AND fechaEmision <= @FechaHasta
+        ORDER BY fechaEmision DESC";
+
+        return await _connection.QueryAsync<Comprobante>(
+            sql, new { Ruc = ruc, FechaDesde = fechaDesde.Date, FechaHasta = fechaHasta.Date }, _transaction);
     }
 
     // ── NUEVO: Obtener comprobante por ID ────────────────────────────────────
