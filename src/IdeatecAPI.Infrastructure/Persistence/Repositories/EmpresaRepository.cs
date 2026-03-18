@@ -39,7 +39,7 @@ public class EmpresaRepository : DapperRepository<Empresa>, IEmpresaRepository
 
     public async Task<int> CreateEmpresaAsync(Empresa empresa)
     {
-        var sql = @"INSERT INTO empresa 
+        var sql = @"INSERT IGNORE INTO empresa 
         (ruc, razonSocial, nombreComercial, direccion, ubigeo, urbanizacion,
          provincia, departamento, distrito,
          solUsuario, solClave, activo, creadoEn, telefono, email, logoBase64,
