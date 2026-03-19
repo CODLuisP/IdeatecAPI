@@ -12,6 +12,7 @@ namespace IdeatecAPI.Application.Features.Comprobante.Services;
 public interface IComprobanteService
 {
     Task<IEnumerable<ObtenerComprobanteDTO>> GetByRucAndFechasAsync(string ruc, DateTime fechaDesde, DateTime fechaHasta);
+    Task<int> GetCantidadByClienteNumDocAsync(string clienteNumDoc);
     Task<ComprobanteResponse> GenerarComprobanteAsync(GenerarComprobanteDTO dto); //Guardar en BD
     Task<ObtenerComprobanteDTO?> GetComprobanteByIdAsync(int comprobanteId);
     Task<IEnumerable<ObtenerComprobanteDTO>> GetComprobanteByEstadoAsync(string estado);
@@ -72,6 +73,11 @@ public class ComprobanteService : IComprobanteService
             lista.Add(MapToDto(comprobante, detalles, pagos, cuotas, leyendas, guias, detracciones));
         }
         return lista;
+    }
+
+    public async Task<int> GetCantidadByClienteNumDocAsync(string clienteNumDoc)
+    {
+        return await _unitOfWork.Comprobantes.GetCantidadByClienteNumDocAsync(clienteNumDoc);
     }
 
     // ── 1. GENERAR Y GUARDAR ─────────────────────────────────────────────────

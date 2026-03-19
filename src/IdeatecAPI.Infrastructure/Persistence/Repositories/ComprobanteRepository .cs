@@ -251,6 +251,19 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
             sql, new { Ruc = ruc, FechaDesde = fechaDesde.Date, FechaHasta = fechaHasta.Date }, _transaction);
     }
 
+    public async Task<int> GetCantidadByClienteNumDocAsync(string clienteNumDoc)
+    {
+        var sql = @"
+        SELECT COUNT(*)
+        FROM comprobante
+        WHERE clienteNumDoc = @ClienteNumDoc";
+
+        return await _connection.ExecuteScalarAsync<int>(
+            sql,
+            new { ClienteNumDoc = clienteNumDoc },
+            _transaction);
+    }
+
     // ── NUEVO: Obtener comprobante por ID ────────────────────────────────────
     public new async Task<Comprobante?> GetByIdAsync(int comprobanteId)
     {
