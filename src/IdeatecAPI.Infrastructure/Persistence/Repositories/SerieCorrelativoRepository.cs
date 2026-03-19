@@ -10,31 +10,31 @@ public class SerieCorrelativoRepository : DapperRepository<SerieCorrelativo>, IS
     {
     }
 
-    public async Task<IEnumerable<SerieCorrelativo>> GetSerieCorrelativoAsync(int empresaId, string tipoComprobante)
+    public async Task<IEnumerable<SerieCorrelativo>> GetSerieCorrelativoAsync(string empresaRuc, string tipoComprobante)
     {
         var sql = @"
             SELECT serieID       AS SerieId,
-                   empresaID     AS EmpresaId,
+                   empresaRuc     AS EmpresaRuc,
                    tipoComprobante,
                    serie,
                    correlativoActual,
                    estado,
                    fechaActualizacion
             FROM serie
-            WHERE empresaID       = @EmpresaId
+            WHERE empresaRuc       = @EmpresaRuc
             AND   tipoComprobante = @TipoComprobante";
 
-        return await _connection.QueryAsync<SerieCorrelativo>(sql, new { EmpresaId = empresaId, TipoComprobante = tipoComprobante }, _transaction);
+        return await _connection.QueryAsync<SerieCorrelativo>(sql, new { EmpresaRuc = empresaRuc, TipoComprobante = tipoComprobante }, _transaction);
     }
 
     public async Task<int> RegistrarSerieCorrelativoAsync(SerieCorrelativo serie)
     {
         var sql = @"
             INSERT INTO serie (
-                empresaID, tipoComprobante, serie,
+                empresaRuc, tipoComprobante, serie,
                 correlativoActual, estado, fechaActualizacion
             ) VALUES (
-                @EmpresaId, @TipoComprobante, @Serie,
+                @EmpresaRuc, @TipoComprobante, @Serie,
                 @CorrelativoActual, @Estado, @FechaActualizacion
             );
             SELECT LAST_INSERT_ID();";

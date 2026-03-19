@@ -21,11 +21,11 @@ public class SerieCorrelativoController : ControllerBase
         _serieCorrelativoService = serieCorrelativoService;
     }
 
-    [HttpGet("{empresaId}/{tipoComprobante}")]
+    [HttpGet("{empresaRuc}/{tipoComprobante}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> Obtener(int empresaId, string tipoComprobante)
+    public async Task<IActionResult> Obtener(string empresaRuc, string tipoComprobante)
     {
-        var resultado = await _serieCorrelativoService.GetSerieCorrelativoAsync(empresaId, tipoComprobante);
+        var resultado = await _serieCorrelativoService.GetSerieCorrelativoAsync(empresaRuc, tipoComprobante);
         return Ok(resultado);
     }
 

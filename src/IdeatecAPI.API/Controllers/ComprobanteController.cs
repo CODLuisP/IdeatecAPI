@@ -15,6 +15,13 @@ public class ComprobantesController : ControllerBase
         _comprobanteService = comprobanteService;
     }
 
+    [HttpGet("cliente/{clienteNumDoc}/cantidad")]
+    public async Task<IActionResult> GetCantidadByCliente(string clienteNumDoc)
+    {
+        var cantidad = await _comprobanteService.GetCantidadByClienteNumDocAsync(clienteNumDoc);
+        return Ok(cantidad);
+    }
+
     [HttpPost("GenerarXml")]
     public async Task<IActionResult> Generar([FromBody] GenerarComprobanteDTO dto)
     {
