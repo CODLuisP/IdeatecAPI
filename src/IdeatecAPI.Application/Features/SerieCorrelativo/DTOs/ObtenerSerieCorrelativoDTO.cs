@@ -7,8 +7,8 @@ namespace IdeatecAPI.Application.Features.SerieCorrelativo.DTOs;
 public class ObtenerSerieCorrelativoDTO
 {
     public int SerieId { get; set; }
-    public int? EmpresaId { get; set; }
-    public int? TipoComprobante { get; set; }
+    public string? EmpresaRuc { get; set; }
+    public string? TipoComprobante { get; set; }
     public string? Serie { get; set; }
     public int? CorrelativoActual { get; set; }
     public bool? Estado { get; set; }

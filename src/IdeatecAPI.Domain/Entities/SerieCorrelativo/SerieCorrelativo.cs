@@ -7,8 +7,8 @@ namespace IdeatecAPI.Domain.Entities;
 public class SerieCorrelativo
 {
     public int SerieId { get; set; }
-    public int? EmpresaId { get; set; }
-    public int? TipoComprobante { get; set; }
+    public string? EmpresaRuc { get; set; }
+    public string? TipoComprobante { get; set; }
     public string? Serie { get; set; }
     public int? CorrelativoActual { get; set; }
     public bool? Estado { get; set; }
