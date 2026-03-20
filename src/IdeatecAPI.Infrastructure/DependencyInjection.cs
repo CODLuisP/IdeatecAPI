@@ -12,7 +12,7 @@ using IdeatecAPI.Application.Features.Notas.Services;
 using IdeatecAPI.Application.Features.Clientes.Services;
 using IdeatecAPI.Application.Features.Direccion.Services;
 using IdeatecAPI.Application.Features.Comprobante.Services;
-// using IdeatecAPI.Application.Features.Productos.Services;
+using IdeatecAPI.Application.Features.Productos.Services;
 using IdeatecAPI.Application.Features.ComunicacionBaja.Services;
 using IdeatecAPI.Application.Features.GuiaRemision.Services;
 using IdeatecAPI.Application.Features.ResumenComprobante.Services;
@@ -79,7 +79,7 @@ public static class DependencyInjection
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IUsuarioService, UsuarioService>();
-        // services.AddScoped<IProductoService, ProductoService>();
+        services.AddScoped<IProductoService, ProductoService>();
         services.AddScoped<ISucursalService, SucursalService>();
 
         // Guía de Remisión
