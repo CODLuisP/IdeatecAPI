@@ -14,7 +14,7 @@ public interface IUnitOfWork : IDisposable
     IComunicacionBajaDetalleRepository BajaDetalles { get; }
     IComprobanteRepository Comprobantes { get; }
     IProductoRepository Productos { get; }
-    ISerieCorrelativoRepository SerieCorrelativo { get; }
+    ISucursalRepository Sucursal { get; }
     IGuiaRemisionRepository Guias { get; }
     IGuiaRemisionDetalleRepository GuiaDetalles { get; }
     IResumenComprobanteRepository ResumenComprobante { get; }

@@ -1,167 +1,167 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using IdeatecAPI.Application.Common.Interfaces.Persistence;
-using IdeatecAPI.Application.Features.Productos.DTO;
-using IdeatecAPI.Domain.Entities;
+// using System;
+// using System.Collections.Generic;
+// using System.Linq;
+// using System.Threading.Tasks;
+// using IdeatecAPI.Application.Common.Interfaces.Persistence;
+// using IdeatecAPI.Application.Features.Productos.DTO;
+// using IdeatecAPI.Domain.Entities;
 
-namespace IdeatecAPI.Application.Features.Productos.Services;
+// namespace IdeatecAPI.Application.Features.Productos.Services;
 
-public interface IProductoService
-{
-    Task<IEnumerable<ObtenerProductoDTO>> GetAllProductosAsync();
-    Task<ObtenerProductoDTO?> GetProductoByIdAsync(int id);
-    Task<bool> ExisteRucAsync(string codigo);
-    Task<ObtenerProductoDTO> RegistrarProductoAsync(RegistrarProductoDTO producto);
-    Task<bool> EditarProductoAsync(EditarProductoDTO producto);
-    Task<bool> EliminarProductoAsync(int productoId);
-}
+// public interface IProductoService
+// {
+//     Task<IEnumerable<ObtenerProductoDTO>> GetAllProductosAsync();
+//     Task<ObtenerProductoDTO?> GetProductoByIdAsync(int id);
+//     Task<bool> ExisteRucAsync(string codigo);
+//     Task<ObtenerProductoDTO> RegistrarProductoAsync(RegistrarProductoDTO producto);
+//     Task<bool> EditarProductoAsync(EditarProductoDTO producto);
+//     Task<bool> EliminarProductoAsync(int productoId);
+// }
 
-public class ProductoService : IProductoService
-{
-    private readonly IUnitOfWork _unitOfWork;
+// public class ProductoService : IProductoService
+// {
+//     private readonly IUnitOfWork _unitOfWork;
 
-    public ProductoService(IUnitOfWork unitOfWork)
-    {
-        _unitOfWork = unitOfWork;
-    }
+//     public ProductoService(IUnitOfWork unitOfWork)
+//     {
+//         _unitOfWork = unitOfWork;
+//     }
 
-    public async Task<IEnumerable<ObtenerProductoDTO>> GetAllProductosAsync()
-    {
-        var productos = await _unitOfWork.Productos.GetAllProductosAsync();
-        return productos.Select(MapToDto);
-    }
+//     public async Task<IEnumerable<ObtenerProductoDTO>> GetAllProductosAsync()
+//     {
+//         var productos = await _unitOfWork.Productos.GetAllProductosAsync();
+//         return productos.Select(MapToDto);
+//     }
 
-    public async Task<ObtenerProductoDTO?> GetProductoByIdAsync(int id)
-    {
-        var producto = await _unitOfWork.Productos.GetProductoByIdAsync(id);
+//     public async Task<ObtenerProductoDTO?> GetProductoByIdAsync(int id)
+//     {
+//         var producto = await _unitOfWork.Productos.GetProductoByIdAsync(id);
 
-        if (producto == null)
-            return null;
+//         if (producto == null)
+//             return null;
 
-        return MapToDto(producto);
-    }
+//         return MapToDto(producto);
+//     }
 
-    public Task<bool> ExisteRucAsync(string codigo)
-    {
-        throw new NotImplementedException();
-    }
+//     public Task<bool> ExisteRucAsync(string codigo)
+//     {
+//         throw new NotImplementedException();
+//     }
 
-    public async Task<ObtenerProductoDTO> RegistrarProductoAsync(RegistrarProductoDTO dto)
-    {
-        if (await _unitOfWork.Productos.ExisteProductoAsync(dto.Codigo))
-            throw new InvalidOperationException($"Ya existe un producto con código {dto.Codigo}");
+//     public async Task<ObtenerProductoDTO> RegistrarProductoAsync(RegistrarProductoDTO dto)
+//     {
+//         if (await _unitOfWork.Productos.ExisteProductoAsync(dto.Codigo))
+//             throw new InvalidOperationException($"Ya existe un producto con código {dto.Codigo}");
 
-        _unitOfWork.BeginTransaction();
-        try
-        {
-            var producto = new Producto
-            {
-                Codigo = dto.Codigo ?? string.Empty,
-                TipoProducto = dto.TipoProducto ?? string.Empty,
-                CodigoSunat = dto.CodigoSunat ?? string.Empty,
-                Descripcion = dto.Descripcion ?? string.Empty,
-                UnidadMedida = dto.UnidadMedida ?? string.Empty,
-                PrecioUnitario = dto.PrecioUnitario ?? 0,
-                TipoAfectacionIGV = dto.TipoAfectacionIGV ?? string.Empty,
-                IncluirIGV = dto.IncluirIGV ?? false,
-                Stock = dto.Stock ?? 0,
-                CategoriaId = dto.CategoriaId ?? 0,
-                Estado = true,
-                FechaCreacion = DateTime.Now
-            };
+//         _unitOfWork.BeginTransaction();
+//         try
+//         {
+//             var producto = new Producto
+//             {
+//                 Codigo = dto.Codigo ?? string.Empty,
+//                 TipoProducto = dto.TipoProducto ?? string.Empty,
+//                 CodigoSunat = dto.CodigoSunat ?? string.Empty,
+//                 Descripcion = dto.Descripcion ?? string.Empty,
+//                 UnidadMedida = dto.UnidadMedida ?? string.Empty,
+//                 PrecioUnitario = dto.PrecioUnitario ?? 0,
+//                 TipoAfectacionIGV = dto.TipoAfectacionIGV ?? string.Empty,
+//                 IncluirIGV = dto.IncluirIGV ?? false,
+//                 Stock = dto.Stock ?? 0,
+//                 CategoriaId = dto.CategoriaId ?? 0,
+//                 Estado = true,
+//                 FechaCreacion = DateTime.Now
+//             };
 
-            var productoCreado = await _unitOfWork.Productos.RegistrarProductoAsync(producto);
+//             var productoCreado = await _unitOfWork.Productos.RegistrarProductoAsync(producto);
 
-            _unitOfWork.Commit();
+//             _unitOfWork.Commit();
 
-            // Recarga completo con relaciones (categoría, etc.)
-            var productoCompleto = await _unitOfWork.Productos.GetProductoByIdAsync(productoCreado.ProductoId);
-            return MapToDto(productoCompleto!);
-        }
-        catch
-        {
-            _unitOfWork.Rollback();
-            throw;
-        }
-    }
+//             // Recarga completo con relaciones (categoría, etc.)
+//             var productoCompleto = await _unitOfWork.Productos.GetProductoByIdAsync(productoCreado.ProductoId);
+//             return MapToDto(productoCompleto!);
+//         }
+//         catch
+//         {
+//             _unitOfWork.Rollback();
+//             throw;
+//         }
+//     }
     
-    public async Task<bool> EditarProductoAsync(EditarProductoDTO dto)
-    {
-        if (dto.ProductoId <= 0)
-            throw new ArgumentException("ProductoId inválido");
+//     public async Task<bool> EditarProductoAsync(EditarProductoDTO dto)
+//     {
+//         if (dto.ProductoId <= 0)
+//             throw new ArgumentException("ProductoId inválido");
 
-        _unitOfWork.BeginTransaction();
+//         _unitOfWork.BeginTransaction();
 
-        try
-        {
-            var producto = new Producto
-            {
-                ProductoId = dto.ProductoId,
-                Codigo = dto.Codigo ?? string.Empty,
-                TipoProducto = dto.TipoProducto ?? string.Empty,
-                CodigoSunat = dto.CodigoSunat ?? string.Empty,
-                Descripcion = dto.Descripcion ?? string.Empty,
-                UnidadMedida = dto.UnidadMedida ?? string.Empty,
-                PrecioUnitario = dto.PrecioUnitario ?? 0,
-                TipoAfectacionIGV = dto.TipoAfectacionIGV ?? string.Empty,
-                IncluirIGV = dto.IncluirIGV ?? false,
-                Stock = dto.Stock ?? 0,
-                CategoriaId = dto.CategoriaId ?? 0
-            };
+//         try
+//         {
+//             var producto = new Producto
+//             {
+//                 ProductoId = dto.ProductoId,
+//                 Codigo = dto.Codigo ?? string.Empty,
+//                 TipoProducto = dto.TipoProducto ?? string.Empty,
+//                 CodigoSunat = dto.CodigoSunat ?? string.Empty,
+//                 Descripcion = dto.Descripcion ?? string.Empty,
+//                 UnidadMedida = dto.UnidadMedida ?? string.Empty,
+//                 PrecioUnitario = dto.PrecioUnitario ?? 0,
+//                 TipoAfectacionIGV = dto.TipoAfectacionIGV ?? string.Empty,
+//                 IncluirIGV = dto.IncluirIGV ?? false,
+//                 Stock = dto.Stock ?? 0,
+//                 CategoriaId = dto.CategoriaId ?? 0
+//             };
 
-            var result = await _unitOfWork.Productos.EditarProductoAsync(producto);
+//             var result = await _unitOfWork.Productos.EditarProductoAsync(producto);
 
-            _unitOfWork.Commit();
-            return result;
-        }
-        catch
-        {
-            _unitOfWork.Rollback();
-            throw;
-        }
-    }
+//             _unitOfWork.Commit();
+//             return result;
+//         }
+//         catch
+//         {
+//             _unitOfWork.Rollback();
+//             throw;
+//         }
+//     }
 
-    public async Task<bool> EliminarProductoAsync(int productoId)
-    {
-        if (productoId <= 0)
-            throw new ArgumentException("ProductoId inválido");
+//     public async Task<bool> EliminarProductoAsync(int productoId)
+//     {
+//         if (productoId <= 0)
+//             throw new ArgumentException("ProductoId inválido");
 
-        _unitOfWork.BeginTransaction();
+//         _unitOfWork.BeginTransaction();
 
-        try
-        {
-            var result = await _unitOfWork.Productos.EliminarProductoAsync(productoId);
+//         try
+//         {
+//             var result = await _unitOfWork.Productos.EliminarProductoAsync(productoId);
 
-            _unitOfWork.Commit();
-            return result;
-        }
-        catch
-        {
-            _unitOfWork.Rollback();
-            throw;
-        }
-    }
+//             _unitOfWork.Commit();
+//             return result;
+//         }
+//         catch
+//         {
+//             _unitOfWork.Rollback();
+//             throw;
+//         }
+//     }
 
-    private static ObtenerProductoDTO MapToDto(Producto p)
-    {
-        return new ObtenerProductoDTO
-        {
-            ProductoId = p.ProductoId,
-            Codigo = p.Codigo,
-            TipoProducto = p.TipoProducto,
-            CodigoSunat = p.CodigoSunat,
-            Descripcion = p.Descripcion,
-            UnidadMedida = p.UnidadMedida,
-            PrecioUnitario = p.PrecioUnitario,
-            TipoAfectacionIGV = p.TipoAfectacionIGV,
-            IncluirIGV = p.IncluirIGV,
-            Stock = p.Stock,
-            Estado = p.Estado,
-            FechaCreacion = p.FechaCreacion,
-            Categoria = p.Categoria
-        };
-    }
-}
+//     private static ObtenerProductoDTO MapToDto(Producto p)
+//     {
+//         return new ObtenerProductoDTO
+//         {
+//             ProductoId = p.ProductoId,
+//             Codigo = p.Codigo,
+//             TipoProducto = p.TipoProducto,
+//             CodigoSunat = p.CodigoSunat,
+//             Descripcion = p.Descripcion,
+//             UnidadMedida = p.UnidadMedida,
+//             PrecioUnitario = p.PrecioUnitario,
+//             TipoAfectacionIGV = p.TipoAfectacionIGV,
+//             IncluirIGV = p.IncluirIGV,
+//             Stock = p.Stock,
+//             Estado = p.Estado,
+//             FechaCreacion = p.FechaCreacion,
+//             Categoria = p.Categoria
+//         };
+//     }
+// }
 
