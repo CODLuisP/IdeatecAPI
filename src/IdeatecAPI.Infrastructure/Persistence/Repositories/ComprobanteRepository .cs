@@ -221,18 +221,19 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
     {
         var sql = @"
             UPDATE serie
-            SET serie             = @Serie,
-                correlativoActual = @Correlativo,
+            SET correlativoActual = @Correlativo,
                 fechaActualizacion = @FechaCreacion
-            WHERE empresaID = @EmpresaId 
-            AND tipoComprobante = @TipoComprobante";
+            WHERE empresaRuc = @EmpresaRuc 
+            AND tipoComprobante = @TipoComprobante
+            AND conEstablecimiento = @EmpresaEstablecimientoAnexo";
 
         var parameters = new
         {
             comprobante.Serie,
             comprobante.Correlativo,
+            comprobante.EmpresaEstablecimientoAnexo,
             comprobante.FechaCreacion,
-            comprobante.EmpresaId,
+            comprobante.EmpresaRuc,
             comprobante.TipoComprobante
         };
 
