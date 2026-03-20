@@ -1,4 +1,5 @@
 
+using IdeatecAPI.Application.Features.Sucursal.DTOs;
 using IdeatecAPI.Domain.Entities;
 
 namespace IdeatecAPI.Application.Common.Interfaces.Persistence;
