@@ -64,10 +64,12 @@ public class UsuarioController : ControllerBase
     /// GET: api/usuario
     /// </summary>
     [HttpGet]
-    //[Authorize(Roles = "admin")] // Solo admins pueden ver todos los usuarios
     public async Task<IActionResult> GetAll([FromQuery] bool incluirInactivos = false)
     {
-        var usuarios = await _unitOfWork.Usuarios.GetAllAsync(!incluirInactivos);
+        // Obtener RUC del usuario logueado
+        var ruc = User.FindFirst("ruc")?.Value;
+
+        var usuarios = await _unitOfWork.Usuarios.GetAllAsync(!incluirInactivos, ruc);
 
         var usuariosDto = usuarios.Select(u => new UsuarioDto
         {
@@ -76,6 +78,8 @@ public class UsuarioController : ControllerBase
             Email = u.Email,
             Rol = u.Rol,
             Ruc = u.Ruc,
+            SucursalID = u.SucursalID,
+            NombreSucursal = u.NombreSucursal,
             Estado = u.Estado,
             FechaUltimoAcceso = u.FechaUltimoAcceso
         });
@@ -93,6 +97,7 @@ public class UsuarioController : ControllerBase
     /// PUT: api/usuario/{id}
     /// </summary>
     [HttpPut("{id}")]
+    [Authorize(Roles = "admin")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateUsuarioDto dto)
     {
         if (id != dto.UsuarioID)
@@ -156,6 +161,8 @@ public class UsuarioController : ControllerBase
         usuarioExistente.Username = dto.Username;
         usuarioExistente.Email = dto.Email;
         usuarioExistente.Ruc = dto.Ruc;
+        usuarioExistente.SucursalID = dto.SucursalID;
+        usuarioExistente.NombreSucursal = dto.NombreSucursal;
 
         // Solo admin puede cambiar el rol
         if (User.IsInRole("admin") && !string.IsNullOrEmpty(dto.Rol))
@@ -186,7 +193,7 @@ public class UsuarioController : ControllerBase
     /// DELETE: api/usuario/{id}
     /// </summary>
     [HttpDelete("{id}")]
-    //[Authorize(Roles = "admin")] // Solo admins pueden eliminar usuarios
+    [Authorize(Roles = "admin")] // Solo admins pueden eliminar usuarios
     public async Task<IActionResult> Delete(int id)
     {
         var usuario = await _unitOfWork.Usuarios.GetByIdAsync(id);

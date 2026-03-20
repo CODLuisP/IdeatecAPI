@@ -23,13 +23,13 @@ public class UsuarioRepository : DapperRepository<Usuario>, IUsuarioRepository
                 rol                 AS Rol,
                 estado              AS Estado,
                 ruc                 AS Ruc,
+                sucursalID          AS SucursalID,
+                nombreSucursal      AS NombreSucursal,
                 tokenVersion        AS TokenVersion,
                 fechaCreacion       AS FechaCreacion,
                 fechaUltimoAcceso   AS FechaUltimoAcceso
             FROM usuario 
-            WHERE (username = @Identifier OR email = @Identifier OR ruc = @Identifier)
-            AND estado = 1
-            LIMIT 1";
+            WHERE (username = @Identifier OR email = @Identifier OR (ruc = @Identifier AND rol = 'superadmin')) AND estado = 1 LIMIT 1";
 
         return await _connection.QueryFirstOrDefaultAsync<Usuario>(
             sql, new { Identifier = identifier }, _transaction);
@@ -66,10 +66,10 @@ public class UsuarioRepository : DapperRepository<Usuario>, IUsuarioRepository
         var sql = @"
             INSERT INTO usuario (
                 username, password, email, rol, estado,
-                ruc, tokenVersion, fechaCreacion
+                ruc, sucursalID, nombreSucursal, tokenVersion, fechaCreacion
             ) VALUES (
                 @Username, @Password, @Email, @Rol, @Estado,
-                @Ruc, @TokenVersion, @FechaCreacion
+                @Ruc, @SucursalID, @NombreSucursal, @TokenVersion, @FechaCreacion
             );
             SELECT LAST_INSERT_ID();";
 
@@ -83,6 +83,8 @@ public class UsuarioRepository : DapperRepository<Usuario>, IUsuarioRepository
                 usuarioID           AS UsuarioID,
                 username            AS Username,
                 password            AS Password,
+                sucursalID          AS SucursalID,
+                nombreSucursal      AS NombreSucursal,
                 email               AS Email,
                 emailVerified       AS EmailVerified,
                 rol                 AS Rol,
@@ -100,27 +102,33 @@ public class UsuarioRepository : DapperRepository<Usuario>, IUsuarioRepository
             sql, new { Id = id }, _transaction);
     }
 
-    public async Task<IEnumerable<Usuario>> GetAllAsync(bool soloActivos = true)
+    public async Task<IEnumerable<Usuario>> GetAllAsync(bool soloActivos = true, string? ruc = null)
     {
         var sql = @"
-            SELECT 
-                usuarioID           AS UsuarioID,
-                username            AS Username,
-                email               AS Email,
-                emailVerified       AS EmailVerified,
-                rol                 AS Rol,
-                estado              AS Estado,
-                ruc                 AS Ruc,
-                fechaCreacion       AS FechaCreacion,
-                fechaUltimoAcceso   AS FechaUltimoAcceso
-            FROM usuario";
+        SELECT 
+            usuarioID           AS UsuarioID,
+            username            AS Username,
+            email               AS Email,
+            emailVerified       AS EmailVerified,
+            rol                 AS Rol,
+            estado              AS Estado,
+            ruc                 AS Ruc,
+            sucursalID          AS SucursalID,
+            nombreSucursal      AS NombreSucursal,
+            fechaCreacion       AS FechaCreacion,
+            fechaUltimoAcceso   AS FechaUltimoAcceso
+        FROM usuario
+        WHERE 1=1";
 
         if (soloActivos)
-            sql += " WHERE estado = 1";
+            sql += " AND estado = 1";
+
+        if (!string.IsNullOrEmpty(ruc))
+            sql += " AND ruc = @Ruc";
 
         sql += " ORDER BY fechaCreacion DESC";
 
-        return await _connection.QueryAsync<Usuario>(sql, transaction: _transaction);
+        return await _connection.QueryAsync<Usuario>(sql, new { Ruc = ruc }, transaction: _transaction);
     }
 
     public new async Task<bool> UpdateAsync(Usuario usuario)
@@ -129,6 +137,8 @@ public class UsuarioRepository : DapperRepository<Usuario>, IUsuarioRepository
             UPDATE usuario SET
                 username            = @Username,
                 email               = @Email,
+                sucursalID          = @SucursalID,
+                nombreSucursal      = @NombreSucursal,
                 rol                 = @Rol,
                 ruc                 = @Ruc,
                 fechaActualizacion  = @FechaActualizacion

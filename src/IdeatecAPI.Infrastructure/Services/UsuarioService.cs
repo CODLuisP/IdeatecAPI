@@ -37,13 +37,15 @@ public class UsuarioService : IUsuarioService
                 Username = request.Username,
                 Email = request.Email,
                 Password = passwordHash,
+                SucursalID = request.SucursalID,
+                NombreSucursal = request.NombreSucursal,
                 Rol = request.Rol ?? "usuario",
                 Estado = true,
                 Ruc = request.Ruc,
                 TokenVersion = 0,
                 FechaCreacion = DateTime.UtcNow
             };
-
+            
             // 5. Guardar en la base de datos
             var usuarioId = await _unitOfWork.Usuarios.CreateAsync(nuevoUsuario);
 
@@ -67,7 +69,9 @@ public class UsuarioService : IUsuarioService
                     Email = nuevoUsuario.Email,
                     Rol = nuevoUsuario.Rol,
                     Ruc = nuevoUsuario.Ruc,
-                    Estado = nuevoUsuario.Estado
+                    Estado = nuevoUsuario.Estado,
+                    SucursalID = nuevoUsuario.SucursalID,
+                    NombreSucursal = nuevoUsuario.NombreSucursal
                 }
             };
         }

@@ -76,9 +76,6 @@ public static class DependencyInjection
         services.AddScoped<IResumenXmlService, GeneraResumenXmlService>();
         services.AddScoped<ISunatResumenService, SunatResumenService>();
 
-        services.AddScoped<ITokenService, TokenService>();
-        services.AddScoped<IAuthService, AuthService>();
-        services.AddScoped<IUsuarioService, UsuarioService>();
         services.AddScoped<IProductoService, ProductoService>();
         services.AddScoped<ISerieCorrelativoService, SerieCorrelativoService>();
 
