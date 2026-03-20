@@ -94,7 +94,7 @@ public class EmpresaService : IEmpresaService
         empresa.Distrito = dto.Distrito ?? empresa.Distrito;
         empresa.Telefono = dto.Telefono ?? empresa.Telefono;
         empresa.Email = dto.Email ?? empresa.Email;
-        empresa.LogoBase64 = dto.LogoBase64 ?? empresa.LogoBase64;
+        empresa.LogoBase64 = string.IsNullOrEmpty(dto.LogoBase64) ? null : dto.LogoBase64;
         empresa.CertificadoPem = dto.CertificadoPem ?? empresa.CertificadoPem;
         empresa.CertificadoPassword = dto.CertificadoPassword ?? empresa.CertificadoPassword;
         empresa.SolUsuario = dto.SolUsuario ?? empresa.SolUsuario;
