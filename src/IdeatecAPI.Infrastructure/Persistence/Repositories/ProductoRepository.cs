@@ -12,88 +12,69 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
     {
     }
 
-    public async Task<IEnumerable<Producto>> GetAllProductosAsync()
+    private const string SelectColumns = @"
+        SELECT
+            p.productoID        AS ProductoId,
+            p.codigo            AS Codigo,
+            p.tipoProducto      AS TipoProducto,
+            p.codigoSunat       AS CodigoSunat,
+            p.nomProducto       AS NomProducto,
+            p.unidadMedida      AS UnidadMedida,
+            p.tipoAfectacionIGV AS TipoAfectacionIGV,
+            p.incluirIGV        AS IncluirIGV,
+            p.estado            AS Estado,
+            p.fechaCreacion     AS FechaCreacion,
+            p.categoriaID       AS CategoriaId,
+
+            c.categoriaID       AS CategoriaId,
+            c.categoriaNombre   AS CategoriaNombre,
+
+            sp.sucursalProductoID        AS SucursalProductoId,
+            sp.precioUnitario            AS PrecioUnitario,
+            sp.stock                     AS Stock
+        FROM producto p
+        INNER JOIN categoria c
+            ON c.categoriaID = p.categoriaID
+        INNER JOIN sucursalProducto sp
+            ON sp.productoID = p.productoID
+        WHERE p.estado = 1
+        AND sp.estado = 1";
+
+    public async Task<IEnumerable<Producto>> GetAllProductosAsync(int sucursalId)
     {
-        var sql = @"
-            SELECT 
-                p.productoID       AS ProductoId,
-                p.codigo           AS Codigo,
-                p.tipoProducto     AS TipoProducto,
-                p.codigoSunat      AS CodigoSunat,
-                p.descripcion      AS Descripcion,
-                p.unidadMedida     AS UnidadMedida,
-                p.precioUnitario   AS PrecioUnitario,
-                p.tipoAfectacionIGV AS TipoAfectacionIGV,
-                p.incluirIGV       AS IncluirIGV,
-                p.stock            AS Stock,
-                p.estado           AS Estado,
-                p.fechaCreacion    AS FechaCreacion,
-                p.categoriaID      AS CategoriaId,
+        var sql = $"{SelectColumns} AND sp.sucursalID = @SucursalId ORDER BY p.productoID";
 
-                c.categoriaID      AS CategoriaId,
-                c.categoriaNombre  AS CategoriaNombre,
-                c.descripcion      AS Descripcion,
-                c.estado           AS Estado
-
-            FROM producto p
-            INNER JOIN categoria c 
-                ON c.categoriaID = p.categoriaID
-            WHERE p.estado = 1
-            ORDER BY p.productoID;";
-
-        var productos = await _connection.QueryAsync<Producto, Categoria, Producto>(
+        var productos = await _connection.QueryAsync<Producto, Categoria, SucursalProducto, Producto>(
             sql,
-            (producto, categoria) =>
+            (producto, categoria, sucursalProducto) =>
             {
-                producto.Categoria = categoria;
+                producto.Categoria       = categoria;
+                producto.SucursalProducto = sucursalProducto;
                 return producto;
             },
+            new { SucursalId = sucursalId },
             transaction: _transaction,
-            splitOn: "CategoriaId"
+            splitOn: "CategoriaId,SucursalProductoId"
         );
 
         return productos;
     }
 
-    public async Task<Producto?> GetProductoByIdAsync(int id)
+    public async Task<Producto?> GetProductoByIdAsync(int productoId, int sucursalId)
     {
-        var sql = @"
-            SELECT 
-                p.productoID       AS ProductoId,
-                p.codigo           AS Codigo,
-                p.tipoProducto     AS TipoProducto,
-                p.codigoSunat      AS CodigoSunat,
-                p.descripcion      AS Descripcion,
-                p.unidadMedida     AS UnidadMedida,
-                p.precioUnitario   AS PrecioUnitario,
-                p.tipoAfectacionIGV AS TipoAfectacionIGV,
-                p.incluirIGV       AS IncluirIGV,
-                p.stock            AS Stock,
-                p.estado           AS Estado,
-                p.fechaCreacion    AS FechaCreacion,
-                p.categoriaID      AS CategoriaId,
+        var sql = $"{SelectColumns} AND p.productoID = @ProductoId AND sp.sucursalID = @SucursalId";
 
-                c.categoriaID      AS CategoriaId,
-                c.categoriaNombre  AS CategoriaNombre,
-                c.descripcion      AS Descripcion,
-                c.estado           AS Estado
-
-            FROM producto p
-            INNER JOIN categoria c 
-                ON c.categoriaID = p.categoriaID
-            WHERE p.productoID = @Id
-            AND p.estado = 1;";
-
-        var result = await _connection.QueryAsync<Producto, Categoria, Producto>(
+        var result = await _connection.QueryAsync<Producto, Categoria, SucursalProducto, Producto>(
             sql,
-            (producto, categoria) =>
+            (producto, categoria, sucursalProducto) =>
             {
-                producto.Categoria = categoria;
+                producto.Categoria        = categoria;
+                producto.SucursalProducto = sucursalProducto;
                 return producto;
             },
-            new { Id = id },
-            _transaction,
-            splitOn: "CategoriaId"
+            new { ProductoId = productoId, SucursalId = sucursalId },
+            transaction: _transaction,
+            splitOn: "CategoriaId,SucursalProductoId"
         );
 
         return result.FirstOrDefault();
@@ -102,62 +83,90 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
     public async Task<bool> ExisteProductoAsync(string codigo)
     {
         var sql = "SELECT COUNT(1) FROM producto WHERE codigo = @Codigo AND estado = 1";
-        var count = await _connection.ExecuteScalarAsync<int>(sql, new { Codigo = codigo }); // ← sin _transaction
+        var count = await _connection.ExecuteScalarAsync<int>(sql, new { Codigo = codigo }, _transaction);
         return count > 0;
     }
 
     public async Task<Producto> RegistrarProductoAsync(Producto producto)
     {
         var sql = @"
-            INSERT INTO producto
-            (codigo, tipoProducto, codigoSunat, descripcion, unidadMedida,
-            precioUnitario, tipoAfectacionIGV, incluirIGV, stock,
-            categoriaID, estado, fechaCreacion)
-            VALUES
-            (@Codigo, @TipoProducto, @CodigoSunat, @Descripcion, @UnidadMedida,
-            @PrecioUnitario, @TipoAfectacionIGV, @IncluirIGV, @Stock,
-            @CategoriaId, @Estado, @FechaCreacion);
+            INSERT INTO producto (
+                codigo, tipoProducto, codigoSunat, nomProducto,
+                unidadMedida, tipoAfectacionIGV, incluirIGV,
+                categoriaID
+            ) VALUES (
+                @Codigo, @TipoProducto, @CodigoSunat, @NomProducto,
+                @UnidadMedida, @TipoAfectacionIGV, @IncluirIGV,
+                @CategoriaId
+            );
             SELECT LAST_INSERT_ID();";
 
-        var newId = await _connection.ExecuteScalarAsync<int>(sql, producto, _transaction);
+        var newId = await _connection.ExecuteScalarAsync<int>(sql, new
+        {
+            producto.Codigo,
+            producto.TipoProducto,
+            producto.CodigoSunat,
+            producto.NomProducto,
+            producto.UnidadMedida,
+            producto.TipoAfectacionIGV,
+            producto.IncluirIGV,
+            producto.CategoriaId,
+        }, _transaction);
         producto.ProductoId = newId;
         return producto;
+    }
+
+    public async Task<SucursalProducto> RegistrarSucursalProductoAsync(SucursalProducto sucursalProducto)
+    {
+        var sql = @"
+            INSERT INTO sucursalProducto (
+                productoID, sucursalID, precioUnitario, stock, estado, fechaCreacion
+            ) VALUES (
+                @ProductoId, @SucursalId, @PrecioUnitario, @Stock, @Estado, @FechaCreacion
+            );
+            SELECT LAST_INSERT_ID();";
+
+        var newId = await _connection.ExecuteScalarAsync<int>(sql, sucursalProducto, _transaction);
+        sucursalProducto.SucursalProductoId = newId;
+        return sucursalProducto;
     }
 
     public async Task<bool> EditarProductoAsync(Producto producto)
     {
         var sql = @"
-            UPDATE producto
-            SET
-                codigo = @Codigo,
-                tipoProducto = @TipoProducto,
-                codigoSunat = @CodigoSunat,
-                descripcion = @Descripcion,
-                unidadMedida = @UnidadMedida,
-                precioUnitario = @PrecioUnitario,
+            UPDATE producto SET
+                codigo            = @Codigo,
+                tipoProducto      = @TipoProducto,
+                codigoSunat       = @CodigoSunat,
+                nomProducto       = @NomProducto,
+                unidadMedida      = @UnidadMedida,
                 tipoAfectacionIGV = @TipoAfectacionIGV,
-                incluirIGV = @IncluirIGV,
-                stock = @Stock,
-                categoriaID = @CategoriaId
-            WHERE productoID = @ProductoId;";
+                incluirIGV        = @IncluirIGV,
+                categoriaID       = @CategoriaId
+            WHERE productoID = @ProductoId AND estado = 1";
 
-        var result = await _connection.ExecuteAsync(sql, producto, _transaction);
-        return result > 0;
+        var filas = await _connection.ExecuteAsync(sql, producto, _transaction);
+        return filas > 0;
     }
 
-    public async Task<bool> EliminarProductoAsync(int productoId)
+    public async Task<bool> EditarSucursalProductoAsync(SucursalProducto sucursalProducto)
     {
         var sql = @"
-            UPDATE producto
-            SET estado = 0
-            WHERE productoID = @ProductoId;";
+            UPDATE sucursalProducto SET
+                precioUnitario = @PrecioUnitario,
+                stock          = @Stock
+            WHERE sucursalProductoID = @SucursalProductoId AND estado = 1";
 
-        var result = await _connection.ExecuteAsync(
-            sql,
-            new { ProductoId = productoId },
-            _transaction
-        );
+        var filas = await _connection.ExecuteAsync(sql, sucursalProducto, _transaction);
+        return filas > 0;
+    }
 
-        return result > 0;
+    public async Task<bool> EliminarSucursalProductoAsync(int sucursalProductoId)
+    {
+        var sql = @"UPDATE sucursalProducto SET estado = 0 
+                    WHERE sucursalProductoID = @SucursalProductoId AND estado = 1";
+
+        var filas = await _connection.ExecuteAsync(sql, new { SucursalProductoId = sucursalProductoId }, _transaction);
+        return filas > 0;
     }
 }
