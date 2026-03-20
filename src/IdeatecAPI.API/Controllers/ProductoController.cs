@@ -43,6 +43,58 @@ public class ProductoController : ControllerBase
         }
     }
 
+    [HttpGet("base/{empresaRuc}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetAllBaseRuc(string empresaRuc)
+    {
+        try
+        {
+            var productos = await _productoService.GetAllProductosBaseRucAsync(empresaRuc);
+
+            if (productos == null || !productos.Any())
+                return NotFound(new { mensaje = $"No se encontraron productos para el RUC '{empresaRuc}'." });
+
+            return Ok(productos);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener productos base para RUC {EmpresaRuc}", empresaRuc);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al obtener los productos.",
+                detalle = ex.Message
+            });
+        }
+    }
+
+    [HttpGet("disponibles/{sucursalId:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetProductosDisponibles(int sucursalId)
+    {
+        try
+        {
+            var productos = await _productoService.GetProductosRucDisponiblesAsync(sucursalId);
+
+            if (productos == null || !productos.Any())
+                return NotFound(new { mensaje = "No hay productos disponibles para agregar a esta sucursal." });
+
+            return Ok(productos);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener productos disponibles para sucursal {SucursalId}", sucursalId);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al obtener los productos disponibles.",
+                detalle = ex.Message
+            });
+        }
+    }
+
     [HttpGet("detalle/{productoId:int}/{sucursalId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -157,6 +209,32 @@ public class ProductoController : ControllerBase
             return StatusCode(StatusCodes.Status500InternalServerError, new
             {
                 mensaje = "Ocurrió un error al eliminar el producto de la sucursal.",
+                detalle = ex.Message
+            });
+        }
+    }
+
+    [HttpGet("{empresaRuc}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetAllRuc(string empresaRuc)
+    {
+        try
+        {
+            var productos = await _productoService.GetAllProductosRucAsync(empresaRuc);
+
+            if (productos == null || !productos.Any())
+                return NotFound(new { mensaje = $"No se encontraron productos para el RUC '{empresaRuc}'." });
+
+            return Ok(productos);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener productos para RUC {EmpresaRuc}", empresaRuc);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al obtener los productos.",
                 detalle = ex.Message
             });
         }
