@@ -32,6 +32,7 @@ public class TokenService : ITokenService
             new Claim(JwtRegisteredClaimNames.Email, usuario.Email),
             new Claim(ClaimTypes.Name, usuario.Username),
             new Claim(ClaimTypes.Role, usuario.Rol),
+            new Claim("sucursalID", usuario.SucursalID ?? ""),
             new Claim("tokenVersion", usuario.TokenVersion.ToString()),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };

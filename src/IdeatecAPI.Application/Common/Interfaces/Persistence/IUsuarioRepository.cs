@@ -10,7 +10,7 @@ public interface IUsuarioRepository
 
     Task<int> CreateAsync(Usuario usuario);
     Task<Usuario?> GetByIdAsync(int id);
-    Task<IEnumerable<Usuario>> GetAllAsync(bool soloActivos = true, string? ruc = null);
+    Task<IEnumerable<Usuario>> GetAllAsync(bool soloActivos = true, string? ruc = null, string? sucursalID = null);
     Task<bool> UpdateAsync(Usuario usuario);
     Task<bool> DeleteAsync(int id); // Soft delete (cambiar estado a false)
     Task<bool> ExistsAsync(string username, string email, string? ruc = null, int? excludeId = null);
@@ -29,4 +29,5 @@ public interface IUsuarioRepository
     // Actualiza la contraseña y limpia el token
     Task UpdatePasswordAsync(int usuarioId, string hashedPassword);
 
+    Task<bool> ExisteSuperadminAsync(string ruc);
 }

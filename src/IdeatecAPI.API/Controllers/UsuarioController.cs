@@ -66,10 +66,14 @@ public class UsuarioController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] bool incluirInactivos = false)
     {
-        // Obtener RUC del usuario logueado
         var ruc = User.FindFirst("ruc")?.Value;
+        var sucursalID = User.FindFirst("sucursalID")?.Value; // ← necesitas este claim
 
-        var usuarios = await _unitOfWork.Usuarios.GetAllAsync(!incluirInactivos, ruc);
+        // superadmin ve todos los de su RUC
+        // admin ve solo los de su sucursal
+        var filtrarPorSucursal = User.IsInRole("superadmin") ? null : sucursalID;
+
+        var usuarios = await _unitOfWork.Usuarios.GetAllAsync(!incluirInactivos, ruc, filtrarPorSucursal);
 
         var usuariosDto = usuarios.Select(u => new UsuarioDto
         {

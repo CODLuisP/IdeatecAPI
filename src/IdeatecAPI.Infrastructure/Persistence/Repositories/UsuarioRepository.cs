@@ -102,7 +102,7 @@ public class UsuarioRepository : DapperRepository<Usuario>, IUsuarioRepository
             sql, new { Id = id }, _transaction);
     }
 
-    public async Task<IEnumerable<Usuario>> GetAllAsync(bool soloActivos = true, string? ruc = null)
+    public async Task<IEnumerable<Usuario>> GetAllAsync(bool soloActivos = true, string? ruc = null, string? sucursalID = null)
     {
         var sql = @"
         SELECT 
@@ -126,9 +126,14 @@ public class UsuarioRepository : DapperRepository<Usuario>, IUsuarioRepository
         if (!string.IsNullOrEmpty(ruc))
             sql += " AND ruc = @Ruc";
 
+        if (!string.IsNullOrEmpty(sucursalID))
+        {
+            sql += " AND sucursalID = @SucursalID AND rol != 'superadmin'";
+        }
+
         sql += " ORDER BY fechaCreacion DESC";
 
-        return await _connection.QueryAsync<Usuario>(sql, new { Ruc = ruc }, transaction: _transaction);
+        return await _connection.QueryAsync<Usuario>(sql, new { Ruc = ruc, SucursalID = sucursalID }, transaction: _transaction);
     }
 
     public new async Task<bool> UpdateAsync(Usuario usuario)
@@ -245,5 +250,17 @@ public class UsuarioRepository : DapperRepository<Usuario>, IUsuarioRepository
 
         await _connection.ExecuteAsync(
             sql, new { hashedPassword, now = DateTime.UtcNow, usuarioId }, _transaction);
+    }
+
+    public async Task<bool> ExisteSuperadminAsync(string ruc)
+    {
+        var sql = @"
+        SELECT COUNT(1) FROM usuario 
+        WHERE ruc = @Ruc AND rol = 'superadmin' AND estado = 1";
+
+        var count = await _connection.ExecuteScalarAsync<int>(
+            sql, new { Ruc = ruc }, _transaction);
+
+        return count > 0;
     }
 }

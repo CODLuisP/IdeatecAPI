@@ -1,11 +1,13 @@
 using IdeatecAPI.Application.Features.Sucursal.DTOs;
 using IdeatecAPI.Application.Features.Sucursal.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IdeatecAPI.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class SucursalController : ControllerBase
 {
     private readonly ISucursalService _sucursalService;
@@ -24,17 +26,17 @@ public class SucursalController : ControllerBase
     {
         try
         {
-            var resultado = await _sucursalService.GetAllSucursalAsync();
+            var ruc = User.FindFirst("ruc")?.Value;
+            if (string.IsNullOrEmpty(ruc))
+                return Unauthorized(new { mensaje = "RUC no encontrado en el token" });
+
+            var resultado = await _sucursalService.GetByRucSucursalAsync(ruc);
             return Ok(resultado);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error al obtener todas las sucursales");
-            return StatusCode(StatusCodes.Status500InternalServerError, new
-            {
-                mensaje = "Ocurrió un error al obtener las sucursales.",
-                detalle = ex.Message
-            });
+            _logger.LogError(ex, "Error al obtener sucursales");
+            return StatusCode(500, new { mensaje = "Error al obtener las sucursales.", detalle = ex.Message });
         }
     }
 
@@ -65,40 +67,20 @@ public class SucursalController : ControllerBase
         }
     }
 
-    [HttpGet("{empresaRuc}")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> ObtenerPorRuc(string empresaRuc)
-    {
-        try
-        {
-            var resultado = await _sucursalService.GetByRucSucursalAsync(empresaRuc);
-
-            if (resultado == null || !resultado.Any())
-                return NotFound(new { mensaje = $"No se encontraron sucursales para el RUC '{empresaRuc}'." });
-
-            return Ok(resultado);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error al obtener sucursales para RUC {EmpresaRuc}", empresaRuc);
-            return StatusCode(StatusCodes.Status500InternalServerError, new
-            {
-                mensaje = "Ocurrió un error al obtener las sucursales.",
-                detalle = ex.Message
-            });
-        }
-    }
-
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [Authorize(Roles = "admin,superadmin")]
     public async Task<IActionResult> Registrar([FromBody] AgregarSucursalDTO dto)
     {
         try
         {
+            // Tomar datos del token
+            dto.EmpresaRuc = User.FindFirst("ruc")?.Value ?? "";
+            dto.EmailAdmin = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "";
+            dto.UsernameAdminActual = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value ?? "";
+
             var sucursalCreada = await _sucursalService.RegistrarSucursalAsync(dto);
             return CreatedAtAction(nameof(ObtenerPorId), new { sucursalId = sucursalCreada.SucursalId }, sucursalCreada);
         }
@@ -130,6 +112,7 @@ public class SucursalController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [Authorize(Roles = "admin,superadmin")]
     public async Task<IActionResult> Editar(int sucursalId, [FromBody] EditarSucursalDTO dto)
     {
         try
@@ -162,6 +145,7 @@ public class SucursalController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [Authorize(Roles = "admin,superadmin")]
     public async Task<IActionResult> Eliminar(int sucursalId)
     {
         try
