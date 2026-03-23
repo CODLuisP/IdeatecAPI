@@ -69,7 +69,7 @@ public class SucursalRepository : DapperRepository<Sucursal>, ISucursalRepositor
                 serieGuiaRemision, correlativoGuiaRemision,
                 serieGuiaTransportista, correlativoGuiaTransportista
             ) VALUES (
-                @EmpresaRuc, @CodEstablecimiento, @Nombre, @Direccion
+                @EmpresaRuc, @CodEstablecimiento, @Nombre, @Direccion,
                 @SerieFactura, @CorrelativoFactura,
                 @SerieBoleta, @CorrelativoBoleta,
                 @SerieNotaCredito, @CorrelativoNotaCredito,
