@@ -18,6 +18,10 @@ public class RegisterRequestDto
     [StringLength(255)]
     public string Password { get; set; } = string.Empty;
 
+    public string? SucursalID { get; set; }
+    
+    public string? NombreSucursal { get; set; }
+
     [StringLength(11)]
     [RegularExpression(@"^\d{11}$", ErrorMessage = "El RUC debe tener exactamente 11 dígitos")]
     public string? Ruc { get; set; }

@@ -82,6 +82,8 @@ public class AuthService : IAuthService
                     Email = usuario.Email,
                     Rol = usuario.Rol,
                     Ruc = usuario.Ruc,
+                    SucursalID = usuario.SucursalID,
+                    NombreSucursal = usuario.NombreSucursal
                 }
             };
         }

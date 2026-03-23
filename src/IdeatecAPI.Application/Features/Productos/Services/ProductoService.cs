@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Application.Features.Productos.DTO;
 using IdeatecAPI.Domain.Entities;
@@ -10,12 +6,14 @@ namespace IdeatecAPI.Application.Features.Productos.Services;
 
 public interface IProductoService
 {
-    Task<IEnumerable<ObtenerProductoDTO>> GetAllProductosAsync();
-    Task<ObtenerProductoDTO?> GetProductoByIdAsync(int id);
-    Task<bool> ExisteRucAsync(string codigo);
-    Task<ObtenerProductoDTO> RegistrarProductoAsync(RegistrarProductoDTO producto);
-    Task<bool> EditarProductoAsync(EditarProductoDTO producto);
-    Task<bool> EliminarProductoAsync(int productoId);
+    Task<IEnumerable<ObtenerProductoDTO>> GetAllProductosAsync(int sucursalId); //Producto completo por sucursal
+    Task<IEnumerable<ObtenerProductoBaseDTO>> GetAllProductosBaseRucAsync(string empresaRuc); //Proucto base por empresa
+    Task<IEnumerable<ObtenerProductoDTO>> GetAllProductosRucAsync(string empresaRuc);
+    Task<IEnumerable<ObtenerProductoBaseDTO>> GetProductosRucDisponiblesAsync(int sucursalId); // productos disponibles de la misma empresa a agregar a la sede
+    Task<ObtenerProductoDTO?> GetProductoByIdAsync(int productoId, int sucursalId); //Producto especifico por sucursal
+    Task<ObtenerProductoDTO> RegistrarProductoAsync(RegistrarProductoDTO dto);
+    Task<bool> EditarProductoAsync(EditarProductoDTO dto);
+    Task<bool> EliminarSucursalProductoAsync(int sucursalProductoId);
 }
 
 public class ProductoService : IProductoService
@@ -27,15 +25,15 @@ public class ProductoService : IProductoService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<IEnumerable<ObtenerProductoDTO>> GetAllProductosAsync()
+    public async Task<IEnumerable<ObtenerProductoDTO>> GetAllProductosAsync(int sucursalId)
     {
-        var productos = await _unitOfWork.Productos.GetAllProductosAsync();
+        var productos = await _unitOfWork.Productos.GetAllProductosAsync(sucursalId);
         return productos.Select(MapToDto);
     }
 
-    public async Task<ObtenerProductoDTO?> GetProductoByIdAsync(int id)
+    public async Task<ObtenerProductoDTO?> GetProductoByIdAsync(int productoId, int sucursalId)
     {
-        var producto = await _unitOfWork.Productos.GetProductoByIdAsync(id);
+        var producto = await _unitOfWork.Productos.GetProductoByIdAsync(productoId, sucursalId);
 
         if (producto == null)
             return null;
@@ -43,41 +41,59 @@ public class ProductoService : IProductoService
         return MapToDto(producto);
     }
 
-    public Task<bool> ExisteRucAsync(string codigo)
-    {
-        throw new NotImplementedException();
-    }
-
     public async Task<ObtenerProductoDTO> RegistrarProductoAsync(RegistrarProductoDTO dto)
     {
-        if (await _unitOfWork.Productos.ExisteProductoAsync(dto.Codigo))
-            throw new InvalidOperationException($"Ya existe un producto con código {dto.Codigo}");
-
         _unitOfWork.BeginTransaction();
         try
         {
-            var producto = new Producto
+            int productoId;
+
+            var productoExistente = await _unitOfWork.Productos.ObtenerProductoPorCodigoAsync(dto.Codigo);
+
+            if (productoExistente != null)
             {
-                Codigo = dto.Codigo ?? string.Empty,
-                TipoProducto = dto.TipoProducto ?? string.Empty,
-                CodigoSunat = dto.CodigoSunat ?? string.Empty,
-                Descripcion = dto.Descripcion ?? string.Empty,
-                UnidadMedida = dto.UnidadMedida ?? string.Empty,
-                PrecioUnitario = dto.PrecioUnitario ?? 0,
-                TipoAfectacionIGV = dto.TipoAfectacionIGV ?? string.Empty,
-                IncluirIGV = dto.IncluirIGV ?? false,
-                Stock = dto.Stock ?? 0,
-                CategoriaId = dto.CategoriaId ?? 0,
-                Estado = true,
-                FechaCreacion = DateTime.Now
+                // El producto ya existe, solo agrega a la sucursal
+                productoId = productoExistente.ProductoId;
+            }
+            else
+            {
+                // El producto no existe, lo crea
+                var producto = new Producto
+                {
+                    Codigo            = dto.Codigo,
+                    TipoProducto      = dto.TipoProducto,
+                    CodigoSunat       = dto.CodigoSunat,
+                    NomProducto       = dto.NomProducto,
+                    UnidadMedida      = dto.UnidadMedida,
+                    TipoAfectacionIGV = dto.TipoAfectacionIGV,
+                    IncluirIGV        = dto.IncluirIGV,
+                    CategoriaId       = dto.CategoriaId
+                };
+
+                var productoCreado = await _unitOfWork.Productos.RegistrarProductoAsync(producto);
+                productoId = productoCreado.ProductoId;
+            }
+
+            // Verifica que el producto no esté ya en esa sucursal
+            var existeEnSucursal = await _unitOfWork.Productos.ExisteEnSucursalAsync(productoId, dto.SucursalId);
+            if (existeEnSucursal)
+                throw new InvalidOperationException($"El producto con código '{dto.Codigo}' ya existe en esta sucursal.");
+
+            var sucursalProducto = new SucursalProducto
+            {
+                ProductoId     = productoId,
+                SucursalId     = dto.SucursalId,
+                PrecioUnitario = dto.PrecioUnitario,
+                Stock          = dto.Stock,
+                Estado         = true,
+                FechaCreacion  = DateTime.Now
             };
 
-            var productoCreado = await _unitOfWork.Productos.RegistrarProductoAsync(producto);
+            await _unitOfWork.Productos.RegistrarSucursalProductoAsync(sucursalProducto);
 
             _unitOfWork.Commit();
 
-            // Recarga completo con relaciones (categoría, etc.)
-            var productoCompleto = await _unitOfWork.Productos.GetProductoByIdAsync(productoCreado.ProductoId);
+            var productoCompleto = await _unitOfWork.Productos.GetProductoByIdAsync(productoId, dto.SucursalId);
             return MapToDto(productoCompleto!);
         }
         catch
@@ -86,35 +102,40 @@ public class ProductoService : IProductoService
             throw;
         }
     }
-    
     public async Task<bool> EditarProductoAsync(EditarProductoDTO dto)
     {
         if (dto.ProductoId <= 0)
-            throw new ArgumentException("ProductoId inválido");
+            throw new ArgumentException("ProductoId inválido.");
 
         _unitOfWork.BeginTransaction();
-
         try
         {
             var producto = new Producto
             {
-                ProductoId = dto.ProductoId,
-                Codigo = dto.Codigo ?? string.Empty,
-                TipoProducto = dto.TipoProducto ?? string.Empty,
-                CodigoSunat = dto.CodigoSunat ?? string.Empty,
-                Descripcion = dto.Descripcion ?? string.Empty,
-                UnidadMedida = dto.UnidadMedida ?? string.Empty,
-                PrecioUnitario = dto.PrecioUnitario ?? 0,
-                TipoAfectacionIGV = dto.TipoAfectacionIGV ?? string.Empty,
-                IncluirIGV = dto.IncluirIGV ?? false,
-                Stock = dto.Stock ?? 0,
-                CategoriaId = dto.CategoriaId ?? 0
+                ProductoId        = dto.ProductoId,
+                Codigo            = dto.Codigo,
+                TipoProducto      = dto.TipoProducto,
+                CodigoSunat       = dto.CodigoSunat,
+                NomProducto       = dto.NomProducto,
+                UnidadMedida      = dto.UnidadMedida,
+                TipoAfectacionIGV = dto.TipoAfectacionIGV,
+                IncluirIGV        = dto.IncluirIGV,
+                CategoriaId       = dto.CategoriaId
             };
 
-            var result = await _unitOfWork.Productos.EditarProductoAsync(producto);
+            await _unitOfWork.Productos.EditarProductoAsync(producto);
+
+            var sucursalProducto = new SucursalProducto
+            {
+                SucursalProductoId = dto.SucursalProductoId,
+                PrecioUnitario     = dto.PrecioUnitario,
+                Stock              = dto.Stock
+            };
+
+            await _unitOfWork.Productos.EditarSucursalProductoAsync(sucursalProducto);
 
             _unitOfWork.Commit();
-            return result;
+            return true;
         }
         catch
         {
@@ -123,45 +144,73 @@ public class ProductoService : IProductoService
         }
     }
 
-    public async Task<bool> EliminarProductoAsync(int productoId)
+    public async Task<bool> EliminarSucursalProductoAsync(int sucursalProductoId)
     {
-        if (productoId <= 0)
-            throw new ArgumentException("ProductoId inválido");
+        if (sucursalProductoId <= 0)
+            throw new ArgumentException("SucursalProductoId inválido.");
 
-        _unitOfWork.BeginTransaction();
-
-        try
-        {
-            var result = await _unitOfWork.Productos.EliminarProductoAsync(productoId);
-
-            _unitOfWork.Commit();
-            return result;
-        }
-        catch
-        {
-            _unitOfWork.Rollback();
-            throw;
-        }
+        return await _unitOfWork.Productos.EliminarSucursalProductoAsync(sucursalProductoId);
     }
 
-    private static ObtenerProductoDTO MapToDto(Producto p)
+    private static ObtenerProductoDTO MapToDto(Producto p) => new ObtenerProductoDTO
     {
-        return new ObtenerProductoDTO
+        ProductoId        = p.ProductoId,
+        Codigo            = p.Codigo,
+        TipoProducto      = p.TipoProducto,
+        CodigoSunat       = p.CodigoSunat,
+        NomProducto       = p.NomProducto,
+        UnidadMedida      = p.UnidadMedida,
+        TipoAfectacionIGV = p.TipoAfectacionIGV,
+        IncluirIGV        = p.IncluirIGV,
+        Estado            = p.Estado,
+        FechaCreacion     = p.FechaCreacion,
+        Categoria         = p.Categoria == null ? null : new ObtenerCategoriaDTO
         {
-            ProductoId = p.ProductoId,
-            Codigo = p.Codigo,
-            TipoProducto = p.TipoProducto,
-            CodigoSunat = p.CodigoSunat,
-            Descripcion = p.Descripcion,
-            UnidadMedida = p.UnidadMedida,
-            PrecioUnitario = p.PrecioUnitario,
-            TipoAfectacionIGV = p.TipoAfectacionIGV,
-            IncluirIGV = p.IncluirIGV,
-            Stock = p.Stock,
-            Estado = p.Estado,
-            FechaCreacion = p.FechaCreacion,
-            Categoria = p.Categoria
-        };
+            CategoriaId    = p.Categoria.CategoriaId,
+            CategoriaNombre = p.Categoria.CategoriaNombre,
+        },
+        SucursalProducto = p.SucursalProducto == null ? null : new ObtenerSucursalProductoDTO
+        {
+            SucursalProductoId = p.SucursalProducto.SucursalProductoId,
+            PrecioUnitario     = p.SucursalProducto.PrecioUnitario,
+            Stock              = p.SucursalProducto.Stock
+        }
+    };
+
+    public async Task<IEnumerable<ObtenerProductoBaseDTO>> GetAllProductosBaseRucAsync(string empresaRuc)
+    {
+        var productos = await _unitOfWork.Productos.GetAllProductosBaseRucAsync(empresaRuc);
+        return productos.Select(MapToBaseDto);
     }
+    public async Task<IEnumerable<ObtenerProductoDTO>> GetAllProductosRucAsync(string empresaRuc)
+    {
+        var productos = await _unitOfWork.Productos.GetAllProductosRucAsync(empresaRuc);
+        return productos.Select(MapToDto);
+    }
+
+
+    public async Task<IEnumerable<ObtenerProductoBaseDTO>> GetProductosRucDisponiblesAsync(int sucursalId)
+    {
+        var productos = await _unitOfWork.Productos.GetProductosRucDisponiblesAsync(sucursalId);
+        return productos.Select(MapToBaseDto);
+    }
+
+    private static ObtenerProductoBaseDTO MapToBaseDto(Producto p) => new ObtenerProductoBaseDTO
+    {
+        ProductoId        = p.ProductoId,
+        Codigo            = p.Codigo,
+        TipoProducto      = p.TipoProducto,
+        CodigoSunat       = p.CodigoSunat,
+        NomProducto       = p.NomProducto,
+        UnidadMedida      = p.UnidadMedida,
+        TipoAfectacionIGV = p.TipoAfectacionIGV,
+        IncluirIGV        = p.IncluirIGV,
+        Estado            = p.Estado,
+        FechaCreacion     = p.FechaCreacion,
+        Categoria         = p.Categoria == null ? null : new ObtenerCategoriaDTO
+        {
+            CategoriaId     = p.Categoria.CategoriaId,
+            CategoriaNombre = p.Categoria.CategoriaNombre,
+        }
+    };
 }
-
