@@ -1,13 +1,10 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-
 namespace IdeatecAPI.Application.Features.Sucursal.DTOs
 {
     public class EditarSucursalDTO
     {
     public int SucursalId { get; set; }
+    public string? Nombre { get; set; }
+    public string? Direccion { get; set; }
     public string? SerieFactura { get; set; }
     public int? CorrelativoFactura { get; set; }
     public string? SerieBoleta { get; set; }
