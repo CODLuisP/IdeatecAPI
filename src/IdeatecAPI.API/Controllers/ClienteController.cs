@@ -1,89 +1,205 @@
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading.Tasks;
 using IdeatecAPI.Application.Features.Clientes.DTOs;
 using IdeatecAPI.Application.Features.Clientes.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 
-namespace IdeatecAPI.API.Controllers; 
+namespace IdeatecAPI.API.Controllers;
 
+[ApiController]
 [Route("api/[controller]")]
 public class ClienteController : ControllerBase
 {
     private readonly IClienteService _clienteService;
+    private readonly ILogger<ClienteController> _logger;
 
-    public ClienteController(IClienteService clienteService)
+    public ClienteController(IClienteService clienteService, ILogger<ClienteController> logger)
     {
         _clienteService = clienteService;
+        _logger = logger;
     }
 
-    [HttpGet]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetAll()
-    {
-        var clientes = await _clienteService.GetAllClientesAsync();
-        return Ok(clientes);
-        
-    }
-
-    [HttpGet("{id}")]
+    // GET api/cliente/ruc/{empresaRuc}
+    [HttpGet("ruc/{empresaRuc}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetById(int id)
-    {
-        var cliente = await _clienteService.GetClienteByIdAsync(id);
-
-        if (cliente == null)
-            return NotFound(new { mensaje = "Cliente no encontrado" });
-
-        return Ok(cliente);
-    }
-
-    [HttpPost]
-    [ProducesResponseType(StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> Registrar([FromBody] RegistrarClienteDTO dto)
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetAllClientesRucAsync(string empresaRuc)
     {
         try
         {
-            var cliente = await _clienteService.RegistrarClienteAsync(dto);
-            return StatusCode(201, cliente);
+            var clientes = await _clienteService.GetAllClientesRucAsync(empresaRuc);
+
+            if (clientes == null || !clientes.Any())
+                return NotFound(new { mensaje = $"No se encontraron clientes para el RUC '{empresaRuc}'." });
+
+            return Ok(clientes);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener clientes para RUC {EmpresaRuc}", empresaRuc);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al obtener los clientes.",
+                detalle = ex.Message
+            });
+        }
+    }
+
+    // GET api/cliente/sucursal/{sucursalId}
+    [HttpGet("sucursal/{sucursalId:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetAllClientesSucursalAsync(int sucursalId)
+    {
+        try
+        {
+            var clientes = await _clienteService.GetAllClientesSucursalAsync(sucursalId);
+
+            if (clientes == null || !clientes.Any())
+                return NotFound(new { mensaje = $"No se encontraron clientes para la sucursal con ID {sucursalId}." });
+
+            return Ok(clientes);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener clientes de la sucursal {SucursalId}", sucursalId);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al obtener los clientes.",
+                detalle = ex.Message
+            });
+        }
+    }
+
+    // GET api/cliente/detalle/{empresaRuc}/{clienteId}
+    [HttpGet("detalle/{empresaRuc}/{clienteId:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetClienteByIdEmpresaAsync(string empresaRuc, int clienteId)
+    {
+        try
+        {
+            var cliente = await _clienteService.GetClienteByIdEmpresaAsync(empresaRuc, clienteId);
+
+            if (cliente == null)
+                return NotFound(new { mensaje = $"No se encontró el cliente con ID {clienteId} para el RUC '{empresaRuc}'." });
+
+            return Ok(cliente);
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning("Argumento inválido al obtener cliente ID {ClienteId} para RUC {EmpresaRuc}", clienteId, empresaRuc);
+            return BadRequest(new { mensaje = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener cliente ID {ClienteId} para RUC {EmpresaRuc}", clienteId, empresaRuc);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al obtener el cliente.",
+                detalle = ex.Message
+            });
+        }
+    }
+
+    // POST api/cliente
+    [HttpPost]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> RegistrarClienteAsync([FromBody] RegistrarClienteDTO dto)
+    {
+        try
+        {
+            var clienteCreado = await _clienteService.RegistrarClienteAsync(dto);
+            return StatusCode(StatusCodes.Status201Created, clienteCreado);
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new { mensaje = ex.Message });
+            _logger.LogWarning("Intento de registro duplicado: Documento {NumeroDocumento}", dto.NumeroDocumento);
+            return Conflict(new { mensaje = ex.Message });
+        }
+        catch (MySqlConnector.MySqlException ex) when (ex.Number == 1062)
+        {
+            _logger.LogWarning("Duplicado en base de datos: Documento {NumeroDocumento}", dto.NumeroDocumento);
+            return Conflict(new { mensaje = $"Ya existe un cliente con el documento '{dto.NumeroDocumento}'." });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al registrar cliente con documento {NumeroDocumento}", dto.NumeroDocumento);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al registrar el cliente.",
+                detalle = ex.Message
+            });
         }
     }
 
-    [HttpPut("{id}")]
+    // PUT api/cliente/{id}
+    [HttpPut("{clienteId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> Editar(int id, [FromBody] EditarClienteDTO dto)
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> EditarClienteAsync(int clienteId, [FromBody] EditarClienteDTO dto)
     {
-        if (id != dto.ClienteId)
-            return BadRequest("El id de la URL no coincide con el del cuerpo.");
+        try
+        {
+            dto.ClienteId = clienteId;
+            var resultado = await _clienteService.EditarClienteAsync(dto);
 
-        var result = await _clienteService.EditarClienteAsync(dto);
+            if (!resultado)
+                return NotFound(new { mensaje = $"No se encontró el cliente con ID {clienteId}." });
 
-        if (!result)
-            return BadRequest("No se pudo actualizar el cliente.");
-
-        return Ok(new { mensaje = "Cliente actualizado correctamente" });
+            return Ok(new { mensaje = "Cliente actualizado correctamente." });
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning("Argumento inválido al editar cliente ID {ClienteId}", clienteId);
+            return BadRequest(new { mensaje = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al editar cliente con ID {ClienteId}", clienteId);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al editar el cliente.",
+                detalle = ex.Message
+            });
+        }
     }
 
-    [HttpDelete("{id}")]
+    // DELETE api/cliente/{id}
+    [HttpDelete("{clienteId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> Eliminar(int id)
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> EliminarClienteAsync(int clienteId)
     {
-        var result = await _clienteService.EliminarClienteAsync(id);
+        try
+        {
+            var resultado = await _clienteService.EliminarClienteAsync(clienteId);
 
-        if (!result)
-            return BadRequest("No se pudo eliminar el cliente.");
+            if (!resultado)
+                return NotFound(new { mensaje = $"No se encontró el cliente con ID {clienteId}." });
 
-        return Ok(new { mensaje = "Cliente eliminado correctamente" });
+            return Ok(new { mensaje = "Cliente eliminado correctamente." });
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning("Argumento inválido al eliminar cliente ID {ClienteId}", clienteId);
+            return BadRequest(new { mensaje = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al eliminar cliente con ID {ClienteId}", clienteId);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al eliminar el cliente.",
+                detalle = ex.Message
+            });
+        }
     }
 }

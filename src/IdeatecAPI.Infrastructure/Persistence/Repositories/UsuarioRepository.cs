@@ -15,21 +15,26 @@ public class UsuarioRepository : DapperRepository<Usuario>, IUsuarioRepository
     public async Task<Usuario?> GetByIdentifierAsync(string identifier)
     {
         var sql = @"
-            SELECT 
-                usuarioID           AS UsuarioID,
-                username            AS Username,
-                password            AS Password,
-                email               AS Email,
-                rol                 AS Rol,
-                estado              AS Estado,
-                ruc                 AS Ruc,
-                sucursalID          AS SucursalID,
-                nombreSucursal      AS NombreSucursal,
-                tokenVersion        AS TokenVersion,
-                fechaCreacion       AS FechaCreacion,
-                fechaUltimoAcceso   AS FechaUltimoAcceso
-            FROM usuario 
-            WHERE (username = @Identifier OR email = @Identifier OR (ruc = @Identifier AND rol = 'superadmin')) AND estado = 1 LIMIT 1";
+        SELECT 
+            u.usuarioID           AS UsuarioID,
+            u.username            AS Username,
+            u.password            AS Password,
+            u.email               AS Email,
+            u.rol                 AS Rol,
+            u.estado              AS Estado,
+            u.ruc                 AS Ruc,
+            u.sucursalID          AS SucursalID,
+            s.nombre              AS NombreSucursal,
+            COALESCE(e.nombreComercial, e.razonSocial) AS NombreEmpresa,
+            u.tokenVersion        AS TokenVersion,
+            u.fechaCreacion       AS FechaCreacion,
+            u.fechaUltimoAcceso   AS FechaUltimoAcceso
+        FROM usuario u
+        LEFT JOIN sucursal s ON s.sucursalID = u.sucursalID
+        LEFT JOIN empresa e ON e.ruc = u.ruc
+        WHERE (u.username = @Identifier OR u.email = @Identifier OR (u.ruc = @Identifier AND u.rol = 'superadmin'))
+        AND u.estado = 1
+        LIMIT 1";
 
         return await _connection.QueryFirstOrDefaultAsync<Usuario>(
             sql, new { Identifier = identifier }, _transaction);
@@ -66,10 +71,10 @@ public class UsuarioRepository : DapperRepository<Usuario>, IUsuarioRepository
         var sql = @"
             INSERT INTO usuario (
                 username, password, email, rol, estado,
-                ruc, sucursalID, nombreSucursal, tokenVersion, fechaCreacion
+                ruc, sucursalID, tokenVersion, fechaCreacion
             ) VALUES (
                 @Username, @Password, @Email, @Rol, @Estado,
-                @Ruc, @SucursalID, @NombreSucursal, @TokenVersion, @FechaCreacion
+                @Ruc, @SucursalID, @TokenVersion, @FechaCreacion
             );
             SELECT LAST_INSERT_ID();";
 
@@ -79,24 +84,25 @@ public class UsuarioRepository : DapperRepository<Usuario>, IUsuarioRepository
     public new async Task<Usuario?> GetByIdAsync(int id)
     {
         var sql = @"
-            SELECT 
-                usuarioID           AS UsuarioID,
-                username            AS Username,
-                password            AS Password,
-                sucursalID          AS SucursalID,
-                nombreSucursal      AS NombreSucursal,
-                email               AS Email,
-                emailVerified       AS EmailVerified,
-                rol                 AS Rol,
-                estado              AS Estado,
-                ruc                 AS Ruc,
-                tokenVersion        AS TokenVersion,
-                refreshToken        AS RefreshToken,
-                fechaCreacion       AS FechaCreacion,
-                fechaUltimoAcceso   AS FechaUltimoAcceso,
-                fechaActualizacion  AS FechaActualizacion
-            FROM usuario 
-            WHERE usuarioID = @Id";
+        SELECT 
+            u.usuarioID           AS UsuarioID,
+            u.username            AS Username,
+            u.password            AS Password,
+            u.sucursalID          AS SucursalID,
+            s.nombre              AS NombreSucursal,
+            u.email               AS Email,
+            u.emailVerified       AS EmailVerified,
+            u.rol                 AS Rol,
+            u.estado              AS Estado,
+            u.ruc                 AS Ruc,
+            u.tokenVersion        AS TokenVersion,
+            u.refreshToken        AS RefreshToken,
+            u.fechaCreacion       AS FechaCreacion,
+            u.fechaUltimoAcceso   AS FechaUltimoAcceso,
+            u.fechaActualizacion  AS FechaActualizacion
+        FROM usuario u
+        LEFT JOIN sucursal s ON s.sucursalID = u.sucursalID
+        WHERE u.usuarioID = @Id";
 
         return await _connection.QueryFirstOrDefaultAsync<Usuario>(
             sql, new { Id = id }, _transaction);
@@ -106,32 +112,31 @@ public class UsuarioRepository : DapperRepository<Usuario>, IUsuarioRepository
     {
         var sql = @"
         SELECT 
-            usuarioID           AS UsuarioID,
-            username            AS Username,
-            email               AS Email,
-            emailVerified       AS EmailVerified,
-            rol                 AS Rol,
-            estado              AS Estado,
-            ruc                 AS Ruc,
-            sucursalID          AS SucursalID,
-            nombreSucursal      AS NombreSucursal,
-            fechaCreacion       AS FechaCreacion,
-            fechaUltimoAcceso   AS FechaUltimoAcceso
-        FROM usuario
+            u.usuarioID           AS UsuarioID,
+            u.username            AS Username,
+            u.email               AS Email,
+            u.emailVerified       AS EmailVerified,
+            u.rol                 AS Rol,
+            u.estado              AS Estado,
+            u.ruc                 AS Ruc,
+            u.sucursalID          AS SucursalID,
+            s.nombre              AS NombreSucursal,
+            u.fechaCreacion       AS FechaCreacion,
+            u.fechaUltimoAcceso   AS FechaUltimoAcceso
+        FROM usuario u
+        LEFT JOIN sucursal s ON s.sucursalID = u.sucursalID
         WHERE 1=1";
 
         if (soloActivos)
-            sql += " AND estado = 1";
+            sql += " AND u.estado = 1";
 
         if (!string.IsNullOrEmpty(ruc))
-            sql += " AND ruc = @Ruc";
+            sql += " AND u.ruc = @Ruc";
 
         if (!string.IsNullOrEmpty(sucursalID))
-        {
-            sql += " AND sucursalID = @SucursalID AND rol != 'superadmin'";
-        }
+            sql += " AND u.sucursalID = @SucursalID AND u.rol != 'superadmin'";
 
-        sql += " ORDER BY fechaCreacion DESC";
+        sql += " ORDER BY u.fechaCreacion DESC";
 
         return await _connection.QueryAsync<Usuario>(sql, new { Ruc = ruc, SucursalID = sucursalID }, transaction: _transaction);
     }
@@ -143,7 +148,6 @@ public class UsuarioRepository : DapperRepository<Usuario>, IUsuarioRepository
                 username            = @Username,
                 email               = @Email,
                 sucursalID          = @SucursalID,
-                nombreSucursal      = @NombreSucursal,
                 rol                 = @Rol,
                 ruc                 = @Ruc,
                 fechaActualizacion  = @FechaActualizacion
@@ -158,34 +162,23 @@ public class UsuarioRepository : DapperRepository<Usuario>, IUsuarioRepository
 
     public new async Task<bool> DeleteAsync(int id)
     {
-        var sql = @"
-            UPDATE usuario 
-            SET estado = 0, fechaActualizacion = @Now 
-            WHERE usuarioID = @Id";
-
-        var rowsAffected = await _connection.ExecuteAsync(
-            sql, new { Id = id, Now = DateTime.UtcNow }, _transaction);
-
-        return rowsAffected > 0;
+        var sql = "DELETE FROM usuario WHERE usuarioID = @Id";
+        var rows = await _connection.ExecuteAsync(sql, new { Id = id }, _transaction);
+        return rows > 0;
     }
 
-    public async Task<bool> ExistsAsync(string username, string email, string? ruc = null, int? excludeId = null)
-    {
-        var sql = @"SELECT COUNT(1) FROM usuario WHERE (username = @Username OR email = @Email";
+    public async Task<bool> ExistsAsync(string username, string? email = null, string? ruc = null, int? excludeId = null)
+{
+    var sql = @"SELECT COUNT(1) FROM usuario WHERE username = @Username";
 
-        if (!string.IsNullOrEmpty(ruc))
-            sql += " OR ruc = @Ruc";
+    if (excludeId.HasValue)
+        sql += " AND usuarioID != @ExcludeId";
 
-        sql += ")";
+    var count = await _connection.ExecuteScalarAsync<int>(
+        sql, new { Username = username, ExcludeId = excludeId }, _transaction);
 
-        if (excludeId.HasValue)
-            sql += " AND usuarioID != @ExcludeId";
-
-        var count = await _connection.ExecuteScalarAsync<int>(
-            sql, new { Username = username, Email = email, Ruc = ruc, ExcludeId = excludeId }, _transaction);
-
-        return count > 0;
-    }
+    return count > 0;
+}
 
     // ── Recuperación de contraseña ─────────────────────────────────────────
 

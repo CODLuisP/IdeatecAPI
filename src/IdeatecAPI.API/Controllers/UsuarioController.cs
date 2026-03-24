@@ -100,96 +100,35 @@ public class UsuarioController : ControllerBase
     /// Actualizar usuario
     /// PUT: api/usuario/{id}
     /// </summary>
-    [HttpPut("{id}")]
-    [Authorize(Roles = "admin")]
+    [HttpPatch("{id}")]
+    [Authorize(Roles = "admin,superadmin")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateUsuarioDto dto)
     {
         if (id != dto.UsuarioID)
-        {
-            return BadRequest(new
-            {
-                success = false,
-                message = "El ID de la ruta no coincide con el ID del cuerpo"
-            });
-        }
+            return BadRequest(new { success = false, message = "ID no coincide" });
 
         if (!ModelState.IsValid)
-        {
-            return BadRequest(new
-            {
-                success = false,
-                message = "Datos inválidos",
-                errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage)
-            });
-        }
+            return BadRequest(new { success = false, message = "Datos inválidos" });
 
-        // Obtener ID del usuario autenticado
-        var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-            ?? User.FindFirst("sub")?.Value;
-
-        // Verificar permisos: solo puede actualizar su propio perfil o ser admin
-        if (currentUserId != id.ToString() && !User.IsInRole("admin"))
-        {
-            return Forbid();
-        }
-
-        // Verificar que el usuario existe
         var usuarioExistente = await _unitOfWork.Usuarios.GetByIdAsync(id);
         if (usuarioExistente == null)
-        {
-            return NotFound(new
-            {
-                success = false,
-                message = "Usuario no encontrado"
-            });
-        }
+            return NotFound(new { success = false, message = "Usuario no encontrado" });
 
-        // Verificar duplicados (username, email, ruc)
-        var existe = await _unitOfWork.Usuarios.ExistsAsync(
-            dto.Username,
-            dto.Email,
-            dto.Ruc,
-            id
-        );
-
+        var existe = await _unitOfWork.Usuarios.ExistsAsync(dto.Username, null, null, id);
         if (existe)
-        {
-            return BadRequest(new
-            {
-                success = false,
-                message = "El username, email o RUC ya están en uso por otro usuario"
-            });
-        }
+            return BadRequest(new { success = false, message = "El username o email ya están en uso" });
 
-        // Actualizar campos
         usuarioExistente.Username = dto.Username;
         usuarioExistente.Email = dto.Email;
-        usuarioExistente.Ruc = dto.Ruc;
-        usuarioExistente.SucursalID = dto.SucursalID;
-        usuarioExistente.NombreSucursal = dto.NombreSucursal;
 
-        // Solo admin puede cambiar el rol
-        if (User.IsInRole("admin") && !string.IsNullOrEmpty(dto.Rol))
-        {
+        if (!string.IsNullOrEmpty(dto.Rol))
             usuarioExistente.Rol = dto.Rol;
-        }
 
         var actualizado = await _unitOfWork.Usuarios.UpdateAsync(usuarioExistente);
-
         if (!actualizado)
-        {
-            return BadRequest(new
-            {
-                success = false,
-                message = "Error al actualizar el usuario"
-            });
-        }
+            return BadRequest(new { success = false, message = "Error al actualizar" });
 
-        return Ok(new
-        {
-            success = true,
-            message = "Usuario actualizado correctamente"
-        });
+        return Ok(new { success = true, message = "Usuario actualizado correctamente" });
     }
 
     /// <summary>
@@ -197,49 +136,22 @@ public class UsuarioController : ControllerBase
     /// DELETE: api/usuario/{id}
     /// </summary>
     [HttpDelete("{id}")]
-    [Authorize(Roles = "admin")] // Solo admins pueden eliminar usuarios
+    [Authorize(Roles = "admin,superadmin")]
     public async Task<IActionResult> Delete(int id)
     {
-        var usuario = await _unitOfWork.Usuarios.GetByIdAsync(id);
-
-        if (usuario == null)
-        {
-            return NotFound(new
-            {
-                success = false,
-                message = "Usuario no encontrado"
-            });
-        }
-
-        // No permitir eliminar al propio usuario admin
-        var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-            ?? User.FindFirst("sub")?.Value;
-
+        var currentUserId = User.FindFirst("sub")?.Value;
         if (currentUserId == id.ToString())
-        {
-            return BadRequest(new
-            {
-                success = false,
-                message = "No puedes desactivar tu propia cuenta"
-            });
-        }
+            return BadRequest(new { success = false, message = "No puedes eliminar tu propia cuenta" });
+
+        var usuario = await _unitOfWork.Usuarios.GetByIdAsync(id);
+        if (usuario == null)
+            return NotFound(new { success = false, message = "Usuario no encontrado" });
 
         var eliminado = await _unitOfWork.Usuarios.DeleteAsync(id);
-
         if (!eliminado)
-        {
-            return BadRequest(new
-            {
-                success = false,
-                message = "Error al desactivar el usuario"
-            });
-        }
+            return BadRequest(new { success = false, message = "Error al eliminar" });
 
-        return Ok(new
-        {
-            success = true,
-            message = "Usuario desactivado correctamente"
-        });
+        return Ok(new { success = true, message = "Usuario eliminado correctamente" });
     }
 
     /// <summary>

@@ -1,21 +1,19 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Application.Features.CatalogoSunat.DTOs;
 using IdeatecAPI.Application.Features.Clientes.DTOs;
 using IdeatecAPI.Application.Features.Direccion.DTOs;
 using IdeatecAPI.Domain.Entities;
+
 namespace IdeatecAPI.Application.Features.Clientes.Services;
 
-public interface IClienteService {
-    Task<IEnumerable<ObtenerClientesDTO>> GetAllClientesAsync();
-    Task<ObtenerClientesDTO?> GetClienteByIdAsync(int clienteId);
-    Task<ObtenerClientesDTO> RegistrarClienteAsync(RegistrarClienteDTO cliente);
+public interface IClienteService
+{
+    Task<IEnumerable<ObtenerClientesDTO>> GetAllClientesRucAsync(string empresaRuc); // Todos los clientes de un RUC
+    Task<IEnumerable<ObtenerClientesDTO>> GetAllClientesSucursalAsync(int sucursalId); // Clientes registrados en una sucursal
+    Task<ObtenerClientesDTO?> GetClienteByIdEmpresaAsync(string empresaRuc, int clienteId); // Cliente unico de una empresa
+    Task<ObtenerClientesDTO> RegistrarClienteAsync(RegistrarClienteDTO cliente); 
     Task<bool> EditarClienteAsync(EditarClienteDTO cliente);
     Task<bool> EliminarClienteAsync(int clienteId);
-
 }
 
 public class ClienteService : IClienteService
@@ -27,36 +25,43 @@ public class ClienteService : IClienteService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<IEnumerable<ObtenerClientesDTO>> GetAllClientesAsync()
+    public async Task<IEnumerable<ObtenerClientesDTO>> GetAllClientesRucAsync(string empresaRuc)
     {
-        var clientes = await _unitOfWork.Clientes.GetAllClientesAsync();
+        var clientes = await _unitOfWork.Clientes.GetAllClientesRucAsync(empresaRuc);
         return clientes.Select(MapToDTO);
     }
-    
-    public async Task<ObtenerClientesDTO?> GetClienteByIdAsync(int clienteId)
+
+    public async Task<IEnumerable<ObtenerClientesDTO>> GetAllClientesSucursalAsync(int sucursalId)
+    {
+        var clientes = await _unitOfWork.Clientes.GetAllClientesSucursalAsync(sucursalId);
+        return clientes.Select(MapToDTO);
+    }
+
+    public async Task<ObtenerClientesDTO?> GetClienteByIdEmpresaAsync(string empresaRuc, int clienteId)
     {
         if (clienteId <= 0)
             throw new ArgumentException("ClienteId inválido");
 
-        var cliente = await _unitOfWork.Clientes.GetClienteByIdAsync(clienteId);
+        var cliente = await _unitOfWork.Clientes.GetClienteByIdEmpresaAsync(empresaRuc, clienteId);
 
         if (cliente == null)
             return null;
 
         return MapToDTO(cliente);
-    }   
-    
+    }
+
     public async Task<ObtenerClientesDTO> RegistrarClienteAsync(RegistrarClienteDTO dto)
     {
-        // Verifica si ya existe el documento
-        var existente = await _unitOfWork.Clientes.GetByNumDocAsync(dto.NumeroDocumento!);
+        var existente = await _unitOfWork.Clientes.GetByClienteRepetidoEmpresaAsync(dto.NumeroDocumento!, dto.SucursalID!.Value);
         if (existente != null)
-            throw new InvalidOperationException($"Ya existe un cliente con el documento {dto.NumeroDocumento}");
+            throw new InvalidOperationException($"Ya existe un cliente con el documento '{dto.NumeroDocumento}' en este RUC.");
+            
         _unitOfWork.BeginTransaction();
         try
         {
             var cliente = new Cliente
             {
+                SucursalID = dto.SucursalID!.Value,
                 TipoDocumentoId = dto.TipoDocumentoId,
                 NumeroDocumento = dto.NumeroDocumento,
                 RazonSocialNombre = dto.RazonSocialNombre,
@@ -67,9 +72,8 @@ public class ClienteService : IClienteService
                 Estado = true
             };
 
-        var clienteCreado = await _unitOfWork.Clientes.RegistrarClienteAsync(cliente);
+            var clienteCreado = await _unitOfWork.Clientes.RegistrarClienteAsync(cliente);
 
-            // ── SOLO SI ES RUC ──
             if (dto.TipoDocumentoId == "06" && dto.Direccion != null)
             {
                 var direccion = new Domain.Entities.Direccion
@@ -85,6 +89,7 @@ public class ClienteService : IClienteService
 
                 await _unitOfWork.Direcciones.CrearDireccionAsync(direccion);
             }
+
             _unitOfWork.Commit();
             var clienteCompleto = await _unitOfWork.Clientes.GetClienteByIdAsync(clienteCreado.ClienteId);
             return MapToDTO(clienteCompleto!);
@@ -96,13 +101,12 @@ public class ClienteService : IClienteService
         }
     }
 
-   public async Task<bool> EditarClienteAsync(EditarClienteDTO dto)
+    public async Task<bool> EditarClienteAsync(EditarClienteDTO dto)
     {
         if (dto.ClienteId == null || dto.ClienteId <= 0)
             throw new ArgumentException("ClienteId es obligatorio");
 
         _unitOfWork.BeginTransaction();
-
         try
         {
             var cliente = new Cliente
@@ -133,7 +137,6 @@ public class ClienteService : IClienteService
             throw new ArgumentException("ClienteId inválido");
 
         _unitOfWork.BeginTransaction();
-
         try
         {
             await _unitOfWork.Clientes.EliminarClienteAsync(clienteId);
@@ -148,12 +151,13 @@ public class ClienteService : IClienteService
         }
     }
 
-    //Metodos privados
+    // Métodos privados
     private ObtenerClientesDTO MapToDTO(Cliente c)
     {
         return new ObtenerClientesDTO
         {
             ClienteId = c.ClienteId,
+            SucursalID = c.SucursalID,
             RazonSocialNombre = c.RazonSocialNombre,
             NumeroDocumento = c.NumeroDocumento,
             NombreComercial = c.NombreComercial,
@@ -184,5 +188,3 @@ public class ClienteService : IClienteService
         };
     }
 }
-
-

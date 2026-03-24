@@ -8,6 +8,7 @@ namespace IdeatecAPI.Application.Features.Clientes.DTOs;
 
     public class RegistrarClienteDTO
     {
+        public int? SucursalID { get; set; }
         public string? NumeroDocumento { get; set; }
         public string? RazonSocialNombre { get; set; }
         public string? NombreComercial { get; set; }
