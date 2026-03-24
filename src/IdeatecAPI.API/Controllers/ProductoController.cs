@@ -21,7 +21,7 @@ public class ProductoController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetAll(int sucursalId)
+    public async Task<IActionResult> GetAllProductosAsync(int sucursalId)
     {
         try
         {
@@ -47,7 +47,7 @@ public class ProductoController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetAllBaseRuc(string empresaRuc)
+    public async Task<IActionResult> GetAllProductosBaseRucAsync(string empresaRuc)
     {
         try
         {
@@ -73,7 +73,7 @@ public class ProductoController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetProductosDisponibles(int sucursalId)
+    public async Task<IActionResult> GetProductosRucDisponiblesAsync(int sucursalId)
     {
         try
         {
@@ -99,7 +99,7 @@ public class ProductoController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetById(int productoId, int sucursalId)
+    public async Task<IActionResult> GetProductoByIdAsync(int productoId, int sucursalId)
     {
         try
         {
@@ -125,12 +125,12 @@ public class ProductoController : ControllerBase
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> Registrar([FromBody] RegistrarProductoDTO dto)
+    public async Task<IActionResult> RegistrarProductoAsync([FromBody] RegistrarProductoDTO dto)
     {
         try
         {
             var productoCreado = await _productoService.RegistrarProductoAsync(dto);
-        return CreatedAtAction(nameof(GetById), new { productoId = productoCreado.ProductoId, sucursalId = dto.SucursalId }, productoCreado);
+            return StatusCode(StatusCodes.Status201Created, productoCreado);
         }
         catch (InvalidOperationException ex)
         {
@@ -158,7 +158,7 @@ public class ProductoController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> Editar(int productoId, [FromBody] EditarProductoDTO dto)
+    public async Task<IActionResult> EditarProductoAsync(int productoId, [FromBody] EditarProductoDTO dto)
     {
         try
         {
@@ -187,7 +187,7 @@ public class ProductoController : ControllerBase
     }
 
     [HttpDelete("{sucursalProductoId:int}")]
-    public async Task<IActionResult> Eliminar(int sucursalProductoId)
+    public async Task<IActionResult> EliminarSucursalProductoAsync(int sucursalProductoId)
     {
         try
         {
@@ -218,7 +218,7 @@ public class ProductoController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetAllRuc(string empresaRuc)
+    public async Task<IActionResult> GetAllProductosRucAsync(string empresaRuc)
     {
         try
         {

@@ -8,8 +8,8 @@ public interface IProductoService
 {
     Task<IEnumerable<ObtenerProductoDTO>> GetAllProductosAsync(int sucursalId); //Producto completo por sucursal
     Task<IEnumerable<ObtenerProductoBaseDTO>> GetAllProductosBaseRucAsync(string empresaRuc); //Proucto base por empresa
-    Task<IEnumerable<ObtenerProductoDTO>> GetAllProductosRucAsync(string empresaRuc);
-    Task<IEnumerable<ObtenerProductoBaseDTO>> GetProductosRucDisponiblesAsync(int sucursalId); // productos disponibles de la misma empresa a agregar a la sede
+    Task<IEnumerable<ObtenerProductoDTO>> GetAllProductosRucAsync(string empresaRuc); // Producto completo por empresa
+    Task<IEnumerable<ObtenerProductoBaseDTO>> GetProductosRucDisponiblesAsync(int sucursalId); // Productos base disponibles de la misma empresa por agregar a la sede
     Task<ObtenerProductoDTO?> GetProductoByIdAsync(int productoId, int sucursalId); //Producto especifico por sucursal
     Task<ObtenerProductoDTO> RegistrarProductoAsync(RegistrarProductoDTO dto);
     Task<bool> EditarProductoAsync(EditarProductoDTO dto);
