@@ -106,7 +106,7 @@ public class SucursalService : ISucursalService
                     Rol = "superadmin",
                     Estado = true,
                     Ruc = dto.EmpresaRuc,
-                    SucursalID = sucursalCreada.SucursalId.ToString(),
+                    SucursalID = null,
                     NombreSucursal = dto.NombreSucursal,
                     TokenVersion = 0,
                     FechaCreacion = DateTime.UtcNow

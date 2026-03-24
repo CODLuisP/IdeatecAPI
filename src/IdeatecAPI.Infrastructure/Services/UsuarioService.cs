@@ -38,7 +38,6 @@ public class UsuarioService : IUsuarioService
                 Email = request.Email,
                 Password = passwordHash,
                 SucursalID = request.SucursalID,
-                NombreSucursal = request.NombreSucursal,
                 Rol = request.Rol ?? "usuario",
                 Estado = true,
                 Ruc = request.Ruc,
@@ -70,8 +69,7 @@ public class UsuarioService : IUsuarioService
                     Rol = nuevoUsuario.Rol,
                     Ruc = nuevoUsuario.Ruc,
                     Estado = nuevoUsuario.Estado,
-                    SucursalID = nuevoUsuario.SucursalID,
-                    NombreSucursal = nuevoUsuario.NombreSucursal
+                    SucursalID = nuevoUsuario.SucursalID
                 }
             };
         }

@@ -166,7 +166,6 @@ public class UsuarioController : ControllerBase
         usuarioExistente.Email = dto.Email;
         usuarioExistente.Ruc = dto.Ruc;
         usuarioExistente.SucursalID = dto.SucursalID;
-        usuarioExistente.NombreSucursal = dto.NombreSucursal;
 
         // Solo admin puede cambiar el rol
         if (User.IsInRole("admin") && !string.IsNullOrEmpty(dto.Rol))

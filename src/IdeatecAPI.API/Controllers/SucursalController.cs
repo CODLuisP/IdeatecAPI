@@ -22,18 +22,15 @@ public class SucursalController : ControllerBase
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> ObtenerTodos()
+    public async Task<IActionResult> ObtenerTodos([FromQuery] string? ruc = null, [FromQuery] string? sucursalID = null)
     {
         try
         {
-            var ruc = User.FindFirst("ruc")?.Value;
-            if (string.IsNullOrEmpty(ruc))
-                return Unauthorized(new { mensaje = "RUC no encontrado en el token" });
+            // Si no viene por parámetro, intentar del token
+            ruc ??= User.FindFirst("ruc")?.Value;
 
-            // superadmin ve todas, admin solo la suya
-            var sucursalID = User.IsInRole("superadmin")
-                ? null
-                : User.FindFirst("sucursalID")?.Value;
+            if (string.IsNullOrEmpty(ruc))
+                return BadRequest(new { mensaje = "RUC es requerido" });
 
             var resultado = await _sucursalService.GetByRucSucursalAsync(ruc, sucursalID);
             return Ok(resultado);
