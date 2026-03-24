@@ -162,34 +162,23 @@ public class UsuarioRepository : DapperRepository<Usuario>, IUsuarioRepository
 
     public new async Task<bool> DeleteAsync(int id)
     {
-        var sql = @"
-            UPDATE usuario 
-            SET estado = 0, fechaActualizacion = @Now 
-            WHERE usuarioID = @Id";
-
-        var rowsAffected = await _connection.ExecuteAsync(
-            sql, new { Id = id, Now = DateTime.UtcNow }, _transaction);
-
-        return rowsAffected > 0;
+        var sql = "DELETE FROM usuario WHERE usuarioID = @Id";
+        var rows = await _connection.ExecuteAsync(sql, new { Id = id }, _transaction);
+        return rows > 0;
     }
 
-    public async Task<bool> ExistsAsync(string username, string email, string? ruc = null, int? excludeId = null)
-    {
-        var sql = @"SELECT COUNT(1) FROM usuario WHERE (username = @Username OR email = @Email";
+    public async Task<bool> ExistsAsync(string username, string? email = null, string? ruc = null, int? excludeId = null)
+{
+    var sql = @"SELECT COUNT(1) FROM usuario WHERE username = @Username";
 
-        if (!string.IsNullOrEmpty(ruc))
-            sql += " OR ruc = @Ruc";
+    if (excludeId.HasValue)
+        sql += " AND usuarioID != @ExcludeId";
 
-        sql += ")";
+    var count = await _connection.ExecuteScalarAsync<int>(
+        sql, new { Username = username, ExcludeId = excludeId }, _transaction);
 
-        if (excludeId.HasValue)
-            sql += " AND usuarioID != @ExcludeId";
-
-        var count = await _connection.ExecuteScalarAsync<int>(
-            sql, new { Username = username, Email = email, Ruc = ruc, ExcludeId = excludeId }, _transaction);
-
-        return count > 0;
-    }
+    return count > 0;
+}
 
     // ── Recuperación de contraseña ─────────────────────────────────────────
 

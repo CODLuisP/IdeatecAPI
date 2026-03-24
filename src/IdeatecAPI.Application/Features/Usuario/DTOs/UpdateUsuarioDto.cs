@@ -7,20 +7,14 @@ public class UpdateUsuarioDto
     [Required]
     public int UsuarioID { get; set; }
 
-    [Required(ErrorMessage = "El username es requerido")]
+    [Required]
     [StringLength(50, MinimumLength = 4)]
     public string Username { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "El email es requerido")]
-    [EmailAddress(ErrorMessage = "Email inválido")]
+    [Required]
+    [EmailAddress]
     [StringLength(100)]
     public string Email { get; set; } = string.Empty;
-
-    public string? SucursalID { get; set; }
-
-    [StringLength(11)]
-    [RegularExpression(@"^\d{11}$", ErrorMessage = "El RUC debe tener exactamente 11 dígitos")]
-    public string? Ruc { get; set; }
 
     [StringLength(20)]
     public string? Rol { get; set; }
