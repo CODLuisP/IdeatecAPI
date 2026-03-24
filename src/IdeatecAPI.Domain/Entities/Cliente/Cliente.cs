@@ -2,6 +2,7 @@ namespace IdeatecAPI.Domain.Entities;
 public class Cliente
 {
     public int ClienteId { get; set; }
+    public int SucursalID { get; set; }
     public string? TipoDocumentoId { get; set; } //Catalogo 06
     public TipoDocumento? TipoDocumentoCliente { get; set; } //Catalogo 06
     public string? NumeroDocumento { get; set; }

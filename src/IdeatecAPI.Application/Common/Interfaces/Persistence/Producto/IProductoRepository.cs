@@ -4,7 +4,7 @@ namespace IdeatecAPI.Application.Common.Interfaces.Persistence;
 
 public interface IProductoRepository : IRepository<Producto>
 {
-    Task<IEnumerable<Producto>> GetAllProductosAsync(int sucursalId);
+    Task<IEnumerable<Producto>> GetAllProductosAsync(int sucursalId); //Producto completo por sucursal
     Task<IEnumerable<Producto>> GetAllProductosBaseRucAsync(string empresaRuc);
     Task<IEnumerable<Producto>> GetAllProductosRucAsync(string empresaRuc);
     Task<IEnumerable<Producto>> GetProductosRucDisponiblesAsync(int sucursalId);
