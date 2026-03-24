@@ -15,6 +15,8 @@ public class SucursalRepository : DapperRepository<Sucursal>, ISucursalRepositor
         SELECT sucursalID                   AS SucursalId,
                empresaRuc                   AS EmpresaRuc,
                codEstablecimiento           AS CodEstablecimiento,
+               nombre                       AS Nombre,
+               direccion                    AS Direccion,
                serieFactura                 AS SerieFactura,
                correlativoFactura           AS CorrelativoFactura,
                serieBoleta                  AS SerieBoleta,
@@ -44,18 +46,22 @@ public class SucursalRepository : DapperRepository<Sucursal>, ISucursalRepositor
                ?? throw new KeyNotFoundException($"Sucursal con ID {sucursalId} no encontrada.");
     }
 
-    public async Task<IEnumerable<Sucursal>> GetByRucSucursalAsync(string empresaRuc)
+    public async Task<IEnumerable<Sucursal>> GetByRucSucursalAsync(string empresaRuc, string? sucursalID = null)
     {
         var sql = $"{SelectColumns} AND empresaRuc = @EmpresaRuc";
 
-        return await _connection.QueryAsync<Sucursal>(sql, new { EmpresaRuc = empresaRuc }, _transaction);
+        if (!string.IsNullOrEmpty(sucursalID))
+            sql += " AND sucursalID = @SucursalID";
+
+        return await _connection.QueryAsync<Sucursal>(
+            sql, new { EmpresaRuc = empresaRuc, SucursalID = sucursalID }, _transaction);
     }
 
     public async Task<Sucursal> RegistrarSucursalAsync(Sucursal sucursal)
     {
         var sql = @"
             INSERT INTO sucursal (
-                empresaRuc, codEstablecimiento,
+                empresaRuc, codEstablecimiento, nombre, direccion,
                 serieFactura, correlativoFactura,
                 serieBoleta, correlativoBoleta,
                 serieNotaCredito, correlativoNotaCredito,
@@ -63,7 +69,7 @@ public class SucursalRepository : DapperRepository<Sucursal>, ISucursalRepositor
                 serieGuiaRemision, correlativoGuiaRemision,
                 serieGuiaTransportista, correlativoGuiaTransportista
             ) VALUES (
-                @EmpresaRuc, @CodEstablecimiento,
+                @EmpresaRuc, @CodEstablecimiento, @Nombre, @Direccion,
                 @SerieFactura, @CorrelativoFactura,
                 @SerieBoleta, @CorrelativoBoleta,
                 @SerieNotaCredito, @CorrelativoNotaCredito,
@@ -82,6 +88,8 @@ public class SucursalRepository : DapperRepository<Sucursal>, ISucursalRepositor
     {
         var sql = @"
             UPDATE sucursal SET
+                nombre                       = @Nombre,
+                direccion                    = @Direccion,
                 serieFactura                 = @SerieFactura,
                 correlativoFactura           = @CorrelativoFactura,
                 serieBoleta                  = @SerieBoleta,
@@ -102,9 +110,22 @@ public class SucursalRepository : DapperRepository<Sucursal>, ISucursalRepositor
 
     public async Task<bool> EliminarSucursalAsync(int sucursalId)
     {
-        var sql = @"UPDATE sucursal SET estado = 0 WHERE sucursalID = @SucursalId AND estado = 1";
+        var sql = @"DELETE FROM sucursal WHERE sucursalID = @SucursalId";
 
         var filas = await _connection.ExecuteAsync(sql, new { SucursalId = sucursalId }, _transaction);
+        return filas > 0;
+    }
+
+    public async Task<bool> EditarInfoAsync(int sucursalId, string? nombre, string? direccion)
+    {
+        var sql = @"
+        UPDATE sucursal SET
+            nombre    = COALESCE(@Nombre, nombre),
+            direccion = COALESCE(@Direccion, direccion)
+        WHERE sucursalID = @SucursalId";
+
+        var filas = await _connection.ExecuteAsync(sql,
+            new { Nombre = nombre, Direccion = direccion, SucursalId = sucursalId }, _transaction);
         return filas > 0;
     }
 }

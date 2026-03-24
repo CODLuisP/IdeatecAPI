@@ -7,10 +7,11 @@ public interface ISucursalService
 {
     Task<IEnumerable<ObtenerSucursalDTO>> GetAllSucursalAsync();
     Task<ObtenerSucursalDTO> GetByIdSucursalAsync(int sucursalId);
-    Task<IEnumerable<ObtenerSucursalDTO>> GetByRucSucursalAsync(string empresaRuc);
+    Task<IEnumerable<ObtenerSucursalDTO>> GetByRucSucursalAsync(string empresaRuc, string? sucursalID = null);
     Task<ObtenerSucursalDTO> RegistrarSucursalAsync(AgregarSucursalDTO agregarSucursalDTO);
     Task<bool> EditarSucursalAsync(EditarSucursalDTO editarSucursalDTO);
     Task<bool> EliminarSucursalAsync(int SucursalId);
+    Task<bool> EditarInfoSucursalAsync(int sucursalId, string? nombre, string? direccion);
 }
 
 public class SucursalService : ISucursalService
@@ -34,9 +35,9 @@ public class SucursalService : ISucursalService
         return MapToDTO(sucursal);
     }
 
-    public async Task<IEnumerable<ObtenerSucursalDTO>> GetByRucSucursalAsync(string empresaRuc)
+    public async Task<IEnumerable<ObtenerSucursalDTO>> GetByRucSucursalAsync(string empresaRuc, string? sucursalID = null)
     {
-        var sucursales = await _unitOfWork.Sucursal.GetByRucSucursalAsync(empresaRuc);
+        var sucursales = await _unitOfWork.Sucursal.GetByRucSucursalAsync(empresaRuc, sucursalID);
         return sucursales.Select(MapToDTO);
     }
 
@@ -54,6 +55,8 @@ public class SucursalService : ISucursalService
             {
                 EmpresaRuc = dto.EmpresaRuc,
                 CodEstablecimiento = dto.CodEstablecimiento,
+                Nombre = dto.Nombre,
+                Direccion = dto.Direccion,
                 SerieFactura = dto.SerieFactura,
                 CorrelativoFactura = dto.CorrelativoFactura,
                 SerieBoleta = dto.SerieBoleta,
@@ -103,7 +106,7 @@ public class SucursalService : ISucursalService
                     Rol = "superadmin",
                     Estado = true,
                     Ruc = dto.EmpresaRuc,
-                    SucursalID = sucursalCreada.SucursalId.ToString(),
+                    SucursalID = null,
                     NombreSucursal = dto.NombreSucursal,
                     TokenVersion = 0,
                     FechaCreacion = DateTime.UtcNow
@@ -127,6 +130,8 @@ public class SucursalService : ISucursalService
         var sucursal = await _unitOfWork.Sucursal.GetByIdSucursalAsync(dto.SucursalId)
                        ?? throw new KeyNotFoundException($"Sucursal con ID {dto.SucursalId} no encontrada.");
 
+        sucursal.Nombre = dto.Nombre;
+        sucursal.Direccion = dto.Nombre;
         sucursal.SerieFactura = dto.SerieFactura;
         sucursal.CorrelativoFactura = dto.CorrelativoFactura;
         sucursal.SerieBoleta = dto.SerieBoleta;
@@ -156,6 +161,8 @@ public class SucursalService : ISucursalService
         SucursalId = s.SucursalId,
         EmpresaRuc = s.EmpresaRuc,
         CodEstablecimiento = s.CodEstablecimiento,
+        Nombre = s.Nombre,
+        Direccion = s.Direccion,
         SerieFactura = s.SerieFactura,
         CorrelativoFactura = s.CorrelativoFactura,
         SerieBoleta = s.SerieBoleta,
@@ -170,4 +177,9 @@ public class SucursalService : ISucursalService
         CorrelativoGuiaTransportista = s.CorrelativoGuiaTransportista,
         Estado = s.Estado
     };
+
+    public async Task<bool> EditarInfoSucursalAsync(int sucursalId, string? nombre, string? direccion)
+    {
+        return await _unitOfWork.Sucursal.EditarInfoAsync(sucursalId, nombre, direccion);
+    }
 }

@@ -34,6 +34,7 @@ public class TokenService : ITokenService
             new Claim(ClaimTypes.Role, usuario.Rol),
             new Claim("sucursalID", usuario.SucursalID ?? ""),
             new Claim("tokenVersion", usuario.TokenVersion.ToString()),
+            new Claim("nombreEmpresa", usuario.NombreEmpresa ?? ""),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 

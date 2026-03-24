@@ -7,7 +7,7 @@ namespace IdeatecAPI.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+//[Authorize]
 public class SucursalController : ControllerBase
 {
     private readonly ISucursalService _sucursalService;
@@ -22,15 +22,17 @@ public class SucursalController : ControllerBase
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> ObtenerTodos()
+    public async Task<IActionResult> ObtenerTodos([FromQuery] string? ruc = null, [FromQuery] string? sucursalID = null)
     {
         try
         {
-            var ruc = User.FindFirst("ruc")?.Value;
-            if (string.IsNullOrEmpty(ruc))
-                return Unauthorized(new { mensaje = "RUC no encontrado en el token" });
+            // Si no viene por parámetro, intentar del token
+            ruc ??= User.FindFirst("ruc")?.Value;
 
-            var resultado = await _sucursalService.GetByRucSucursalAsync(ruc);
+            if (string.IsNullOrEmpty(ruc))
+                return BadRequest(new { mensaje = "RUC es requerido" });
+
+            var resultado = await _sucursalService.GetByRucSucursalAsync(ruc, sucursalID);
             return Ok(resultado);
         }
         catch (Exception ex)
@@ -105,6 +107,26 @@ public class SucursalController : ControllerBase
                 mensaje = "Ocurrió un error al registrar la sucursal.",
                 detalle = ex.Message
             });
+        }
+    }
+
+    [HttpPatch("{sucursalId:int}")]
+    [Authorize(Roles = "admin,superadmin")]
+    public async Task<IActionResult> EditarInfo(int sucursalId, [FromBody] EditarInfoSucursalDTO dto)
+    {
+        try
+        {
+            var resultado = await _sucursalService.EditarInfoSucursalAsync(sucursalId, dto.Nombre, dto.Direccion);
+
+            if (!resultado)
+                return NotFound(new { mensaje = $"No se encontró la sucursal con ID {sucursalId}." });
+
+            return Ok(new { mensaje = "Sucursal actualizada correctamente." });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al editar sucursal {SucursalId}", sucursalId);
+            return StatusCode(500, new { mensaje = "Error al actualizar la sucursal.", detalle = ex.Message });
         }
     }
 
