@@ -219,22 +219,31 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
     }
     private async Task ActualizarSerieCorrelativoAsync(Comprobante comprobante)
     {
-        var sql = @"
-            UPDATE serie
-            SET correlativoActual = @Correlativo,
-                fechaActualizacion = @FechaCreacion
-            WHERE empresaRuc = @EmpresaRuc 
-            AND tipoComprobante = @TipoComprobante
-            AND conEstablecimiento = @EmpresaEstablecimientoAnexo";
+        string sql = comprobante.TipoComprobante switch
+        {
+            "01" => @"UPDATE sucursal SET 
+                        serieFactura       = @Serie,
+                        correlativoFactura = @Correlativo
+                    WHERE empresaRuc           = @EmpresaRuc 
+                    AND codEstablecimiento     = @EmpresaEstablecimientoAnexo
+                    AND estado                = 1",
+
+            "03" => @"UPDATE sucursal SET 
+                        serieBoleta       = @Serie,
+                        correlativoBoleta = @Correlativo
+                    WHERE empresaRuc           = @EmpresaRuc 
+                    AND codEstablecimiento     = @EmpresaEstablecimientoAnexo
+                    AND estado                = 1",
+
+            _ => throw new InvalidOperationException($"Tipo de comprobante '{comprobante.TipoComprobante}' no soportado.")
+        };
 
         var parameters = new
         {
             comprobante.Serie,
             comprobante.Correlativo,
-            comprobante.EmpresaEstablecimientoAnexo,
-            comprobante.FechaCreacion,
             comprobante.EmpresaRuc,
-            comprobante.TipoComprobante
+            comprobante.EmpresaEstablecimientoAnexo
         };
 
         await _connection.ExecuteAsync(sql, parameters, _transaction);
