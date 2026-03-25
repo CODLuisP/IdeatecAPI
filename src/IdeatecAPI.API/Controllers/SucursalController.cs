@@ -22,7 +22,7 @@ public class SucursalController : ControllerBase
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> ObtenerTodos([FromQuery] string? ruc = null, [FromQuery] string? sucursalID = null)
+    public async Task<IActionResult> ObtenerTodos([FromQuery] string? ruc = null)
     {
         try
         {
@@ -32,7 +32,7 @@ public class SucursalController : ControllerBase
             if (string.IsNullOrEmpty(ruc))
                 return BadRequest(new { mensaje = "RUC es requerido" });
 
-            var resultado = await _sucursalService.GetByRucSucursalAsync(ruc, sucursalID);
+            var resultado = await _sucursalService.GetByRucSucursalAsync(ruc);
             return Ok(resultado);
         }
         catch (Exception ex)
