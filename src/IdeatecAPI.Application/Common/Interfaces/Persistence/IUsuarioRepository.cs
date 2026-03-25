@@ -13,7 +13,7 @@ public interface IUsuarioRepository
     Task<IEnumerable<Usuario>> GetAllAsync(bool soloActivos = true, string? ruc = null, string? sucursalID = null);
     Task<bool> UpdateAsync(Usuario usuario);
     Task<bool> DeleteAsync(int id); // Soft delete (cambiar estado a false)
-    Task<bool> ExistsAsync(string username, string email, string? ruc = null, int? excludeId = null);
+    Task<bool> ExistsAsync(string username, string? email = null, string? ruc = null, int? excludeId = null);
 
     // ── Métodos para recuperación de contraseña ──
 
