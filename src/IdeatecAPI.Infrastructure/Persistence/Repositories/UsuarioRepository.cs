@@ -26,6 +26,8 @@ public class UsuarioRepository : DapperRepository<Usuario>, IUsuarioRepository
             u.sucursalID          AS SucursalID,
             s.nombre              AS NombreSucursal,
             COALESCE(e.nombreComercial, e.razonSocial) AS NombreEmpresa,
+            e.environment         AS Environment,
+            e.logoBase64          AS LogoBase64,
             u.tokenVersion        AS TokenVersion,
             u.fechaCreacion       AS FechaCreacion,
             u.fechaUltimoAcceso   AS FechaUltimoAcceso
@@ -108,7 +110,7 @@ public class UsuarioRepository : DapperRepository<Usuario>, IUsuarioRepository
             sql, new { Id = id }, _transaction);
     }
 
-    public async Task<IEnumerable<Usuario>> GetAllAsync(bool soloActivos = true, string? ruc = null, string? sucursalID = null)
+    public async Task<IEnumerable<Usuario>> GetAllAsync(bool soloActivos = true, string? ruc = null, string? sucursalID = null, int? usuarioId = null)
     {
         var sql = @"
         SELECT 
@@ -135,10 +137,13 @@ public class UsuarioRepository : DapperRepository<Usuario>, IUsuarioRepository
 
         if (!string.IsNullOrEmpty(sucursalID))
             sql += " AND u.sucursalID = @SucursalID AND u.rol != 'superadmin'";
+        
+        if (usuarioId.HasValue)
+            sql += " AND u.usuarioID = @UsuarioId";
 
         sql += " ORDER BY u.fechaCreacion DESC";
 
-        return await _connection.QueryAsync<Usuario>(sql, new { Ruc = ruc, SucursalID = sucursalID }, transaction: _transaction);
+        return await _connection.QueryAsync<Usuario>(sql, new { Ruc = ruc, SucursalID = sucursalID, UsuarioId = usuarioId }, transaction: _transaction);
     }
 
     public new async Task<bool> UpdateAsync(Usuario usuario)
