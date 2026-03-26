@@ -10,7 +10,7 @@ public interface IUsuarioRepository
 
     Task<int> CreateAsync(Usuario usuario);
     Task<Usuario?> GetByIdAsync(int id);
-    Task<IEnumerable<Usuario>> GetAllAsync(bool soloActivos = true, string? ruc = null, string? sucursalID = null);
+    Task<IEnumerable<Usuario>> GetAllAsync(bool soloActivos = true, string? ruc = null, string? sucursalID = null, int? usuarioId = null);
     Task<bool> UpdateAsync(Usuario usuario);
     Task<bool> DeleteAsync(int id); // Soft delete (cambiar estado a false)
     Task<bool> ExistsAsync(string username, string? email = null, string? ruc = null, int? excludeId = null);
