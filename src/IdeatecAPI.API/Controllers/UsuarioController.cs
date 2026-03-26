@@ -67,13 +67,28 @@ public class UsuarioController : ControllerBase
     public async Task<IActionResult> GetAll([FromQuery] bool incluirInactivos = false)
     {
         var ruc = User.FindFirst("ruc")?.Value;
-        var sucursalID = User.FindFirst("sucursalID")?.Value; // ← necesitas este claim
+        var sucursalID = User.FindFirst("sucursalID")?.Value;
+        var rolClaim = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
 
-        // superadmin ve todos los de su RUC
-        // admin ve solo los de su sucursal
-        var filtrarPorSucursal = User.IsInRole("superadmin") ? null : sucursalID;
+        string? filtrarPorSucursal = null;
+        int? filtrarPorUsuario = null;
 
-        var usuarios = await _unitOfWork.Usuarios.GetAllAsync(!incluirInactivos, ruc, filtrarPorSucursal);
+        if (rolClaim == "superadmin")
+        {
+            filtrarPorSucursal = null; // ve toda la empresa
+        }
+        else if (rolClaim == "admin")
+        {
+            filtrarPorSucursal = sucursalID; // ve su sucursal
+        }
+        else
+        {
+            // facturador → solo se ve a sí mismo
+            var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (int.TryParse(userIdStr, out var uid)) filtrarPorUsuario = uid;
+        }
+
+        var usuarios = await _unitOfWork.Usuarios.GetAllAsync(!incluirInactivos, ruc, filtrarPorSucursal, filtrarPorUsuario);
 
         var usuariosDto = usuarios.Select(u => new UsuarioDto
         {
@@ -88,12 +103,7 @@ public class UsuarioController : ControllerBase
             FechaUltimoAcceso = u.FechaUltimoAcceso
         });
 
-        return Ok(new
-        {
-            success = true,
-            data = usuariosDto,
-            total = usuariosDto.Count()
-        });
+        return Ok(new { success = true, data = usuariosDto, total = usuariosDto.Count() });
     }
 
     /// <summary>
