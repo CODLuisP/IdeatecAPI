@@ -14,6 +14,7 @@ public class GenerarComprobanteDTO
     public DateTime HoraEmision { get; set; }
     public DateTime FechaVencimiento { get; set; }
     public string TipoMoneda { get; set; } = "PEN";
+    public decimal? TipoCambio { get; set; }
     public string? TipoPago { get; set; } = "Contado";
 
     public ClienteDTO? Cliente { get; set; } = new();

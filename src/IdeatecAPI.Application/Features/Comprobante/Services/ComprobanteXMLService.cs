@@ -126,6 +126,7 @@ public class ComprobanteService : IComprobanteService
                 HoraEmision = dto.FechaEmision,
                 FechaVencimiento = dto.FechaVencimiento,
                 TipoMoneda = dto.TipoMoneda,
+                TipoCambio = dto.TipoCambio,
                 TipoPago = dto.TipoPago,
                 EmpresaId = dto.Company.EmpresaId,
                 EmpresaRuc = dto.Company.NumeroDocumento,
@@ -296,6 +297,7 @@ public class ComprobanteService : IComprobanteService
             FechaVencimiento = comprobante.FechaVencimiento,
             TipoMoneda = comprobante.TipoMoneda!,
             TipoPago = comprobante.TipoPago,
+            TipoCambio = comprobante.TipoCambio,
             // ← decimales nullable necesitan ?? 0
             CodigoTipoDescGlobal = comprobante.CodigoTipoDescGlobal ?? "",
             DescuentoGlobal = comprobante.DescuentoGlobal ?? 0,
@@ -587,7 +589,7 @@ public class ComprobanteService : IComprobanteService
             Serie = comprobante.Serie ?? "",
             Correlativo = comprobante.Correlativo?.ToString() ?? "",
             NumeroCompleto = comprobante.NumeroCompleto ?? "",
-            TipoCambio = 0, // si luego manejas TC lo puedes mapear aquí
+            TipoCambio = comprobante.TipoCambio ?? 0,
             FechaEmision = comprobante.FechaEmision,
             HoraEmision = comprobante.HoraEmision,
             FechaVencimiento = comprobante.FechaVencimiento,
