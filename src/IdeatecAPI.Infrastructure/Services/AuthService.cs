@@ -85,6 +85,7 @@ public class AuthService : IAuthService
                     SucursalID = usuario.SucursalID,
                     NombreSucursal = usuario.NombreSucursal,
                     NombreEmpresa = usuario.NombreEmpresa,
+                    Environment   = usuario.Environment,
                 }
             };
         }
