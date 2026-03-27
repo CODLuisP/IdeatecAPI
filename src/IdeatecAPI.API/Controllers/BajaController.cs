@@ -7,7 +7,7 @@ namespace IdeatecAPI.API.Controllers;
 
 [ApiController]
 [Route("api/bajas")]
-//[Authorize]
+[Authorize]
 
 public class BajaController : ControllerBase
 {

@@ -1,15 +1,13 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using IdeatecAPI.Application.Features.ResumenComprobante.DTO;
 using IdeatecAPI.Application.Features.ResumenComprobante.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IdeatecAPI.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class ResumenComprobanteController : ControllerBase
 {
     private readonly IResumenComprobanteService _resumenComprobanteService;
