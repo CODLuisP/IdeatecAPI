@@ -13,7 +13,7 @@ public class FileUploadRequest
 
 [ApiController]
 [Route("api/companies")]
-// [Authorize]
+[Authorize]
 public class CompaniesController : ControllerBase
 {
     private readonly IEmpresaService _empresaService;

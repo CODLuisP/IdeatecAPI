@@ -1,10 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
 using IdeatecAPI.Application.Features.Categorias.Services;
 using IdeatecAPI.Application.Features.Categorias.DTOs;
+using Microsoft.AspNetCore.Authorization;
 namespace IdeatecAPI.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
+
 public class CategoriasController : ControllerBase
 {
     private readonly ICategoriaService _categoriaService;

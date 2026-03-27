@@ -90,6 +90,7 @@ public class GeneraXmlService : IComprobanteXmlService
                 new XAttribute("listAgencyName", "United Nations Economic Commission for Europe"),
                 moneda),
             new XElement(Cbc + "LineCountNumeric", dto.Details.Count)
+            
         );
 
         // ── Guías de remisión ────────────────────────────────────────────
@@ -170,6 +171,18 @@ public class GeneraXmlService : IComprobanteXmlService
                             cuota.FechaVencimiento.ToString("yyyy-MM-dd"))));
                 }
             }
+        }
+
+        // ── Tipo de cambio DESPUÉS de PaymentTerms ────────────────────────
+        if (dto.TipoMoneda != "PEN" && dto.TipoCambio.HasValue)
+        {
+            root.Add(new XElement(Cac + "TaxExchangeRate",
+                new XElement(Cbc + "SourceCurrencyCode", dto.TipoMoneda),
+                new XElement(Cbc + "TargetCurrencyCode", "PEN"),
+                new XElement(Cbc + "CalculationRate",
+                    dto.TipoCambio.Value.ToString("F3")),
+                new XElement(Cbc + "Date",
+                    dto.FechaEmision.ToString("yyyy-MM-dd"))));
         }
 
         // ── Descuento global ─────────────────────────────────────────────

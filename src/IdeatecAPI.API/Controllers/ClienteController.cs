@@ -1,11 +1,13 @@
 using IdeatecAPI.Application.Features.Clientes.DTOs;
 using IdeatecAPI.Application.Features.Clientes.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace IdeatecAPI.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class ClienteController : ControllerBase
 {
     private readonly IClienteService _clienteService;
@@ -98,6 +100,32 @@ public class ClienteController : ControllerBase
             return StatusCode(StatusCodes.Status500InternalServerError, new
             {
                 mensaje = "Ocurrió un error al obtener el cliente.",
+                detalle = ex.Message
+            });
+        }
+    }
+
+    // GET api/cliente/search/{empresaRuc}?q=ana
+    [HttpGet("search/{empresaRuc}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> SearchClientesAsync(string empresaRuc, [FromQuery] string q)
+    {
+        if (string.IsNullOrWhiteSpace(q))
+            return BadRequest(new { mensaje = "Debes ingresar al menos una letra para buscar." });
+
+        try
+        {
+            var clientes = await _clienteService.SearchClientesAsync(empresaRuc, q);
+            return Ok(clientes);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al buscar clientes para RUC {EmpresaRuc} con palabra '{Palabra}'", empresaRuc, q);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al buscar los clientes.",
                 detalle = ex.Message
             });
         }

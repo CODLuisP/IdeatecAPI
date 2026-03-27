@@ -16,7 +16,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
             INSERT INTO comprobante (
                 tipoOperacion, tipoComprobante, serie, correlativo,
                 fechaEmision, horaEmision, fechaVencimiento, tipoMoneda,
-                tipoPago,
+                tipoPago, tipoCambio,
                 empresaID, empresaRuc, empresaRazonSocial, empresaNombreComercial,
                 empresaDireccion, empresaProvincia, empresaDepartamento,
                 empresaDistrito, empresaUbigeo, establecimientoAnexo,
@@ -30,7 +30,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
             ) VALUES (
                 @TipoOperacion, @TipoComprobante, @Serie, @Correlativo,
                 @FechaEmision, @HoraEmision, @FechaVencimiento, @TipoMoneda,
-                @TipoPago,
+                @TipoPago, @TipoCambio,
                 @EmpresaId, @EmpresaRuc, @EmpresaRazonSocial, @EmpresaNombreComercial,
                 @EmpresaDireccion, @EmpresaProvincia, @EmpresaDepartamento,
                 @EmpresaDistrito, @EmpresaUbigeo, @EmpresaEstablecimientoAnexo,
@@ -55,6 +55,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
             FechaVencimiento = comprobante.FechaVencimiento.Date,
             comprobante.TipoMoneda,
             comprobante.TipoPago,
+            comprobante.TipoCambio,
             comprobante.EmpresaId,
             comprobante.EmpresaRuc,
             comprobante.EmpresaRazonSocial,

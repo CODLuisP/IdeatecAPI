@@ -306,4 +306,65 @@ public class ClienteRepository : DapperRepository<Cliente>, IClienteRepository
             _transaction
         );
     }
+
+    public async Task<IEnumerable<Cliente>> SearchByRucAsync(string empresaRuc, string palabra)
+    {
+        var sql = @"
+        SELECT
+            c.clienteID          AS ClienteId,
+            c.sucursalID         AS SucursalID,
+            c.numeroDocumento    AS NumeroDocumento,
+            c.razonSocial        AS RazonSocialNombre,
+            c.nombreComercial    AS NombreComercial,
+            c.fechaCreacion      AS FechaCreacion,
+            c.telefono           AS Telefono,
+            c.email              AS Correo,
+            c.estado             AS Estado,
+
+            td.tipoDocumentoId   AS TipoDocumentoId,
+            td.tipoDocumento     AS TipoDocumentoNombre,
+
+            d.direccionId        AS DireccionId,
+            d.direccionLineal    AS DireccionLineal,
+            d.ubigeo             AS Ubigeo,
+            d.departamento       AS Departamento,
+            d.provincia          AS Provincia,
+            d.distrito           AS Distrito,
+            d.tipoDireccion      AS TipoDireccion
+        FROM cliente c
+        INNER JOIN sucursal s ON s.sucursalID = c.sucursalID
+        LEFT JOIN tipodocumento td ON td.tipoDocumentoId = c.tipoDocumentoId
+        LEFT JOIN direccion d ON d.clienteID = c.clienteID AND d.estado = 1
+        WHERE s.empresaRuc = @EmpresaRuc
+          AND c.estado = 1
+          AND (c.razonSocial LIKE @Palabra OR c.numeroDocumento LIKE @Palabra)
+        ORDER BY c.razonSocial ASC
+        LIMIT 10;";
+
+        var clienteDictionary = new Dictionary<int, Cliente>();
+
+        await _connection.QueryAsync<Cliente, TipoDocumento, Direccion, Cliente>(
+            sql,
+            (cliente, tipoDoc, direccion) =>
+            {
+                if (!clienteDictionary.TryGetValue(cliente.ClienteId, out var clienteEntry))
+                {
+                    clienteEntry = cliente;
+                    clienteEntry.TipoDocumentoCliente = tipoDoc;
+                    clienteEntry.Direcciones = new List<Direccion>();
+                    clienteDictionary.Add(clienteEntry.ClienteId, clienteEntry);
+                }
+
+                if (direccion != null && direccion.DireccionId != 0)
+                    clienteEntry.Direcciones.Add(direccion);
+
+                return clienteEntry;
+            },
+            new { EmpresaRuc = empresaRuc, Palabra = $"%{palabra}%" },
+            transaction: _transaction,
+            splitOn: "TipoDocumentoId,DireccionId"
+        );
+
+        return clienteDictionary.Values;
+    }
 }

@@ -1,11 +1,14 @@
 using IdeatecAPI.Application.Features.Comprobante.DTOs;
 using IdeatecAPI.Application.Features.Comprobante.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IdeatecAPI.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
+
 public class ComprobantesController : ControllerBase
 {
     private readonly IComprobanteService _comprobanteService;
