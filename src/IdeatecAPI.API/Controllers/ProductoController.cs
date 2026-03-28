@@ -1,11 +1,13 @@
 using IdeatecAPI.Application.Features.Productos.DTO;
 using IdeatecAPI.Application.Features.Productos.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IdeatecAPI.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class ProductoController : ControllerBase
 {
     private readonly IProductoService _productoService;

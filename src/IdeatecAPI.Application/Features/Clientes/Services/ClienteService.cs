@@ -11,9 +11,10 @@ public interface IClienteService
     Task<IEnumerable<ObtenerClientesDTO>> GetAllClientesRucAsync(string empresaRuc); // Todos los clientes de un RUC
     Task<IEnumerable<ObtenerClientesDTO>> GetAllClientesSucursalAsync(int sucursalId); // Clientes registrados en una sucursal
     Task<ObtenerClientesDTO?> GetClienteByIdEmpresaAsync(string empresaRuc, int clienteId); // Cliente unico de una empresa
-    Task<ObtenerClientesDTO> RegistrarClienteAsync(RegistrarClienteDTO cliente); 
+    Task<ObtenerClientesDTO> RegistrarClienteAsync(RegistrarClienteDTO cliente);
     Task<bool> EditarClienteAsync(EditarClienteDTO cliente);
     Task<bool> EliminarClienteAsync(int clienteId);
+    Task<IEnumerable<ObtenerClientesDTO>> SearchClientesAsync(string empresaRuc, string palabra);
 }
 
 public class ClienteService : IClienteService
@@ -55,7 +56,7 @@ public class ClienteService : IClienteService
         var existente = await _unitOfWork.Clientes.GetByClienteRepetidoEmpresaAsync(dto.NumeroDocumento!, dto.SucursalID!.Value);
         if (existente != null)
             throw new InvalidOperationException($"Ya existe un cliente con el documento '{dto.NumeroDocumento}' en este RUC.");
-            
+
         _unitOfWork.BeginTransaction();
         try
         {
@@ -186,5 +187,11 @@ public class ClienteService : IClienteService
                     TipoDocumentoNombre = c.TipoDocumentoCliente.TipoDocumentoNombre
                 }
         };
+    }
+
+    public async Task<IEnumerable<ObtenerClientesDTO>> SearchClientesAsync(string empresaRuc, string palabra)
+    {
+        var clientes = await _unitOfWork.Clientes.SearchByRucAsync(empresaRuc, palabra);
+        return clientes.Select(MapToDTO);
     }
 }

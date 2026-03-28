@@ -8,7 +8,7 @@ namespace IdeatecAPI.API.Controllers;
 
 [ApiController]
 [Route("api/guias")]
-//[Authorize]
+[Authorize]
 
 public class GuiaController : ControllerBase
 {

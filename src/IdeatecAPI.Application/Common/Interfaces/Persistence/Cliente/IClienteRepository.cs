@@ -14,4 +14,5 @@ public interface IClienteRepository : IRepository<Cliente>
     Task<bool> EliminarClienteAsync(int clienteId);
     Task<Cliente?> GetByNumDocAsync(string numeroDocumento); // interno solo tabla cliente, no va al controller
     Task<Cliente?> GetByClienteRepetidoEmpresaAsync(string numeroDocumento, int sucursalId);
+    Task<IEnumerable<Cliente>> SearchByRucAsync(string empresaRuc, string palabra);
 }

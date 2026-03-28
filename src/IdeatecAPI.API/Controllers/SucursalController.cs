@@ -7,7 +7,7 @@ namespace IdeatecAPI.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-//[Authorize]
+[Authorize]
 public class SucursalController : ControllerBase
 {
     private readonly ISucursalService _sucursalService;

@@ -1,5 +1,6 @@
 using IdeatecAPI.Application.Features.Direccion.DTOs;
 using IdeatecAPI.Application.Features.Direccion.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 
@@ -7,6 +8,8 @@ namespace IdeatecAPI.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
+
 public class DireccionController : ControllerBase
 {
    private readonly IDireccionService _direccionService;

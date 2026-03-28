@@ -8,7 +8,7 @@ namespace IdeatecAPI.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-//[Authorize] // Todos los endpoints requieren autenticación
+[Authorize]
 public class UsuarioController : ControllerBase
 {
     private readonly IUnitOfWork _unitOfWork;
