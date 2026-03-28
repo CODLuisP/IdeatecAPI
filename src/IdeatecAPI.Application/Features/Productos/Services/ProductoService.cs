@@ -102,6 +102,8 @@ public class ProductoService : IProductoService
             throw;
         }
     }
+
+    
     public async Task<bool> EditarProductoAsync(EditarProductoDTO dto)
     {
         if (dto.ProductoId <= 0)

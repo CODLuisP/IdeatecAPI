@@ -74,7 +74,7 @@ public class ClienteService : IClienteService
 
             var clienteCreado = await _unitOfWork.Clientes.RegistrarClienteAsync(cliente);
 
-            if (dto.TipoDocumentoId == "06" && dto.Direccion != null)
+            if (dto.Direccion != null)
             {
                 var direccion = new Domain.Entities.Direccion
                 {

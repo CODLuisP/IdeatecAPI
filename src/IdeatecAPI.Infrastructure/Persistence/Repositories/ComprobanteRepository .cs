@@ -224,14 +224,14 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         {
             "01" => @"UPDATE sucursal SET 
                         serieFactura       = @Serie,
-                        correlativoFactura = @Correlativo
+                        correlativoFactura = correlativoFactura + 1
                     WHERE empresaRuc           = @EmpresaRuc 
                     AND codEstablecimiento     = @EmpresaEstablecimientoAnexo
                     AND estado                = 1",
 
             "03" => @"UPDATE sucursal SET 
                         serieBoleta       = @Serie,
-                        correlativoBoleta = @Correlativo
+                        correlativoBoleta = correlativoBoleta + 1
                     WHERE empresaRuc           = @EmpresaRuc 
                     AND codEstablecimiento     = @EmpresaEstablecimientoAnexo
                     AND estado                = 1",
@@ -242,7 +242,6 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         var parameters = new
         {
             comprobante.Serie,
-            comprobante.Correlativo,
             comprobante.EmpresaRuc,
             comprobante.EmpresaEstablecimientoAnexo
         };

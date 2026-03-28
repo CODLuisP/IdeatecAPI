@@ -346,7 +346,7 @@ public class ComprobanteService : IComprobanteService
             Details = detalles.Select(d => new DetalleFacturaDTO
             {
                 Item = d.Item,
-                ProductoId = d.ProductoId,
+                ProductoId = d.ProductoId ?? 0,
                 Codigo = d.Codigo,
                 Descripcion = d.Descripcion,
                 Cantidad = d.Cantidad,
