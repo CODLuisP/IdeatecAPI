@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace IdeatecAPI.API.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/productos")]
 [Authorize]
 public class ProductoController : ControllerBase
 {
@@ -150,6 +150,38 @@ public class ProductoController : ControllerBase
             return StatusCode(StatusCodes.Status500InternalServerError, new
             {
                 mensaje = "Ocurrió un error al registrar el producto.",
+                detalle = ex.Message
+            });
+        }
+    }
+
+    [HttpPut("actualizarstock")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> ActualizarStock([FromBody] IEnumerable<ActualizarStockDTO> dtos)
+    {
+        try
+        {
+            await _productoService.ActualizarStockAsync(dtos);
+            return Ok(new { mensaje = "Stock actualizado correctamente." });
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning("Datos inválidos al actualizar stock: {Mensaje}", ex.Message);
+            return BadRequest(new { mensaje = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning("Error al actualizar stock: {Mensaje}", ex.Message);
+            return BadRequest(new { mensaje = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al actualizar stock");
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al actualizar el stock.",
                 detalle = ex.Message
             });
         }
