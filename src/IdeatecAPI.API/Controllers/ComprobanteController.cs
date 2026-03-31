@@ -12,64 +12,176 @@ namespace IdeatecAPI.API.Controllers;
 public class ComprobantesController : ControllerBase
 {
     private readonly IComprobanteService _comprobanteService;
+    private readonly ILogger<ComprobantesController> _logger;
 
-    public ComprobantesController(IComprobanteService comprobanteService)
+    public ComprobantesController(IComprobanteService comprobanteService, ILogger<ComprobantesController> logger)
     {
         _comprobanteService = comprobanteService;
+        _logger = logger;
     }
 
     [HttpGet("cliente/{clienteNumDoc}/cantidad")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetCantidadByCliente(string clienteNumDoc)
     {
-        var cantidad = await _comprobanteService.GetCantidadByClienteNumDocAsync(clienteNumDoc);
-        return Ok(cantidad);
+        try
+        {
+            var cantidad = await _comprobanteService.GetCantidadByClienteNumDocAsync(clienteNumDoc);
+            return Ok(cantidad);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener cantidad de comprobantes para cliente {ClienteNumDoc}", clienteNumDoc);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al obtener la cantidad de comprobantes.",
+                detalle = ex.Message
+            });
+        }
+    }
+
+    [HttpGet("ruc/{ruc}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetByRucAndFechas(string ruc, [FromQuery] DateTime fechaDesde, [FromQuery] DateTime fechaHasta)
+    {
+        try
+        {
+            var comprobantes = await _comprobanteService.GetByRucAndFechasAsync(ruc, fechaDesde, fechaHasta);
+
+            if (comprobantes == null || !comprobantes.Any())
+                return NotFound(new { mensaje = $"No se encontraron comprobantes para el RUC '{ruc}' en el rango de fechas indicado." });
+
+            return Ok(comprobantes);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener comprobantes para RUC {Ruc}", ruc);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al obtener los comprobantes.",
+                detalle = ex.Message
+            });
+        }
     }
 
     [HttpPost("GenerarXml")]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Generar([FromBody] GenerarComprobanteDTO dto)
     {
-        var resultado = await _comprobanteService.GenerarComprobanteAsync(dto);
-
-        if (!resultado.Exitoso)
-            return BadRequest(resultado);
-
-        return Ok(resultado);
+        try
+        {
+            var resultado = await _comprobanteService.GenerarComprobanteAsync(dto);
+            return StatusCode(StatusCodes.Status201Created, resultado);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning("Operación inválida al generar comprobante: {Mensaje}", ex.Message);
+            return Conflict(new { mensaje = ex.Message });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            _logger.LogWarning("Recurso no encontrado al generar comprobante: {Mensaje}", ex.Message);
+            return NotFound(new { mensaje = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al generar comprobante {Serie}-{Correlativo}", dto.Serie, dto.Correlativo);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al generar el comprobante.",
+                detalle = ex.Message
+            });
+        }
     }
 
-    // POST api/comprobantes/{id}/enviar-sunat
     [HttpPost("{id}/enviar-sunat")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> EnviarSunat(int id)
     {
         try
         {
-            var result = await _comprobanteService.SendToSunatAsync(id);
-            return result.Exitoso ? Ok(result) : BadRequest(result);
+            var resultado = await _comprobanteService.SendToSunatAsync(id);
+            return resultado.Exitoso ? Ok(resultado) : BadRequest(resultado);
         }
         catch (KeyNotFoundException ex)
         {
+            _logger.LogWarning("Comprobante no encontrado al enviar a SUNAT: ID {Id}", id);
             return NotFound(new { mensaje = ex.Message });
         }
         catch (InvalidOperationException ex)
         {
+            _logger.LogWarning("Operación inválida al enviar comprobante ID {Id} a SUNAT: {Mensaje}", id, ex.Message);
             return BadRequest(new { mensaje = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al enviar comprobante ID {Id} a SUNAT", id);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al enviar el comprobante a SUNAT.",
+                detalle = ex.Message
+            });
         }
     }
 
     [HttpGet("{id}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetById(int id)
     {
-        var comprobante = await _comprobanteService.GetComprobanteByIdAsync(id);
-        if (comprobante == null)
-            return NotFound(new { mensaje = "Comprobante no encontrado" });
+        try
+        {
+            var comprobante = await _comprobanteService.GetComprobanteByIdAsync(id);
 
-        return Ok(comprobante);
+            if (comprobante == null)
+                return NotFound(new { mensaje = $"No se encontró el comprobante con ID {id}." });
+
+            return Ok(comprobante);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener comprobante con ID {Id}", id);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al obtener el comprobante.",
+                detalle = ex.Message
+            });
+        }
     }
 
-    // GET api/comprobantes/estado/{estado}
     [HttpGet("estado/{estado}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetByEstado(string estado)
     {
-        var comprobantes = await _comprobanteService.GetComprobanteByEstadoAsync(estado);
-        return Ok(comprobantes);
+        try
+        {
+            var comprobantes = await _comprobanteService.GetComprobanteByEstadoAsync(estado);
+
+            if (comprobantes == null || !comprobantes.Any())
+                return NotFound(new { mensaje = $"No se encontraron comprobantes con estado '{estado}'." });
+
+            return Ok(comprobantes);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener comprobantes con estado {Estado}", estado);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al obtener los comprobantes.",
+                detalle = ex.Message
+            });
+        }
     }
 }

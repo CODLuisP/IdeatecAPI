@@ -13,6 +13,8 @@ public interface IProductoService
     Task<ObtenerProductoDTO?> GetProductoByIdAsync(int productoId, int sucursalId); //Producto especifico por sucursal
     Task<ObtenerProductoDTO> RegistrarProductoAsync(RegistrarProductoDTO dto);
     Task<bool> EditarProductoAsync(EditarProductoDTO dto);
+    Task<bool> ActualizarStockAsync(IEnumerable<ActualizarStockDTO> dtos);
+
     Task<bool> EliminarSucursalProductoAsync(int sucursalProductoId);
 }
 
@@ -102,6 +104,8 @@ public class ProductoService : IProductoService
             throw;
         }
     }
+
+    
     public async Task<bool> EditarProductoAsync(EditarProductoDTO dto)
     {
         if (dto.ProductoId <= 0)
@@ -133,6 +137,34 @@ public class ProductoService : IProductoService
             };
 
             await _unitOfWork.Productos.EditarSucursalProductoAsync(sucursalProducto);
+
+            _unitOfWork.Commit();
+            return true;
+        }
+        catch
+        {
+            _unitOfWork.Rollback();
+            throw;
+        }
+    }
+
+    public async Task<bool> ActualizarStockAsync(IEnumerable<ActualizarStockDTO> dtos)
+    {
+        if (!dtos.Any())
+            throw new ArgumentException("La lista no puede estar vacía.");
+
+        if (dtos.Any(d => d.Cantidad <= 0))
+            throw new ArgumentException("Todas las cantidades deben ser mayores a 0.");
+
+        _unitOfWork.BeginTransaction();
+        try
+        {
+            foreach (var dto in dtos)
+            {
+                var resultado = await _unitOfWork.Productos.ActualizarStockAsync(dto.SucursalProductoId, dto.Cantidad);
+                if (!resultado)
+                    throw new InvalidOperationException($"Stock insuficiente o producto no encontrado para SucursalProductoId {dto.SucursalProductoId}.");
+            }
 
             _unitOfWork.Commit();
             return true;
