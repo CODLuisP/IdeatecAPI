@@ -514,36 +514,59 @@ private static XElement BuildInvoiceLine(DetalleFacturaDTO d, int item, string m
         );
     }
 
-    invoiceLine.Add(
-        new XElement(Cac + "TaxTotal",
+    var taxTotalAmount = d.MontoIGV + (d.Icbper > 0 ? d.Icbper : 0);
+    var taxTotal = new XElement(Cac + "TaxTotal",
+        new XElement(Cbc + "TaxAmount",
+            new XAttribute("currencyID", moneda),
+            taxTotalAmount.ToString("F2")),
+        new XElement(Cac + "TaxSubtotal",
+            new XElement(Cbc + "TaxableAmount",
+                new XAttribute("currencyID", moneda),
+                d.BaseIgv.ToString("F2")),
             new XElement(Cbc + "TaxAmount",
                 new XAttribute("currencyID", moneda),
                 d.MontoIGV.ToString("F2")),
+            new XElement(Cac + "TaxCategory",
+                new XElement(Cbc + "ID",
+                    new XAttribute("schemeID", "UN/ECE 5305"),
+                    new XAttribute("schemeAgencyName", "United Nations Economic Commission for Europe"),
+                    catId),
+                new XElement(Cbc + "Percent", d.PorcentajeIGV.ToString("F2")),
+                new XElement(Cbc + "TaxExemptionReasonCode",
+                    new XAttribute("listAgencyName", "PE:SUNAT"),
+                    new XAttribute("listURI", "urn:pe:gob:sunat:cpe:see:gem:catalogos:catalogo07"),
+                    d.TipoAfectacionIGV),
+                new XElement(Cac + "TaxScheme",
+                    new XElement(Cbc + "ID",
+                        new XAttribute("schemeID", "UN/ECE 5153"),
+                        new XAttribute("schemeAgencyName", "PE:SUNAT"),
+                        schemeId),
+                    new XElement(Cbc + "Name", taxName),
+                    new XElement(Cbc + "TaxTypeCode", taxType))))
+    );
+
+    if (d.Icbper > 0 && d.FactorIcbper > 0)
+    {
+        taxTotal.Add(
             new XElement(Cac + "TaxSubtotal",
-                new XElement(Cbc + "TaxableAmount",
-                    new XAttribute("currencyID", moneda),
-                    d.BaseIgv.ToString("F2")),
                 new XElement(Cbc + "TaxAmount",
                     new XAttribute("currencyID", moneda),
-                    d.MontoIGV.ToString("F2")),
+                    d.Icbper.ToString("F2")),
+                new XElement(Cbc + "BaseUnitMeasure",
+                    new XAttribute("unitCode", d.UnidadMedida ?? "NIU"),
+                    ((int)d.Cantidad).ToString()),
                 new XElement(Cac + "TaxCategory",
-                    new XElement(Cbc + "ID",
-                        new XAttribute("schemeID", "UN/ECE 5305"),
-                        new XAttribute("schemeAgencyName", "United Nations Economic Commission for Europe"),
-                        catId),
-                    new XElement(Cbc + "Percent", d.PorcentajeIGV.ToString("F2")),
-                    new XElement(Cbc + "TaxExemptionReasonCode",
-                        new XAttribute("listAgencyName", "PE:SUNAT"),
-                        new XAttribute("listURI", "urn:pe:gob:sunat:cpe:see:gem:catalogos:catalogo07"),
-                        d.TipoAfectacionIGV),
+                    new XElement(Cbc + "PerUnitAmount",
+                        new XAttribute("currencyID", moneda),
+                        d.FactorIcbper.ToString("F2")),
                     new XElement(Cac + "TaxScheme",
-                        new XElement(Cbc + "ID",
-                            new XAttribute("schemeID", "UN/ECE 5153"),
-                            new XAttribute("schemeAgencyName", "PE:SUNAT"),
-                            schemeId),
-                        new XElement(Cbc + "Name", taxName),
-                        new XElement(Cbc + "TaxTypeCode", taxType)))))
-    );
+                        new XElement(Cbc + "ID", "7152"),
+                        new XElement(Cbc + "Name", "ICBPER"),
+                        new XElement(Cbc + "TaxTypeCode", "OTH"))))
+        );
+    }
+
+    invoiceLine.Add(taxTotal);
 
     // ✅ 4. Item
     invoiceLine.Add(
