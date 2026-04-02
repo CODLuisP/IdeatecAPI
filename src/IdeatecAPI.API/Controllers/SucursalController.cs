@@ -22,6 +22,7 @@ public class SucursalController : ControllerBase
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [AllowAnonymous] 
     public async Task<IActionResult> ObtenerTodos([FromQuery] string? ruc = null)
     {
         try
