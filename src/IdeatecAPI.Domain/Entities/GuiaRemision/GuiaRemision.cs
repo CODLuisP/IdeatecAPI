@@ -63,7 +63,10 @@ public class GuiaRemision
     public string? TransportistaTipoDoc { get; set; }
     public string? TransportistaNumDoc { get; set; }
     public string? TransportistaRznSocial { get; set; }
+    public bool IndVehiculoM1L { get; set; } = false;
     public string? TransportistaPlaca { get; set; }
+    public string? AutorizacionVehiculoEntidad { get; set; }
+    public string? AutorizacionVehiculoNumero { get; set; }
     public string? ChoferTipoDoc { get; set; }
     public string? ChoferDoc { get; set; }
     public string? ChoferNombres { get; set; }

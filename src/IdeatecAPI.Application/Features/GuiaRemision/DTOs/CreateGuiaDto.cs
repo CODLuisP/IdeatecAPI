@@ -85,10 +85,13 @@ public class CreateGuiaDireccionDto
 
 public class CreateGuiaTransportistaDto
 {
-    public string TipoDoc { get; set; } = string.Empty;
-    public string NumDoc { get; set; } = string.Empty;
-    public string RznSocial { get; set; } = string.Empty;
+    public string? TipoDoc { get; set; }
+    public string? NumDoc { get; set; }
+    public string? RznSocial { get; set; }
+    public bool IndVehiculoM1L { get; set; } = false;
     public string? Placa { get; set; }
+    public string? AutorizacionVehiculoEntidad { get; set; }
+    public string? AutorizacionVehiculoNumero { get; set; }
     public string? PlacaSecundaria1 { get; set; }  // ← nuevo
     public string? PlacaSecundaria2 { get; set; }  // ← nuevo
     public string? PlacaSecundaria3 { get; set; }  // ← nuevo
