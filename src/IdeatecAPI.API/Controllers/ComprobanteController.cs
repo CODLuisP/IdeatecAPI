@@ -12,11 +12,13 @@ namespace IdeatecAPI.API.Controllers;
 public class ComprobantesController : ControllerBase
 {
     private readonly IComprobanteService _comprobanteService;
+    private readonly IComprobantePdfService _pdfService;
     private readonly ILogger<ComprobantesController> _logger;
 
-    public ComprobantesController(IComprobanteService comprobanteService, ILogger<ComprobantesController> logger)
+    public ComprobantesController(IComprobanteService comprobanteService, IComprobantePdfService pdfService, ILogger<ComprobantesController> logger)
     {
         _comprobanteService = comprobanteService;
+        _pdfService         = pdfService;
         _logger = logger;
     }
 
@@ -128,6 +130,43 @@ public class ComprobantesController : ControllerBase
             return StatusCode(StatusCodes.Status500InternalServerError, new
             {
                 mensaje = "Ocurrió un error al enviar el comprobante a SUNAT.",
+                detalle = ex.Message
+            });
+        }
+    }
+
+    [HttpGet("{id}/pdf")]
+    [ProducesResponseType(StatusCodes.Status200OK,  Type = typeof(FileContentResult))]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> DescargarPdf(int id,
+        [FromQuery] TamanoPdf tamano = TamanoPdf.A4)
+    {
+        try
+        {
+            var pdfBytes = await _pdfService.GenerarPdfAsync(id, tamano);
+    
+            // Recuperar número de comprobante para el nombre del archivo
+            var comprobante = await _comprobanteService.GetComprobanteByIdAsync(id);
+            var nombreArchivo = comprobante?.NumeroCompleto ?? id.ToString();
+            nombreArchivo = string.Concat(nombreArchivo
+                .Replace("/", "-").Replace("\\", "-")
+                .Where(c => !Path.GetInvalidFileNameChars().Contains(c)));
+    
+            Response.Headers["Content-Disposition"] = $"inline; filename=\"{nombreArchivo}.pdf\"";
+            return File(pdfBytes, "application/pdf");
+        }
+        catch (KeyNotFoundException ex)
+        {
+            _logger.LogWarning("Comprobante no encontrado al generar PDF: {Mensaje}", ex.Message);
+            return NotFound(new { mensaje = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al generar PDF del comprobante ID {Id}", id);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al generar el PDF.",
                 detalle = ex.Message
             });
         }
