@@ -37,6 +37,9 @@ public class GuiaDto
 
     public string? TransportistaNumDoc { get; set; }
     public string? TransportistaRznSocial { get; set; }
+    public bool IndVehiculoM1L { get; set; } = false;
+    public string? AutorizacionVehiculoEntidad { get; set; }
+    public string? AutorizacionVehiculoNumero { get; set; }
     public string? TransportistaPlaca { get; set; }
     public string? PlacaSecundaria1 { get; set; }
     public string? PlacaSecundaria2 { get; set; }

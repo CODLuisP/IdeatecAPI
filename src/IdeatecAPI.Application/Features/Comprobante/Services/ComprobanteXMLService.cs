@@ -15,6 +15,7 @@ public interface IComprobanteService
     Task<int> GetCantidadByClienteNumDocAsync(string clienteNumDoc);
     Task<ComprobanteResponse> GenerarComprobanteAsync(GenerarComprobanteDTO dto); //Guardar en BD
     Task<ObtenerComprobanteDTO?> GetComprobanteByIdAsync(int comprobanteId);
+    Task<ObtenerComprobanteDTO?> GetByRucSerieNumeroAsync(string ruc, string serie, int numero);
     Task<IEnumerable<ObtenerComprobanteDTO>> GetComprobanteByEstadoAsync(string estado);
     Task<ComprobanteResponse> SendToSunatAsync(int comprobanteId); // Generar XML, firmar y enviar a sunat
 }
@@ -529,6 +530,23 @@ public class ComprobanteService : IComprobanteService
         if (comprobante == null)
             return null;
 
+        var detalles = (await _unitOfWork.Comprobantes.GetDetallesByIdAsync(comprobanteId)).ToList();
+        var pagos = (await _unitOfWork.Comprobantes.GetPagosByIdAsync(comprobanteId)).ToList();
+        var cuotas = (await _unitOfWork.Comprobantes.GetCuotasByIdAsync(comprobanteId)).ToList();
+        var leyendas = (await _unitOfWork.Comprobantes.GetLeyendasByIdAsync(comprobanteId)).ToList();
+        var guias = (await _unitOfWork.Comprobantes.GetGuiasByIdAsync(comprobanteId)).ToList();
+        var detracciones = (await _unitOfWork.Comprobantes.GetDetraccionesByIdAsync(comprobanteId)).ToList();
+
+        return MapToDto(comprobante, detalles, pagos, cuotas, leyendas, guias, detracciones);
+    }
+
+    public async Task<ObtenerComprobanteDTO?> GetByRucSerieNumeroAsync(string ruc, string serie, int numero)
+    {
+        var comprobante = await _unitOfWork.Comprobantes.GetByRucSerieNumeroAsync(ruc, serie, numero);
+        if (comprobante == null)
+            return null;
+
+        var comprobanteId = comprobante.ComprobanteId;
         var detalles = (await _unitOfWork.Comprobantes.GetDetallesByIdAsync(comprobanteId)).ToList();
         var pagos = (await _unitOfWork.Comprobantes.GetPagosByIdAsync(comprobanteId)).ToList();
         var cuotas = (await _unitOfWork.Comprobantes.GetCuotasByIdAsync(comprobanteId)).ToList();

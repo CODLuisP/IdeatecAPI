@@ -64,7 +64,10 @@ public class GuiaRemisionRepository : IGuiaRemisionRepository
                         transportistaTipoDoc    AS TransportistaTipoDoc,
                         transportistaNumDoc     AS TransportistaNumDoc,
                         transportistaRznSocial  AS TransportistaRznSocial,
+                        indVehiculoM1L          AS IndVehiculoM1L,
                         transportistaPlaca      AS TransportistaPlaca,
+                        autorizacionVehiculoEntidad AS AutorizacionVehiculoEntidad,
+                        autorizacionVehiculoNumero  AS AutorizacionVehiculoNumero,
                         placaSecundaria1          AS PlacaSecundaria1,
                         placaSecundaria2          AS PlacaSecundaria2,
                         placaSecundaria3          AS PlacaSecundaria3,
@@ -146,7 +149,10 @@ public class GuiaRemisionRepository : IGuiaRemisionRepository
                         transportistaTipoDoc    AS TransportistaTipoDoc,
                         transportistaNumDoc     AS TransportistaNumDoc,
                         transportistaRznSocial  AS TransportistaRznSocial,
+                        indVehiculoM1L          AS IndVehiculoM1L,
                         transportistaPlaca      AS TransportistaPlaca,
+                        autorizacionVehiculoEntidad AS AutorizacionVehiculoEntidad,
+                        autorizacionVehiculoNumero  AS AutorizacionVehiculoNumero,
                         placaSecundaria1          AS PlacaSecundaria1,
                         placaSecundaria2          AS PlacaSecundaria2,
                         placaSecundaria3          AS PlacaSecundaria3,
@@ -201,7 +207,7 @@ public class GuiaRemisionRepository : IGuiaRemisionRepository
                         choferSecundarioApellidos, choferSecundarioLicencia, choferSecundario2TipoDoc, 
                         choferSecundario2Doc, choferSecundario2Nombres, choferSecundario2Apellidos, 
                         choferSecundario2Licencia, choferTipoDoc, choferDoc, 
-                        choferNombres, choferApellidos, choferLicencia, estadoSunat, fechaCreacion
+                        choferNombres, choferApellidos, choferLicencia, estadoSunat, fechaCreacion, indVehiculoM1L, autorizacionVehiculoEntidad, autorizacionVehiculoNumero
                     ) VALUES (
                         @EmpresaId, @Version, @TipoDoc, @Serie, @Correlativo, @NumeroCompleto, @FechaEmision,
                         @EmpresaRuc, @EmpresaRazonSocial, @EmpresaNombreComercial,
@@ -218,7 +224,7 @@ public class GuiaRemisionRepository : IGuiaRemisionRepository
                         @ChoferSecundarioTipoDoc, @ChoferSecundarioDoc, @ChoferSecundarioNombres,
                         @ChoferSecundarioApellidos, @ChoferSecundarioLicencia, @ChoferSecundario2TipoDoc, @ChoferSecundario2Doc, 
                         @ChoferSecundario2Nombres, @ChoferSecundario2Apellidos, @ChoferSecundario2Licencia, @ChoferTipoDoc, @ChoferDoc, 
-                        @ChoferNombres, @ChoferApellidos, @ChoferLicencia, @EstadoSunat, @FechaCreacion
+                        @ChoferNombres, @ChoferApellidos, @ChoferLicencia, @EstadoSunat, @FechaCreacion, @IndVehiculoM1L, @AutorizacionVehiculoEntidad, @AutorizacionVehiculoNumero
                     );
                     SELECT LAST_INSERT_ID();";
 
@@ -276,21 +282,27 @@ public class GuiaRemisionRepository : IGuiaRemisionRepository
 
     private async Task ActualizarSerieCorrelativoAsync(GuiaRemision guia)
     {
-        var sql = @"
-        UPDATE serie
-        SET serie              = @Serie,
-            correlativoActual  = @Correlativo,
-            fechaActualizacion = NOW()
-        WHERE empresaID        = @EmpresaId
-          AND tipoComprobante  = @TipoDoc
-          AND serie            = @Serie";
+        string sql = guia.TipoDoc switch
+        {
+            "09" => @"UPDATE sucursal SET 
+                    serieGuiaRemision        = @Serie,
+                    correlativoGuiaRemision  = correlativoGuiaRemision + 1
+                  WHERE empresaRuc           = @EmpresaRuc
+                  AND estado                 = 1",
+
+            "31" => @"UPDATE sucursal SET 
+                    serieGuiaTransportista        = @Serie,
+                    correlativoGuiaTransportista  = correlativoGuiaTransportista + 1
+                  WHERE empresaRuc                = @EmpresaRuc
+                  AND estado                      = 1",
+
+            _ => throw new InvalidOperationException($"Tipo de guía '{guia.TipoDoc}' no soportado.")
+        };
 
         await _connection.ExecuteAsync(sql, new
         {
             guia.Serie,
-            guia.Correlativo,
-            guia.EmpresaId,
-            guia.TipoDoc
+            guia.EmpresaRuc
         }, _transaction);
     }
 }

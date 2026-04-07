@@ -198,6 +198,32 @@ public class ComprobantesController : ControllerBase
         }
     }
 
+    [HttpGet("{ruc}/{serie}/{numero}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetByRucSerieNumero(string ruc, string serie, int numero)
+    {
+        try
+        {
+            var comprobante = await _comprobanteService.GetByRucSerieNumeroAsync(ruc, serie, numero);
+
+            if (comprobante == null)
+                return NotFound(new { mensaje = $"No se encontró el comprobante {serie}-{numero} para el RUC '{ruc}'." });
+
+            return Ok(comprobante);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener comprobante {Ruc}/{Serie}/{Numero}", ruc, serie, numero);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al obtener el comprobante.",
+                detalle = ex.Message
+            });
+        }
+    }
+
     [HttpGet("estado/{estado}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

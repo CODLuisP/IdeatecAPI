@@ -67,7 +67,17 @@ public class XmlGuiaBuilderService : IXmlGuiaBuilderService
             new XAttribute("listName", "Documento relacionado al transporte"),
             new XAttribute("listURI", "urn:pe:gob:sunat:cpe:see:gem:catalogos:catalogo61"),
             guia.RelDocTipoDoc ?? "01"),
-        new XElement(Cbc + "DocumentType", "Factura"),
+        new XElement(Cbc + "DocumentType",
+            guia.RelDocTipoDoc switch
+            {
+                "01" => "Factura",
+                "03" => "Boleta de Venta",
+                "09" => "Guia Remision Remitente",
+                "07" => "Nota de Credito",
+                "08" => "Nota de Debito",
+                "04" => "Liquidacion de Compra",
+                _ => "Otro"
+            }),
         new XElement(Cac + "IssuerParty",
             new XElement(Cac + "PartyIdentification",
                 new XElement(Cbc + "ID",
@@ -149,8 +159,10 @@ public class XmlGuiaBuilderService : IXmlGuiaBuilderService
 
     private static XElement BuildShipment(GuiaEntity guia)
     {
+        var shipmentId = guia.IndVehiculoM1L ? "SUNAT_Envio" : "1";
+
         var shipment = new XElement(Cac + "Shipment",
-            new XElement(Cbc + "ID", "1"),
+            new XElement(Cbc + "ID", shipmentId),
             new XElement(Cbc + "HandlingCode", guia.CodTraslado),
             new XElement(Cbc + "HandlingInstructions", guia.DesTraslado),
             new XElement(Cbc + "GrossWeightMeasure",
@@ -158,32 +170,44 @@ public class XmlGuiaBuilderService : IXmlGuiaBuilderService
                 guia.PesoTotal?.ToString("F2") ?? "0.00")
         );
 
-        // ── Transbordo (solo modo público) ──────────────────────────────────
-        if (guia.ModTraslado == "01" && guia.IndTransbordo)
-        {
-            shipment.Add(new XElement(Cbc + "SpecialInstructions", "TRANSBORDO"));
-        }
+        // ── Indicador M1/L ───────────────────────────────────────────────────
+        if (guia.IndVehiculoM1L)
+            shipment.Add(new XElement(Cbc + "SpecialInstructions",
+                "SUNAT_Envio_IndicadorTrasladoVehiculoM1L"));
 
-        // ── Material peligroso ──────────────────────────────────────────────
+        // ── Transbordo (solo modo público, no M1/L) ──────────────────────────
+        if (guia.ModTraslado == "01" && guia.IndTransbordo && !guia.IndVehiculoM1L)
+            shipment.Add(new XElement(Cbc + "SpecialInstructions", "TRANSBORDO"));
+
         if (!string.IsNullOrEmpty(guia.MatPeligrosoClase))
         {
-            // Formato: "CODIGO_ONU|CLASE"  →  ej: "UN1203|3"
             var valor = string.IsNullOrEmpty(guia.MatPeligrosoNroONU)
                 ? guia.MatPeligrosoClase
                 : $"{guia.MatPeligrosoNroONU}|{guia.MatPeligrosoClase}";
-
             shipment.Add(new XElement(Cbc + "SpecialInstructions", valor));
         }
 
         shipment.Add(BuildShipmentStage(guia));
         shipment.Add(BuildDelivery(guia));
 
-        // ── TransportHandlingUnit (modo privado) ────────────────────────────
-        if (guia.ModTraslado == "02" && !string.IsNullOrEmpty(guia.TransportistaPlaca))
+        // ── TransportHandlingUnit — solo si NO es M1/L y hay placa ──────────
+        if (!guia.IndVehiculoM1L && !string.IsNullOrEmpty(guia.TransportistaPlaca))
         {
-            shipment.Add(new XElement(Cac + "TransportHandlingUnit",
-                new XElement(Cac + "TransportEquipment",
-                    new XElement(Cbc + "ID", guia.TransportistaPlaca))));
+            var transportEquipment = new XElement(Cac + "TransportEquipment",
+                new XElement(Cbc + "ID", guia.TransportistaPlaca));
+
+            // Autorización especial — solo transporte privado
+            if (guia.ModTraslado == "02" && !string.IsNullOrEmpty(guia.AutorizacionVehiculoNumero))
+            {
+                transportEquipment.Add(new XElement(Cac + "ShipmentDocumentReference",
+                    new XElement(Cbc + "ID",
+                        new XAttribute("schemeID", guia.AutorizacionVehiculoEntidad ?? ""),
+                        new XAttribute("schemeName", "Entidad Autorizadora"),
+                        new XAttribute("schemeAgencyName", "PE:SUNAT"),
+                        guia.AutorizacionVehiculoNumero)));
+            }
+
+            shipment.Add(new XElement(Cac + "TransportHandlingUnit", transportEquipment));
 
             foreach (var placa in new[] { guia.PlacaSecundaria1, guia.PlacaSecundaria2 }
                 .Where(p => !string.IsNullOrEmpty(p)))
@@ -206,20 +230,40 @@ public class XmlGuiaBuilderService : IXmlGuiaBuilderService
                     guia.FecTraslado?.ToString("yyyy-MM-dd") ?? guia.FechaEmision.ToString("yyyy-MM-dd")))
         );
 
-        // ── Modo público → CarrierParty ─────────────────────────────
-        if (guia.ModTraslado == "01")
+        // ── Modo público → CarrierParty ─────────────────────────────────────
+        if (guia.ModTraslado == "01" && !guia.IndVehiculoM1L)
         {
-            stage.Add(new XElement(Cac + "CarrierParty",
-                new XElement(Cac + "PartyIdentification",
-                    new XElement(Cbc + "ID",
-                        new XAttribute("schemeID", guia.TransportistaTipoDoc ?? "6"),
-                        guia.TransportistaNumDoc!)),
-                new XElement(Cac + "PartyLegalEntity",
-                    new XElement(Cbc + "RegistrationName", guia.TransportistaRznSocial))));
+            if (!string.IsNullOrEmpty(guia.TransportistaNumDoc))
+            {
+                var carrierParty = new XElement(Cac + "CarrierParty",
+                    new XElement(Cac + "PartyIdentification",
+                        new XElement(Cbc + "ID",
+                            new XAttribute("schemeID", guia.TransportistaTipoDoc ?? "6"),
+                            new XAttribute("schemeName", "Documento de Identidad"),
+                            new XAttribute("schemeAgencyName", "PE:SUNAT"),
+                            new XAttribute("schemeURI", "urn:pe:gob:sunat:cpe:see:gem:catalogos:catalogo06"),
+                            guia.TransportistaNumDoc!)),
+                    new XElement(Cac + "PartyLegalEntity",
+                        new XElement(Cbc + "RegistrationName", guia.TransportistaRznSocial)));
+
+                // Autorización especial del transportista
+                if (!string.IsNullOrEmpty(guia.AutorizacionVehiculoNumero))
+                {
+                    carrierParty.Add(new XElement(Cac + "AgentParty",
+                        new XElement(Cac + "PartyLegalEntity",
+                            new XElement(Cbc + "CompanyID",
+                                new XAttribute("schemeID", guia.AutorizacionVehiculoEntidad ?? ""),
+                                new XAttribute("schemeName", "Entidad Autorizadora"),
+                                new XAttribute("schemeAgencyName", "PE:SUNAT"),
+                                guia.AutorizacionVehiculoNumero))));
+                }
+
+                stage.Add(carrierParty);
+            }
         }
 
-        // ── Modo privado → Conductor principal ───────────────────────
-        if (guia.ModTraslado == "02")
+        // ── Modo privado → Conductor principal ──────────────────────────────
+        if (guia.ModTraslado == "02" && !guia.IndVehiculoM1L && !string.IsNullOrEmpty(guia.ChoferDoc))
         {
             stage.Add(new XElement(Cac + "DriverPerson",
                 new XElement(Cbc + "ID",
@@ -232,8 +276,8 @@ public class XmlGuiaBuilderService : IXmlGuiaBuilderService
                     new XElement(Cbc + "ID", guia.ChoferLicencia ?? ""))));
         }
 
-        // ── Conductor secundario ─────────────────────────────────────
-        if (guia.ModTraslado == "02" && !string.IsNullOrEmpty(guia.ChoferSecundarioDoc))
+        // ── Conductor secundario ─────────────────────────────────────────────
+        if (guia.ModTraslado == "02" && !guia.IndVehiculoM1L && !string.IsNullOrEmpty(guia.ChoferSecundarioDoc))
         {
             stage.Add(new XElement(Cac + "DriverPerson",
                 new XElement(Cbc + "ID",
@@ -246,8 +290,8 @@ public class XmlGuiaBuilderService : IXmlGuiaBuilderService
                     new XElement(Cbc + "ID", guia.ChoferSecundarioLicencia ?? ""))));
         }
 
-        // Conductor secundario 2  ← NUEVO
-        if (guia.ModTraslado == "02" && !string.IsNullOrEmpty(guia.ChoferSecundario2Doc))
+        // ── Conductor secundario 2 ───────────────────────────────────────────
+        if (guia.ModTraslado == "02" && !guia.IndVehiculoM1L && !string.IsNullOrEmpty(guia.ChoferSecundario2Doc))
         {
             stage.Add(new XElement(Cac + "DriverPerson",
                 new XElement(Cbc + "ID",
@@ -263,12 +307,37 @@ public class XmlGuiaBuilderService : IXmlGuiaBuilderService
         return stage;
     }
 
-    private static XElement BuildDelivery(GuiaEntity guia) =>
-        new(Cac + "Delivery",
+    private static XElement BuildDelivery(GuiaEntity guia)
+    {
+        if (guia.IndVehiculoM1L)
+        {
+            // M1/L — estructura simplificada sin AddressTypeCode
+            return new XElement(Cac + "Delivery",
+                new XElement(Cac + "DeliveryAddress",
+                    new XElement(Cbc + "ID",
+                        new XAttribute("schemeName", "Ubigeos"),
+                        new XAttribute("schemeAgencyName", "PE:INEI"),
+                        guia.LlegadaUbigeo),
+                    new XElement(Cac + "AddressLine",
+                        new XElement(Cbc + "Line", guia.LlegadaDireccion))),
+                new XElement(Cac + "Despatch",
+                    new XElement(Cac + "DespatchAddress",
+                        new XElement(Cbc + "ID",
+                            new XAttribute("schemeName", "Ubigeos"),
+                            new XAttribute("schemeAgencyName", "PE:INEI"),
+                            guia.PartidaUbigeo!),
+                        new XElement(Cac + "AddressLine",
+                            new XElement(Cbc + "Line", guia.PartidaDireccion)))));
+        }
+
+        // Normal — estructura completa con AddressTypeCode
+        return new XElement(Cac + "Delivery",
             new XElement(Cac + "DeliveryAddress",
                 new XElement(Cbc + "ID", guia.LlegadaUbigeo),
                 new XElement(Cbc + "AddressTypeCode",
-                    new XAttribute("listID", guia.DestinatarioNumDoc ?? ""),
+                    new XAttribute("listID", guia.DestinatarioTipoDoc == "6"
+                        ? guia.DestinatarioNumDoc ?? ""
+                        : ""),
                     new XAttribute("listAgencyName", "PE:SUNAT"),
                     new XAttribute("listName", "Establecimientos anexos"),
                     "0"),
@@ -287,6 +356,7 @@ public class XmlGuiaBuilderService : IXmlGuiaBuilderService
                         "0"),
                     new XElement(Cac + "AddressLine",
                         new XElement(Cbc + "Line", guia.PartidaDireccion)))));
+    }
 
     private static XElement BuildDespatchLine(int lineId, GuiaDetalleEntity detalle) =>
         new(Cac + "DespatchLine",
@@ -342,7 +412,14 @@ public class XmlGuiaBuilderService : IXmlGuiaBuilderService
                         new XAttribute("listName", "Documento relacionado al transporte"),
                         new XAttribute("listURI", "urn:pe:gob:sunat:cpe:see:gem:catalogos:catalogo61"),
                         guia.RelDocTipoDoc ?? "09"),
-                    new XElement(Cbc + "DocumentType", "Guia Remision Remitente"),
+                    new XElement(Cbc + "DocumentType",
+                        guia.RelDocTipoDoc switch
+                        {
+                            "09" => "Guia Remision Remitente",
+                            "01" => "Factura",
+                            "03" => "Boleta de Venta",
+                            _ => "Otro"
+                        }),
                     new XElement(Cac + "IssuerParty",
                         new XElement(Cac + "PartyIdentification",
                             new XElement(Cbc + "ID",
@@ -467,7 +544,16 @@ public class XmlGuiaBuilderService : IXmlGuiaBuilderService
 
             // ── Vehículo ──────────────────────────────────────────────────
             new XElement(Cac + "TransportHandlingUnit",
-                new XElement(Cac + "TransportEquipment",
-                    new XElement(Cbc + "ID", guia.TransportistaPlaca ?? ""))));
+    new XElement(Cac + "TransportEquipment",
+        new XElement(Cbc + "ID", guia.TransportistaPlaca ?? ""),
+        // Autorización especial del vehículo
+        !string.IsNullOrEmpty(guia.AutorizacionVehiculoNumero)
+            ? new XElement(Cac + "ShipmentDocumentReference",
+                new XElement(Cbc + "ID",
+                    new XAttribute("schemeID", guia.AutorizacionVehiculoEntidad ?? ""),
+                    new XAttribute("schemeName", "Entidad Autorizadora"),
+                    new XAttribute("schemeAgencyName", "PE:SUNAT"),
+                    guia.AutorizacionVehiculoNumero))
+            : null!)));
     }
 }

@@ -11,10 +11,11 @@ public interface IProductoService
     Task<IEnumerable<ObtenerProductoDTO>> GetAllProductosRucAsync(string empresaRuc); // Producto completo por empresa
     Task<IEnumerable<ObtenerProductoBaseDTO>> GetProductosRucDisponiblesAsync(int sucursalId); // Productos base disponibles de la misma empresa por agregar a la sede
     Task<ObtenerProductoDTO?> GetProductoByIdAsync(int productoId, int sucursalId); //Producto especifico por sucursal
+    Task<IEnumerable<ObtenerProductoDTO>> SearchBySucursalAsync(int sucursalId, string palabra);
+    Task<IEnumerable<ObtenerProductoDTO>> SearchByRucAsync(string empresaRuc, string palabra);
     Task<ObtenerProductoDTO> RegistrarProductoAsync(RegistrarProductoDTO dto);
     Task<bool> EditarProductoAsync(EditarProductoDTO dto);
     Task<bool> ActualizarStockAsync(IEnumerable<ActualizarStockDTO> dtos);
-
     Task<bool> EliminarSucursalProductoAsync(int sucursalProductoId);
 }
 
@@ -62,14 +63,14 @@ public class ProductoService : IProductoService
                 // El producto no existe, lo crea
                 var producto = new Producto
                 {
-                    Codigo            = dto.Codigo,
-                    TipoProducto      = dto.TipoProducto,
-                    CodigoSunat       = dto.CodigoSunat,
-                    NomProducto       = dto.NomProducto,
-                    UnidadMedida      = dto.UnidadMedida,
+                    Codigo = dto.Codigo,
+                    TipoProducto = dto.TipoProducto,
+                    CodigoSunat = dto.CodigoSunat,
+                    NomProducto = dto.NomProducto,
+                    UnidadMedida = dto.UnidadMedida,
                     TipoAfectacionIGV = dto.TipoAfectacionIGV,
-                    IncluirIGV        = dto.IncluirIGV,
-                    CategoriaId       = dto.CategoriaId
+                    IncluirIGV = dto.IncluirIGV,
+                    CategoriaId = dto.CategoriaId
                 };
 
                 var productoCreado = await _unitOfWork.Productos.RegistrarProductoAsync(producto);
@@ -83,12 +84,12 @@ public class ProductoService : IProductoService
 
             var sucursalProducto = new SucursalProducto
             {
-                ProductoId     = productoId,
-                SucursalId     = dto.SucursalId,
+                ProductoId = productoId,
+                SucursalId = dto.SucursalId,
                 PrecioUnitario = dto.PrecioUnitario,
-                Stock          = dto.Stock,
-                Estado         = true,
-                FechaCreacion  = DateTime.Now
+                Stock = dto.Stock,
+                Estado = true,
+                FechaCreacion = DateTime.Now
             };
 
             await _unitOfWork.Productos.RegistrarSucursalProductoAsync(sucursalProducto);
@@ -105,7 +106,24 @@ public class ProductoService : IProductoService
         }
     }
 
-    
+    public async Task<IEnumerable<ObtenerProductoDTO>> SearchBySucursalAsync(int sucursalId, string palabra)
+    {
+        if (string.IsNullOrWhiteSpace(palabra))
+            throw new ArgumentException("La palabra de búsqueda no puede estar vacía.");
+
+        var productos = await _unitOfWork.Productos.SearchBySucursalAsync(sucursalId, palabra);
+        return productos.Select(MapToDto);
+    }
+
+    public async Task<IEnumerable<ObtenerProductoDTO>> SearchByRucAsync(string empresaRuc, string palabra)
+    {
+        if (string.IsNullOrWhiteSpace(palabra))
+            throw new ArgumentException("La palabra de búsqueda no puede estar vacía.");
+
+        var productos = await _unitOfWork.Productos.SearchByRucAsync(empresaRuc, palabra);
+        return productos.Select(MapToDto);
+    }
+
     public async Task<bool> EditarProductoAsync(EditarProductoDTO dto)
     {
         if (dto.ProductoId <= 0)
@@ -116,15 +134,15 @@ public class ProductoService : IProductoService
         {
             var producto = new Producto
             {
-                ProductoId        = dto.ProductoId,
-                Codigo            = dto.Codigo,
-                TipoProducto      = dto.TipoProducto,
-                CodigoSunat       = dto.CodigoSunat,
-                NomProducto       = dto.NomProducto,
-                UnidadMedida      = dto.UnidadMedida,
+                ProductoId = dto.ProductoId,
+                Codigo = dto.Codigo,
+                TipoProducto = dto.TipoProducto,
+                CodigoSunat = dto.CodigoSunat,
+                NomProducto = dto.NomProducto,
+                UnidadMedida = dto.UnidadMedida,
                 TipoAfectacionIGV = dto.TipoAfectacionIGV,
-                IncluirIGV        = dto.IncluirIGV,
-                CategoriaId       = dto.CategoriaId
+                IncluirIGV = dto.IncluirIGV,
+                CategoriaId = dto.CategoriaId
             };
 
             await _unitOfWork.Productos.EditarProductoAsync(producto);
@@ -132,8 +150,8 @@ public class ProductoService : IProductoService
             var sucursalProducto = new SucursalProducto
             {
                 SucursalProductoId = dto.SucursalProductoId,
-                PrecioUnitario     = dto.PrecioUnitario,
-                Stock              = dto.Stock
+                PrecioUnitario = dto.PrecioUnitario,
+                Stock = dto.Stock
             };
 
             await _unitOfWork.Productos.EditarSucursalProductoAsync(sucursalProducto);
@@ -186,26 +204,26 @@ public class ProductoService : IProductoService
 
     private static ObtenerProductoDTO MapToDto(Producto p) => new ObtenerProductoDTO
     {
-        ProductoId        = p.ProductoId,
-        Codigo            = p.Codigo,
-        TipoProducto      = p.TipoProducto,
-        CodigoSunat       = p.CodigoSunat,
-        NomProducto       = p.NomProducto,
-        UnidadMedida      = p.UnidadMedida,
+        ProductoId = p.ProductoId,
+        Codigo = p.Codigo,
+        TipoProducto = p.TipoProducto,
+        CodigoSunat = p.CodigoSunat,
+        NomProducto = p.NomProducto,
+        UnidadMedida = p.UnidadMedida,
         TipoAfectacionIGV = p.TipoAfectacionIGV,
-        IncluirIGV        = p.IncluirIGV,
-        Estado            = p.Estado,
-        FechaCreacion     = p.FechaCreacion,
-        Categoria         = p.Categoria == null ? null : new ObtenerCategoriaDTO
+        IncluirIGV = p.IncluirIGV,
+        Estado = p.Estado,
+        FechaCreacion = p.FechaCreacion,
+        Categoria = p.Categoria == null ? null : new ObtenerCategoriaDTO
         {
-            CategoriaId    = p.Categoria.CategoriaId,
+            CategoriaId = p.Categoria.CategoriaId,
             CategoriaNombre = p.Categoria.CategoriaNombre,
         },
         SucursalProducto = p.SucursalProducto == null ? null : new ObtenerSucursalProductoDTO
         {
             SucursalProductoId = p.SucursalProducto.SucursalProductoId,
-            PrecioUnitario     = p.SucursalProducto.PrecioUnitario,
-            Stock              = p.SucursalProducto.Stock
+            PrecioUnitario = p.SucursalProducto.PrecioUnitario,
+            Stock = p.SucursalProducto.Stock
         }
     };
 
@@ -229,19 +247,19 @@ public class ProductoService : IProductoService
 
     private static ObtenerProductoBaseDTO MapToBaseDto(Producto p) => new ObtenerProductoBaseDTO
     {
-        ProductoId        = p.ProductoId,
-        Codigo            = p.Codigo,
-        TipoProducto      = p.TipoProducto,
-        CodigoSunat       = p.CodigoSunat,
-        NomProducto       = p.NomProducto,
-        UnidadMedida      = p.UnidadMedida,
+        ProductoId = p.ProductoId,
+        Codigo = p.Codigo,
+        TipoProducto = p.TipoProducto,
+        CodigoSunat = p.CodigoSunat,
+        NomProducto = p.NomProducto,
+        UnidadMedida = p.UnidadMedida,
         TipoAfectacionIGV = p.TipoAfectacionIGV,
-        IncluirIGV        = p.IncluirIGV,
-        Estado            = p.Estado,
-        FechaCreacion     = p.FechaCreacion,
-        Categoria         = p.Categoria == null ? null : new ObtenerCategoriaDTO
+        IncluirIGV = p.IncluirIGV,
+        Estado = p.Estado,
+        FechaCreacion = p.FechaCreacion,
+        Categoria = p.Categoria == null ? null : new ObtenerCategoriaDTO
         {
-            CategoriaId     = p.Categoria.CategoriaId,
+            CategoriaId = p.Categoria.CategoriaId,
             CategoriaNombre = p.Categoria.CategoriaNombre,
         }
     };
