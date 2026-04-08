@@ -2,6 +2,7 @@ namespace IdeatecAPI.Application.Features.GuiaRemision.DTOs;
 
 public class CreateGuiaDto
 {
+    public int? SucursalId { get; set; }
     public int Version { get; set; } = 2022;
     public string TipoDoc { get; set; } = "09";
     public string Serie { get; set; } = string.Empty;
@@ -88,6 +89,7 @@ public class CreateGuiaTransportistaDto
     public string? TipoDoc { get; set; }
     public string? NumDoc { get; set; }
     public string? RznSocial { get; set; }
+    public string? RegistroMTC { get; set; }
     public bool IndVehiculoM1L { get; set; } = false;
     public string? Placa { get; set; }
     public string? AutorizacionVehiculoEntidad { get; set; }

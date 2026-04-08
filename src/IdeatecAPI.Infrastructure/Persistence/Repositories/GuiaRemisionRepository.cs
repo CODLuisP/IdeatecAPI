@@ -59,11 +59,18 @@ public class GuiaRemisionRepository : IGuiaRemisionRepository
                         matPeligrosoNroONU      AS MatPeligrosoNroONU,
                         llegadaUbigeo           AS LlegadaUbigeo,
                         llegadaDireccion        AS LlegadaDireccion,
+                        llegadaDepartamento     AS LlegadaDepartamento,
+                        llegadaProvincia        AS LlegadaProvincia,
+                        llegadaDistrito         AS LlegadaDistrito, 
                         partidaUbigeo           AS PartidaUbigeo,
                         partidaDireccion        AS PartidaDireccion,
+                        partidaDepartamento     AS PartidaDepartamento,
+                        partidaProvincia        AS PartidaProvincia,
+                        partidaDistrito         AS PartidaDistrito,  
                         transportistaTipoDoc    AS TransportistaTipoDoc,
                         transportistaNumDoc     AS TransportistaNumDoc,
                         transportistaRznSocial  AS TransportistaRznSocial,
+                        transportistaRegistroMTC AS TransportistaRegistroMTC,
                         indVehiculoM1L          AS IndVehiculoM1L,
                         transportistaPlaca      AS TransportistaPlaca,
                         autorizacionVehiculoEntidad AS AutorizacionVehiculoEntidad,
@@ -144,11 +151,18 @@ public class GuiaRemisionRepository : IGuiaRemisionRepository
                         matPeligrosoNroONU      AS MatPeligrosoNroONU,
                         llegadaUbigeo           AS LlegadaUbigeo,
                         llegadaDireccion        AS LlegadaDireccion,
+                        llegadaDepartamento     AS LlegadaDepartamento,
+                        llegadaProvincia        AS LlegadaProvincia,
+                        llegadaDistrito         AS LlegadaDistrito, 
                         partidaUbigeo           AS PartidaUbigeo,
                         partidaDireccion        AS PartidaDireccion,
+                        partidaDepartamento     AS PartidaDepartamento,
+                        partidaProvincia        AS PartidaProvincia,
+                        partidaDistrito         AS PartidaDistrito,  
                         transportistaTipoDoc    AS TransportistaTipoDoc,
                         transportistaNumDoc     AS TransportistaNumDoc,
                         transportistaRznSocial  AS TransportistaRznSocial,
+                        transportistaRegistroMTC AS TransportistaRegistroMTC,
                         indVehiculoM1L          AS IndVehiculoM1L,
                         transportistaPlaca      AS TransportistaPlaca,
                         autorizacionVehiculoEntidad AS AutorizacionVehiculoEntidad,
@@ -185,13 +199,39 @@ public class GuiaRemisionRepository : IGuiaRemisionRepository
         return await _connection.QueryFirstOrDefaultAsync<GuiaRemision>(sql, new { GuiaId = guiaId }, _transaction);
     }
 
+    public async Task<GuiaRemision?> GetBySerieCorrelativoAsync(string empresaRuc, string serie, int correlativo)
+    {
+        var sql = @"SELECT
+                    guiaId          AS GuiaId,
+                    empresaId       AS EmpresaId,
+                    tipoDoc         AS TipoDoc,
+                    serie           AS Serie,
+                    correlativo     AS Correlativo,
+                    numeroCompleto  AS NumeroCompleto,
+                    empresaRuc      AS EmpresaRuc,
+                    estadoSunat     AS EstadoSunat
+                FROM guiaRemision
+                WHERE empresaRuc  = @EmpresaRuc
+                  AND serie       = @Serie
+                  AND correlativo = @Correlativo
+                  AND estadoSunat = 'ACEPTADO'
+                LIMIT 1";
+
+        return await _connection.QueryFirstOrDefaultAsync<GuiaRemision>(sql, new
+        {
+            EmpresaRuc = empresaRuc,
+            Serie = serie,
+            Correlativo = correlativo
+        }, _transaction);
+    }
+
     public async Task<int> CreateAsync(GuiaRemision guia)
     {
         // ← Calcular numeroCompleto antes del INSERT
         guia.NumeroCompleto = $"{guia.Serie}-{guia.Correlativo:D8}";
 
         var sql = @"INSERT INTO guiaRemision (
-                        empresaId, version, tipoDoc, serie, correlativo, numeroCompleto, fechaEmision,
+                        empresaId, sucursalId, version, tipoDoc, serie, correlativo, numeroCompleto, fechaEmision,
                         empresaRuc, empresaRazonSocial, empresaNombreComercial,
                         empresaDireccion, empresaProvincia, empresaDepartamento,
                         empresaDistrito, empresaUbigeo,
@@ -201,15 +241,17 @@ public class GuiaRemisionRepository : IGuiaRemisionRepository
                         codTraslado, desTraslado, modTraslado, fecTraslado,
                         codPuerto, indTransbordo, pesoTotal, undPesoTotal, numContenedor, matPeligrosoClase, matPeligrosoNroONU,
                         llegadaUbigeo, llegadaDireccion, partidaUbigeo, partidaDireccion,
-                        transportistaTipoDoc, transportistaNumDoc, transportistaRznSocial,
+                        transportistaTipoDoc, transportistaNumDoc, transportistaRznSocial, transportistaRegistroMTC,
                         transportistaPlaca, placaSecundaria1, placaSecundaria2, placaSecundaria3,
                         choferSecundarioTipoDoc, choferSecundarioDoc, choferSecundarioNombres,
                         choferSecundarioApellidos, choferSecundarioLicencia, choferSecundario2TipoDoc, 
                         choferSecundario2Doc, choferSecundario2Nombres, choferSecundario2Apellidos, 
                         choferSecundario2Licencia, choferTipoDoc, choferDoc, 
-                        choferNombres, choferApellidos, choferLicencia, estadoSunat, fechaCreacion, indVehiculoM1L, autorizacionVehiculoEntidad, autorizacionVehiculoNumero
+                        choferNombres, choferApellidos, choferLicencia, estadoSunat, fechaCreacion, indVehiculoM1L, autorizacionVehiculoEntidad, 
+                        autorizacionVehiculoNumero, partidaDepartamento, partidaProvincia, partidaDistrito,
+                        llegadaDepartamento, llegadaProvincia, llegadaDistrito
                     ) VALUES (
-                        @EmpresaId, @Version, @TipoDoc, @Serie, @Correlativo, @NumeroCompleto, @FechaEmision,
+                        @EmpresaId, @SucursalId, @Version, @TipoDoc, @Serie, @Correlativo, @NumeroCompleto, @FechaEmision,
                         @EmpresaRuc, @EmpresaRazonSocial, @EmpresaNombreComercial,
                         @EmpresaDireccion, @EmpresaProvincia, @EmpresaDepartamento,
                         @EmpresaDistrito, @EmpresaUbigeo,
@@ -219,12 +261,14 @@ public class GuiaRemisionRepository : IGuiaRemisionRepository
                         @CodTraslado, @DesTraslado, @ModTraslado, @FecTraslado,
                         @CodPuerto, @IndTransbordo, @PesoTotal, @UndPesoTotal, @NumContenedor, @MatPeligrosoClase, @MatPeligrosoNroONU,
                         @LlegadaUbigeo, @LlegadaDireccion, @PartidaUbigeo, @PartidaDireccion,
-                        @TransportistaTipoDoc, @TransportistaNumDoc, @TransportistaRznSocial,
+                        @TransportistaTipoDoc, @TransportistaNumDoc, @TransportistaRznSocial, @TransportistaRegistroMTC,
                         @TransportistaPlaca, @PlacaSecundaria1, @PlacaSecundaria2, @PlacaSecundaria3,
                         @ChoferSecundarioTipoDoc, @ChoferSecundarioDoc, @ChoferSecundarioNombres,
                         @ChoferSecundarioApellidos, @ChoferSecundarioLicencia, @ChoferSecundario2TipoDoc, @ChoferSecundario2Doc, 
                         @ChoferSecundario2Nombres, @ChoferSecundario2Apellidos, @ChoferSecundario2Licencia, @ChoferTipoDoc, @ChoferDoc, 
-                        @ChoferNombres, @ChoferApellidos, @ChoferLicencia, @EstadoSunat, @FechaCreacion, @IndVehiculoM1L, @AutorizacionVehiculoEntidad, @AutorizacionVehiculoNumero
+                        @ChoferNombres, @ChoferApellidos, @ChoferLicencia, @EstadoSunat, @FechaCreacion, @IndVehiculoM1L, @AutorizacionVehiculoEntidad, 
+                        @AutorizacionVehiculoNumero, @PartidaDepartamento, @PartidaProvincia, @PartidaDistrito,
+                        @LlegadaDepartamento, @LlegadaProvincia, @LlegadaDistrito
                     );
                     SELECT LAST_INSERT_ID();";
 
@@ -281,28 +325,28 @@ public class GuiaRemisionRepository : IGuiaRemisionRepository
     }
 
     private async Task ActualizarSerieCorrelativoAsync(GuiaRemision guia)
+{
+    string sql = guia.TipoDoc switch
     {
-        string sql = guia.TipoDoc switch
-        {
-            "09" => @"UPDATE sucursal SET 
-                    serieGuiaRemision        = @Serie,
-                    correlativoGuiaRemision  = correlativoGuiaRemision + 1
-                  WHERE empresaRuc           = @EmpresaRuc
-                  AND estado                 = 1",
+        "09" => @"UPDATE sucursal SET 
+                    serieGuiaRemision       = @Serie,
+                    correlativoGuiaRemision = correlativoGuiaRemision + 1
+                  WHERE sucursalId          = @SucursalId
+                  AND estado                = 1",
 
-            "31" => @"UPDATE sucursal SET 
+        "31" => @"UPDATE sucursal SET 
                     serieGuiaTransportista        = @Serie,
                     correlativoGuiaTransportista  = correlativoGuiaTransportista + 1
-                  WHERE empresaRuc                = @EmpresaRuc
+                  WHERE sucursalId                = @SucursalId
                   AND estado                      = 1",
 
-            _ => throw new InvalidOperationException($"Tipo de guía '{guia.TipoDoc}' no soportado.")
-        };
+        _ => throw new InvalidOperationException($"Tipo de guía '{guia.TipoDoc}' no soportado.")
+    };
 
-        await _connection.ExecuteAsync(sql, new
-        {
-            guia.Serie,
-            guia.EmpresaRuc
-        }, _transaction);
-    }
+    await _connection.ExecuteAsync(sql, new
+    {
+        guia.Serie,
+        guia.SucursalId   // ← reemplaza EmpresaRuc
+    }, _transaction);
+}
 }

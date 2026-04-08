@@ -3,6 +3,7 @@ namespace IdeatecAPI.Application.Features.GuiaRemision.DTOs;
 public class GuiaDto
 {
     public int GuiaId { get; set; }
+    public int? SucursalId { get; set; }
     public int Version { get; set; }
     public string TipoDoc { get; set; } = string.Empty;
     public string Serie { get; set; } = string.Empty;
@@ -24,9 +25,18 @@ public class GuiaDto
     public decimal? PesoTotal { get; set; }
     public string? UndPesoTotal { get; set; }
 
+    // Llegada
     public string? LlegadaUbigeo { get; set; }
+    public string? LlegadaDepartamento { get; set; }
+    public string? LlegadaProvincia { get; set; }
+    public string? LlegadaDistrito { get; set; }
     public string? LlegadaDireccion { get; set; }
+
+    // Partida
     public string? PartidaUbigeo { get; set; }
+    public string? PartidaDepartamento { get; set; }
+    public string? PartidaProvincia { get; set; }
+    public string? PartidaDistrito { get; set; }
     public string? PartidaDireccion { get; set; }
 
     public string? ChoferTipoDoc { get; set; }
@@ -37,6 +47,7 @@ public class GuiaDto
 
     public string? TransportistaNumDoc { get; set; }
     public string? TransportistaRznSocial { get; set; }
+    public string? TransportistaRegistroMTC { get; set; }
     public bool IndVehiculoM1L { get; set; } = false;
     public string? AutorizacionVehiculoEntidad { get; set; }
     public string? AutorizacionVehiculoNumero { get; set; }

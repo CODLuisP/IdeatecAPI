@@ -4,6 +4,7 @@ public class GuiaRemision
 {
     public int GuiaId { get; set; }
     public int EmpresaId { get; set; }
+    public int? SucursalId { get; set; }
     public int Version { get; set; } = 2022;
     public string TipoDoc { get; set; } = "09";
     public string Serie { get; set; } = string.Empty;
@@ -53,16 +54,23 @@ public class GuiaRemision
 
     // Llegada
     public string? LlegadaUbigeo { get; set; }
+    public string? LlegadaDepartamento { get; set; }
+    public string? LlegadaProvincia { get; set; }
+    public string? LlegadaDistrito { get; set; }
     public string? LlegadaDireccion { get; set; }
 
     // Partida
     public string? PartidaUbigeo { get; set; }
+    public string? PartidaDepartamento { get; set; }
+    public string? PartidaProvincia { get; set; }
+    public string? PartidaDistrito { get; set; }
     public string? PartidaDireccion { get; set; }
 
     // Transportista
     public string? TransportistaTipoDoc { get; set; }
     public string? TransportistaNumDoc { get; set; }
     public string? TransportistaRznSocial { get; set; }
+    public string? TransportistaRegistroMTC { get; set; }
     public bool IndVehiculoM1L { get; set; } = false;
     public string? TransportistaPlaca { get; set; }
     public string? AutorizacionVehiculoEntidad { get; set; }

@@ -16,6 +16,10 @@ public record DatosComprobante(
 );
 
 // Datos para Guía de Remisión (tipo 9)
+// Agrega este record
+public record BienGuia(string Descripcion, int Cantidad, string Unidad);
+
+// Cambia la tupla por el record
 public record DatosGuiaRemision(
     string SerieNumero,
     string EstadoSunat,
@@ -23,5 +27,5 @@ public record DatosGuiaRemision(
     string FechaTraslado,
     string DireccionPartida,
     string DireccionLlegada,
-    List<(string Descripcion, int Cantidad, string Unidad)> Bienes
+    List<BienGuia> Bienes  // ← antes era List<(string, int, string)>
 );

@@ -331,18 +331,24 @@ public class XmlGuiaBuilderService : IXmlGuiaBuilderService
         }
 
         // Normal — estructura completa con AddressTypeCode
+        var deliveryAddress = new XElement(Cac + "DeliveryAddress",
+            new XElement(Cbc + "ID", guia.LlegadaUbigeo));
+
+        // AddressTypeCode solo si el destinatario tiene RUC
+        if (guia.DestinatarioTipoDoc == "6" && !string.IsNullOrEmpty(guia.DestinatarioNumDoc))
+        {
+            deliveryAddress.Add(new XElement(Cbc + "AddressTypeCode",
+                new XAttribute("listID", guia.DestinatarioNumDoc),
+                new XAttribute("listAgencyName", "PE:SUNAT"),
+                new XAttribute("listName", "Establecimientos anexos"),
+                "0"));
+        }
+
+        deliveryAddress.Add(new XElement(Cac + "AddressLine",
+            new XElement(Cbc + "Line", guia.LlegadaDireccion)));
+
         return new XElement(Cac + "Delivery",
-            new XElement(Cac + "DeliveryAddress",
-                new XElement(Cbc + "ID", guia.LlegadaUbigeo),
-                new XElement(Cbc + "AddressTypeCode",
-                    new XAttribute("listID", guia.DestinatarioTipoDoc == "6"
-                        ? guia.DestinatarioNumDoc ?? ""
-                        : ""),
-                    new XAttribute("listAgencyName", "PE:SUNAT"),
-                    new XAttribute("listName", "Establecimientos anexos"),
-                    "0"),
-                new XElement(Cac + "AddressLine",
-                    new XElement(Cbc + "Line", guia.LlegadaDireccion))),
+            deliveryAddress,
             new XElement(Cac + "Despatch",
                 new XElement(Cac + "DespatchAddress",
                     new XElement(Cbc + "ID",
@@ -480,18 +486,12 @@ public class XmlGuiaBuilderService : IXmlGuiaBuilderService
                     guia.FecTraslado?.ToString("yyyy-MM-dd")
                     ?? guia.FechaEmision.ToString("yyyy-MM-dd"))),
 
-            // ── CarrierParty vacío (requerido por schema) ─────────────────
+            // ── CarrierParty — registro MTC del transportista ─────────────
             new XElement(Cac + "CarrierParty",
-                new XElement(Cac + "PartyIdentification",
-                    new XElement(Cbc + "ID",
-                        new XAttribute("schemeID", ""))),
                 new XElement(Cac + "PartyLegalEntity",
-                    new XElement(Cbc + "RegistrationName", ""))),
-
-            // ── Placa via TransportMeans ──────────────────────────────────
-            new XElement(Cac + "TransportMeans",
-                new XElement(Cac + "RoadTransport",
-                    new XElement(Cbc + "LicensePlateID", guia.TransportistaPlaca ?? ""))),
+                    !string.IsNullOrEmpty(guia.TransportistaRegistroMTC)
+                        ? new XElement(Cbc + "CompanyID", guia.TransportistaRegistroMTC)
+                        : null!)),
 
             // ── Conductor ─────────────────────────────────────────────────
             new XElement(Cac + "DriverPerson",
@@ -542,18 +542,19 @@ public class XmlGuiaBuilderService : IXmlGuiaBuilderService
                                 new XElement(Cbc + "RegistrationName", guia.TerceroRznSocial ?? "")))
                         : null!)),
 
-            // ── Vehículo ──────────────────────────────────────────────────
+            // ── Vehículo — placa en TransportEquipment ────────────────────────
             new XElement(Cac + "TransportHandlingUnit",
-    new XElement(Cac + "TransportEquipment",
-        new XElement(Cbc + "ID", guia.TransportistaPlaca ?? ""),
-        // Autorización especial del vehículo
-        !string.IsNullOrEmpty(guia.AutorizacionVehiculoNumero)
-            ? new XElement(Cac + "ShipmentDocumentReference",
-                new XElement(Cbc + "ID",
-                    new XAttribute("schemeID", guia.AutorizacionVehiculoEntidad ?? ""),
-                    new XAttribute("schemeName", "Entidad Autorizadora"),
-                    new XAttribute("schemeAgencyName", "PE:SUNAT"),
-                    guia.AutorizacionVehiculoNumero))
-            : null!)));
+                new XElement(Cac + "TransportEquipment",
+                    new XElement(Cbc + "ID", guia.TransportistaPlaca ?? ""),
+                    // Autorización especial si existe
+                    !string.IsNullOrEmpty(guia.AutorizacionVehiculoNumero)
+                        ? new XElement(Cac + "ShipmentDocumentReference",
+                            new XElement(Cbc + "ID",
+                                new XAttribute("schemeID", guia.AutorizacionVehiculoEntidad ?? ""),
+                                new XAttribute("schemeName", "Entidad Autorizadora"),
+                                new XAttribute("schemeAgencyName", "PE:SUNAT"),
+                                guia.AutorizacionVehiculoNumero))
+                        : null!))
+        );
     }
 }
