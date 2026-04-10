@@ -8,6 +8,7 @@ public interface IProductoRepository : IRepository<Producto>
     Task<IEnumerable<Producto>> GetAllProductosBaseRucAsync(string empresaRuc);
     Task<IEnumerable<Producto>> GetAllProductosRucAsync(string empresaRuc);
     Task<IEnumerable<Producto>> GetProductosRucDisponiblesAsync(int sucursalId);
+    Task<IEnumerable<Producto>> SearchProductosRucDisponiblesAsync(int sucursalId, string palabra);
     Task<IEnumerable<Producto>> SearchBySucursalAsync(int sucursalId, string palabra);
     Task<IEnumerable<Producto>> SearchByRucAsync(string empresaRuc, string palabra);
     Task<Producto?> GetProductoByIdAsync(int productoId, int sucursalId);
