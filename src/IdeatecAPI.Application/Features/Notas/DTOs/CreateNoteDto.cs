@@ -28,7 +28,11 @@ public class CreateNoteDto
 
     // Totales
     public decimal MtoOperGravadas { get; set; }
+    public decimal MtoOperExoneradas { get; set; }   // ← agregar
+    public decimal MtoOperInafectas { get; set; }    // ← agregar
+    public decimal MtoOperGratuitas { get; set; }  
     public decimal MtoIGV { get; set; }
+    public decimal TotalIcbper { get; set; }
     public decimal? ValorVenta { get; set; }
     public decimal? SubTotal { get; set; }
     public decimal MtoImpVenta { get; set; }
@@ -67,4 +71,6 @@ public class CreateNoteDetailDto
     public int TipAfeIgv { get; set; } = 10;
     public decimal MtoPrecioUnitario { get; set; }
     public decimal? TotalVentaItem { get; set; }
+    public decimal? Icbper { get; set; }
+    public decimal? FactorIcbper { get; set; }
 }

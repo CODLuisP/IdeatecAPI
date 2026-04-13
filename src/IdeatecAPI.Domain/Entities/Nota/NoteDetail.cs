@@ -12,7 +12,6 @@ public class NoteDetail
     public decimal Cantidad { get; set; }
     public string TipoAfectacionIGV { get; set; } = "10";
     public decimal PorcentajeIGV { get; set; } = 18;
-    public decimal MontoIGV { get; set; }
     public decimal DescuentoUnitario { get; set; }
     public decimal DescuentoTotal { get; set; }
     public decimal MtoValorUnitario { get; set; }
@@ -21,4 +20,6 @@ public class NoteDetail
     public decimal? TotalVentaItem { get; set; }
     public decimal Igv { get; set; }
     public decimal MtoPrecioUnitario { get; set; }
+    public decimal? Icbper { get; set; }
+    public decimal? FactorIcbper { get; set; }
 }

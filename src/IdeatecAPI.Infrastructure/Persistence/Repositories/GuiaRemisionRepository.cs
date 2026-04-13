@@ -325,28 +325,28 @@ public class GuiaRemisionRepository : IGuiaRemisionRepository
     }
 
     private async Task ActualizarSerieCorrelativoAsync(GuiaRemision guia)
-{
-    string sql = guia.TipoDoc switch
     {
-        "09" => @"UPDATE sucursal SET 
+        string sql = guia.TipoDoc switch
+        {
+            "09" => @"UPDATE sucursal SET 
                     serieGuiaRemision       = @Serie,
                     correlativoGuiaRemision = correlativoGuiaRemision + 1
                   WHERE sucursalId          = @SucursalId
                   AND estado                = 1",
 
-        "31" => @"UPDATE sucursal SET 
+            "31" => @"UPDATE sucursal SET 
                     serieGuiaTransportista        = @Serie,
                     correlativoGuiaTransportista  = correlativoGuiaTransportista + 1
                   WHERE sucursalId                = @SucursalId
                   AND estado                      = 1",
 
-        _ => throw new InvalidOperationException($"Tipo de guía '{guia.TipoDoc}' no soportado.")
-    };
+            _ => throw new InvalidOperationException($"Tipo de guía '{guia.TipoDoc}' no soportado.")
+        };
 
-    await _connection.ExecuteAsync(sql, new
-    {
-        guia.Serie,
-        guia.SucursalId   // ← reemplaza EmpresaRuc
-    }, _transaction);
-}
+        await _connection.ExecuteAsync(sql, new
+        {
+            guia.Serie,
+            guia.SucursalId   // ← reemplaza EmpresaRuc
+        }, _transaction);
+    }
 }
