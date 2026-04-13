@@ -83,6 +83,29 @@ public class NoteService : INoteService
         if (dto.Details == null || dto.Details.Count == 0)
             throw new InvalidOperationException("La nota debe tener al menos un detalle");
 
+        // ── Validación especial para nota débito motivo 01 ────────────────────
+        if (dto.TipoDoc == "08" && dto.CodMotivo == "01")
+        {
+            var comprobanteAfectado = await _unitOfWork.Comprobantes
+                .GetByIdAsync(dto.ComprobanteAfectadoId ?? 0)
+                ?? throw new KeyNotFoundException("Comprobante afectado no encontrado");
+
+            if (comprobanteAfectado.TipoPago?.ToLower() == "contado")
+                throw new InvalidOperationException(
+                    "No se puede emitir nota de débito por mora a un comprobante de pago al contado");
+
+            var cuotas = await _unitOfWork.Comprobantes
+                .GetCuotasByIdAsync(dto.ComprobanteAfectadoId ?? 0);
+
+            var cuotasVencidasNoPagadas = cuotas.Where(c =>
+                c.FechaVencimiento < DateTime.Today &&
+                c.Estado?.ToUpper() != "PAGADO");
+
+            if (!cuotasVencidasNoPagadas.Any())
+                throw new InvalidOperationException(
+                    "El comprobante no tiene cuotas vencidas pendientes de pago");
+        }
+
         // ── 2. Buscar empresa por RUC ─────────────────────────────────────────
         var empresa = await _unitOfWork.Empresas.GetEmpresaByRucAsync(dto.Company.Ruc)
             ?? throw new KeyNotFoundException($"Empresa con RUC {dto.Company.Ruc} no encontrada");
@@ -91,6 +114,19 @@ public class NoteService : INoteService
         var cliente = await _unitOfWork.Clientes.GetByNumDocAsync(dto.Client.NumDoc);
         var clienteId = cliente?.ClienteId;
 
+        // ── Pendiente 2: Validar que el comprobante afectado no esté anulado ──
+        if (dto.ComprobanteAfectadoId.HasValue && dto.ComprobanteAfectadoId > 0)
+        {
+            var comprobanteAfectado = await _unitOfWork.Comprobantes
+                .GetByIdAsync(dto.ComprobanteAfectadoId.Value)
+                ?? throw new KeyNotFoundException(
+                    $"Comprobante afectado {dto.NumDocAfectado} no encontrado");
+
+            if (comprobanteAfectado.EstadoSunat == "ANULADO")
+                throw new InvalidOperationException(
+                    $"No se puede emitir una nota contra el comprobante {dto.NumDocAfectado} porque está ANULADO");
+        }
+
         // ── 4. BeginTransaction ───────────────────────────────────────────────
         _unitOfWork.BeginTransaction();
         try
@@ -98,6 +134,10 @@ public class NoteService : INoteService
             if (await _unitOfWork.Notes.ExisteNoteAsync(empresa.Id, dto.TipoDoc, dto.Serie, correlativoInt))
                 throw new InvalidOperationException($"Ya existe una nota {dto.Serie}-{dto.Correlativo}");
 
+            var horaLima = TimeZoneInfo.ConvertTimeFromUtc(
+                DateTime.UtcNow,
+                TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time")
+            );
             var note = new Note
             {
                 EmpresaId = empresa.Id,
@@ -105,7 +145,7 @@ public class NoteService : INoteService
                 TipoDoc = dto.TipoDoc,
                 Serie = dto.Serie,
                 Correlativo = correlativoInt,
-                FechaEmision = dto.FechaEmision,
+                FechaEmision = dto.FechaEmision.Date.Add(horaLima.TimeOfDay),
                 TipoMoneda = dto.TipoMoneda,
                 TipoOperacion = dto.TipoOperacion,
                 ComprobanteAfectadoId = dto.ComprobanteAfectadoId,
@@ -122,6 +162,7 @@ public class NoteService : INoteService
                 ClienteDistrito = dto.Client.Address?.Distrito,
                 ClienteUbigeo = dto.Client.Address?.Ubigueo,
                 EmpresaRuc = dto.Company.Ruc,
+                EstablecimientoAnexo = dto.Company.CodEstablecimiento,
                 EmpresaRazonSocial = dto.Company.RazonSocial,
                 EmpresaNombreComercial = dto.Company.NombreComercial,
                 EmpresaDireccion = dto.Company.Address?.Direccion,
@@ -130,9 +171,11 @@ public class NoteService : INoteService
                 EmpresaDistrito = dto.Company.Address?.Distrito,
                 EmpresaUbigeo = dto.Company.Address?.Ubigueo,
                 MtoOperGravadas = dto.MtoOperGravadas,
+                MtoOperExoneradas = dto.MtoOperExoneradas,
                 MtoIGV = dto.MtoIGV,
-                ValorVenta = dto.ValorVenta,
-                SubTotal = dto.SubTotal,
+                TotalIcbper = dto.TotalIcbper,
+                ValorVenta = dto.ValorVenta ?? dto.MtoOperGravadas,
+                SubTotal = dto.SubTotal ?? dto.MtoImpVenta,
                 MtoImpVenta = dto.MtoImpVenta,
                 EstadoSunat = "PENDIENTE",
                 FechaCreacion = DateTime.UtcNow
@@ -157,9 +200,11 @@ public class NoteService : INoteService
                     MtoBaseIgv = d.MtoBaseIgv,
                     PorcentajeIGV = d.PorcentajeIgv,
                     Igv = d.Igv,
-                    TipoAfectacionIGV = d.TipAfeIgv.ToString(),
+                    TipoAfectacionIGV = d.TipAfeIgv.ToString("D2"),
                     MtoPrecioUnitario = d.MtoPrecioUnitario,
-                    TotalVentaItem = d.TotalVentaItem
+                    TotalVentaItem = d.TotalVentaItem,
+                    Icbper = d.Icbper,
+                    FactorIcbper = d.FactorIcbper
                 });
             }
 
@@ -228,13 +273,14 @@ public class NoteService : INoteService
 
         // ← Guardar archivos localmente
         await GuardarArchivosAsync(
-    empresa.Ruc,
-    note.EmpresaRazonSocial ?? empresa.RazonSocial,
-    note.TipoDoc,
-    note.Serie,
-    note.Correlativo.ToString(),
-    xmlFirmadoBytes,
-    sunatResponse.CdrBase64);
+            empresa.Ruc,
+            note.EmpresaRazonSocial ?? empresa.RazonSocial,
+            note.TipoDoc,
+            note.Serie,
+            note.Correlativo.ToString(),
+            xmlFirmadoBytes,
+            sunatResponse.CdrBase64
+        );
 
         var nuevoEstado = sunatResponse.Success ? (sunatResponse.TieneObservaciones ? "ACEPTADO_CON_OBSERVACIONES" : "ACEPTADO") : "RECHAZADO";
 
@@ -246,6 +292,25 @@ public class NoteService : INoteService
             xmlFirmadoString,
             sunatResponse.CdrBase64
         );
+
+        // ── Pendiente 1: Anular comprobante original si es anulación total aceptada ──
+        if (sunatResponse.Success && note.ComprobanteAfectadoId.HasValue)
+        {
+            var esAnulacionTotal = new[] { "01", "02", "03" }
+                .Contains(note.TipoNotaCreditoDebito);
+
+            if (esAnulacionTotal)
+            {
+                await _unitOfWork.Comprobantes.UpdateEstadoSunatAsync(
+                    note.ComprobanteAfectadoId.Value,
+                    "ANULADO",
+                    null,
+                    $"Anulado por nota de crédito {note.Serie}-{note.Correlativo:D8}",
+                    null,
+                    null
+                );
+            }
+        }
 
         return await GetNoteByIdAsync(comprobanteId)
             ?? throw new InvalidOperationException("Error al recuperar la nota actualizada");
@@ -312,6 +377,8 @@ public class NoteService : INoteService
         Descripcion = d.Descripcion,
         Cantidad = d.Cantidad,
         MtoValorUnitario = d.MtoValorUnitario,
+        Icbper = d.Icbper,
+        FactorIcbper = d.FactorIcbper,
         MtoValorVenta = d.MtoValorVenta,
         MtoBaseIgv = d.MtoBaseIgv,
         PorcentajeIgv = d.PorcentajeIGV,

@@ -35,6 +35,7 @@ public class Note
 
     //Empresa (denormalizado para el XML)
     public string? EmpresaRuc { get; set; }
+    public string? EstablecimientoAnexo { get; set; } 
     public string? EmpresaRazonSocial { get; set; }
     public string? EmpresaNombreComercial { get; set; }
     public string? EmpresaDireccion { get; set; }
@@ -49,9 +50,13 @@ public class Note
 
     // Totales
     public decimal MtoOperGravadas { get; set; }
+    public decimal MtoOperExoneradas { get; set; }   // ← agregar
+    public decimal MtoOperInafectas { get; set; }    // ← agregar
+    public decimal MtoOperGratuitas { get; set; }
     public decimal MtoIGV { get; set; }
-    public decimal? ValorVenta { get; set; }
-    public decimal? SubTotal { get; set; }
+    public decimal TotalIcbper { get; set; }
+    public decimal ValorVenta { get; set; }
+    public decimal SubTotal { get; set; }
     public decimal MtoImpVenta { get; set; }
 
     // Resultado SUNAT

@@ -437,7 +437,8 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         var sql = BaseSelect + @"
         WHERE empresaRuc  = @Ruc
           AND serie       = @Serie
-          AND correlativo = @Numero";
+          AND correlativo = @Numero
+          AND estadoSunat = 'ACEPTADO'";
 
         return await _connection.QueryFirstOrDefaultAsync<Comprobante>(
             sql,
