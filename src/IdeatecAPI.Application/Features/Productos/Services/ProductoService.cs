@@ -10,6 +10,7 @@ public interface IProductoService
     Task<IEnumerable<ObtenerProductoBaseDTO>> GetAllProductosBaseRucAsync(string empresaRuc); //Proucto base por empresa
     Task<IEnumerable<ObtenerProductoDTO>> GetAllProductosRucAsync(string empresaRuc); // Producto completo por empresa
     Task<IEnumerable<ObtenerProductoBaseDTO>> GetProductosRucDisponiblesAsync(int sucursalId); // Productos base disponibles de la misma empresa por agregar a la sede
+    Task<IEnumerable<ObtenerProductoBaseDTO>> SearchProductosRucDisponiblesAsync(int sucursalId, string palabra); // topa 10 segun palaba de Productos base disponibles de la misma empresa por agregar a la sede
     Task<ObtenerProductoDTO?> GetProductoByIdAsync(int productoId, int sucursalId); //Producto especifico por sucursal
     Task<IEnumerable<ObtenerProductoDTO>> SearchBySucursalAsync(int sucursalId, string palabra);
     Task<IEnumerable<ObtenerProductoDTO>> SearchByRucAsync(string empresaRuc, string palabra);
@@ -222,6 +223,7 @@ public class ProductoService : IProductoService
         SucursalProducto = p.SucursalProducto == null ? null : new ObtenerSucursalProductoDTO
         {
             SucursalProductoId = p.SucursalProducto.SucursalProductoId,
+            NomSucursal = p.SucursalProducto.NomSucursal,
             PrecioUnitario = p.SucursalProducto.PrecioUnitario,
             Stock = p.SucursalProducto.Stock
         }
@@ -242,6 +244,15 @@ public class ProductoService : IProductoService
     public async Task<IEnumerable<ObtenerProductoBaseDTO>> GetProductosRucDisponiblesAsync(int sucursalId)
     {
         var productos = await _unitOfWork.Productos.GetProductosRucDisponiblesAsync(sucursalId);
+        return productos.Select(MapToBaseDto);
+    }
+
+    public async Task<IEnumerable<ObtenerProductoBaseDTO>> SearchProductosRucDisponiblesAsync(int sucursalId, string palabra)
+    {
+        if (string.IsNullOrWhiteSpace(palabra))
+            throw new ArgumentException("La palabra de búsqueda no puede estar vacía.");
+
+        var productos = await _unitOfWork.Productos.SearchProductosRucDisponiblesAsync(sucursalId, palabra);
         return productos.Select(MapToBaseDto);
     }
 
