@@ -43,14 +43,12 @@ public class SucursalService : ISucursalService
 
     public async Task<ObtenerSucursalDTO> RegistrarSucursalAsync(AgregarSucursalDTO dto)
     {
-        // Validar antes de abrir transacción
         if (string.IsNullOrEmpty(dto.EmpresaRuc))
             throw new InvalidOperationException("El RUC de la empresa es requerido.");
 
         _unitOfWork.BeginTransaction();
         try
         {
-            // 1. Crear sucursal
             var sucursal = new Domain.Entities.Sucursal
             {
                 EmpresaRuc = dto.EmpresaRuc,
@@ -61,10 +59,14 @@ public class SucursalService : ISucursalService
                 CorrelativoFactura = dto.CorrelativoFactura,
                 SerieBoleta = dto.SerieBoleta,
                 CorrelativoBoleta = dto.CorrelativoBoleta,
-                SerieNotaCredito = dto.SerieNotaCredito,
-                CorrelativoNotaCredito = dto.CorrelativoNotaCredito,
-                SerieNotaDebito = dto.SerieNotaDebito,
-                CorrelativoNotaDebito = dto.CorrelativoNotaDebito,
+                SerieNotaCreditoFactura = dto.SerieNotaCreditoFactura,
+                CorrelativoNotaCreditoFactura = dto.CorrelativoNotaCreditoFactura,
+                SerieNotaCreditoBoleta = dto.SerieNotaCreditoBoleta,
+                CorrelativoNotaCreditoBoleta = dto.CorrelativoNotaCreditoBoleta,
+                SerieNotaDebitoFactura = dto.SerieNotaDebitoFactura,
+                CorrelativoNotaDebitoFactura = dto.CorrelativoNotaDebitoFactura,
+                SerieNotaDebitoBoleta = dto.SerieNotaDebitoBoleta,
+                CorrelativoNotaDebitoBoleta = dto.CorrelativoNotaDebitoBoleta,
                 SerieGuiaRemision = dto.SerieGuiaRemision,
                 CorrelativoGuiaRemision = dto.CorrelativoGuiaRemision,
                 SerieGuiaTransportista = dto.SerieGuiaTransportista,
@@ -74,7 +76,6 @@ public class SucursalService : ISucursalService
 
             var sucursalCreada = await _unitOfWork.Sucursal.RegistrarSucursalAsync(sucursal);
 
-            // 2. Crear usuario admin de la nueva sucursal
             var passwordHash = BCrypt.Net.BCrypt.HashPassword("12345678");
 
             var adminSucursal = new Domain.Entities.Usuario
@@ -93,7 +94,6 @@ public class SucursalService : ISucursalService
 
             await _unitOfWork.Usuarios.CreateAsync(adminSucursal);
 
-            // 3. Verificar si ya existe superadmin para este RUC
             var existeSuperadmin = await _unitOfWork.Usuarios.ExisteSuperadminAsync(dto.EmpresaRuc);
 
             if (!existeSuperadmin)
@@ -131,15 +131,19 @@ public class SucursalService : ISucursalService
                        ?? throw new KeyNotFoundException($"Sucursal con ID {dto.SucursalId} no encontrada.");
 
         sucursal.Nombre = dto.Nombre;
-        sucursal.Direccion = dto.Nombre;
+        sucursal.Direccion = dto.Direccion; // ← también corregí este bug (antes asignaba dto.Nombre)
         sucursal.SerieFactura = dto.SerieFactura;
         sucursal.CorrelativoFactura = dto.CorrelativoFactura;
         sucursal.SerieBoleta = dto.SerieBoleta;
         sucursal.CorrelativoBoleta = dto.CorrelativoBoleta;
-        sucursal.SerieNotaCredito = dto.SerieNotaCredito;
-        sucursal.CorrelativoNotaCredito = dto.CorrelativoNotaCredito;
-        sucursal.SerieNotaDebito = dto.SerieNotaDebito;
-        sucursal.CorrelativoNotaDebito = dto.CorrelativoNotaDebito;
+        sucursal.SerieNotaCreditoFactura = dto.SerieNotaCreditoFactura;
+        sucursal.CorrelativoNotaCreditoFactura = dto.CorrelativoNotaCreditoFactura;
+        sucursal.SerieNotaCreditoBoleta = dto.SerieNotaCreditoBoleta;
+        sucursal.CorrelativoNotaCreditoBoleta = dto.CorrelativoNotaCreditoBoleta;
+        sucursal.SerieNotaDebitoFactura = dto.SerieNotaDebitoFactura;
+        sucursal.CorrelativoNotaDebitoFactura = dto.CorrelativoNotaDebitoFactura;
+        sucursal.SerieNotaDebitoBoleta = dto.SerieNotaDebitoBoleta;
+        sucursal.CorrelativoNotaDebitoBoleta = dto.CorrelativoNotaDebitoBoleta;
         sucursal.SerieGuiaRemision = dto.SerieGuiaRemision;
         sucursal.CorrelativoGuiaRemision = dto.CorrelativoGuiaRemision;
         sucursal.SerieGuiaTransportista = dto.SerieGuiaTransportista;
@@ -167,10 +171,14 @@ public class SucursalService : ISucursalService
         CorrelativoFactura = s.CorrelativoFactura,
         SerieBoleta = s.SerieBoleta,
         CorrelativoBoleta = s.CorrelativoBoleta,
-        SerieNotaCredito = s.SerieNotaCredito,
-        CorrelativoNotaCredito = s.CorrelativoNotaCredito,
-        SerieNotaDebito = s.SerieNotaDebito,
-        CorrelativoNotaDebito = s.CorrelativoNotaDebito,
+        SerieNotaCreditoFactura = s.SerieNotaCreditoFactura,
+        CorrelativoNotaCreditoFactura = s.CorrelativoNotaCreditoFactura,
+        SerieNotaCreditoBoleta = s.SerieNotaCreditoBoleta,
+        CorrelativoNotaCreditoBoleta = s.CorrelativoNotaCreditoBoleta,
+        SerieNotaDebitoFactura = s.SerieNotaDebitoFactura,
+        CorrelativoNotaDebitoFactura = s.CorrelativoNotaDebitoFactura,
+        SerieNotaDebitoBoleta = s.SerieNotaDebitoBoleta,
+        CorrelativoNotaDebitoBoleta = s.CorrelativoNotaDebitoBoleta,
         SerieGuiaRemision = s.SerieGuiaRemision,
         CorrelativoGuiaRemision = s.CorrelativoGuiaRemision,
         SerieGuiaTransportista = s.SerieGuiaTransportista,
