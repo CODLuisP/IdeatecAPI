@@ -317,6 +317,19 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
         return filas > 0;
     }
 
+    public async Task<bool> DevolverStockAsync(int productoId, int sucursalId, int cantidad)
+    {
+        var sql = @"
+            UPDATE sucursalProducto
+            SET stock = stock + @Cantidad
+            WHERE productoID  = @ProductoId
+            AND sucursalID  = @SucursalId
+            AND estado      = 1";
+
+        var filas = await _connection.ExecuteAsync(sql, new { ProductoId = productoId, SucursalId = sucursalId, Cantidad = cantidad }, _transaction);
+        return filas > 0;
+    }
+    
     public async Task<bool> EliminarSucursalProductoAsync(int sucursalProductoId)
     {
         var sql = @"UPDATE sucursalProducto SET estado = 0 
