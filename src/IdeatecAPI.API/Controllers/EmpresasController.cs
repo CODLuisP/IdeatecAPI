@@ -59,6 +59,7 @@ public class CompaniesController : ControllerBase
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [AllowAnonymous]
     public async Task<IActionResult> Create([FromBody] CreateEmpresaDto dto)
     {
         var empresa = await _empresaService.CreateEmpresaAsync(dto);

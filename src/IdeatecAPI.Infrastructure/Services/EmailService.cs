@@ -135,7 +135,7 @@ public class EmailService : IEmailService
         </html>
         """;
 
-  public async Task SendEmailAsync(string toEmail, string subject, string htmlBody)
+  public async Task SendEmailAsync(string toEmail, string subject, string htmlBody, byte[]? adjunto = null, string? nombreAdjunto = null)
   {
     try
     {
@@ -150,14 +150,17 @@ public class EmailService : IEmailService
       message.Subject = subject;
 
       var bodyBuilder = new BodyBuilder { HtmlBody = htmlBody };
+
+      // ← adjuntar PDF si viene
+      if (adjunto != null && !string.IsNullOrWhiteSpace(nombreAdjunto))
+      {
+        bodyBuilder.Attachments.Add(nombreAdjunto, adjunto, ContentType.Parse("application/pdf"));
+      }
+
       message.Body = bodyBuilder.ToMessageBody();
 
       using var client = new SmtpClient();
-      await client.ConnectAsync(
-          smtpConfig["Host"],
-          int.Parse(smtpConfig["Port"] ?? "587"),
-          SecureSocketOptions.StartTls
-      );
+      await client.ConnectAsync(smtpConfig["Host"], int.Parse(smtpConfig["Port"] ?? "587"), SecureSocketOptions.StartTls);
       await client.AuthenticateAsync(smtpConfig["Username"], smtpConfig["Password"]);
       await client.SendAsync(message);
       await client.DisconnectAsync(true);

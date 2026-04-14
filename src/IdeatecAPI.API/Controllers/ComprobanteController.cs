@@ -12,11 +12,13 @@ namespace IdeatecAPI.API.Controllers;
 public class ComprobantesController : ControllerBase
 {
     private readonly IComprobanteService _comprobanteService;
+    private readonly IComprobantePdfService _pdfService;
     private readonly ILogger<ComprobantesController> _logger;
 
-    public ComprobantesController(IComprobanteService comprobanteService, ILogger<ComprobantesController> logger)
+    public ComprobantesController(IComprobanteService comprobanteService, IComprobantePdfService pdfService, ILogger<ComprobantesController> logger)
     {
         _comprobanteService = comprobanteService;
+        _pdfService         = pdfService;
         _logger = logger;
     }
 
@@ -133,6 +135,43 @@ public class ComprobantesController : ControllerBase
         }
     }
 
+    [HttpGet("{id}/pdf")]
+    [ProducesResponseType(StatusCodes.Status200OK,  Type = typeof(FileContentResult))]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> DescargarPdf(int id,
+        [FromQuery] TamanoPdf tamano = TamanoPdf.A4)
+    {
+        try
+        {
+            var pdfBytes = await _pdfService.GenerarPdfAsync(id, tamano);
+    
+            // Recuperar número de comprobante para el nombre del archivo
+            var comprobante = await _comprobanteService.GetComprobanteByIdAsync(id);
+            var nombreArchivo = comprobante?.NumeroCompleto ?? id.ToString();
+            nombreArchivo = string.Concat(nombreArchivo
+                .Replace("/", "-").Replace("\\", "-")
+                .Where(c => !Path.GetInvalidFileNameChars().Contains(c)));
+    
+            Response.Headers["Content-Disposition"] = $"inline; filename=\"{nombreArchivo}.pdf\"";
+            return File(pdfBytes, "application/pdf");
+        }
+        catch (KeyNotFoundException ex)
+        {
+            _logger.LogWarning("Comprobante no encontrado al generar PDF: {Mensaje}", ex.Message);
+            return NotFound(new { mensaje = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al generar PDF del comprobante ID {Id}", id);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al generar el PDF.",
+                detalle = ex.Message
+            });
+        }
+    }
+
     [HttpGet("{id}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -151,6 +190,32 @@ public class ComprobantesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error al obtener comprobante con ID {Id}", id);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al obtener el comprobante.",
+                detalle = ex.Message
+            });
+        }
+    }
+
+    [HttpGet("{ruc}/{serie}/{numero}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetByRucSerieNumero(string ruc, string serie, int numero)
+    {
+        try
+        {
+            var comprobante = await _comprobanteService.GetByRucSerieNumeroAsync(ruc, serie, numero);
+
+            if (comprobante == null)
+                return NotFound(new { mensaje = $"No se encontró el comprobante {serie}-{numero} para el RUC '{ruc}'." });
+
+            return Ok(comprobante);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener comprobante {Ruc}/{Serie}/{Numero}", ruc, serie, numero);
             return StatusCode(StatusCodes.Status500InternalServerError, new
             {
                 mensaje = "Ocurrió un error al obtener el comprobante.",

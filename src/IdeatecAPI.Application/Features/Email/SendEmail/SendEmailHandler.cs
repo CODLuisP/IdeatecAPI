@@ -33,7 +33,13 @@ public class SendEmailHandler : IRequestHandler<SendEmailCommand, SendEmailResul
                         request.ToName, request.Subject, request.Body)
             };
 
-            await _emailService.SendEmailAsync(request.ToEmail, request.Subject, html);
+            await _emailService.SendEmailAsync(
+                request.ToEmail,
+                request.Subject,
+                html,
+                request.Adjunto,        // ← nuevo
+                request.NombreAdjunto   // ← nuevo
+            );
             return new SendEmailResult(true, "Correo enviado correctamente.");
         }
         catch (Exception ex)

@@ -9,6 +9,7 @@ public class SucursalProducto
     public int SucursalProductoId { get; set; }
     public int ProductoId { get; set; }
     public int SucursalId { get; set; }
+    public string? NomSucursal { get; set; }
     public decimal? PrecioUnitario { get; set; }
     public int? Stock { get; set; }
     public bool? Estado { get; set; }

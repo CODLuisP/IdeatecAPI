@@ -20,38 +20,58 @@ public class EmailController : ControllerBase
 
     [HttpPost("send")]
     [AllowAnonymous]
-    public async Task<IActionResult> Send([FromBody] SendEmailDto request)
+    public async Task<IActionResult> Send([FromForm] string toEmail,
+                                      [FromForm] string toName,
+                                      [FromForm] string subject,
+                                      [FromForm] string body,
+                                      [FromForm] string tipo = "0",
+                                      [FromForm] string? comprobanteJson = null,
+                                      [FromForm] string? guiaJson = null,
+                                      IFormFile? adjunto = null)
     {
-        if (string.IsNullOrWhiteSpace(request.ToEmail) ||
-            string.IsNullOrWhiteSpace(request.ToName)  ||
-            string.IsNullOrWhiteSpace(request.Subject) ||
-            string.IsNullOrWhiteSpace(request.Body))
+        if (string.IsNullOrWhiteSpace(toEmail) ||
+            string.IsNullOrWhiteSpace(toName) ||
+            string.IsNullOrWhiteSpace(subject) ||
+            string.IsNullOrWhiteSpace(body))
             return BadRequest(new { success = false, message = "Todos los campos son requeridos." });
 
-        // Mapear string → enum
-        var tipo = request.Tipo switch
+        var tipoEnum = tipo switch
         {
             "1" => TipoComprobante.Factura,
             "3" => TipoComprobante.Boleta,
             "9" => TipoComprobante.GuiaRemision,
-            _   => TipoComprobante.Texto
+            _ => TipoComprobante.Texto
         };
 
-        // Validar que lleguen los datos necesarios según el tipo
-        if (tipo is TipoComprobante.Factura or TipoComprobante.Boleta && request.Comprobante is null)
-            return BadRequest(new { success = false, message = "Se requieren datos del comprobante para este tipo." });
+        // Deserializar comprobante/guia desde JSON string
+        var jsonOptions = new System.Text.Json.JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        };
 
-        if (tipo == TipoComprobante.GuiaRemision && request.Guia is null)
-            return BadRequest(new { success = false, message = "Se requieren datos de la guía de remisión." });
+        var comprobante = comprobanteJson != null
+            ? System.Text.Json.JsonSerializer.Deserialize<DatosComprobante>(comprobanteJson, jsonOptions)
+            : null;
+
+        var guia = guiaJson != null
+            ? System.Text.Json.JsonSerializer.Deserialize<DatosGuiaRemision>(guiaJson, jsonOptions)
+            : null;
+
+        // Leer bytes del PDF
+        byte[]? adjuntoBytes = null;
+        string? nombreAdjunto = null;
+        if (adjunto != null)
+        {
+            using var ms = new MemoryStream();
+            await adjunto.CopyToAsync(ms);
+            adjuntoBytes = ms.ToArray();
+            nombreAdjunto = adjunto.FileName;
+        }
 
         var result = await _mediator.Send(new SendEmailCommand(
-            request.ToEmail,
-            request.ToName,
-            request.Subject,
-            request.Body,
-            tipo,
-            request.Comprobante,
-            request.Guia
+            toEmail, toName, subject, body,
+            tipoEnum, comprobante, guia,
+            adjuntoBytes, nombreAdjunto
         ));
 
         if (!result.Success)

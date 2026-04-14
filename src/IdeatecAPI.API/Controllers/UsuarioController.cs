@@ -26,7 +26,7 @@ public class UsuarioController : ControllerBase
     /// POST: api/usuario/register
     /// </summary>
     [HttpPost("register")]
-    //[Authorize(Roles = "admin")]
+    [AllowAnonymous]
     public async Task<IActionResult> Register([FromBody] RegisterRequestDto request)
     {
         if (!ModelState.IsValid)

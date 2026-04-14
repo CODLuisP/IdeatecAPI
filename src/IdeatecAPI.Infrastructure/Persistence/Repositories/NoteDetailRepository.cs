@@ -13,8 +13,8 @@ public class NoteDetailRepository : DapperRepository<NoteDetail>, INoteDetailRep
     }
 
     public async Task<IEnumerable<NoteDetail>> GetByComprobanteIdAsync(int comprobanteId)
-{
-    var sql = @"
+    {
+        var sql = @"
         SELECT
             detalleID           AS DetalleId,
             comprobanteID       AS ComprobanteId,
@@ -33,14 +33,16 @@ public class NoteDetailRepository : DapperRepository<NoteDetail>, INoteDetailRep
             baseIgv             AS MtoBaseIgv,
             descuentoUnitario   AS DescuentoUnitario,
             descuentoTotal      AS DescuentoTotal,
-            totalVentaItem      AS TotalVentaItem
+            totalVentaItem      AS TotalVentaItem,
+            icbper              AS Icbper,
+            factorIcbper        AS FactorIcbper
         FROM comprobanteDetalle 
         WHERE comprobanteID = @ComprobanteId 
         ORDER BY item";
 
-    return await _connection.QueryAsync<NoteDetail>(sql, 
-        new { ComprobanteId = comprobanteId }, _transaction);
-}
+        return await _connection.QueryAsync<NoteDetail>(sql,
+            new { ComprobanteId = comprobanteId }, _transaction);
+    }
 
     public async Task<int> CreateDetailAsync(NoteDetail detail)
     {
@@ -50,13 +52,13 @@ public class NoteDetailRepository : DapperRepository<NoteDetail>, INoteDetailRep
                 cantidad, unidadMedida, precioUnitario,
                 tipoAfectacionIGV, porcentajeIGV, montoIGV,
                 baseIgv, descuentoUnitario, descuentoTotal,
-                valorVenta, precioVenta, totalVentaItem
+                valorVenta, precioVenta, totalVentaItem, icbper, factorIcbper
             ) VALUES (
                 @ComprobanteId, @Item, @ProductoId, @CodProducto, @Descripcion,
                 @Cantidad, @Unidad, @MtoValorUnitario,
                 @TipoAfectacionIGV, @PorcentajeIGV, @Igv,
                 @MtoBaseIgv, @DescuentoUnitario, @DescuentoTotal,
-                @MtoValorVenta, @MtoPrecioUnitario, @TotalVentaItem
+                @MtoValorVenta, @MtoPrecioUnitario, @TotalVentaItem, @Icbper, @FactorIcbper
             );
             SELECT LAST_INSERT_ID();";
 

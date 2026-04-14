@@ -24,6 +24,7 @@ public class ObtenerProductoDTO
 public class ObtenerSucursalProductoDTO
 {
     public int SucursalProductoId { get; set; }
+    public string? NomSucursal { get; set; }
     public decimal? PrecioUnitario { get; set; }
     public int? Stock { get; set; }
 }

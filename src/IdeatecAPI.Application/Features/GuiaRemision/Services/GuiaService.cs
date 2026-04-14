@@ -11,6 +11,7 @@ public interface IGuiaService
 {
     Task<IEnumerable<GuiaDto>> GetAllAsync(int empresaId);
     Task<GuiaDto?> GetByIdAsync(int guiaId);
+    Task<GuiaDto?> GetBySerieCorrelativoAsync(string ruc, string serie, int correlativo);
     Task<GuiaDto> CreateAsync(CreateGuiaDto dto);
     Task<GuiaDto> SendToSunatAsync(int guiaId);
     Task DeleteAsync(int guiaId);
@@ -66,6 +67,18 @@ public class GuiaService : IGuiaService
         return dto;
     }
 
+    public async Task<GuiaDto?> GetBySerieCorrelativoAsync(string ruc, string serie, int correlativo)
+    {
+        var guia = await _unitOfWork.Guias.GetBySerieCorrelativoAsync(ruc, serie, correlativo);
+        if (guia is null) return null;
+
+        var dto = MapToDto(guia);
+        dto.Details = (await _unitOfWork.GuiaDetalles.GetByGuiaIdAsync(guia.GuiaId))
+            .Select(MapDetalleToDto).ToList();
+
+        return dto;
+    }
+
     public async Task<GuiaDto> CreateAsync(CreateGuiaDto dto)
     {
         // ── 1. Validaciones ───────────────────────────────────────────────
@@ -96,6 +109,7 @@ public class GuiaService : IGuiaService
             var guia = new GuiaEntity
             {
                 EmpresaId = empresa.Id,
+                SucursalId = dto.SucursalId,
                 Version = dto.Version,
                 TipoDoc = dto.TipoDoc,
                 Serie = dto.Serie,
@@ -126,19 +140,29 @@ public class GuiaService : IGuiaService
                 FecTraslado = dto.Envio.FecTraslado,
                 CodPuerto = dto.Envio.CodPuerto,
                 IndTransbordo = dto.Envio.IndTransbordo,
-                MatPeligrosoClase  = dto.Envio.MatPeligrosoClase,
+                MatPeligrosoClase = dto.Envio.MatPeligrosoClase,
                 MatPeligrosoNroONU = dto.Envio.MatPeligrosoNroONU,
                 PesoTotal = dto.Envio.PesoTotal,
                 UndPesoTotal = dto.Envio.UndPesoTotal,
                 NumContenedor = dto.Envio.NumContenedor,
                 LlegadaUbigeo = dto.Envio.Llegada.Ubigueo,
                 LlegadaDireccion = dto.Envio.Llegada.Direccion,
+                LlegadaDepartamento = dto.Envio.Llegada.Departamento,
+                LlegadaProvincia    = dto.Envio.Llegada.Provincia,
+                LlegadaDistrito     = dto.Envio.Llegada.Distrito, 
                 PartidaUbigeo = dto.Envio.Partida.Ubigueo,
                 PartidaDireccion = dto.Envio.Partida.Direccion,
+                PartidaDepartamento = dto.Envio.Partida.Departamento,
+                PartidaProvincia    = dto.Envio.Partida.Provincia,
+                PartidaDistrito     = dto.Envio.Partida.Distrito,   
                 TransportistaTipoDoc = dto.Envio.Transportista?.TipoDoc,
                 TransportistaNumDoc = dto.Envio.Transportista?.NumDoc,
+                TransportistaRegistroMTC = dto.Envio.Transportista?.RegistroMTC,
                 TransportistaRznSocial = dto.Envio.Transportista?.RznSocial,
+                IndVehiculoM1L = dto.Envio.Transportista?.IndVehiculoM1L ?? false,
                 TransportistaPlaca = dto.Envio.Transportista?.Placa,
+                AutorizacionVehiculoEntidad = dto.Envio.Transportista?.AutorizacionVehiculoEntidad,
+                AutorizacionVehiculoNumero = dto.Envio.Transportista?.AutorizacionVehiculoNumero,
                 PlacaSecundaria1 = dto.Envio.Transportista?.PlacaSecundaria1,
                 PlacaSecundaria2 = dto.Envio.Transportista?.PlacaSecundaria2,
                 PlacaSecundaria3 = dto.Envio.Transportista?.PlacaSecundaria3,
@@ -317,6 +341,7 @@ public class GuiaService : IGuiaService
 
     private static GuiaDto MapToDto(GuiaEntity g) => new()
     {
+        SucursalId = g.SucursalId,
         GuiaId = g.GuiaId,
         Version = g.Version,
         TipoDoc = g.TipoDoc,
@@ -336,14 +361,22 @@ public class GuiaService : IGuiaService
         PesoTotal = g.PesoTotal,
         UndPesoTotal = g.UndPesoTotal,
         IndTransbordo = g.IndTransbordo,
-        MatPeligrosoClase  = g.MatPeligrosoClase,
+        MatPeligrosoClase = g.MatPeligrosoClase,
         MatPeligrosoNroONU = g.MatPeligrosoNroONU,
         LlegadaUbigeo = g.LlegadaUbigeo,
         LlegadaDireccion = g.LlegadaDireccion,
+        LlegadaDepartamento = g.LlegadaDepartamento,
+        LlegadaProvincia = g.LlegadaProvincia,
+        LlegadaDistrito = g.LlegadaDistrito,  
         PartidaUbigeo = g.PartidaUbigeo,
         PartidaDireccion = g.PartidaDireccion,
+        PartidaDepartamento = g.PartidaDepartamento,
+        PartidaProvincia = g.PartidaProvincia,
+        PartidaDistrito = g.PartidaDistrito, 
         TransportistaNumDoc = g.TransportistaNumDoc,
         TransportistaRznSocial = g.TransportistaRznSocial,
+        TransportistaRegistroMTC = g.TransportistaRegistroMTC,
+        IndVehiculoM1L = g.IndVehiculoM1L,
         TransportistaPlaca = g.TransportistaPlaca,
         PlacaSecundaria1 = g.PlacaSecundaria1,
         PlacaSecundaria2 = g.PlacaSecundaria2,

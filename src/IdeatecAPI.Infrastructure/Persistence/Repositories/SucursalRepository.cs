@@ -12,24 +12,28 @@ public class SucursalRepository : DapperRepository<Sucursal>, ISucursalRepositor
     }
 
     private const string SelectColumns = @"
-        SELECT sucursalID                   AS SucursalId,
-               empresaRuc                   AS EmpresaRuc,
-               codEstablecimiento           AS CodEstablecimiento,
-               nombre                       AS Nombre,
-               direccion                    AS Direccion,
-               serieFactura                 AS SerieFactura,
-               correlativoFactura           AS CorrelativoFactura,
-               serieBoleta                  AS SerieBoleta,
-               correlativoBoleta            AS CorrelativoBoleta,
-               serieNotaCredito             AS SerieNotaCredito,
-               correlativoNotaCredito       AS CorrelativoNotaCredito,
-               serieNotaDebito              AS SerieNotaDebito,
-               correlativoNotaDebito        AS CorrelativoNotaDebito,
-               serieGuiaRemision            AS SerieGuiaRemision,
-               correlativoGuiaRemision      AS CorrelativoGuiaRemision,
-               serieGuiaTransportista       AS SerieGuiaTransportista,
-               correlativoGuiaTransportista AS CorrelativoGuiaTransportista,
-               estado                       AS Estado
+        SELECT sucursalID                        AS SucursalId,
+               empresaRuc                        AS EmpresaRuc,
+               codEstablecimiento                AS CodEstablecimiento,
+               nombre                            AS Nombre,
+               direccion                         AS Direccion,
+               serieFactura                      AS SerieFactura,
+               correlativoFactura                AS CorrelativoFactura,
+               serieBoleta                       AS SerieBoleta,
+               correlativoBoleta                 AS CorrelativoBoleta,
+               serieNotaCreditoFactura           AS SerieNotaCreditoFactura,
+               correlativoNotaCreditoFactura     AS CorrelativoNotaCreditoFactura,
+               serieNotaCreditoBoleta            AS SerieNotaCreditoBoleta,
+               correlativoNotaCreditoBoleta      AS CorrelativoNotaCreditoBoleta,
+               serieNotaDebitoFactura            AS SerieNotaDebitoFactura,
+               correlativoNotaDebitoFactura      AS CorrelativoNotaDebitoFactura,
+               serieNotaDebitoBoleta             AS SerieNotaDebitoBoleta,
+               correlativoNotaDebitoBoleta       AS CorrelativoNotaDebitoBoleta,
+               serieGuiaRemision                 AS SerieGuiaRemision,
+               correlativoGuiaRemision           AS CorrelativoGuiaRemision,
+               serieGuiaTransportista            AS SerieGuiaTransportista,
+               correlativoGuiaTransportista      AS CorrelativoGuiaTransportista,
+               estado                            AS Estado
         FROM sucursal
         WHERE estado = 1";
 
@@ -64,16 +68,20 @@ public class SucursalRepository : DapperRepository<Sucursal>, ISucursalRepositor
                 empresaRuc, codEstablecimiento, nombre, direccion,
                 serieFactura, correlativoFactura,
                 serieBoleta, correlativoBoleta,
-                serieNotaCredito, correlativoNotaCredito,
-                serieNotaDebito, correlativoNotaDebito,
+                serieNotaCreditoFactura, correlativoNotaCreditoFactura,
+                serieNotaCreditoBoleta, correlativoNotaCreditoBoleta,
+                serieNotaDebitoFactura, correlativoNotaDebitoFactura,
+                serieNotaDebitoBoleta, correlativoNotaDebitoBoleta,
                 serieGuiaRemision, correlativoGuiaRemision,
                 serieGuiaTransportista, correlativoGuiaTransportista
             ) VALUES (
                 @EmpresaRuc, @CodEstablecimiento, @Nombre, @Direccion,
                 @SerieFactura, @CorrelativoFactura,
                 @SerieBoleta, @CorrelativoBoleta,
-                @SerieNotaCredito, @CorrelativoNotaCredito,
-                @SerieNotaDebito, @CorrelativoNotaDebito,
+                @SerieNotaCreditoFactura, @CorrelativoNotaCreditoFactura,
+                @SerieNotaCreditoBoleta, @CorrelativoNotaCreditoBoleta,
+                @SerieNotaDebitoFactura, @CorrelativoNotaDebitoFactura,
+                @SerieNotaDebitoBoleta, @CorrelativoNotaDebitoBoleta,
                 @SerieGuiaRemision, @CorrelativoGuiaRemision,
                 @SerieGuiaTransportista, @CorrelativoGuiaTransportista
             );
@@ -88,20 +96,24 @@ public class SucursalRepository : DapperRepository<Sucursal>, ISucursalRepositor
     {
         var sql = @"
             UPDATE sucursal SET
-                nombre                       = @Nombre,
-                direccion                    = @Direccion,
-                serieFactura                 = @SerieFactura,
-                correlativoFactura           = @CorrelativoFactura,
-                serieBoleta                  = @SerieBoleta,
-                correlativoBoleta            = @CorrelativoBoleta,
-                serieNotaCredito             = @SerieNotaCredito,
-                correlativoNotaCredito       = @CorrelativoNotaCredito,
-                serieNotaDebito              = @SerieNotaDebito,
-                correlativoNotaDebito        = @CorrelativoNotaDebito,
-                serieGuiaRemision            = @SerieGuiaRemision,
-                correlativoGuiaRemision      = @CorrelativoGuiaRemision,
-                serieGuiaTransportista       = @SerieGuiaTransportista,
-                correlativoGuiaTransportista = @CorrelativoGuiaTransportista
+                nombre                            = @Nombre,
+                direccion                         = @Direccion,
+                serieFactura                      = @SerieFactura,
+                correlativoFactura                = @CorrelativoFactura,
+                serieBoleta                       = @SerieBoleta,
+                correlativoBoleta                 = @CorrelativoBoleta,
+                serieNotaCreditoFactura           = @SerieNotaCreditoFactura,
+                correlativoNotaCreditoFactura     = @CorrelativoNotaCreditoFactura,
+                serieNotaCreditoBoleta            = @SerieNotaCreditoBoleta,
+                correlativoNotaCreditoBoleta      = @CorrelativoNotaCreditoBoleta,
+                serieNotaDebitoFactura            = @SerieNotaDebitoFactura,
+                correlativoNotaDebitoFactura      = @CorrelativoNotaDebitoFactura,
+                serieNotaDebitoBoleta             = @SerieNotaDebitoBoleta,
+                correlativoNotaDebitoBoleta       = @CorrelativoNotaDebitoBoleta,
+                serieGuiaRemision                 = @SerieGuiaRemision,
+                correlativoGuiaRemision           = @CorrelativoGuiaRemision,
+                serieGuiaTransportista            = @SerieGuiaTransportista,
+                correlativoGuiaTransportista      = @CorrelativoGuiaTransportista
             WHERE sucursalID = @SucursalId AND estado = 1";
 
         var filas = await _connection.ExecuteAsync(sql, sucursal, _transaction);

@@ -8,10 +8,14 @@ public class AgregarSucursalDTO
     public int CorrelativoFactura { get; set; } = 1;
     public string? SerieBoleta { get; set; }
     public int CorrelativoBoleta { get; set; } = 1;
-    public string? SerieNotaCredito { get; set; }
-    public int CorrelativoNotaCredito { get; set; } = 1;
-    public string? SerieNotaDebito { get; set; }
-    public int CorrelativoNotaDebito { get; set; } = 1;
+    public string? SerieNotaCreditoFactura { get; set; }
+    public int CorrelativoNotaCreditoFactura { get; set; } = 1;
+    public string? SerieNotaCreditoBoleta { get; set; }
+    public int CorrelativoNotaCreditoBoleta { get; set; } = 1;
+    public string? SerieNotaDebitoFactura { get; set; }
+    public int CorrelativoNotaDebitoFactura { get; set; } = 1;
+    public string? SerieNotaDebitoBoleta { get; set; }
+    public int CorrelativoNotaDebitoBoleta { get; set; } = 1;
     public string? SerieGuiaRemision { get; set; }
     public int CorrelativoGuiaRemision { get; set; } = 1;
     public string? SerieGuiaTransportista { get; set; }

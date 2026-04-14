@@ -75,6 +75,8 @@ public static class DependencyInjection
         services.AddScoped<IResumenComprobanteService, ResumenComprobanteService>();
         services.AddScoped<IResumenXmlService, GeneraResumenXmlService>();
         services.AddScoped<ISunatResumenService, SunatResumenService>();
+        services.AddScoped<IComprobantePdfService, ComprobantePdfService>();
+
 
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IAuthService, AuthService>();
@@ -86,6 +88,7 @@ public static class DependencyInjection
         services.AddScoped<IGuiaService, GuiaService>();
         services.AddScoped<IXmlGuiaBuilderService, XmlGuiaBuilderService>();
         services.AddScoped<ISunatGuiaService, SunatGuiaService>();
+        services.AddScoped<IGuiaPdfService, GuiaPdfService>();
 
         // ── Servicios de Email ──
         services.AddScoped<IEmailService, EmailService>();

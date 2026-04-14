@@ -11,6 +11,7 @@ public interface IComprobanteRepository : IRepository<Comprobante>
     Task<int> GenerarComprobanteAsync(Comprobante dto);
     Task<Comprobante?> GetComprobanteByIdAsync(int comprobanteId);
     Task<IEnumerable<Comprobante>> GetComprobanteByEstadoAsync(string estado);
+    Task<Comprobante?> GetByRucSerieNumeroAsync(string ruc, string serie, int numero);
 
     //Metodos internos para
     new Task<Comprobante?> GetByIdAsync(int comprobanteId);

@@ -97,6 +97,43 @@ public class ProductoController : ControllerBase
         }
     }
 
+    [HttpGet("base/disponibles/buscar")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> SearchProductosRucDisponiblesAsync(
+        [FromQuery] int sucursalId,
+        [FromQuery] string palabra)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(palabra))
+                return BadRequest(new { mensaje = "El parámetro 'palabra' es requerido." });
+
+            var productos = await _productoService.SearchProductosRucDisponiblesAsync(sucursalId, palabra);
+
+            if (productos == null || !productos.Any())
+                return NotFound(new { mensaje = $"No se encontraron productos disponibles con '{palabra}'." });
+
+            return Ok(productos);
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning("Búsqueda inválida de disponibles para sucursal {SucursalId}: {Mensaje}", sucursalId, ex.Message);
+            return BadRequest(new { mensaje = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al buscar productos disponibles en sucursal {SucursalId} con palabra '{Palabra}'", sucursalId, palabra);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al buscar productos disponibles.",
+                detalle = ex.Message
+            });
+        }
+    }
+
     [HttpGet("detalle/{productoId:int}/{sucursalId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -118,6 +155,76 @@ public class ProductoController : ControllerBase
             return StatusCode(StatusCodes.Status500InternalServerError, new
             {
                 mensaje = "Ocurrió un error al obtener el producto.",
+                detalle = ex.Message
+            });
+        }
+    }
+
+    [HttpGet("buscar/{sucursalId:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> SearchBySucursalAsync(int sucursalId, [FromQuery] string palabra)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(palabra))
+                return BadRequest(new { mensaje = "El parámetro 'palabra' es requerido." });
+
+            var productos = await _productoService.SearchBySucursalAsync(sucursalId, palabra);
+
+            if (productos == null || !productos.Any())
+                return NotFound(new { mensaje = $"No se encontraron productos con '{palabra}' en la sucursal {sucursalId}." });
+
+            return Ok(productos);
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning("Búsqueda inválida en sucursal {SucursalId}: {Mensaje}", sucursalId, ex.Message);
+            return BadRequest(new { mensaje = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al buscar productos en sucursal {SucursalId} con palabra '{Palabra}'", sucursalId, palabra);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al buscar productos.",
+                detalle = ex.Message
+            });
+        }
+    }
+
+    [HttpGet("buscar/ruc/{empresaRuc}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> SearchByRucAsync(string empresaRuc, [FromQuery] string palabra)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(palabra))
+                return BadRequest(new { mensaje = "El parámetro 'palabra' es requerido." });
+
+            var productos = await _productoService.SearchByRucAsync(empresaRuc, palabra);
+
+            if (productos == null || !productos.Any())
+                return NotFound(new { mensaje = $"No se encontraron productos con '{palabra}' para el RUC '{empresaRuc}'." });
+
+            return Ok(productos);
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning("Búsqueda inválida para RUC {EmpresaRuc}: {Mensaje}", empresaRuc, ex.Message);
+            return BadRequest(new { mensaje = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al buscar productos para RUC {EmpresaRuc} con palabra '{Palabra}'", empresaRuc, palabra);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al buscar productos.",
                 detalle = ex.Message
             });
         }

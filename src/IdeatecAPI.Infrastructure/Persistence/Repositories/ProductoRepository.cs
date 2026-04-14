@@ -48,7 +48,7 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
             sql,
             (producto, categoria, sucursalProducto) =>
             {
-                producto.Categoria       = categoria;
+                producto.Categoria = categoria;
                 producto.SucursalProducto = sucursalProducto;
                 return producto;
             },
@@ -103,15 +103,42 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
         return productos;
     }
 
-    public async Task<Producto?> GetProductoByIdAsync(int productoId, int sucursalId)
-    {
-        var sql = $"{SelectColumns} AND p.productoID = @ProductoId AND sp.sucursalID = @SucursalId";
+    public async Task<Producto?> GetProductoByIdAsync(int productoId, int sucursalId) {
+        var sql = @"
+            SELECT
+                p.productoID        AS ProductoId,
+                p.codigo            AS Codigo,
+                p.tipoProducto      AS TipoProducto,
+                p.codigoSunat       AS CodigoSunat,
+                p.nomProducto       AS NomProducto,
+                p.unidadMedida      AS UnidadMedida,
+                p.tipoAfectacionIGV AS TipoAfectacionIGV,
+                p.incluirIGV        AS IncluirIGV,
+                p.estado            AS Estado,
+                p.fechaCreacion     AS FechaCreacion,
+                p.categoriaID       AS CategoriaId,
+
+                c.categoriaID       AS CategoriaId,
+                c.categoriaNombre   AS CategoriaNombre,
+
+                sp.sucursalProductoID AS SucursalProductoId,
+                sp.precioUnitario     AS PrecioUnitario,
+                sp.stock              AS Stock,
+                s.nombre              AS NomSucursal
+            FROM producto p
+            INNER JOIN categoria c ON c.categoriaID = p.categoriaID
+            INNER JOIN sucursalProducto sp ON sp.productoID = p.productoID
+            INNER JOIN sucursal s ON s.sucursalID = sp.sucursalID
+            WHERE p.estado = 1
+            AND sp.estado = 1
+            AND p.productoID = @ProductoId
+            AND sp.sucursalID = @SucursalId";
 
         var result = await _connection.QueryAsync<Producto, Categoria, SucursalProducto, Producto>(
             sql,
             (producto, categoria, sucursalProducto) =>
             {
-                producto.Categoria        = categoria;
+                producto.Categoria = categoria;
                 producto.SucursalProducto = sucursalProducto;
                 return producto;
             },
@@ -121,6 +148,80 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
         );
 
         return result.FirstOrDefault();
+    }
+
+    public async Task<IEnumerable<Producto>> SearchBySucursalAsync(int sucursalId, string palabra)
+    {
+        var sql = $@"{SelectColumns}
+        AND sp.sucursalID = @SucursalId
+        AND (p.nomProducto LIKE @Palabra OR p.codigo LIKE @Palabra)
+        ORDER BY p.nomProducto ASC
+        LIMIT 10";
+
+        var productos = await _connection.QueryAsync<Producto, Categoria, SucursalProducto, Producto>(
+            sql,
+            (producto, categoria, sucursalProducto) =>
+            {
+                producto.Categoria = categoria;
+                producto.SucursalProducto = sucursalProducto;
+                return producto;
+            },
+            new { SucursalId = sucursalId, Palabra = $"%{palabra}%" },
+            transaction: _transaction,
+            splitOn: "CategoriaId,SucursalProductoId"
+        );
+
+        return productos;
+    }
+
+    public async Task<IEnumerable<Producto>> SearchByRucAsync(string empresaRuc, string palabra)
+    {
+        var sql = @"
+        SELECT
+            p.productoID        AS ProductoId,
+            p.codigo            AS Codigo,
+            p.tipoProducto      AS TipoProducto,
+            p.codigoSunat       AS CodigoSunat,
+            p.nomProducto       AS NomProducto,
+            p.unidadMedida      AS UnidadMedida,
+            p.tipoAfectacionIGV AS TipoAfectacionIGV,
+            p.incluirIGV        AS IncluirIGV,
+            p.estado            AS Estado,
+            p.fechaCreacion     AS FechaCreacion,
+            p.categoriaID       AS CategoriaId,
+
+            c.categoriaID       AS CategoriaId,
+            c.categoriaNombre   AS CategoriaNombre,
+
+            sp.sucursalProductoID AS SucursalProductoId,
+            sp.precioUnitario     AS PrecioUnitario,
+            sp.stock              AS Stock
+        FROM producto p
+        INNER JOIN categoria c ON c.categoriaID = p.categoriaID
+        INNER JOIN sucursalProducto sp ON sp.productoID = p.productoID
+        INNER JOIN sucursal s ON s.sucursalID = sp.sucursalID
+        WHERE p.estado = 1
+          AND sp.estado = 1
+          AND s.estado = 1
+          AND s.empresaRuc = @EmpresaRuc
+          AND (p.nomProducto LIKE @Palabra OR p.codigo LIKE @Palabra)
+        ORDER BY p.nomProducto ASC
+        LIMIT 10";
+
+        var productos = await _connection.QueryAsync<Producto, Categoria, SucursalProducto, Producto>(
+            sql,
+            (producto, categoria, sucursalProducto) =>
+            {
+                producto.Categoria = categoria;
+                producto.SucursalProducto = sucursalProducto;
+                return producto;
+            },
+            new { EmpresaRuc = empresaRuc, Palabra = $"%{palabra}%" },
+            transaction: _transaction,
+            splitOn: "CategoriaId,SucursalProductoId"
+        );
+
+        return productos;
     }
 
     public async Task<bool> ExisteProductoAsync(string codigo)
@@ -291,6 +392,57 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
         return productos;
     }
 
+    public async Task<IEnumerable<Producto>> SearchProductosRucDisponiblesAsync(int sucursalId, string palabra)
+    {
+        var sql = @"
+            SELECT DISTINCT
+                p.productoID        AS ProductoId,
+                p.codigo            AS Codigo,
+                p.tipoProducto      AS TipoProducto,
+                p.codigoSunat       AS CodigoSunat,
+                p.nomProducto       AS NomProducto,
+                p.unidadMedida      AS UnidadMedida,
+                p.tipoAfectacionIGV AS TipoAfectacionIGV,
+                p.incluirIGV        AS IncluirIGV,
+                p.estado            AS Estado,
+                p.fechaCreacion     AS FechaCreacion,
+                p.categoriaID       AS CategoriaId,
+
+                c.categoriaID       AS CategoriaId,
+                c.categoriaNombre   AS CategoriaNombre
+            FROM producto p
+            INNER JOIN categoria c ON c.categoriaID = p.categoriaID
+            INNER JOIN sucursalProducto sp ON sp.productoID = p.productoID
+            INNER JOIN sucursal s ON s.sucursalID = sp.sucursalID
+            WHERE p.estado = 1
+            AND sp.estado = 1
+            AND s.estado = 1
+            AND s.empresaRuc = (
+                SELECT empresaRuc FROM sucursal WHERE sucursalID = @SucursalId AND estado = 1
+            )
+            AND p.productoID NOT IN (
+                SELECT productoID FROM sucursalProducto 
+                WHERE sucursalID = @SucursalId AND estado = 1
+            )
+            AND (p.nomProducto LIKE @Palabra OR p.codigo LIKE @Palabra)
+            ORDER BY p.nomProducto
+            LIMIT 10";
+
+        var productos = await _connection.QueryAsync<Producto, Categoria, Producto>(
+            sql,
+            (producto, categoria) =>
+            {
+                producto.Categoria = categoria;
+                return producto;
+            },
+            new { SucursalId = sucursalId, Palabra = $"%{palabra}%" },
+            transaction: _transaction,
+            splitOn: "CategoriaId"
+        );
+
+        return productos;
+    }
+    
     public async Task<IEnumerable<Producto>> GetAllProductosRucAsync(string empresaRuc)
     {
         var sql = @"
@@ -312,7 +464,9 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
 
                 sp.sucursalProductoID        AS SucursalProductoId,
                 sp.precioUnitario            AS PrecioUnitario,
-                sp.stock                     AS Stock
+                sp.stock                     AS Stock,
+
+                s.nombre            AS NomSucursal
             FROM producto p
             INNER JOIN categoria c ON c.categoriaID = p.categoriaID
             INNER JOIN sucursalProducto sp ON sp.productoID = p.productoID
@@ -327,7 +481,7 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
             sql,
             (producto, categoria, sucursalProducto) =>
             {
-                producto.Categoria        = categoria;
+                producto.Categoria = categoria;
                 producto.SucursalProducto = sucursalProducto;
                 return producto;
             },
