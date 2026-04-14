@@ -296,7 +296,7 @@ public class NoteService : INoteService
         // ── Pendiente 1: Anular comprobante original si es anulación total aceptada ──
         if (sunatResponse.Success && note.ComprobanteAfectadoId.HasValue)
         {
-            var esAnulacionTotal = new[] { "01", "02", "03" }
+            var esAnulacionTotal = new[] { "01", "02"}
                 .Contains(note.TipoNotaCreditoDebito);
 
             if (esAnulacionTotal)
