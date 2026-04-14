@@ -299,38 +299,37 @@ public class NoteRepository : DapperRepository<Note>, INoteRepository
 
     private async Task ActualizarSerieCorrelativoAsync(Note note)
     {
-        // Determinar si la nota afecta factura (FC/BC) o boleta (BE/BD)
         var esParaBoleta = note.TipDocAfectado == "03";
 
         string sql = (note.TipoDoc, esParaBoleta) switch
         {
             ("07", false) => @"UPDATE sucursal SET 
-                serieNotaCredito               = @Serie,
-                correlativoNotaCredito         = correlativoNotaCredito + 1
-              WHERE empresaRuc                 = @EmpresaRuc
-                AND codEstablecimiento         = @CodEstablecimiento
-                AND estado                     = 1",
+                    serieNotaCreditoFactura           = @Serie,
+                    correlativoNotaCreditoFactura     = correlativoNotaCreditoFactura + 1
+                WHERE empresaRuc                    = @EmpresaRuc
+                    AND codEstablecimiento            = @CodEstablecimiento
+                    AND estado                        = 1",
 
             ("07", true) => @"UPDATE sucursal SET 
-                serieNotaCreditoBoleta         = @Serie,
-                correlativoNotaCreditoBoleta   = correlativoNotaCreditoBoleta + 1
-              WHERE empresaRuc                 = @EmpresaRuc
-                AND codEstablecimiento         = @CodEstablecimiento
-                AND estado                     = 1",
+                    serieNotaCreditoBoleta            = @Serie,
+                    correlativoNotaCreditoBoleta      = correlativoNotaCreditoBoleta + 1
+                WHERE empresaRuc                    = @EmpresaRuc
+                    AND codEstablecimiento            = @CodEstablecimiento
+                    AND estado                        = 1",
 
             ("08", false) => @"UPDATE sucursal SET 
-                serieNotaDebito                = @Serie,
-                correlativoNotaDebito          = correlativoNotaDebito + 1
-              WHERE empresaRuc                 = @EmpresaRuc
-                AND codEstablecimiento         = @CodEstablecimiento
-                AND estado                     = 1",
+                    serieNotaDebitoFactura            = @Serie,
+                    correlativoNotaDebitoFactura      = correlativoNotaDebitoFactura + 1
+                WHERE empresaRuc                    = @EmpresaRuc
+                    AND codEstablecimiento            = @CodEstablecimiento
+                    AND estado                        = 1",
 
             ("08", true) => @"UPDATE sucursal SET 
-                serieNotaDebitoBoleta          = @Serie,
-                correlativoNotaDebitoBoleta    = correlativoNotaDebitoBoleta + 1
-              WHERE empresaRuc                 = @EmpresaRuc
-                AND codEstablecimiento         = @CodEstablecimiento
-                AND estado                     = 1",
+                    serieNotaDebitoBoleta             = @Serie,
+                    correlativoNotaDebitoBoleta       = correlativoNotaDebitoBoleta + 1
+                WHERE empresaRuc                    = @EmpresaRuc
+                    AND codEstablecimiento            = @CodEstablecimiento
+                    AND estado                        = 1",
 
             _ => throw new InvalidOperationException($"Tipo de nota '{note.TipoDoc}' no soportado.")
         };
