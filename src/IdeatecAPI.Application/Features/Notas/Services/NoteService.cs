@@ -161,6 +161,10 @@ public class NoteService : INoteService
                 ClienteDepartamento = dto.Client.Address?.Departamento,
                 ClienteDistrito = dto.Client.Address?.Distrito,
                 ClienteUbigeo = dto.Client.Address?.Ubigueo,
+                ClienteCorreo = dto.Client?.ClienteCorreo,
+                EnviadoPorCorreo = dto.Client?.EnviadoPorCorreo,
+                ClienteWhatsApp = dto.Client?.ClienteWhatsApp,
+                EnviadoPorWhatsApp = dto.Client?.EnviadoPorWhatsApp,
                 EmpresaRuc = dto.Company.Ruc,
                 EstablecimientoAnexo = dto.Company.CodEstablecimiento,
                 EmpresaRazonSocial = dto.Company.RazonSocial,
@@ -177,6 +181,7 @@ public class NoteService : INoteService
                 ValorVenta = dto.ValorVenta ?? dto.MtoOperGravadas,
                 SubTotal = dto.SubTotal ?? dto.MtoImpVenta,
                 MtoImpVenta = dto.MtoImpVenta,
+                UsuarioCreacion = dto.UsuarioCreacion,
                 EstadoSunat = "PENDIENTE",
                 FechaCreacion = DateTime.UtcNow
             };
@@ -359,6 +364,10 @@ public class NoteService : INoteService
         ClienteTipoDoc = n.ClienteTipoDoc,
         ClienteNumDoc = n.ClienteNumDoc,
         ClienteRznSocial = n.ClienteRznSocial,
+        ClienteCorreo = n.ClienteCorreo,
+        EnviadoPorCorreo = n.EnviadoPorCorreo,
+        ClienteWhatsApp = n.ClienteWhatsApp,
+        EnviadoPorWhatsApp = n.EnviadoPorWhatsApp,
         MtoOperGravadas = n.MtoOperGravadas,
         MtoIGV = n.MtoIGV,
         MtoImpVenta = n.MtoImpVenta,
@@ -366,6 +375,9 @@ public class NoteService : INoteService
         CodigoRespuestaSunat = n.CodigoRespuestaSunat,
         MensajeRespuestaSunat = n.MensajeRespuestaSunat,
         FechaEnvioSunat = n.FechaEnvioSunat,
+        UsuarioCreacion = n.UsuarioCreacion,
+        PdfGenerado = n.PdfGenerado,
+        EnviadoEnResumen = n.EnviadoEnResumen,
         FechaCreacion = n.FechaCreacion
     };
 

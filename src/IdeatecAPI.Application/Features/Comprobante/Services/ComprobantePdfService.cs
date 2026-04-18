@@ -177,6 +177,16 @@ public class ComprobantePdfService : IComprobantePdfService
                     TicketFila(cli, "Moneda", $"{c.TipoMoneda} T.C. S/{c.TipoCambio:F3}");
             });
 
+            //documento que modifca
+            col.Item().Height(6);
+            if (c.TipoComprobante is "07" or "08" 
+            && !string.IsNullOrEmpty(c.TipDocAfectado)
+            && !string.IsNullOrEmpty(c.NumDocAfectado))
+            {
+                col.Item().PaddingTop(3)
+                    .Element(ct => BuildDocumentoModifica(ct, c, true));
+            }
+
             col.Item().PaddingTop(3).LineHorizontal(0.5f).LineColor(ColorAzulMarino);
             col.Item().Height(6);
 
@@ -273,6 +283,12 @@ public class ComprobantePdfService : IComprobantePdfService
                 col.Item().PaddingTop(2).LineHorizontal(0.5f).LineColor(ColorAzulMarino);
             }
 
+            //Leyenda Motivo Nota
+            if (c.TipoComprobante is "07" or "08")
+            {
+                col.Item().Element(ct => BuildMotivoNota(ct, c));
+            }
+
             // 8. TIPO DE PAGO
             col.Item().PaddingTop(3)
                 .Element(pc => BuildSeccionPagosTicket(pc, c, pagos, cuotas, moneda));
@@ -317,13 +333,13 @@ public class ComprobantePdfService : IComprobantePdfService
 
             if (!esCredito)
             {
-                col.Item().Text("CONTADO").Bold().FontSize(6).FontColor(ColorAzulMarino);
+                col.Item().Text("Tipo de Pago: CONTADO").Bold().FontSize(6).FontColor(ColorAzulMarino);
                 foreach (var p in pagos)
                     TicketFilaTotal(col, p.MedioPago ?? "Efectivo", FormatearMoneda(p.Monto ?? 0, moneda));
             }
             else if (tieneInicialYCuotas)
             {
-                col.Item().Text("CRÉDITO CON INICIAL").Bold().FontSize(7).FontColor(ColorAzulMarino);
+                col.Item().Text("Tipo de Pago: CRÉDITO CON INICIAL").Bold().FontSize(7).FontColor(ColorAzulMarino);
                 foreach (var p in pagos)
                     TicketFilaTotal(col, $"Inicial ({p.MedioPago ?? "Efectivo"})", FormatearMoneda(p.Monto ?? 0, moneda));
 
@@ -333,7 +349,7 @@ public class ComprobantePdfService : IComprobantePdfService
             }
             else
             {
-                col.Item().Text("CRÉDITO").Bold().FontSize(7).FontColor(ColorAzulMarino);
+                col.Item().Text("Tipo de Pago: CRÉDITO").Bold().FontSize(7).FontColor(ColorAzulMarino);
                 TicketFilaTotal(col, "Monto Crédito", FormatearMoneda(c.MontoCredito ?? 0, moneda));
 
                 if (cuotas.Any())
@@ -433,10 +449,14 @@ public class ComprobantePdfService : IComprobantePdfService
             : ObtenerLabelTipoDoc(c.ClienteTipoDoc);
 
         container.Background(ColorGrisClaro).Border(1).BorderColor(ColorGrisBorde)
-            .Padding(6).Column(rec =>
+        .Padding(6)
+        .Row(row =>
+        {
+            // Cliente (lado izquierdo)
+            row.RelativeItem(6).Column(rec =>
             {
-                BuildFilaDato(rec, "Señores",     c.ClienteRazonSocial ?? "-");
-                BuildFilaDato(rec, tipoDocLabel,  c.ClienteNumDoc ?? "-");
+                BuildFilaDato(rec, "Señores", c.ClienteRazonSocial ?? "-");
+                BuildFilaDato(rec, tipoDocLabel, c.ClienteNumDoc ?? "-");
 
                 if (!string.IsNullOrEmpty(c.ClienteDireccion))
                     BuildFilaDato(rec, "Dirección",
@@ -447,6 +467,92 @@ public class ComprobantePdfService : IComprobantePdfService
                 if (c.TipoMoneda != "PEN" && c.TipoCambio.HasValue)
                     BuildFilaDato(rec, "Moneda", $"{c.TipoMoneda} (T.C. S/ {c.TipoCambio:F3})");
             });
+
+            // Documento que modifica (lado derecho)
+            if (c.TipoComprobante is "07" or "08"
+                && !string.IsNullOrEmpty(c.TipDocAfectado)
+                && !string.IsNullOrEmpty(c.NumDocAfectado))
+            {
+                row.RelativeItem(4)
+                    .PaddingLeft(10)
+                    .Element(ct => BuildDocumentoModifica(ct, c));
+            }
+        });
+            
+    }
+
+    //documento que modifica
+    private static void BuildDocumentoModifica(
+        IContainer container, 
+        Domain.Entities.Comprobante c,
+        bool esTicket = false)
+    {
+        if (string.IsNullOrEmpty(c.TipDocAfectado))
+            return;
+
+        var denominacion = c.TipDocAfectado switch
+        {
+            "01" => "FACTURA",
+            "03" => "BOLETA",
+            _    => "COMPROBANTE"
+        };
+
+        if (esTicket)
+        {
+            // 🎟 FORMATO COMPACTO
+            container.PaddingTop(3).Text(
+                $"Doc. Modifica: {denominacion} {c.NumDocAfectado}"
+            )
+            .FontSize(6)
+            .FontColor(ColorTexto);
+        }
+        else
+        {
+            // 🧾 FORMATO A4
+            container.PaddingTop(3).Column(col =>
+            {
+                col.Item().Text("DOCUMENTO QUE MODIFICA")
+                    .Bold()
+                    .FontSize(8)
+                    .FontColor(ColorAzulMarino);
+
+                col.Item().PaddingTop(2);
+
+                col.Item().Text($"Denominación: {denominacion}")
+                    .FontSize(8);
+
+                col.Item().Text($"Número: {c.NumDocAfectado}")
+                    .FontSize(8);
+            });
+        }
+    }
+
+    //Leyenda Motivo Nota
+    private static void BuildMotivoNota(IContainer container, Domain.Entities.Comprobante c)
+    {
+        if (string.IsNullOrEmpty(c.MotivoNota))
+            return;
+
+        var tipoNota = c.TipoComprobante switch
+        {
+            "07" => "NOTA DE CRÉDITO",
+            "08" => "NOTA DE DÉBITO",
+            _    => "NOTA"
+        };
+
+        container.PaddingTop(4).Column(col =>
+        {
+            col.Item().Text(txt =>
+            {
+                txt.Span($"MOTIVO DE LA {tipoNota}: ")
+                    .Bold().FontColor(ColorAzulMarino);
+
+                txt.Span(c.MotivoNota)
+                    .FontColor(ColorTexto);
+            });
+
+            col.Item().PaddingBottom(6);
+        });
     }
 
     private static void BuildContent(IContainer container,
@@ -498,6 +604,12 @@ public class ComprobantePdfService : IComprobantePdfService
                         ley.Item().Text(l.Value.ToUpper()).Bold().FontSize(8).FontColor(ColorAzulMarino);
                 });
                 col.Item().PaddingTop(6);
+            }
+
+            //Leyenda Motivo Nota
+            if (c.TipoComprobante is "07" or "08")
+            {
+                col.Item().Element(ct => BuildMotivoNota(ct, c));
             }
 
             // Fila inferior: Pagos+QR | Totales

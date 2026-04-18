@@ -43,6 +43,10 @@ public class Note
     public string? EmpresaDepartamento { get; set; }
     public string? EmpresaDistrito { get; set; }
     public string? EmpresaUbigeo { get; set; }
+    public string? ClienteCorreo { get; set; }
+    public bool? EnviadoPorCorreo { get; set; }
+    public string? ClienteWhatsApp { get; set; }
+    public bool? EnviadoPorWhatsApp { get; set; }
 
     // Forma de pago
     public string? FormaPagoMoneda { get; set; }
@@ -63,15 +67,17 @@ public class Note
     public string? XmlGenerado { get; set; }
     public string? XmlRespuestaSunat { get; set; }
     public string? CdrSunat { get; set; }
+    public string? PdfGenerado { get; set; }
+    public bool? EnviadoEnResumen { get; set; }
     public string? CodigoRespuestaSunat { get; set; }
     public string? MensajeRespuestaSunat { get; set; }
     public string EstadoSunat { get; set; } = "PENDIENTE";
     public DateTime? FechaEnvioSunat { get; set; }
 
     // Auditoría
-    public string? UsuarioCreacion { get; set; }
+    public int? UsuarioCreacion { get; set; }
     public DateTime FechaCreacion { get; set; }
-    public string? UsuarioModificacion { get; set; }
+    public int? UsuarioModificacion { get; set; }
     public DateTime? FechaModificacion { get; set; }
 
     // Navegación

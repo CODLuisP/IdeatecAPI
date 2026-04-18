@@ -22,11 +22,11 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
                 empresaDistrito, empresaUbigeo, establecimientoAnexo,
                 clienteID, clienteTipoDoc, clienteNumDoc, clienteRznSocial,
                 clienteDireccion, clienteProvincia, clienteDepartamento,
-                clienteDistrito, clienteUbigeo,
+                clienteDistrito, clienteUbigeo, clienteCorreo, enviadoPorCorreo, clienteWhatsApp, enviadoPorWhatsApp,
                 codigoTipoDescGlobal, descuentoGlobal, totalOperacionesGravadas, totalOperacionesExoneradas, 
                 totalOperacionesInafectas, totalOperacionesGratuitas, totalIgvGratuitas, totalIGV, totalDescuentos, totalOtrosCargos,
                 totalIcbper, totalImpuestos, valorVenta, subTotal, importeTotal, montoCredito,
-                estadoSunat, xmlGenerado, fechaCreacion
+                estadoSunat, enviadoEnResumen, xmlGenerado, usuarioCreacion, fechaCreacion
             ) VALUES (
                 @TipoOperacion, @TipoComprobante, @Serie, @Correlativo,
                 @FechaEmision, @HoraEmision, @FechaVencimiento, @TipoMoneda,
@@ -36,11 +36,11 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
                 @EmpresaDistrito, @EmpresaUbigeo, @EmpresaEstablecimientoAnexo,
                 @ClienteId, @ClienteTipoDoc, @ClienteNumDoc, @ClienteRazonSocial,
                 @ClienteDireccion, @ClienteProvincia, @ClienteDepartamento,
-                @ClienteDistrito, @ClienteUbigeo,
+                @ClienteDistrito, @ClienteUbigeo, @ClienteCorreo, @EnviadoPorCorreo, @ClienteWhatsApp, @EnviadoPorWhatsApp,
                 @codigoTipoDescGlobal,  @DescuentoGlobal, @TotalOperacionesGravadas, @TotalOperacionesExoneradas, 
                 @TotalOperacionesInafectas, @TotalOperacionesGratuitas, @TotalIgvGratuitas, @TotalIGV, @TotalDescuentos, @TotalOtrosCargos,
                 @TotalIcbper, @TotalImpuestos, @ValorVenta, @SubTotal, @ImporteTotal, @MontoCredito,
-                @EstadoSunat, @XmlGenerado, @FechaCreacion
+                @EstadoSunat,  @EnviadoEnResumen, @XmlGenerado, @UsuarioCreacion, @FechaCreacion
             );
             SELECT LAST_INSERT_ID();";
 
@@ -75,6 +75,10 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
             comprobante.ClienteDepartamento,
             comprobante.ClienteDistrito,
             comprobante.ClienteUbigeo,
+            comprobante.ClienteCorreo,
+            comprobante.EnviadoPorCorreo,
+            comprobante.ClienteWhatsApp,
+            comprobante.EnviadoPorWhatsApp,
             comprobante.CodigoTipoDescGlobal,
             comprobante.DescuentoGlobal,
             comprobante.TotalOperacionesGravadas,
@@ -93,6 +97,8 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
             comprobante.MontoCredito,
             comprobante.EstadoSunat,
             comprobante.XmlGenerado,
+            comprobante.EnviadoEnResumen,
+            comprobante.UsuarioCreacion,
             comprobante.FechaCreacion
         };
 
@@ -218,6 +224,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
 
         await _connection.ExecuteAsync(sql, d, _transaction);
     }
+
     private async Task ActualizarSerieCorrelativoAsync(Comprobante comprobante)
     {
         string sql = comprobante.TipoComprobante switch
@@ -249,16 +256,57 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         await _connection.ExecuteAsync(sql, parameters, _transaction);
     }
 
-    public async Task<IEnumerable<Comprobante>> GetByRucAndFechasAsync(string ruc, DateTime fechaDesde, DateTime fechaHasta)
+    public async Task<IEnumerable<Comprobante>> GetByRucAndFechasAsync(string ruc, DateTime? fechaDesde, DateTime? fechaHasta)
     {
         var sql = BaseSelect + @"
         WHERE empresaRuc = @Ruc
-          AND fechaEmision >= @FechaDesde
-          AND fechaEmision <= @FechaHasta
+        AND (@FechaDesde IS NULL OR fechaEmision >= @FechaDesde)
+        AND (@FechaHasta IS NULL OR fechaEmision <= @FechaHasta)
+        ORDER BY fechaEmision DESC
+        LIMIT 100";
+
+        return await _connection.QueryAsync<Comprobante>(
+            sql, new { Ruc = ruc, FechaDesde = fechaDesde, FechaHasta = fechaHasta }, _transaction);
+    }
+
+   public async Task<IEnumerable<Comprobante>> GetByDocClienteAndFechasAsync(string rucEmpresa, string clienteNumDoc, DateTime? fechaDesde, DateTime? fechaHasta)
+    {
+        var sql = BaseSelect + @"
+        WHERE empresaRuc = @RucEmpresa
+        AND clienteNumDoc = @ClienteNumDoc
+        AND (@FechaDesde IS NULL OR fechaEmision >= @FechaDesde)
+        AND (@FechaHasta IS NULL OR fechaEmision <= @FechaHasta)
         ORDER BY fechaEmision DESC";
 
         return await _connection.QueryAsync<Comprobante>(
-            sql, new { Ruc = ruc, FechaDesde = fechaDesde.Date, FechaHasta = fechaHasta.Date }, _transaction);
+            sql, new { RucEmpresa = rucEmpresa, ClienteNumDoc = clienteNumDoc, FechaDesde = fechaDesde, FechaHasta = fechaHasta }, _transaction);
+    } 
+
+    public async Task<IEnumerable<Comprobante>> GetBySucursalAndFechasAsync(string empresaRuc, string codEstablecimiento, DateTime? fechaDesde, DateTime? fechaHasta)
+    {
+        var sql = BaseSelect + @"
+        WHERE empresaRuc = @EmpresaRuc
+        AND establecimientoAnexo = @CodEstablecimiento
+        AND (@FechaDesde IS NULL OR fechaEmision >= @FechaDesde)
+        AND (@FechaHasta IS NULL OR fechaEmision <= @FechaHasta)
+        ORDER BY fechaEmision DESC
+        LIMIT 50";
+
+        return await _connection.QueryAsync<Comprobante>(
+            sql, new { EmpresaRuc = empresaRuc, CodEstablecimiento = codEstablecimiento, FechaDesde = fechaDesde, FechaHasta = fechaHasta }, _transaction);
+    }
+
+    public async Task<IEnumerable<Comprobante>> GetByDocUsuarioAndFechasAsync(string rucEmpresa, int usuarioCreacion, DateTime? fechaDesde, DateTime? fechaHasta)
+    {
+        var sql = BaseSelect + @"
+        WHERE empresaRuc = @RucEmpresa
+        AND usuarioCreacion = @UsuarioCreacion
+        AND (@FechaDesde IS NULL OR fechaEmision >= @FechaDesde)
+        AND (@FechaHasta IS NULL OR fechaEmision <= @FechaHasta)
+        ORDER BY fechaEmision DESC";
+
+        return await _connection.QueryAsync<Comprobante>(
+            sql, new { RucEmpresa = rucEmpresa, UsuarioCreacion = usuarioCreacion, FechaDesde = fechaDesde, FechaHasta = fechaHasta }, _transaction);
     }
 
     public async Task<int> GetCantidadByClienteNumDocAsync(string clienteNumDoc)
@@ -482,6 +530,10 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         clienteDepartamento     AS ClienteDepartamento,
         clienteDistrito         AS ClienteDistrito,
         clienteUbigeo           AS ClienteUbigeo,
+        clienteCorreo          AS ClienteCorreo,
+        enviadoPorCorreo       AS EnviadoPorCorreo,
+        clienteWhatsApp        AS ClienteWhatsApp,
+        enviadoPorWhatsApp     AS EnviadoPorWhatsApp,
 
         codigoTipoDescGlobal        AS CodigoTipoDescGlobal,
         descuentoGlobal        AS DescuentoGlobal,
@@ -500,7 +552,14 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         importeTotal            AS ImporteTotal,
         montoCredito            AS MontoCredito,
 
+        tipDocAfectado         AS TipDocAfectado,
+        numDocAfectado         AS NumDocAfectado,
+        tipoNotaCreditoDebito  AS TipoNotaCreditoDebito,
+        motivoNota             AS MotivoNota,
+
         estadoSunat             AS EstadoSunat,
+        pdfGenerado            AS PdfGenerado,
+        enviadoEnResumen       AS EnviadoEnResumen,
         codigoHashCPE           AS CodigoHashCPE,
         codigoRespuestaSunat    AS CodigoRespuestaSunat,
         mensajeRespuestaSunat   AS MensajeRespuestaSunat,

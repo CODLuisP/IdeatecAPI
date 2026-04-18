@@ -1,4 +1,3 @@
-using IdeatecAPI.Application.Features.Comprobante.Services;
 using IdeatecAPI.Application.Features.Empresas.DTOs;
 using IdeatecAPI.Application.Features.Empresas.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -17,12 +16,10 @@ public class FileUploadRequest
 public class CompaniesController : ControllerBase
 {
     private readonly IEmpresaService _empresaService;
-    private readonly IComprobanteService _comprobanteService;
 
-    public CompaniesController(IEmpresaService empresaService, IComprobanteService comprobanteService)
+    public CompaniesController(IEmpresaService empresaService)
     {
         _empresaService = empresaService;
-        _comprobanteService = comprobanteService;
     }
 
     [HttpGet]
@@ -42,18 +39,6 @@ public class CompaniesController : ControllerBase
         if (empresa is null)
             return NotFound(new { message = $"Empresa con RUC {ruc} no encontrada" });
         return Ok(empresa);
-    }
-
-    [HttpGet("{ruc}/comprobantes")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetComprobantes(
-    string ruc,
-    [FromQuery] DateTime fechaDesde,
-    [FromQuery] DateTime fechaHasta)
-    {
-        var comprobantes = await _comprobanteService.GetByRucAndFechasAsync(ruc, fechaDesde, fechaHasta);
-        return Ok(comprobantes);
     }
 
     [HttpPost]

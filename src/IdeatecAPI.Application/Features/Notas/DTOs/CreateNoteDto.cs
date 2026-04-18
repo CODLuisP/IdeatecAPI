@@ -36,6 +36,7 @@ public class CreateNoteDto
     public decimal? ValorVenta { get; set; }
     public decimal? SubTotal { get; set; }
     public decimal MtoImpVenta { get; set; }
+    public int? UsuarioCreacion { get; set; }
 
     // Detalle y leyendas
     public List<CreateNoteDetailDto> Details { get; set; } = new();
@@ -48,6 +49,11 @@ public class CreateNoteClientDto
     public string NumDoc { get; set; } = string.Empty;
     public string RznSocial { get; set; } = string.Empty;
     public NoteAddressDto? Address { get; set; }
+    public string? ClienteCorreo { get; set; }
+    public bool? EnviadoPorCorreo { get; set; }
+    public string? ClienteWhatsApp { get; set; }
+    public bool? EnviadoPorWhatsApp { get; set; }
+
 }
 
 public class CreateNoteFormaPagoDto

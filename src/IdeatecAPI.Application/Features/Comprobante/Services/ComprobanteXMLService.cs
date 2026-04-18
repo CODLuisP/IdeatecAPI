@@ -11,7 +11,16 @@ namespace IdeatecAPI.Application.Features.Comprobante.Services;
 
 public interface IComprobanteService
 {
-    Task<IEnumerable<ObtenerComprobanteDTO>> GetByRucAndFechasAsync(string ruc, DateTime fechaDesde, DateTime fechaHasta);
+    Task<IEnumerable<ObtenerComprobanteDTO>> GetByRucAndFechasAsync(string ruc, DateTime? fechaDesde, DateTime? fechaHasta);
+
+    //Comprobantes de una cliente en la empresa
+    Task<IEnumerable<ObtenerComprobanteDTO>> GetByDocClienteAndFechasAsync(string rucEmpresa, string clienteNumDoc, DateTime? fechaDesde, DateTime? fechaHasta);
+
+    //comprobantes de una sucursal
+    Task<IEnumerable<ObtenerComprobanteDTO>> GetBySucursalAndFechasAsync(int sucursalId, DateTime? fechaDesde, DateTime? fechaHasta); 
+
+    //comprobantes por usuario
+    Task<IEnumerable<ObtenerComprobanteDTO>> GetByDocUsuarioAndFechasAsync(string rucEmpresa, int usuarioCreacion, DateTime? fechaDesde, DateTime? fechaHasta);
     Task<int> GetCantidadByClienteNumDocAsync(string clienteNumDoc);
     Task<ComprobanteResponse> GenerarComprobanteAsync(GenerarComprobanteDTO dto); //Guardar en BD
     Task<ObtenerComprobanteDTO?> GetComprobanteByIdAsync(int comprobanteId);
@@ -58,9 +67,71 @@ public class ComprobanteService : IComprobanteService
         _rutaXml = configuration["Storage:RutaXml"] ?? Path.Combine(Directory.GetCurrentDirectory(), "XmlFiles");
     }
 
-    public async Task<IEnumerable<ObtenerComprobanteDTO>> GetByRucAndFechasAsync(string ruc, DateTime fechaDesde, DateTime fechaHasta)
+    public async Task<IEnumerable<ObtenerComprobanteDTO>> GetByRucAndFechasAsync(string ruc, DateTime? fechaDesde, DateTime? fechaHasta)
     {
         var comprobantes = await _unitOfWork.Comprobantes.GetByRucAndFechasAsync(ruc, fechaDesde, fechaHasta);
+
+        var lista = new List<ObtenerComprobanteDTO>();
+        foreach (var comprobante in comprobantes)
+        {
+            var detalles = (await _unitOfWork.Comprobantes.GetDetallesByIdAsync(comprobante.ComprobanteId)).ToList();
+            var pagos = (await _unitOfWork.Comprobantes.GetPagosByIdAsync(comprobante.ComprobanteId)).ToList();
+            var cuotas = (await _unitOfWork.Comprobantes.GetCuotasByIdAsync(comprobante.ComprobanteId)).ToList();
+            var leyendas = (await _unitOfWork.Comprobantes.GetLeyendasByIdAsync(comprobante.ComprobanteId)).ToList();
+            var guias = (await _unitOfWork.Comprobantes.GetGuiasByIdAsync(comprobante.ComprobanteId)).ToList();
+            var detracciones = (await _unitOfWork.Comprobantes.GetDetraccionesByIdAsync(comprobante.ComprobanteId)).ToList();
+            lista.Add(MapToDto(comprobante, detalles, pagos, cuotas, leyendas, guias, detracciones));
+        }
+        return lista;
+    }
+
+    public async Task<IEnumerable<ObtenerComprobanteDTO>> GetByDocClienteAndFechasAsync(string rucEmpresa, string clienteNumDoc, DateTime? fechaDesde, DateTime? fechaHasta)
+    {
+        var comprobantes = await _unitOfWork.Comprobantes.GetByDocClienteAndFechasAsync(rucEmpresa, clienteNumDoc, fechaDesde, fechaHasta);
+
+        var lista = new List<ObtenerComprobanteDTO>();
+        foreach (var comprobante in comprobantes)
+        {
+            var detalles = (await _unitOfWork.Comprobantes.GetDetallesByIdAsync(comprobante.ComprobanteId)).ToList();
+            var pagos = (await _unitOfWork.Comprobantes.GetPagosByIdAsync(comprobante.ComprobanteId)).ToList();
+            var cuotas = (await _unitOfWork.Comprobantes.GetCuotasByIdAsync(comprobante.ComprobanteId)).ToList();
+            var leyendas = (await _unitOfWork.Comprobantes.GetLeyendasByIdAsync(comprobante.ComprobanteId)).ToList();
+            var guias = (await _unitOfWork.Comprobantes.GetGuiasByIdAsync(comprobante.ComprobanteId)).ToList();
+            var detracciones = (await _unitOfWork.Comprobantes.GetDetraccionesByIdAsync(comprobante.ComprobanteId)).ToList();
+            lista.Add(MapToDto(comprobante, detalles, pagos, cuotas, leyendas, guias, detracciones));
+        }
+        return lista;
+    }
+
+    public async Task<IEnumerable<ObtenerComprobanteDTO>> GetBySucursalAndFechasAsync(int sucursalId, DateTime? fechaDesde, DateTime? fechaHasta)
+    {
+        // 1. Obtener sucursal para extraer ruc y codEstablecimiento
+        var sucursal = await _unitOfWork.Sucursal.GetByIdSucursalAsync(sucursalId);
+
+        // 2. Buscar comprobantes con esos datos
+        var comprobantes = await _unitOfWork.Comprobantes.GetBySucursalAndFechasAsync(
+            sucursal.EmpresaRuc ?? throw new InvalidOperationException("La sucursal no tiene RUC"),
+            sucursal.CodEstablecimiento ?? throw new InvalidOperationException("La sucursal no tiene código de establecimiento"),
+            fechaDesde,
+            fechaHasta);
+
+        var lista = new List<ObtenerComprobanteDTO>();
+        foreach (var comprobante in comprobantes)
+        {
+            var detalles = (await _unitOfWork.Comprobantes.GetDetallesByIdAsync(comprobante.ComprobanteId)).ToList();
+            var pagos = (await _unitOfWork.Comprobantes.GetPagosByIdAsync(comprobante.ComprobanteId)).ToList();
+            var cuotas = (await _unitOfWork.Comprobantes.GetCuotasByIdAsync(comprobante.ComprobanteId)).ToList();
+            var leyendas = (await _unitOfWork.Comprobantes.GetLeyendasByIdAsync(comprobante.ComprobanteId)).ToList();
+            var guias = (await _unitOfWork.Comprobantes.GetGuiasByIdAsync(comprobante.ComprobanteId)).ToList();
+            var detracciones = (await _unitOfWork.Comprobantes.GetDetraccionesByIdAsync(comprobante.ComprobanteId)).ToList();
+            lista.Add(MapToDto(comprobante, detalles, pagos, cuotas, leyendas, guias, detracciones));
+        }
+        return lista;
+    }
+
+    public async Task<IEnumerable<ObtenerComprobanteDTO>> GetByDocUsuarioAndFechasAsync(string rucEmpresa, int usuarioCreacion, DateTime? fechaDesde, DateTime? fechaHasta)
+    {
+        var comprobantes = await _unitOfWork.Comprobantes.GetByDocUsuarioAndFechasAsync(rucEmpresa, usuarioCreacion, fechaDesde, fechaHasta);
 
         var lista = new List<ObtenerComprobanteDTO>();
         foreach (var comprobante in comprobantes)
@@ -148,6 +219,10 @@ public class ComprobanteService : IComprobanteService
                 ClienteDepartamento = dto.Cliente?.Departamento,
                 ClienteDistrito = dto.Cliente?.Distrito,
                 ClienteUbigeo = dto.Cliente?.Ubigeo,
+                ClienteCorreo = dto.Cliente?.Correo,
+                EnviadoPorCorreo = dto.Cliente?.EnviadoPorCorreo,
+                ClienteWhatsApp = dto.Cliente?.WhatsApp,
+                EnviadoPorWhatsApp = dto.Cliente?.EnviadoPorWhatsApp,
                 CodigoTipoDescGlobal = dto.CodigoTipoDescGlobal,
                 DescuentoGlobal = dto.DescuentoGlobal,
                 TotalOperacionesGravadas = dto.TotalOperacionesGravadas,
@@ -166,6 +241,8 @@ public class ComprobanteService : IComprobanteService
                 MontoCredito = dto.MontoCredito,
                 EstadoSunat = "PENDIENTE",
                 XmlGenerado = null,
+                EnviadoEnResumen = dto.EnviadoEnResumen,
+                UsuarioCreacion = dto.UsuarioCreacion,
                 FechaCreacion = DateTime.Now,
 
                 Detalles = dto.Details.Select(d => new Domain.Entities.ComprobanteDetalle
@@ -601,6 +678,7 @@ public class ComprobanteService : IComprobanteService
     {
         return new ObtenerComprobanteDTO
         {
+            ComprobanteId = comprobante.ComprobanteId,
             UblVersion = "2.1",
             TipoOperacion = comprobante.TipoOperacion ?? "0101",
             TipoComprobante = comprobante.TipoComprobante,
@@ -624,7 +702,11 @@ public class ComprobanteService : IComprobanteService
                 Provincia = comprobante.ClienteProvincia,
                 Departamento = comprobante.ClienteDepartamento,
                 Distrito = comprobante.ClienteDistrito,
-                Ubigeo = comprobante.ClienteUbigeo
+                Ubigeo = comprobante.ClienteUbigeo,
+                Correo = comprobante.ClienteCorreo,
+                EnviadoPorCorreo = comprobante.EnviadoPorCorreo,
+                WhatsApp = comprobante.ClienteWhatsApp,
+                EnviadoPorWhatsApp = comprobante.EnviadoPorWhatsApp
             },
 
             Company = new EmpresaDTO
@@ -657,6 +739,12 @@ public class ComprobanteService : IComprobanteService
             SubTotal = comprobante.SubTotal ?? 0,
             TotalIcbper = comprobante.TotalIcbper ?? 0,
             ImporteTotal = comprobante.ImporteTotal ?? 0,
+
+            //Obtener para pdf Notas
+            TipDocAfectado = comprobante.TipDocAfectado,
+            NumDocAfectado = comprobante.NumDocAfectado,
+            TipoNotaCreditoDebito = comprobante.TipoNotaCreditoDebito,
+            MotivoNota = comprobante.MotivoNota,
 
             Details = detalles.Select(d => new DetalleFacturaDTO
             {
@@ -729,6 +817,8 @@ public class ComprobanteService : IComprobanteService
                 Observacion = d.Observacion
             }).ToList(),
 
+            PdfGenerado = comprobante.PdfGenerado,
+            EnviadoEnResumen = comprobante.EnviadoEnResumen,
             EstadoSunat = comprobante.EstadoSunat,
             CodigoRespuestaSunat = comprobante.CodigoRespuestaSunat,
             MensajeRespuestaSunat = comprobante.MensajeRespuestaSunat,
