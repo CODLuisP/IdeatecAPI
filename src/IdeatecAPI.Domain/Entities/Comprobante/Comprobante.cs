@@ -64,6 +64,8 @@ public class Comprobante
     public decimal? MontoCredito { get; set; }
 
     //Campos extras para notas y sus PDF
+    public int? ComprobanteAfectadoId { get; set; }
+    public string? Observaciones { get; set; }
     public string? TipDocAfectado { get; set; }
     public string? NumDocAfectado { get; set; }
     public string? TipoNotaCreditoDebito { get; set; }

@@ -263,7 +263,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         AND (@FechaDesde IS NULL OR fechaEmision >= @FechaDesde)
         AND (@FechaHasta IS NULL OR fechaEmision <= @FechaHasta)
         ORDER BY fechaEmision DESC
-        LIMIT 100";
+        LIMIT 40";
 
         return await _connection.QueryAsync<Comprobante>(
             sql, new { Ruc = ruc, FechaDesde = fechaDesde, FechaHasta = fechaHasta }, _transaction);
@@ -290,7 +290,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         AND (@FechaDesde IS NULL OR fechaEmision >= @FechaDesde)
         AND (@FechaHasta IS NULL OR fechaEmision <= @FechaHasta)
         ORDER BY fechaEmision DESC
-        LIMIT 50";
+        LIMIT 20";
 
         return await _connection.QueryAsync<Comprobante>(
             sql, new { EmpresaRuc = empresaRuc, CodEstablecimiento = codEstablecimiento, FechaDesde = fechaDesde, FechaHasta = fechaHasta }, _transaction);
@@ -307,6 +307,42 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
 
         return await _connection.QueryAsync<Comprobante>(
             sql, new { RucEmpresa = rucEmpresa, UsuarioCreacion = usuarioCreacion, FechaDesde = fechaDesde, FechaHasta = fechaHasta }, _transaction);
+    }
+
+    public async Task<IEnumerable<Comprobante>> GetByClienteAndSucursalAsync(string empresaRuc, string codEstablecimiento, string clienteNumDoc, DateTime? fechaDesde, DateTime? fechaHasta)
+    {
+        var sql = BaseSelect + @"
+        WHERE empresaRuc = @EmpresaRuc
+        AND establecimientoAnexo = @CodEstablecimiento
+        AND clienteNumDoc = @ClienteNumDoc
+        AND (@FechaDesde IS NULL OR fechaEmision >= @FechaDesde)
+        AND (@FechaHasta IS NULL OR fechaEmision <= @FechaHasta)
+        ORDER BY fechaEmision DESC";
+
+        return await _connection.QueryAsync<Comprobante>(
+            sql,
+            new { EmpresaRuc = empresaRuc, CodEstablecimiento = codEstablecimiento, ClienteNumDoc = clienteNumDoc, FechaDesde = fechaDesde, FechaHasta = fechaHasta },
+            _transaction);
+    }
+
+    public async Task UpdateCorreoWhatsappAsync(int comprobanteId, string? correo, bool? enviadoPorCorreo, string? whatsApp, bool? enviadoPorWhatsApp)
+    {
+        var sql = @"
+            UPDATE comprobante SET
+                clienteCorreo        = @Correo,
+                enviadoPorCorreo     = @EnviadoPorCorreo,
+                clienteWhatsApp      = @WhatsApp,
+                enviadoPorWhatsApp   = @EnviadoPorWhatsApp
+            WHERE comprobanteID = @ComprobanteId";
+
+        await _connection.ExecuteAsync(sql, new
+        {
+            ComprobanteId      = comprobanteId,
+            Correo             = correo,
+            EnviadoPorCorreo   = enviadoPorCorreo,
+            WhatsApp           = whatsApp,
+            EnviadoPorWhatsApp = enviadoPorWhatsApp
+        }, _transaction);
     }
 
     public async Task<int> GetCantidadByClienteNumDocAsync(string clienteNumDoc)
@@ -556,6 +592,8 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         numDocAfectado         AS NumDocAfectado,
         tipoNotaCreditoDebito  AS TipoNotaCreditoDebito,
         motivoNota             AS MotivoNota,
+        comprobanteAfectadoID  AS ComprobanteAfectadoId,
+        observaciones          AS Observaciones,
 
         estadoSunat             AS EstadoSunat,
         pdfGenerado            AS PdfGenerado,
