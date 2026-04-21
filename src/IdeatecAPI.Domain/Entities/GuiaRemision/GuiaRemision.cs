@@ -12,6 +12,12 @@ public class GuiaRemision
     public string? NumeroCompleto { get; set; }
     public string? MatPeligrosoClase { get; set; }     // ej: "1.1A", "3"
     public string? MatPeligrosoNroONU { get; set; }    // ej: "UN1203"
+                                                       // Al final de la clase
+    public string? ClienteCorreo { get; set; }
+    public bool EnviadoPorCorreo { get; set; }
+    public string? ClienteWhatsapp { get; set; }
+    public bool EnviadoPorWhatsapp { get; set; }
+    public int? UsuarioCreacion { get; set; }
     public DateTime FechaEmision { get; set; }
 
     // Empresa denormalizada

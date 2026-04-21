@@ -182,7 +182,12 @@ public class GuiaService : IGuiaService
                 ChoferApellidos = dto.Envio.Transportista?.ChoferApellidos,
                 ChoferLicencia = dto.Envio.Transportista?.ChoferLicencia,
                 EstadoSunat = "PENDIENTE",
-                FechaCreacion = DateTime.UtcNow
+                FechaCreacion = DateTime.UtcNow,
+                ClienteCorreo      = dto.ClienteCorreo,
+                ClienteWhatsapp    = dto.ClienteWhatsapp,
+                UsuarioCreacion    = dto.UsuarioCreacion,
+                EnviadoPorCorreo   = dto.EnviadoPorCorreo,
+                EnviadoPorWhatsapp = dto.EnviadoPorWhatsapp
             };
 
             var newId = await _unitOfWork.Guias.CreateAsync(guia);
@@ -401,7 +406,12 @@ public class GuiaService : IGuiaService
         MensajeRespuestaSunat = g.MensajeRespuestaSunat,
         TicketSunat = g.TicketSunat,
         FechaEnvioSunat = g.FechaEnvioSunat,
-        FechaCreacion = g.FechaCreacion
+        FechaCreacion = g.FechaCreacion,
+        ClienteCorreo      = g.ClienteCorreo,
+        EnviadoPorCorreo   = g.EnviadoPorCorreo,
+        ClienteWhatsapp    = g.ClienteWhatsapp,
+        EnviadoPorWhatsapp = g.EnviadoPorWhatsapp,
+        UsuarioCreacion    = g.UsuarioCreacion
     };
 
     private static GuiaDetalleDto MapDetalleToDto(GuiaDetalleEntity d) => new()
