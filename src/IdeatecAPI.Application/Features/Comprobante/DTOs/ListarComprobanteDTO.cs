@@ -1,12 +1,8 @@
-
-using IdeatecAPI.Application.Features.Detraccion.DTOs;
-using IdeatecAPI.Application.Features.Notas.DTOs;
-
 namespace IdeatecAPI.Application.Features.Comprobante.DTOs;
-public class ObtenerComprobanteDTO
+public class ListarComprobanteDTO
 {
     public int ComprobanteId { get; set; }
-    public string UblVersion { get; set; } = "2.1"; 
+    public string UblVersion { get; set; } = "2.1";
     public string TipoOperacion { get; set; } = "0101";
     public string? TipoComprobante { get; set; }
     public string Serie { get; set; } = string.Empty;
@@ -34,24 +30,19 @@ public class ObtenerComprobanteDTO
     public decimal TotalImpuestos { get; set; }
     public decimal TotalDescuentos { get; set; }
     public decimal TotalOtrosCargos { get; set; }
-    public decimal TotalIcbper { get; set; }          
-    public decimal ValorVenta { get; set; }                
-    public decimal SubTotal { get; set; }                 
+    public decimal TotalIcbper { get; set; }
+    public decimal ValorVenta { get; set; }
+    public decimal SubTotal { get; set; }
     public decimal ImporteTotal { get; set; }
     public decimal MontoCredito { get; set; }
 
-    //Para notas Y su PDF
+    // Notas
+    public int? ComprobanteAfectadoId { get; set; }
     public string? TipDocAfectado { get; set; }
     public string? NumDocAfectado { get; set; }
     public string? TipoNotaCreditoDebito { get; set; }
     public string? MotivoNota { get; set; }
-
-    public List<DetalleFacturaDTO> Details { get; set; } = [];
-    public List<DetallePagosDTO>? Pagos { get; set; } = [];
-    public List<DetalleCuotasDTO>? Cuotas { get; set; } = [];
-    public List<NoteLegendDto>? Legends { get; set; } = [];
-    public List<GuiaComprobanteDTO>? Guias { get; set; } = [];
-    public List<DetraccionDTO>? Detracciones { get; set; } = [];
+    public string? Observaciones { get; set; }
 
     // Estado SUNAT
     public string? EstadoSunat { get; set; }
@@ -68,4 +59,3 @@ public class ObtenerComprobanteDTO
     public int? UsuarioModificacion { get; set; }
     public DateTime? FechaModificacion { get; set; }
 }
-

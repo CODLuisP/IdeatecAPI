@@ -22,6 +22,10 @@ public class NoteDto
     public string ClienteTipoDoc { get; set; } = string.Empty;
     public string ClienteNumDoc { get; set; } = string.Empty;
     public string ClienteRznSocial { get; set; } = string.Empty;
+    public string? ClienteCorreo { get; set; }
+    public bool? EnviadoPorCorreo { get; set; }
+    public string? ClienteWhatsApp { get; set; }
+    public bool? EnviadoPorWhatsApp { get; set; }
 
     // Totales
     public decimal MtoOperGravadas { get; set; }
@@ -29,6 +33,8 @@ public class NoteDto
     public decimal MtoImpVenta { get; set; }
 
     // Estado SUNAT
+    public string? PdfGenerado { get; set; }
+    public bool? EnviadoEnResumen { get; set; }
     public string EstadoSunat { get; set; } = string.Empty;
     public string? CodigoRespuestaSunat { get; set; }
     public string? MensajeRespuestaSunat { get; set; }
@@ -39,4 +45,6 @@ public class NoteDto
     public List<NoteLegendDto> Legends { get; set; } = new();
 
     public DateTime FechaCreacion { get; set; }
+
+    public int? UsuarioCreacion { get; set; }
 }

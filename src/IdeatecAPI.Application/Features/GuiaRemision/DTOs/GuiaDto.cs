@@ -73,10 +73,15 @@ public class GuiaDto
     public string? TicketSunat { get; set; }
     public DateTime? FechaEnvioSunat { get; set; }
     public DateTime FechaCreacion { get; set; }
-    public bool IndTransbordo { get; set; } 
+    public bool IndTransbordo { get; set; }
     public string? MatPeligrosoClase { get; set; }
-    public string? MatPeligrosoNroONU { get; set; }  
-
+    public string? MatPeligrosoNroONU { get; set; }
+    // Al final, antes de Details
+    public string? ClienteCorreo { get; set; }
+    public bool EnviadoPorCorreo { get; set; }
+    public string? ClienteWhatsapp { get; set; }
+    public bool EnviadoPorWhatsapp { get; set; }
+    public int? UsuarioCreacion { get; set; }
     public List<GuiaDetalleDto> Details { get; set; } = new();
 }
 

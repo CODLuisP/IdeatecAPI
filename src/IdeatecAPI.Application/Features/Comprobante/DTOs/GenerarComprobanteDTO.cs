@@ -38,6 +38,10 @@ public class GenerarComprobanteDTO
     public decimal ImporteTotal { get; set; }
     public decimal MontoCredito { get; set; }
 
+    //Usuario creacion y si el doc se envio en resumen
+    public int? UsuarioCreacion { get; set; }
+    public bool? EnviadoEnResumen { get; set; }
+
     public List<DetalleFacturaDTO> Details { get; set; } = [];
     public List<DetallePagosDTO>? Pagos { get; set; } = [];
     public List<DetalleCuotasDTO>? Cuotas { get; set; } = [];
@@ -100,6 +104,10 @@ public class ClienteDTO
     public string? Departamento { get; set; }
     public string? Provincia { get; set; }
     public string? Distrito { get; set; }
+    public string? Correo { get; set; }
+    public bool? EnviadoPorCorreo { get; set; }
+    public string? WhatsApp { get; set; }
+    public bool? EnviadoPorWhatsApp { get; set; }
 }
 public class DetalleFacturaDTO
 {

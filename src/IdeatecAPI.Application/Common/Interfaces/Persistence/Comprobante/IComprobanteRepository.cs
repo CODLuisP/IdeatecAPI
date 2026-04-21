@@ -17,7 +17,12 @@ public interface IComprobanteRepository : IRepository<Comprobante>
     new Task<Comprobante?> GetByIdAsync(int comprobanteId);
     Task<IEnumerable<Comprobante>> GetByEstadoAsync(string estado);
     Task<IEnumerable<ComprobanteDetalle>> GetDetallesByIdAsync(int comprobanteId);
-    Task<IEnumerable<Comprobante>> GetByRucAndFechasAsync(string ruc, DateTime fechaDesde, DateTime fechaHasta);
+    Task<IEnumerable<Comprobante>> GetByRucAndFechasAsync(string ruc, DateTime? fechaDesde, DateTime? fechaHasta);
+    Task<IEnumerable<Comprobante>> GetByDocClienteAndFechasAsync(string rucEmpresa, string clienteNumDoc, DateTime? fechaDesde, DateTime? fechaHasta);
+    Task<IEnumerable<Comprobante>> GetBySucursalAndFechasAsync(string empresaRuc, string codEstablecimiento, DateTime? fechaDesde, DateTime? fechaHasta);
+    Task<IEnumerable<Comprobante>> GetByDocUsuarioAndFechasAsync(string rucEmpresa, int usuarioCreacion, DateTime? fechaDesde, DateTime? fechaHasta);
+    Task<IEnumerable<Comprobante>> GetByClienteAndSucursalAsync(string empresaRuc, string codEstablecimiento, string clienteNumDoc, DateTime? fechaDesde, DateTime? fechaHasta);
+    Task UpdateCorreoWhatsappAsync(int comprobanteId, string? correo, bool? enviadoPorCorreo, string? whatsApp, bool? enviadoPorWhatsApp);
     Task<int> GetCantidadByClienteNumDocAsync(string clienteNumDoc);
     Task<IEnumerable<Pago>> GetPagosByIdAsync(int comprobanteId);
     Task<IEnumerable<Cuota>> GetCuotasByIdAsync(int comprobanteId);

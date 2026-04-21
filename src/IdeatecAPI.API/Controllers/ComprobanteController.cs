@@ -43,15 +43,30 @@ public class ComprobantesController : ControllerBase
         }
     }
 
+    //comrpobantes completos por Ruc
     [HttpGet("ruc/{ruc}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetByRucAndFechas(string ruc, [FromQuery] DateTime fechaDesde, [FromQuery] DateTime fechaHasta)
+    public async Task<IActionResult> GetByRucAndFechas(string ruc, [FromQuery] DateTime? fechaDesde, [FromQuery] DateTime? fechaHasta)
     {
         try
         {
-            var comprobantes = await _comprobanteService.GetByRucAndFechasAsync(ruc, fechaDesde, fechaHasta);
+            // Caso 1: solo RUC → sin filtro de fechas (null ambas)
+            // Caso 2: solo fechaDesde → filtrar ese día completo
+            // Caso 3: ambas → rango completo
+
+            DateTime? desde = null;
+            DateTime? hasta = null;
+
+            if (fechaDesde.HasValue)
+            {
+                desde = fechaDesde.Value.Date; // 00:00:00
+                hasta = fechaHasta.HasValue
+                    ? fechaHasta.Value.Date.AddDays(1).AddSeconds(-1) // 23:59:59
+                    : fechaDesde.Value.Date.AddDays(1).AddSeconds(-1); // mismo día
+            }
+            var comprobantes = await _comprobanteService.GetByRucAndFechasAsync(ruc, desde, hasta);
 
             if (comprobantes == null || !comprobantes.Any())
                 return NotFound(new { mensaje = $"No se encontraron comprobantes para el RUC '{ruc}' en el rango de fechas indicado." });
@@ -64,6 +79,342 @@ public class ComprobantesController : ControllerBase
             return StatusCode(StatusCodes.Status500InternalServerError, new
             {
                 mensaje = "Ocurrió un error al obtener los comprobantes.",
+                detalle = ex.Message
+            });
+        }
+    }
+
+    //comrpobantes completos de Un clinte dentro de la empresa
+    [HttpGet("empresa/{rucEmpresa}/cliente/{clienteNumDoc}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetByDocClienteAndFechas(
+        string rucEmpresa,
+        string clienteNumDoc,
+        [FromQuery] DateTime? fechaDesde,
+        [FromQuery] DateTime? fechaHasta)
+    {
+        try
+        {
+            DateTime? desde = null;
+            DateTime? hasta = null;
+
+            if (fechaDesde.HasValue)
+            {
+                desde = fechaDesde.Value.Date;
+                hasta = fechaHasta.HasValue
+                    ? fechaHasta.Value.Date.AddDays(1).AddSeconds(-1)
+                    : fechaDesde.Value.Date.AddDays(1).AddSeconds(-1);
+            }
+
+            var comprobantes = await _comprobanteService.GetByDocClienteAndFechasAsync(rucEmpresa, clienteNumDoc, desde, hasta);
+
+            if (comprobantes == null || !comprobantes.Any())
+                return NotFound(new { mensaje = $"No se encontraron comprobantes para el cliente '{clienteNumDoc}'." });
+
+            return Ok(comprobantes);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener comprobantes para cliente {ClienteNumDoc}", clienteNumDoc);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al obtener los comprobantes.",
+                detalle = ex.Message
+            });
+        }
+    }
+
+    //comrpobantes completos por SucursalId
+    [HttpGet("sucursal/{sucursalId}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetBySucursal(
+        int sucursalId,
+        [FromQuery] DateTime? fechaDesde,
+        [FromQuery] DateTime? fechaHasta)
+    {
+        try
+        {
+            DateTime? desde = null;
+            DateTime? hasta = null;
+
+            if (fechaDesde.HasValue)
+            {
+                desde = fechaDesde.Value.Date;
+                hasta = fechaHasta.HasValue
+                    ? fechaHasta.Value.Date.AddDays(1).AddSeconds(-1)
+                    : fechaDesde.Value.Date.AddDays(1).AddSeconds(-1);
+            }
+
+            var comprobantes = await _comprobanteService.GetBySucursalAndFechasAsync(sucursalId, desde, hasta);
+
+            if (comprobantes == null || !comprobantes.Any())
+                return NotFound(new { mensaje = $"No se encontraron comprobantes para la sucursal {sucursalId}." });
+
+            return Ok(comprobantes);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            _logger.LogWarning("Sucursal no encontrada: {Mensaje}", ex.Message);
+            return NotFound(new { mensaje = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener comprobantes para sucursal {SucursalId}", sucursalId);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al obtener los comprobantes.",
+                detalle = ex.Message
+            });
+        }
+    }
+
+    //comrpobantes completos de un usuario por Ruc
+    [HttpGet("empresa/{rucEmpresa}/usuario/{usuarioId}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetByDocUsuario(
+        string rucEmpresa,
+        int usuarioId,
+        [FromQuery] DateTime? fechaDesde,
+        [FromQuery] DateTime? fechaHasta)
+    {
+        try
+        {
+            DateTime? desde = null;
+            DateTime? hasta = null;
+
+            if (fechaDesde.HasValue)
+            {
+                desde = fechaDesde.Value.Date;
+                hasta = fechaHasta.HasValue
+                    ? fechaHasta.Value.Date.AddDays(1).AddSeconds(-1)
+                    : fechaDesde.Value.Date.AddDays(1).AddSeconds(-1);
+            }
+
+            var comprobantes = await _comprobanteService.GetByDocUsuarioAndFechasAsync(rucEmpresa, usuarioId, desde, hasta);
+
+            if (comprobantes == null || !comprobantes.Any())
+                return NotFound(new { mensaje = $"No se encontraron comprobantes para el usuario {usuarioId}." });
+
+            return Ok(comprobantes);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener comprobantes para usuario {UsuarioId}", usuarioId);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al obtener los comprobantes.",
+                detalle = ex.Message
+            });
+        }
+    }
+
+    //Campos de la tabla comrpobantes por Ruc
+    [HttpGet("listado/ruc/{ruc}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetListadoByRuc(string ruc, [FromQuery] DateTime? fechaDesde, [FromQuery] DateTime? fechaHasta)
+    {
+        try
+        {
+            var (desde, hasta) = NormalizarFechas(fechaDesde, fechaHasta);
+            var result = await _comprobanteService.GetListadoByRucAndFechasAsync(ruc, desde, hasta);
+            if (!result.Any())
+                return NotFound(new { mensaje = $"No se encontraron comprobantes para el RUC '{ruc}'." });
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener listado por RUC {Ruc}", ruc);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al obtener los comprobantes.",
+                detalle = ex.Message
+            });
+        }
+    }
+
+    //Campos de la tabla comrpobantes por Sucursal
+    [HttpGet("listado/sucursal/{sucursalId}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetListadoBySucursal(int sucursalId, [FromQuery] DateTime? fechaDesde, [FromQuery] DateTime? fechaHasta)
+    {
+        try
+        {
+            var (desde, hasta) = NormalizarFechas(fechaDesde, fechaHasta);
+            var result = await _comprobanteService.GetListadoBySucursalAndFechasAsync(sucursalId, desde, hasta);
+            if (!result.Any())
+                return NotFound(new { mensaje = $"No se encontraron comprobantes para la sucursal {sucursalId}." });
+            return Ok(result);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            _logger.LogWarning("Sucursal no encontrada: {Mensaje}", ex.Message);
+            return NotFound(new { mensaje = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener listado por sucursal {SucursalId}", sucursalId);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al obtener los comprobantes.",
+                detalle = ex.Message
+            });
+        }
+    }
+
+    //Campos de la tabla comrpobantes por Ruc y Doc del cleinte
+    [HttpGet("listado/empresa/{rucEmpresa}/cliente/{clienteNumDoc}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetListadoByCliente(string rucEmpresa, string clienteNumDoc, [FromQuery] DateTime? fechaDesde, [FromQuery] DateTime? fechaHasta)
+    {
+        try
+        {
+            var (desde, hasta) = NormalizarFechas(fechaDesde, fechaHasta);
+            var result = await _comprobanteService.GetListadoByDocClienteAndFechasAsync(rucEmpresa, clienteNumDoc, desde, hasta);
+            if (!result.Any())
+                return NotFound(new { mensaje = $"No se encontraron comprobantes para el cliente '{clienteNumDoc}'." });
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener listado por cliente {ClienteNumDoc}", clienteNumDoc);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al obtener los comprobantes.",
+                detalle = ex.Message
+            });
+        }
+    }
+
+    //Campos de la tabla comrpobantes por Ruc y IdUsuario del cleinte
+    [HttpGet("listado/empresa/{rucEmpresa}/usuario/{usuarioId}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetListadoByUsuario(string rucEmpresa, int usuarioId, [FromQuery] DateTime? fechaDesde, [FromQuery] DateTime? fechaHasta)
+    {
+        try
+        {
+            var (desde, hasta) = NormalizarFechas(fechaDesde, fechaHasta);
+            var result = await _comprobanteService.GetListadoByDocUsuarioAndFechasAsync(rucEmpresa, usuarioId, desde, hasta);
+            if (!result.Any())
+                return NotFound(new { mensaje = $"No se encontraron comprobantes para el usuario {usuarioId}." });
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener listado por usuario {UsuarioId}", usuarioId);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al obtener los comprobantes.",
+                detalle = ex.Message
+            });
+        }
+    }
+
+    //Campos de la tabla comrpobantes de un cliente en una ucursal
+    [HttpGet("listado/sucursal/{sucursalId}/cliente/{clienteNumDoc}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetListadoByClienteAndSucursal(
+        int sucursalId,
+        string clienteNumDoc,
+        [FromQuery] DateTime? fechaDesde,
+        [FromQuery] DateTime? fechaHasta)
+    {
+        try
+        {
+            var (desde, hasta) = NormalizarFechas(fechaDesde, fechaHasta);
+            var result = await _comprobanteService.GetListadoByClienteAndSucursalAsync(sucursalId, clienteNumDoc, desde, hasta);
+            if (!result.Any())
+                return NotFound(new { mensaje = $"No se encontraron comprobantes para el cliente '{clienteNumDoc}' en la sucursal {sucursalId}." });
+            return Ok(result);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            _logger.LogWarning("Sucursal no encontrada: {Mensaje}", ex.Message);
+            return NotFound(new { mensaje = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener listado por cliente {ClienteNumDoc} y sucursal {SucursalId}", clienteNumDoc, sucursalId);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al obtener los comprobantes.",
+                detalle = ex.Message
+            });
+        }
+    }
+
+    //Solo detalles de un comprobante por su ComprobanteId
+    [HttpGet("{id}/detalles")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetDetalles(int id)
+    {
+        try
+        {
+            var resultado = await _comprobanteService.GetDetallesByComprobanteIdAsync(id);
+            if (resultado == null)
+                return NotFound(new { mensaje = $"No se encontró el comprobante con ID {id}." });
+            return Ok(resultado);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener detalles del comprobante ID {Id}", id);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al obtener los detalles.",
+                detalle = ex.Message
+            });
+        }
+    }
+
+    private static (DateTime? desde, DateTime? hasta) NormalizarFechas(DateTime? fechaDesde, DateTime? fechaHasta)
+    {
+        if (!fechaDesde.HasValue) return (null, null);
+        var desde = fechaDesde.Value.Date;
+        var hasta = fechaHasta.HasValue
+            ? fechaHasta.Value.Date.AddDays(1).AddSeconds(-1)
+            : fechaDesde.Value.Date.AddDays(1).AddSeconds(-1);
+        return (desde, hasta);
+    }
+
+    [HttpPatch("actualizar/{id}/correo-whatsapp")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> ActualizarCorreoWhatsapp(int id, [FromBody] ActualizarCorreoWhatsappDTO dto)
+    {
+        try
+        {
+            await _comprobanteService.ActualizarCorreoWhatsappAsync(id, dto);
+            return Ok(new { mensaje = "Datos actualizados correctamente" });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            _logger.LogWarning("Comprobante no encontrado: {Mensaje}", ex.Message);
+            return NotFound(new { mensaje = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al actualizar correo/whatsapp del comprobante ID {Id}", id);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al actualizar los datos.",
                 detalle = ex.Message
             });
         }

@@ -12,71 +12,8 @@ public class NoteRepository : DapperRepository<Note>, INoteRepository
     {
     }
 
-    public async Task<IEnumerable<Note>> GetAllNotesAsync(int empresaId)
-    {
-        var sql = @"
-            SELECT 
-            comprobanteID           AS ComprobanteId,
-            empresaID               AS EmpresaId,
-            clienteID               AS ClienteId,
-            tipoComprobante         AS TipoDoc,
-            serie                   AS Serie,
-            correlativo             AS Correlativo,
-            numeroCompleto          AS NumeroCompleto,
-            DATE_ADD(fechaEmision, INTERVAL TIME_TO_SEC(horaEmision) SECOND) AS FechaEmision,
-            tipoMoneda              AS TipoMoneda,
-            comprobanteAfectadoID   AS ComprobanteAfectadoId,
-            tipDocAfectado          AS TipDocAfectado,
-            numDocAfectado          AS NumDocAfectado,
-            tipoNotaCreditoDebito   AS TipoNotaCreditoDebito,
-            motivoNota              AS MotivoNota,
-            totalOperacionesGravadas AS MtoOperGravadas,
-            totalOperacionesExoneradas AS MtoOperExoneradas,
-            totalOperacionesInafectas AS MtoOperInafectas,
-            totalIGV                AS MtoIGV,
-            totalIcbper             AS TotalIcbper,
-            valorVenta              AS ValorVenta,
-            subTotal                AS SubTotal,
-            importeTotal            AS MtoImpVenta,
-            estadoSunat             AS EstadoSunat,
-            codigoRespuestaSunat    AS CodigoRespuestaSunat,
-            mensajeRespuestaSunat   AS MensajeRespuestaSunat,
-            xmlGenerado             AS XmlGenerado,
-            cdrSunat                AS CdrSunat,
-            fechaEnvioSunat         AS FechaEnvioSunat,
-            usuarioCreacion         AS UsuarioCreacion,
-            fechaCreacion           AS FechaCreacion,
-            usuarioModificacion     AS UsuarioModificacion,
-            fechaModificacion       AS FechaModificacion,
-            clienteTipoDoc          AS ClienteTipoDoc,
-            clienteNumDoc           AS ClienteNumDoc,
-            clienteRznSocial        AS ClienteRznSocial,
-            clienteDireccion        AS ClienteDireccion,
-            clienteProvincia        AS ClienteProvincia,
-            clienteDepartamento     AS ClienteDepartamento,
-            clienteDistrito         AS ClienteDistrito,
-            clienteUbigeo           AS ClienteUbigeo,
-            empresaRuc            AS EmpresaRuc,
-            empresaRazonSocial    AS EmpresaRazonSocial,
-            establecimientoAnexo  AS EstablecimientoAnexo,
-            empresaNombreComercial AS EmpresaNombreComercial,
-            empresaDireccion      AS EmpresaDireccion,
-            empresaProvincia      AS EmpresaProvincia,
-            empresaDepartamento   AS EmpresaDepartamento,
-            empresaDistrito       AS EmpresaDistrito,
-            empresaUbigeo         AS EmpresaUbigeo
-        FROM comprobante 
-            WHERE empresaID = @EmpresaId 
-              AND tipoComprobante IN ('07', '08')
-              AND estadoSunat != 'ANULADO'
-            ORDER BY fechaEmision DESC, comprobanteID DESC";
-
-        return await _connection.QueryAsync<Note>(sql, new { EmpresaId = empresaId }, _transaction);
-    }
-
-    public async Task<Note?> GetNoteByIdAsync(int comprobanteId)
-    {
-        var sql = @"
+    // ── SELECT base reutilizable ──────────────────────────────────────────────
+    private const string BaseSelect = @"
         SELECT 
             comprobanteID           AS ComprobanteId,
             empresaID               AS EmpresaId,
@@ -92,9 +29,9 @@ public class NoteRepository : DapperRepository<Note>, INoteRepository
             numDocAfectado          AS NumDocAfectado,
             tipoNotaCreditoDebito   AS TipoNotaCreditoDebito,
             motivoNota              AS MotivoNota,
-            totalOperacionesGravadas AS MtoOperGravadas,
-            totalOperacionesExoneradas AS MtoOperExoneradas,
-            totalOperacionesInafectas AS MtoOperInafectas,
+            totalOperacionesGravadas    AS MtoOperGravadas,
+            totalOperacionesExoneradas  AS MtoOperExoneradas,
+            totalOperacionesInafectas   AS MtoOperInafectas,
             totalIGV                AS MtoIGV,
             totalIcbper             AS TotalIcbper,
             valorVenta              AS ValorVenta,
@@ -105,6 +42,8 @@ public class NoteRepository : DapperRepository<Note>, INoteRepository
             mensajeRespuestaSunat   AS MensajeRespuestaSunat,
             xmlGenerado             AS XmlGenerado,
             cdrSunat                AS CdrSunat,
+            pdfGenerado             AS PdfGenerado,
+            enviadoEnResumen        AS EnviadoEnResumen,
             fechaEnvioSunat         AS FechaEnvioSunat,
             usuarioCreacion         AS UsuarioCreacion,
             fechaCreacion           AS FechaCreacion,
@@ -118,67 +57,10 @@ public class NoteRepository : DapperRepository<Note>, INoteRepository
             clienteDepartamento     AS ClienteDepartamento,
             clienteDistrito         AS ClienteDistrito,
             clienteUbigeo           AS ClienteUbigeo,
-            empresaRuc            AS EmpresaRuc,
-            establecimientoAnexo  AS EstablecimientoAnexo,
-            empresaRazonSocial    AS EmpresaRazonSocial,
-            empresaNombreComercial AS EmpresaNombreComercial,
-            empresaDireccion      AS EmpresaDireccion,
-            empresaProvincia      AS EmpresaProvincia,
-            empresaDepartamento   AS EmpresaDepartamento,
-            empresaDistrito       AS EmpresaDistrito,
-            empresaUbigeo         AS EmpresaUbigeo
-        FROM comprobante 
-        WHERE comprobanteID = @ComprobanteId 
-          AND tipoComprobante IN ('07', '08')";
-
-        return await _connection.QueryFirstOrDefaultAsync<Note>(sql,
-            new { ComprobanteId = comprobanteId }, _transaction);
-    }
-
-    public async Task<Note?> GetNoteByNumeroAsync(int empresaId, string tipoDoc, string serie, int correlativo)
-    {
-        var sql = @"
-        SELECT 
-            comprobanteID           AS ComprobanteId,
-            empresaID               AS EmpresaId,
-            clienteID               AS ClienteId,
-            tipoComprobante         AS TipoDoc,
-            serie                   AS Serie,
-            correlativo             AS Correlativo,
-            numeroCompleto          AS NumeroCompleto,
-            DATE_ADD(fechaEmision, INTERVAL TIME_TO_SEC(horaEmision) SECOND) AS FechaEmision,
-            tipoMoneda              AS TipoMoneda,
-            comprobanteAfectadoID   AS ComprobanteAfectadoId,
-            tipDocAfectado          AS TipDocAfectado,
-            numDocAfectado          AS NumDocAfectado,
-            tipoNotaCreditoDebito   AS TipoNotaCreditoDebito,
-            motivoNota              AS MotivoNota,
-            totalOperacionesGravadas AS MtoOperGravadas,
-            totalOperacionesExoneradas AS MtoOperExoneradas,
-            totalOperacionesInafectas AS MtoOperInafectas,
-            totalIGV                AS MtoIGV,
-            totalIcbper             AS TotalIcbper,
-            valorVenta              AS ValorVenta,
-            subTotal                AS SubTotal,
-            importeTotal            AS MtoImpVenta,
-            estadoSunat             AS EstadoSunat,
-            codigoRespuestaSunat    AS CodigoRespuestaSunat,
-            mensajeRespuestaSunat   AS MensajeRespuestaSunat,
-            xmlGenerado             AS XmlGenerado,
-            cdrSunat                AS CdrSunat,
-            fechaEnvioSunat         AS FechaEnvioSunat,
-            usuarioCreacion         AS UsuarioCreacion,
-            fechaCreacion           AS FechaCreacion,
-            usuarioModificacion     AS UsuarioModificacion,
-            fechaModificacion       AS FechaModificacion,
-            clienteTipoDoc          AS ClienteTipoDoc,
-            clienteNumDoc           AS ClienteNumDoc,
-            clienteRznSocial        AS ClienteRznSocial,
-            clienteDireccion        AS ClienteDireccion,
-            clienteProvincia        AS ClienteProvincia,
-            clienteDepartamento     AS ClienteDepartamento,
-            clienteDistrito         AS ClienteDistrito,
-            clienteUbigeo           AS ClienteUbigeo,
+            clienteCorreo           AS ClienteCorreo,
+            enviadoPorCorreo        AS EnviadoPorCorreo,
+            clienteWhatsApp         AS ClienteWhatsApp,
+            enviadoPorWhatsApp      AS EnviadoPorWhatsApp,
             empresaRuc              AS EmpresaRuc,
             establecimientoAnexo    AS EstablecimientoAnexo,
             empresaRazonSocial      AS EmpresaRazonSocial,
@@ -188,13 +70,27 @@ public class NoteRepository : DapperRepository<Note>, INoteRepository
             empresaDepartamento     AS EmpresaDepartamento,
             empresaDistrito         AS EmpresaDistrito,
             empresaUbigeo           AS EmpresaUbigeo
-        FROM comprobante 
-        WHERE empresaID      = @EmpresaId
-          AND tipoComprobante = @TipoDoc
-          AND serie           = @Serie
-          AND correlativo     = @Correlativo
-          AND tipoComprobante IN ('07', '08')";
+        FROM comprobante
+        WHERE tipoComprobante IN ('07', '08')";
 
+    // ─────────────────────────────────────────────────────────────────────────
+
+    public async Task<IEnumerable<Note>> GetAllNotesAsync(int empresaId)
+    {
+        var sql = $"{BaseSelect} AND empresaID = @EmpresaId AND estadoSunat != 'ANULADO' ORDER BY fechaEmision DESC, comprobanteID DESC";
+        return await _connection.QueryAsync<Note>(sql, new { EmpresaId = empresaId }, _transaction);
+    }
+
+    public async Task<Note?> GetNoteByIdAsync(int comprobanteId)
+    {
+        var sql = $"{BaseSelect} AND comprobanteID = @ComprobanteId";
+        return await _connection.QueryFirstOrDefaultAsync<Note>(sql,
+            new { ComprobanteId = comprobanteId }, _transaction);
+    }
+
+    public async Task<Note?> GetNoteByNumeroAsync(int empresaId, string tipoDoc, string serie, int correlativo)
+    {
+        var sql = $"{BaseSelect} AND empresaID = @EmpresaId AND tipoComprobante = @TipoDoc AND serie = @Serie AND correlativo = @Correlativo";
         return await _connection.QueryFirstOrDefaultAsync<Note>(sql,
             new { EmpresaId = empresaId, TipoDoc = tipoDoc, Serie = serie, Correlativo = correlativo },
             _transaction);
@@ -224,6 +120,7 @@ public class NoteRepository : DapperRepository<Note>, INoteRepository
             empresaDireccion, empresaProvincia, empresaDepartamento, empresaDistrito, empresaUbigeo,
             establecimientoAnexo, clienteID, clienteTipoDoc, clienteNumDoc, clienteRznSocial,
             clienteDireccion, clienteProvincia, clienteDepartamento, clienteDistrito, clienteUbigeo,
+            clienteCorreo, enviadoPorCorreo, clienteWhatsApp, enviadoPorWhatsApp,
             tipoComprobante, serie, correlativo, fechaEmision, horaEmision, tipoMoneda,
             totalOperacionesGravadas, totalOperacionesExoneradas, totalOperacionesInafectas, totalIGV, 
             totalIcbper, valorVenta, subTotal, totalDescuentos, totalOtrosCargos, importeTotal,
@@ -235,6 +132,7 @@ public class NoteRepository : DapperRepository<Note>, INoteRepository
             @EmpresaDireccion, @EmpresaProvincia, @EmpresaDepartamento, @EmpresaDistrito, @EmpresaUbigeo,
             @EstablecimientoAnexo, @ClienteId, @ClienteTipoDoc, @ClienteNumDoc, @ClienteRznSocial,
             @ClienteDireccion, @ClienteProvincia, @ClienteDepartamento, @ClienteDistrito, @ClienteUbigeo,
+            @ClienteCorreo, @EnviadoPorCorreo, @ClienteWhatsApp, @EnviadoPorWhatsApp,
             @TipoDoc, @Serie, @Correlativo, @FechaEmision, @HoraEmision, @TipoMoneda,
             @MtoOperGravadas, @MtoOperExoneradas, @MtoOperInafectas, @MtoIGV, 
             @TotalIcbper, @ValorVenta, @SubTotal, @TotalDescuentos, @TotalOtrosCargos, @MtoImpVenta,
@@ -265,6 +163,10 @@ public class NoteRepository : DapperRepository<Note>, INoteRepository
             note.ClienteDepartamento,
             note.ClienteDistrito,
             note.ClienteUbigeo,
+            note.ClienteCorreo,
+            note.EnviadoPorCorreo,
+            note.ClienteWhatsApp,
+            note.EnviadoPorWhatsApp,
             TipoDoc = note.TipoDoc,
             note.Serie,
             note.Correlativo,
@@ -272,12 +174,12 @@ public class NoteRepository : DapperRepository<Note>, INoteRepository
             HoraEmision = note.FechaEmision.TimeOfDay,
             note.TipoMoneda,
             note.MtoOperGravadas,
-            MtoOperExoneradas = note.MtoOperExoneradas,
-            MtoOperInafectas  = note.MtoOperInafectas, 
+            note.MtoOperExoneradas,
+            note.MtoOperInafectas,
             note.MtoIGV,
-            TotalIcbper = note.TotalIcbper,
-            ValorVenta = note.ValorVenta,
-            SubTotal = note.SubTotal,
+            note.TotalIcbper,
+            note.ValorVenta,
+            note.SubTotal,
             TotalDescuentos = 0m,
             TotalOtrosCargos = 0m,
             note.MtoImpVenta,
@@ -291,7 +193,6 @@ public class NoteRepository : DapperRepository<Note>, INoteRepository
             FechaCreacion = DateTime.UtcNow
         }, _transaction);
 
-        // ← Actualizar serie y correlativo actual
         await ActualizarSerieCorrelativoAsync(note);
 
         return newId;
@@ -304,32 +205,24 @@ public class NoteRepository : DapperRepository<Note>, INoteRepository
         string sql = (note.TipoDoc, esParaBoleta) switch
         {
             ("07", false) => @"UPDATE sucursal SET 
-                    serieNotaCreditoFactura           = @Serie,
-                    correlativoNotaCreditoFactura     = correlativoNotaCreditoFactura + 1
-                WHERE empresaRuc                    = @EmpresaRuc
-                    AND codEstablecimiento            = @CodEstablecimiento
-                    AND estado                        = 1",
+                    serieNotaCreditoFactura       = @Serie,
+                    correlativoNotaCreditoFactura = correlativoNotaCreditoFactura + 1
+                WHERE empresaRuc = @EmpresaRuc AND codEstablecimiento = @CodEstablecimiento AND estado = 1",
 
             ("07", true) => @"UPDATE sucursal SET 
-                    serieNotaCreditoBoleta            = @Serie,
-                    correlativoNotaCreditoBoleta      = correlativoNotaCreditoBoleta + 1
-                WHERE empresaRuc                    = @EmpresaRuc
-                    AND codEstablecimiento            = @CodEstablecimiento
-                    AND estado                        = 1",
+                    serieNotaCreditoBoleta        = @Serie,
+                    correlativoNotaCreditoBoleta  = correlativoNotaCreditoBoleta + 1
+                WHERE empresaRuc = @EmpresaRuc AND codEstablecimiento = @CodEstablecimiento AND estado = 1",
 
             ("08", false) => @"UPDATE sucursal SET 
-                    serieNotaDebitoFactura            = @Serie,
-                    correlativoNotaDebitoFactura      = correlativoNotaDebitoFactura + 1
-                WHERE empresaRuc                    = @EmpresaRuc
-                    AND codEstablecimiento            = @CodEstablecimiento
-                    AND estado                        = 1",
+                    serieNotaDebitoFactura        = @Serie,
+                    correlativoNotaDebitoFactura  = correlativoNotaDebitoFactura + 1
+                WHERE empresaRuc = @EmpresaRuc AND codEstablecimiento = @CodEstablecimiento AND estado = 1",
 
             ("08", true) => @"UPDATE sucursal SET 
-                    serieNotaDebitoBoleta             = @Serie,
-                    correlativoNotaDebitoBoleta       = correlativoNotaDebitoBoleta + 1
-                WHERE empresaRuc                    = @EmpresaRuc
-                    AND codEstablecimiento            = @CodEstablecimiento
-                    AND estado                        = 1",
+                    serieNotaDebitoBoleta         = @Serie,
+                    correlativoNotaDebitoBoleta   = correlativoNotaDebitoBoleta + 1
+                WHERE empresaRuc = @EmpresaRuc AND codEstablecimiento = @CodEstablecimiento AND estado = 1",
 
             _ => throw new InvalidOperationException($"Tipo de nota '{note.TipoDoc}' no soportado.")
         };
@@ -346,17 +239,17 @@ public class NoteRepository : DapperRepository<Note>, INoteRepository
     {
         var sql = @"
             UPDATE comprobante SET
-                tipoMoneda           = @TipoMoneda,
+                tipoMoneda            = @TipoMoneda,
                 totalOperacionesGravadas = @MtoOperGravadas,
-                totalIGV             = @MtoIGV,
-                importeTotal         = @MtoImpVenta,
+                totalIGV              = @MtoIGV,
+                importeTotal          = @MtoImpVenta,
                 comprobanteAfectadoID = @ComprobanteAfectadoId,
-                tipDocAfectado       = @TipDocAfectado,
-                numDocAfectado       = @NumDocAfectado,
+                tipDocAfectado        = @TipDocAfectado,
+                numDocAfectado        = @NumDocAfectado,
                 tipoNotaCreditoDebito = @TipoNotaCreditoDebito,
-                motivoNota           = @MotivoNota,
-                usuarioModificacion  = @UsuarioModificacion,
-                fechaModificacion    = @FechaModificacion
+                motivoNota            = @MotivoNota,
+                usuarioModificacion   = @UsuarioModificacion,
+                fechaModificacion     = @FechaModificacion
             WHERE comprobanteID = @ComprobanteId
               AND tipoComprobante IN ('07', '08')";
 
@@ -382,13 +275,13 @@ public class NoteRepository : DapperRepository<Note>, INoteRepository
     {
         var sql = @"
             UPDATE comprobante SET
-                estadoSunat             = @Estado,
-                codigoRespuestaSunat    = @Codigo,
-                mensajeRespuestaSunat   = @Mensaje,
-                xmlGenerado             = COALESCE(@Xml, xmlGenerado),
-                cdrSunat                = COALESCE(@Cdr, cdrSunat),
-                fechaEnvioSunat         = @FechaEnvio,
-                fechaModificacion       = NOW()
+                estadoSunat          = @Estado,
+                codigoRespuestaSunat = @Codigo,
+                mensajeRespuestaSunat = @Mensaje,
+                xmlGenerado          = COALESCE(@Xml, xmlGenerado),
+                cdrSunat             = COALESCE(@Cdr, cdrSunat),
+                fechaEnvioSunat      = @FechaEnvio,
+                fechaModificacion    = NOW()
             WHERE comprobanteID = @ComprobanteId";
 
         await _connection.ExecuteAsync(sql, new

@@ -100,7 +100,12 @@ public class GuiaRemisionRepository : IGuiaRemisionRepository
                         cdrBase64               AS CdrBase64,
                         fechaEnvioSunat         AS FechaEnvioSunat,
                         fechaCreacion           AS FechaCreacion,
-                        fechaModificacion       AS FechaModificacion
+                        fechaModificacion       AS FechaModificacion,
+                        clienteCorreo           AS ClienteCorreo,
+                        enviadoPorCorreo        AS EnviadoPorCorreo,
+                        clienteWhatsapp         AS ClienteWhatsapp,
+                        enviadoPorWhatsapp      AS EnviadoPorWhatsapp,
+                        usuarioCreacion         AS UsuarioCreacion
                     FROM guiaRemision
                     WHERE empresaId = @EmpresaId
                     ORDER BY fechaCreacion DESC";
@@ -192,7 +197,12 @@ public class GuiaRemisionRepository : IGuiaRemisionRepository
                         cdrBase64               AS CdrBase64,
                         fechaEnvioSunat         AS FechaEnvioSunat,
                         fechaCreacion           AS FechaCreacion,
-                        fechaModificacion       AS FechaModificacion
+                        fechaModificacion       AS FechaModificacion,
+                        clienteCorreo           AS ClienteCorreo,
+                        enviadoPorCorreo        AS EnviadoPorCorreo,
+                        clienteWhatsapp         AS ClienteWhatsapp,
+                        enviadoPorWhatsapp      AS EnviadoPorWhatsapp,
+                        usuarioCreacion         AS UsuarioCreacion
                     FROM guiaRemision
                     WHERE guiaId = @GuiaId";
 
@@ -249,7 +259,7 @@ public class GuiaRemisionRepository : IGuiaRemisionRepository
                         choferSecundario2Licencia, choferTipoDoc, choferDoc, 
                         choferNombres, choferApellidos, choferLicencia, estadoSunat, fechaCreacion, indVehiculoM1L, autorizacionVehiculoEntidad, 
                         autorizacionVehiculoNumero, partidaDepartamento, partidaProvincia, partidaDistrito,
-                        llegadaDepartamento, llegadaProvincia, llegadaDistrito
+                        llegadaDepartamento, llegadaProvincia, llegadaDistrito, clienteCorreo, enviadoPorCorreo, clienteWhatsapp, enviadoPorWhatsapp, usuarioCreacion
                     ) VALUES (
                         @EmpresaId, @SucursalId, @Version, @TipoDoc, @Serie, @Correlativo, @NumeroCompleto, @FechaEmision,
                         @EmpresaRuc, @EmpresaRazonSocial, @EmpresaNombreComercial,
@@ -268,7 +278,7 @@ public class GuiaRemisionRepository : IGuiaRemisionRepository
                         @ChoferSecundario2Nombres, @ChoferSecundario2Apellidos, @ChoferSecundario2Licencia, @ChoferTipoDoc, @ChoferDoc, 
                         @ChoferNombres, @ChoferApellidos, @ChoferLicencia, @EstadoSunat, @FechaCreacion, @IndVehiculoM1L, @AutorizacionVehiculoEntidad, 
                         @AutorizacionVehiculoNumero, @PartidaDepartamento, @PartidaProvincia, @PartidaDistrito,
-                        @LlegadaDepartamento, @LlegadaProvincia, @LlegadaDistrito
+                        @LlegadaDepartamento, @LlegadaProvincia, @LlegadaDistrito, @ClienteCorreo, @EnviadoPorCorreo, @ClienteWhatsapp, @EnviadoPorWhatsapp, @UsuarioCreacion
                     );
                     SELECT LAST_INSERT_ID();";
 

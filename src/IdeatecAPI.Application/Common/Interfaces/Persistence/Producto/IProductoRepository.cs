@@ -17,6 +17,7 @@ public interface IProductoRepository : IRepository<Producto>
     Task<SucursalProducto> RegistrarSucursalProductoAsync(SucursalProducto sucursalProducto);
     Task<bool> EditarProductoAsync(Producto producto);
     Task<bool> ActualizarStockAsync(int sucursalProductoId, int cantidad);
+    Task<bool> DevolverStockAsync(int ProductoId, int SucursalId, int cantidad);
     Task<bool> EditarSucursalProductoAsync(SucursalProducto sucursalProducto);
     Task<bool> EliminarSucursalProductoAsync(int sucursalProductoId); 
     Task<Producto?> ObtenerProductoPorCodigoAsync(string codigo);

@@ -25,6 +25,10 @@ public class Comprobante
     public string? ClienteDepartamento { get; set; }
     public string? ClienteDistrito { get; set; }
     public string? ClienteUbigeo { get; set; }
+    public string? ClienteCorreo { get; set; }
+    public bool? EnviadoPorCorreo { get; set; }
+    public string? ClienteWhatsApp { get; set; }
+    public bool? EnviadoPorWhatsApp { get; set; }
 
     // Cabecera
     public string? TipoOperacion { get; set; }
@@ -59,6 +63,14 @@ public class Comprobante
     public decimal? ImporteTotal { get; set; }
     public decimal? MontoCredito { get; set; }
 
+    //Campos extras para notas y sus PDF
+    public int? ComprobanteAfectadoId { get; set; }
+    public string? Observaciones { get; set; }
+    public string? TipDocAfectado { get; set; }
+    public string? NumDocAfectado { get; set; }
+    public string? TipoNotaCreditoDebito { get; set; }
+    public string? MotivoNota { get; set; }
+
     // Relaciones
     public ICollection<ComprobanteDetalle> Detalles { get; set; } = [];   // ✅ falta
     public ICollection<NoteLegend> Leyendas { get; set; } = [];   // ✅ falta
@@ -75,11 +87,13 @@ public class Comprobante
     public string? XmlGenerado { get; set; }
     public string? XmlRespuestaSunat { get; set; }
     public string? CdrSunat { get; set; }
+    public string? PdfGenerado { get; set; }
+    public bool? EnviadoEnResumen { get; set; }
     public DateTime? FechaEnvioSunat { get; set; }
 
     // Auditoría
-    public string? UsuarioCreacion { get; set; }
+    public int? UsuarioCreacion { get; set; }
     public DateTime? FechaCreacion { get; set; }
-    public string? UsuarioModificacion { get; set; }
+    public int? UsuarioModificacion { get; set; }
     public DateTime? FechaModificacion { get; set; }
 }

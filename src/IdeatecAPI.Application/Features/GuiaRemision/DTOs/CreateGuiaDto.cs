@@ -19,6 +19,12 @@ public class CreateGuiaDto
 
     public CreateGuiaEnvioDto Envio { get; set; } = new();
     public List<CreateGuiaDetalleDto> Details { get; set; } = new();
+    public string? ClienteCorreo { get; set; }
+    public bool EnviadoPorCorreo { get; set; }
+    public string? ClienteWhatsapp { get; set; }
+    public bool EnviadoPorWhatsapp { get; set; }
+    public int? UsuarioCreacion { get; set; }
+    // EnviadoPor* se manejan internamente, no vienen del request
 }
 
 public class CreateGuiaCompanyDto

@@ -294,6 +294,38 @@ public class ProductoController : ControllerBase
         }
     }
 
+    [HttpPut("devolverstock")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> DevolverStock([FromBody] IEnumerable<DevolverStockDTO> dtos)
+    {
+        try
+        {
+            await _productoService.DevolverStockAsync(dtos);
+            return Ok(new { mensaje = "Stock devuelto correctamente." });
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning("Datos inválidos al devolver stock: {Mensaje}", ex.Message);
+            return BadRequest(new { mensaje = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning("Error al devolver stock: {Mensaje}", ex.Message);
+            return BadRequest(new { mensaje = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al devolver stock");
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al devolver el stock.",
+                detalle = ex.Message
+            });
+        }
+    }
+
     [HttpPut("{productoId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
