@@ -256,17 +256,31 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         await _connection.ExecuteAsync(sql, parameters, _transaction);
     }
 
-    public async Task<IEnumerable<Comprobante>> GetByRucAndFechasAsync(string ruc, DateTime? fechaDesde, DateTime? fechaHasta)
+public async Task<IEnumerable<Comprobante>> GetByRucAndFechasAsync(string ruc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null)
+{
+    var sql = BaseSelect + @"
+    WHERE empresaRuc = @Ruc
+    AND (@FechaDesde IS NULL OR fechaEmision >= @FechaDesde)
+    AND (@FechaHasta IS NULL OR fechaEmision <= @FechaHasta)
+    ORDER BY fechaEmision DESC"
+    + (limit.HasValue ? " LIMIT @Limit" : "");
+
+    return await _connection.QueryAsync<Comprobante>(
+        sql, new { Ruc = ruc, FechaDesde = fechaDesde, FechaHasta = fechaHasta, Limit = limit }, _transaction);
+}
+
+    public async Task<IEnumerable<Comprobante>> GetBySucursalAndFechasAsync(string empresaRuc, string codEstablecimiento, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null)
     {
         var sql = BaseSelect + @"
-        WHERE empresaRuc = @Ruc
+        WHERE empresaRuc = @EmpresaRuc
+        AND establecimientoAnexo = @CodEstablecimiento
         AND (@FechaDesde IS NULL OR fechaEmision >= @FechaDesde)
         AND (@FechaHasta IS NULL OR fechaEmision <= @FechaHasta)
-        ORDER BY fechaEmision DESC
-        LIMIT 40";
+        ORDER BY fechaEmision DESC"
+        + (limit.HasValue ? " LIMIT @Limit" : "");
 
         return await _connection.QueryAsync<Comprobante>(
-            sql, new { Ruc = ruc, FechaDesde = fechaDesde, FechaHasta = fechaHasta }, _transaction);
+            sql, new { EmpresaRuc = empresaRuc, CodEstablecimiento = codEstablecimiento, FechaDesde = fechaDesde, FechaHasta = fechaHasta, Limit = limit }, _transaction);
     }
 
    public async Task<IEnumerable<Comprobante>> GetByDocClienteAndFechasAsync(string rucEmpresa, string clienteNumDoc, DateTime? fechaDesde, DateTime? fechaHasta)
@@ -281,20 +295,6 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         return await _connection.QueryAsync<Comprobante>(
             sql, new { RucEmpresa = rucEmpresa, ClienteNumDoc = clienteNumDoc, FechaDesde = fechaDesde, FechaHasta = fechaHasta }, _transaction);
     } 
-
-    public async Task<IEnumerable<Comprobante>> GetBySucursalAndFechasAsync(string empresaRuc, string codEstablecimiento, DateTime? fechaDesde, DateTime? fechaHasta)
-    {
-        var sql = BaseSelect + @"
-        WHERE empresaRuc = @EmpresaRuc
-        AND establecimientoAnexo = @CodEstablecimiento
-        AND (@FechaDesde IS NULL OR fechaEmision >= @FechaDesde)
-        AND (@FechaHasta IS NULL OR fechaEmision <= @FechaHasta)
-        ORDER BY fechaEmision DESC
-        LIMIT 20";
-
-        return await _connection.QueryAsync<Comprobante>(
-            sql, new { EmpresaRuc = empresaRuc, CodEstablecimiento = codEstablecimiento, FechaDesde = fechaDesde, FechaHasta = fechaHasta }, _transaction);
-    }
 
     public async Task<IEnumerable<Comprobante>> GetByDocUsuarioAndFechasAsync(string rucEmpresa, int usuarioCreacion, DateTime? fechaDesde, DateTime? fechaHasta)
     {
