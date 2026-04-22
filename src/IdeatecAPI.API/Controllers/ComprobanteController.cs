@@ -48,7 +48,7 @@ public class ComprobantesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetByRucAndFechas(string ruc, [FromQuery] DateTime? fechaDesde, [FromQuery] DateTime? fechaHasta)
+    public async Task<IActionResult> GetByRucAndFechas(string ruc, [FromQuery] DateTime? fechaDesde, [FromQuery] DateTime? fechaHasta, [FromQuery] int? limit = null)
     {
         try
         {
@@ -66,7 +66,7 @@ public class ComprobantesController : ControllerBase
                     ? fechaHasta.Value.Date.AddDays(1).AddSeconds(-1) // 23:59:59
                     : fechaDesde.Value.Date.AddDays(1).AddSeconds(-1); // mismo día
             }
-            var comprobantes = await _comprobanteService.GetByRucAndFechasAsync(ruc, desde, hasta);
+            var comprobantes = await _comprobanteService.GetByRucAndFechasAsync(ruc, desde, hasta, limit);
 
             if (comprobantes == null || !comprobantes.Any())
                 return NotFound(new { mensaje = $"No se encontraron comprobantes para el RUC '{ruc}' en el rango de fechas indicado." });
@@ -134,7 +134,8 @@ public class ComprobantesController : ControllerBase
     public async Task<IActionResult> GetBySucursal(
         int sucursalId,
         [FromQuery] DateTime? fechaDesde,
-        [FromQuery] DateTime? fechaHasta)
+        [FromQuery] DateTime? fechaHasta,
+        [FromQuery] int? limit = null)
     {
         try
         {
@@ -149,7 +150,7 @@ public class ComprobantesController : ControllerBase
                     : fechaDesde.Value.Date.AddDays(1).AddSeconds(-1);
             }
 
-            var comprobantes = await _comprobanteService.GetBySucursalAndFechasAsync(sucursalId, desde, hasta);
+            var comprobantes = await _comprobanteService.GetBySucursalAndFechasAsync(sucursalId, desde, hasta, limit);
 
             if (comprobantes == null || !comprobantes.Any())
                 return NotFound(new { mensaje = $"No se encontraron comprobantes para la sucursal {sucursalId}." });
@@ -219,12 +220,12 @@ public class ComprobantesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetListadoByRuc(string ruc, [FromQuery] DateTime? fechaDesde, [FromQuery] DateTime? fechaHasta)
+    public async Task<IActionResult> GetListadoByRuc(string ruc, [FromQuery] DateTime? fechaDesde, [FromQuery] DateTime? fechaHasta, [FromQuery] int? limit = null)
     {
         try
         {
             var (desde, hasta) = NormalizarFechas(fechaDesde, fechaHasta);
-            var result = await _comprobanteService.GetListadoByRucAndFechasAsync(ruc, desde, hasta);
+            var result = await _comprobanteService.GetListadoByRucAndFechasAsync(ruc, desde, hasta, limit);
             if (!result.Any())
                 return NotFound(new { mensaje = $"No se encontraron comprobantes para el RUC '{ruc}'." });
             return Ok(result);
@@ -245,12 +246,12 @@ public class ComprobantesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetListadoBySucursal(int sucursalId, [FromQuery] DateTime? fechaDesde, [FromQuery] DateTime? fechaHasta)
+    public async Task<IActionResult> GetListadoBySucursal(int sucursalId, [FromQuery] DateTime? fechaDesde, [FromQuery] DateTime? fechaHasta, [FromQuery] int? limit = null)
     {
         try
         {
             var (desde, hasta) = NormalizarFechas(fechaDesde, fechaHasta);
-            var result = await _comprobanteService.GetListadoBySucursalAndFechasAsync(sucursalId, desde, hasta);
+            var result = await _comprobanteService.GetListadoBySucursalAndFechasAsync(sucursalId, desde, hasta, limit);
             if (!result.Any())
                 return NotFound(new { mensaje = $"No se encontraron comprobantes para la sucursal {sucursalId}." });
             return Ok(result);

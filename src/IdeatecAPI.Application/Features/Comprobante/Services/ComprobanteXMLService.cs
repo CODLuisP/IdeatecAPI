@@ -12,7 +12,7 @@ namespace IdeatecAPI.Application.Features.Comprobante.Services;
 public interface IComprobanteService
 {
     //comprobantes por ruc
-    Task<IEnumerable<ObtenerComprobanteDTO>> GetByRucAndFechasAsync(string ruc, DateTime? fechaDesde, DateTime? fechaHasta);
+    Task<IEnumerable<ObtenerComprobanteDTO>> GetByRucAndFechasAsync(string ruc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null);
 
     //Comprobantes de un cliente en un ruc
     Task<IEnumerable<ObtenerComprobanteDTO>> GetByDocClienteAndFechasAsync(string rucEmpresa, string clienteNumDoc, DateTime? fechaDesde, DateTime? fechaHasta);
@@ -21,14 +21,14 @@ public interface IComprobanteService
     Task<IEnumerable<ObtenerComprobanteDTO>> GetByDocUsuarioAndFechasAsync(string rucEmpresa, int usuarioCreacion, DateTime? fechaDesde, DateTime? fechaHasta);
 
     //comprobantes de una sucursal, la empresa se obtiene internamente de esa sucursal
-    Task<IEnumerable<ObtenerComprobanteDTO>> GetBySucursalAndFechasAsync(int sucursalId, DateTime? fechaDesde, DateTime? fechaHasta); 
+    Task<IEnumerable<ObtenerComprobanteDTO>> GetBySucursalAndFechasAsync(int sucursalId, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null); 
 
 
     //obtener Listado de campos solo de la tabla comrpobantes sin su relaciones
-    Task<IEnumerable<ListarComprobanteDTO>> GetListadoByRucAndFechasAsync(string ruc, DateTime? fechaDesde, DateTime? fechaHasta);
+    Task<IEnumerable<ListarComprobanteDTO>> GetListadoByRucAndFechasAsync(string ruc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null);
     Task<IEnumerable<ListarComprobanteDTO>> GetListadoByDocClienteAndFechasAsync(string rucEmpresa, string clienteNumDoc, DateTime? fechaDesde, DateTime? fechaHasta);
     Task<IEnumerable<ListarComprobanteDTO>> GetListadoByDocUsuarioAndFechasAsync(string rucEmpresa, int usuarioCreacion, DateTime? fechaDesde, DateTime? fechaHasta);
-    Task<IEnumerable<ListarComprobanteDTO>> GetListadoBySucursalAndFechasAsync(int sucursalId, DateTime? fechaDesde, DateTime? fechaHasta);
+    Task<IEnumerable<ListarComprobanteDTO>> GetListadoBySucursalAndFechasAsync(int sucursalId, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null);
     Task<IEnumerable<ListarComprobanteDTO>> GetListadoByClienteAndSucursalAsync(int sucursalId, string clienteNumDoc, DateTime? fechaDesde, DateTime? fechaHasta);
 
     //Traer solo detalles de un comprobante
@@ -83,9 +83,9 @@ public class ComprobanteService : IComprobanteService
         _rutaXml = configuration["Storage:RutaXml"] ?? Path.Combine(Directory.GetCurrentDirectory(), "XmlFiles");
     }
 
-    public async Task<IEnumerable<ObtenerComprobanteDTO>> GetByRucAndFechasAsync(string ruc, DateTime? fechaDesde, DateTime? fechaHasta)
+    public async Task<IEnumerable<ObtenerComprobanteDTO>> GetByRucAndFechasAsync(string ruc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null)
     {
-        var comprobantes = await _unitOfWork.Comprobantes.GetByRucAndFechasAsync(ruc, fechaDesde, fechaHasta);
+        var comprobantes = await _unitOfWork.Comprobantes.GetByRucAndFechasAsync(ruc, fechaDesde, fechaHasta, limit);
 
         var lista = new List<ObtenerComprobanteDTO>();
         foreach (var comprobante in comprobantes)
@@ -119,7 +119,7 @@ public class ComprobanteService : IComprobanteService
         return lista;
     }
 
-    public async Task<IEnumerable<ObtenerComprobanteDTO>> GetBySucursalAndFechasAsync(int sucursalId, DateTime? fechaDesde, DateTime? fechaHasta)
+    public async Task<IEnumerable<ObtenerComprobanteDTO>> GetBySucursalAndFechasAsync(int sucursalId, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null)
     {
         // 1. Obtener sucursal para extraer ruc y codEstablecimiento
         var sucursal = await _unitOfWork.Sucursal.GetByIdSucursalAsync(sucursalId);
@@ -129,7 +129,8 @@ public class ComprobanteService : IComprobanteService
             sucursal.EmpresaRuc ?? throw new InvalidOperationException("La sucursal no tiene RUC"),
             sucursal.CodEstablecimiento ?? throw new InvalidOperationException("La sucursal no tiene código de establecimiento"),
             fechaDesde,
-            fechaHasta);
+            fechaHasta,
+            limit);
 
         var lista = new List<ObtenerComprobanteDTO>();
         foreach (var comprobante in comprobantes)
@@ -168,9 +169,9 @@ public class ComprobanteService : IComprobanteService
         return await _unitOfWork.Comprobantes.GetCantidadByClienteNumDocAsync(clienteNumDoc);
     }
 
-    public async Task<IEnumerable<ListarComprobanteDTO>> GetListadoByRucAndFechasAsync(string ruc, DateTime? fechaDesde, DateTime? fechaHasta)
+    public async Task<IEnumerable<ListarComprobanteDTO>> GetListadoByRucAndFechasAsync(string ruc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null)
     {
-        var comprobantes = await _unitOfWork.Comprobantes.GetByRucAndFechasAsync(ruc, fechaDesde, fechaHasta);
+        var comprobantes = await _unitOfWork.Comprobantes.GetByRucAndFechasAsync(ruc, fechaDesde, fechaHasta, limit);
         return comprobantes.Select(MapToListarDto);
     }
 
@@ -186,14 +187,15 @@ public class ComprobanteService : IComprobanteService
         return comprobantes.Select(MapToListarDto);
     }
 
-    public async Task<IEnumerable<ListarComprobanteDTO>> GetListadoBySucursalAndFechasAsync(int sucursalId, DateTime? fechaDesde, DateTime? fechaHasta)
+    public async Task<IEnumerable<ListarComprobanteDTO>> GetListadoBySucursalAndFechasAsync(int sucursalId, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null)
     {
         var sucursal = await _unitOfWork.Sucursal.GetByIdSucursalAsync(sucursalId);
         var comprobantes = await _unitOfWork.Comprobantes.GetBySucursalAndFechasAsync(
             sucursal.EmpresaRuc ?? throw new InvalidOperationException("La sucursal no tiene RUC"),
             sucursal.CodEstablecimiento ?? throw new InvalidOperationException("La sucursal no tiene código de establecimiento"),
             fechaDesde,
-            fechaHasta);
+            fechaHasta,
+            limit);
         return comprobantes.Select(MapToListarDto);
     }
 
