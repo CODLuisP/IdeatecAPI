@@ -21,13 +21,21 @@ public class XmlSignerService : IXmlSignerService
 
     public byte[] SignXmlToBytes(string xmlContent, string certificadoPem, string certificadoPassword)
     {
-        // ── Cargar certificado ────────────────────────────────────────────
-        var certBytes = Convert.FromBase64String(certificadoPem);
-        var certificate = X509CertificateLoader.LoadPkcs12(
-            certBytes,
-            certificadoPassword,
-            X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable
-        );
+        // ── Decodificar Base64 del PEM y obtener texto ────────────────────
+        var pemBytes = Convert.FromBase64String(certificadoPem);
+        var pemText = Encoding.UTF8.GetString(pemBytes);
+
+        // ── Cargar certificado desde PEM ──────────────────────────────────
+        X509Certificate2 certificate;
+        if (pemText.Contains("-----BEGIN ENCRYPTED PRIVATE KEY-----"))
+        {
+            certificate = X509Certificate2.CreateFromEncryptedPem(
+                pemText, pemText, certificadoPassword);
+        }
+        else
+        {
+            certificate = X509Certificate2.CreateFromPem(pemText, pemText);
+        }
 
         // ── Cargar XML preservando whitespace (importante para la firma) ──
         var xmlDoc = new XmlDocument { PreserveWhitespace = true };
@@ -75,7 +83,7 @@ public class XmlSignerService : IXmlSignerService
         using var ms = new MemoryStream();
         using var xw = XmlWriter.Create(ms, new XmlWriterSettings
         {
-            Encoding           = new UTF8Encoding(false), // false = sin BOM
+            Encoding           = new UTF8Encoding(false),
             Indent             = false,
             OmitXmlDeclaration = false
         });
