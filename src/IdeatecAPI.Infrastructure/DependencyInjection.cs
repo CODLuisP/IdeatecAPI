@@ -18,6 +18,7 @@ using IdeatecAPI.Application.Features.GuiaRemision.Services;
 using IdeatecAPI.Application.Features.ResumenComprobante.Services;
 using MediatR;
 using IdeatecAPI.Application.Features.Sucursal.Services;
+using IdeatecAPI.Application.Features.Dashboard.Services;
 
 namespace IdeatecAPI.Infrastructure;
 
@@ -92,6 +93,9 @@ public static class DependencyInjection
 
         // ── Servicios de Email ──
         services.AddScoped<IEmailService, EmailService>();
+
+        //Dashboard
+        services.AddScoped<IDashboardService, DashboardService>();
 
         var jwtSecret = configuration["JwtSettings:Secret"]
             ?? throw new InvalidOperationException("JWT Secret not configured in appsettings.json");
