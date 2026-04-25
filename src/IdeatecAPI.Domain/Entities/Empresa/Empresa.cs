@@ -4,6 +4,7 @@ public class Empresa
 {
     public int Id { get; set; }
     public string Ruc { get; set; } = string.Empty;
+    public double Igv { get; set; }
     public string RazonSocial { get; set; } = string.Empty;
     public string? NombreComercial { get; set; }
     public string? Direccion { get; set; }
