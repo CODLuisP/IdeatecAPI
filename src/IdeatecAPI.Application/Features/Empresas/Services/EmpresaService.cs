@@ -43,14 +43,13 @@ public class EmpresaService : IEmpresaService
 
     public async Task<EmpresaDto> CreateEmpresaAsync(CreateEmpresaDto dto)
     {
-         if (await _unitOfWork.Empresas.ExisteRucAsync(dto.Ruc)) {
-            Console.WriteLine($"Omitiendo creación de empresa: RUC {dto.Ruc} ya existe.");
-            return new EmpresaDto { Ruc = dto.Ruc }; // retorno vacío, sin excepción
-        }
+        if (await _unitOfWork.Empresas.ExisteRucAsync(dto.Ruc))
+        throw new InvalidOperationException($"El RUC {dto.Ruc} ya está registrado");
 
         var empresa = new Empresa
         {
             Ruc = dto.Ruc,
+            Igv = dto.Igv,
             RazonSocial = dto.RazonSocial,
             NombreComercial = dto.NombreComercial,
             Direccion = dto.Direccion,
@@ -85,6 +84,7 @@ public class EmpresaService : IEmpresaService
             ?? throw new KeyNotFoundException($"Empresa con RUC {ruc} no encontrada");
 
         empresa.RazonSocial = dto.RazonSocial ?? empresa.RazonSocial;
+        empresa.Igv = dto.Igv ?? empresa.Igv;
         empresa.NombreComercial = dto.NombreComercial ?? empresa.NombreComercial;
         empresa.Direccion = dto.Direccion ?? empresa.Direccion;
         empresa.Ubigeo = dto.Ubigeo ?? empresa.Ubigeo;
@@ -311,6 +311,7 @@ public class EmpresaService : IEmpresaService
     {
         Id = e.Id,
         Ruc = e.Ruc,
+        Igv = e.Igv,
         RazonSocial = e.RazonSocial,
         NombreComercial = e.NombreComercial,
         Direccion = e.Direccion,
