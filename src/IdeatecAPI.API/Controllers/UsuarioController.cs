@@ -210,4 +210,41 @@ public class UsuarioController : ControllerBase
             message = "Contraseña actualizada correctamente. Debes iniciar sesión nuevamente."
         });
     }
+
+    /// <summary>
+    /// Obtener usuarios por RUC y opcionalmente por SucursalID
+    /// GET: api/usuario/por-ruc?ruc=12345678901&sucursalID=S01
+    /// </summary>
+    [HttpGet("por-ruc")]
+    [Authorize(Roles = "admin,superadmin")]
+    public async Task<IActionResult> GetByRuc(
+        [FromQuery] string ruc,
+        [FromQuery] string? sucursalID = null)
+    {
+        if (string.IsNullOrWhiteSpace(ruc))
+            return BadRequest(new { success = false, message = "El RUC es obligatorio" });
+
+        var usuarios = await _unitOfWork.Usuarios.GetAllAsync(
+            soloActivos: true,
+            ruc: ruc,
+            sucursalID: sucursalID
+        );
+
+        var resultado = usuarios.Select(u => new UsuarioPorRucDto
+        {
+            UsuarioID = u.UsuarioID,
+            Username  = u.Username,
+            Rol       = u.Rol,
+            SucursalID = u.SucursalID,
+            Email     = u.Email,
+            Ruc       = u.Ruc
+        });
+
+        return Ok(new
+        {
+            success = true,
+            data    = resultado,
+            total   = resultado.Count()
+        });
+    }
 }

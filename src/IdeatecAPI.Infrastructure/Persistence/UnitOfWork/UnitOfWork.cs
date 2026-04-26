@@ -35,6 +35,7 @@ public class UnitOfWork : IUnitOfWork
     private IGuiaRemisionRepository? _guias;
     private IGuiaRemisionDetalleRepository? _guiaDetalles;
     private IDashboardRepository? _dashboard;
+    private IReportesRepository? _reportes;
 
     public UnitOfWork(string connectionString)
     {
@@ -205,6 +206,15 @@ public class UnitOfWork : IUnitOfWork
         }
     }
 
+    public IReportesRepository Reportes
+    {
+        get
+        {
+            _reportes ??= new ReportesRepository(Connection, _transaction);
+            return _reportes;
+        }
+    }
+
     public void BeginTransaction()
     {
         _transaction = Connection.BeginTransaction();
@@ -261,6 +271,7 @@ public class UnitOfWork : IUnitOfWork
         _sucursales = null; 
         _resumenComprobante = null;
         _dashboard = null;
+        _reportes = null;
     }
 
     public IRepository<T> Repository<T>() where T : class

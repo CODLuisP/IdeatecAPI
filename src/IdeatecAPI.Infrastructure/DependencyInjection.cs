@@ -19,6 +19,7 @@ using IdeatecAPI.Application.Features.ResumenComprobante.Services;
 using MediatR;
 using IdeatecAPI.Application.Features.Sucursal.Services;
 using IdeatecAPI.Application.Features.Dashboard.Services;
+using IdeatecAPI.Application.Features.Reportes.Services;
 
 namespace IdeatecAPI.Infrastructure;
 
@@ -88,6 +89,9 @@ public static class DependencyInjection
 
         //Dashboard
         services.AddScoped<IDashboardService, DashboardService>();
+
+        //Reportes
+        services.AddScoped<IReportesService, ReportesService>();
 
         var jwtSecret = configuration["JwtSettings:Secret"]
             ?? throw new InvalidOperationException("JWT Secret not configured in appsettings.json");

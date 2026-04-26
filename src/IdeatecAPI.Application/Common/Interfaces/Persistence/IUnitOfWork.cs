@@ -19,6 +19,7 @@ public interface IUnitOfWork : IDisposable
     IGuiaRemisionDetalleRepository GuiaDetalles { get; }
     IResumenComprobanteRepository ResumenComprobante { get; }
     IDashboardRepository Dashboard { get; }
+    IReportesRepository Reportes { get; } 
     
     // Transacciones
 

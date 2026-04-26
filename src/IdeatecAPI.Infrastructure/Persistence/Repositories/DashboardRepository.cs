@@ -78,8 +78,8 @@ public class DashboardRepository : IDashboardRepository
 
         // ── Parámetros para conteos con rango ──
         var dpRango = new DynamicParameters(parametrosBase);
-        dpRango.Add("Desde", desde);
-        dpRango.Add("Hasta", hasta);
+        dpRango.Add("Desde", desde.HasValue ? desde.Value.Date : (DateTime?)null);
+        dpRango.Add("Hasta", hasta.HasValue ? hasta.Value.Date.AddDays(1).AddTicks(-1) : (DateTime?)null);
 
         // ── Parámetros para rendimiento (siempre últimos 7 días) ──
         var dpRendimiento = new DynamicParameters(parametrosBase);
