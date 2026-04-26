@@ -31,10 +31,19 @@ public class GuiaController : ControllerBase
         _logger = logger;
     }
 
-    [HttpGet("{empresaId}")]
-    public async Task<IActionResult> GetAll(int empresaId)
+    [HttpGet]
+    public async Task<IActionResult> GetAll(
+        [FromQuery] string empresaRuc,
+        [FromQuery] string tipoDoc,
+        [FromQuery] int? sucursalId = null)
     {
-        var guias = await _guiaService.GetAllAsync(empresaId);
+        if (string.IsNullOrWhiteSpace(empresaRuc))
+            return BadRequest(new { mensaje = "El parámetro empresaRuc es requerido." });
+
+        if (string.IsNullOrWhiteSpace(tipoDoc))
+            return BadRequest(new { mensaje = "El parámetro tipoDoc es requerido." });
+
+        var guias = await _guiaService.GetAllByRucAsync(empresaRuc, tipoDoc, sucursalId);
         return Ok(guias);
     }
 
