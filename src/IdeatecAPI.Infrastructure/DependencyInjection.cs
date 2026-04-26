@@ -61,14 +61,6 @@ public static class DependencyInjection
         services.AddScoped<IXmlBajaBuilderService, XmlBajaBuilderService>();
         services.AddScoped<ISunatBajaService, SunatBajaService>();
 
-        // JWT
-        // ========================================
-        // JWT AUTHENTICATION (NUEVO)
-        // ========================================
-        services.AddScoped<IDireccionService, DireccionService>();
-        services.AddScoped<IEmpresaService, EmpresaService>();
-        services.AddScoped<INoteService, NoteService>();
-
         // Comprobante
         services.AddScoped<IComprobanteService, ComprobanteService>();
         services.AddScoped<IComprobanteXmlService, GeneraXmlService>();

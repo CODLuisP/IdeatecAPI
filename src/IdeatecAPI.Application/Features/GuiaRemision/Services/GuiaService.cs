@@ -10,6 +10,7 @@ namespace IdeatecAPI.Application.Features.GuiaRemision.Services;
 public interface IGuiaService
 {
     Task<IEnumerable<GuiaDto>> GetAllAsync(int empresaId);
+    Task<IEnumerable<GuiaListadoDto>> GetAllByRucAsync(string empresaRuc, string tipoDoc, int? sucursalId);
     Task<GuiaDto?> GetByIdAsync(int guiaId);
     Task<GuiaDto?> GetBySerieCorrelativoAsync(string ruc, string serie, int correlativo);
     Task<GuiaDto> CreateAsync(CreateGuiaDto dto);
@@ -39,20 +40,39 @@ public class GuiaService : IGuiaService
         _rutaXml = configuration["Storage:RutaXml"] ?? "C:/FacturacionStorage";
     }
 
+    // ── Método original (sin cambios) ─────────────────────────────────────────
     public async Task<IEnumerable<GuiaDto>> GetAllAsync(int empresaId)
     {
         var guias = await _unitOfWork.Guias.GetAllAsync(empresaId);
-        var result = new List<GuiaDto>();
+        return await MapListAsync(guias);
+    }
 
-        foreach (var guia in guias)
+    // ── Nuevo método ──────────────────────────────────────────────────────────
+    public async Task<IEnumerable<GuiaListadoDto>> GetAllByRucAsync(string empresaRuc, string tipoDoc, int? sucursalId)
+    {
+        var guias = await _unitOfWork.Guias.GetAllByRucAsync(empresaRuc, tipoDoc, sucursalId);
+        return guias.Select(g => new GuiaListadoDto
         {
-            var dto = MapToDto(guia);
-            dto.Details = (await _unitOfWork.GuiaDetalles.GetByGuiaIdAsync(guia.GuiaId))
-                .Select(MapDetalleToDto).ToList();
-            result.Add(dto);
-        }
-
-        return result;
+            GuiaId = g.GuiaId,
+            SucursalId = g.SucursalId,
+            TipoDoc = g.TipoDoc,
+            NumeroCompleto = g.NumeroCompleto,
+            FechaEmision = g.FechaEmision,
+            FechaCreacion = g.FechaCreacion,
+            DestinatarioNumDoc = g.DestinatarioNumDoc,
+            DestinatarioRznSocial = g.DestinatarioRznSocial,
+            PartidaDireccion = g.PartidaDireccion,
+            LlegadaDireccion = g.LlegadaDireccion,
+            TransportistaRznSocial = g.TransportistaRznSocial,
+            TransportistaPlaca = g.TransportistaPlaca,
+            ClienteCorreo = g.ClienteCorreo,
+            EnviadoPorCorreo = g.EnviadoPorCorreo,
+            ClienteWhatsapp = g.ClienteWhatsapp,
+            EnviadoPorWhatsapp = g.EnviadoPorWhatsapp,
+            EstadoSunat = g.EstadoSunat,
+            CodigoRespuestaSunat = g.CodigoRespuestaSunat,
+            MensajeRespuestaSunat = g.MensajeRespuestaSunat,
+        });
     }
 
     public async Task<GuiaDto?> GetByIdAsync(int guiaId)
@@ -81,7 +101,6 @@ public class GuiaService : IGuiaService
 
     public async Task<GuiaDto> CreateAsync(CreateGuiaDto dto)
     {
-        // ── 1. Validaciones ───────────────────────────────────────────────
         if (dto.Details == null || dto.Details.Count == 0)
             throw new InvalidOperationException("La guía debe tener al menos un detalle");
 
@@ -94,15 +113,12 @@ public class GuiaService : IGuiaService
         if (!int.TryParse(dto.Correlativo, out var correlativoInt))
             throw new InvalidOperationException("El correlativo debe ser un número entero");
 
-        // ── 2. Buscar empresa ─────────────────────────────────────────────
         var empresa = await _unitOfWork.Empresas.GetEmpresaByRucAsync(dto.Company.Ruc)
             ?? throw new KeyNotFoundException($"Empresa con RUC {dto.Company.Ruc} no encontrada");
 
         if (await _unitOfWork.Guias.ExisteAsync(empresa.Id, dto.TipoDoc, dto.Serie, correlativoInt))
-            throw new InvalidOperationException(
-                $"Ya existe la guía {dto.Serie}-{dto.Correlativo}");
+            throw new InvalidOperationException($"Ya existe la guía {dto.Serie}-{dto.Correlativo}");
 
-        // ── 3. BeginTransaction ───────────────────────────────────────────
         _unitOfWork.BeginTransaction();
         try
         {
@@ -148,13 +164,13 @@ public class GuiaService : IGuiaService
                 LlegadaUbigeo = dto.Envio.Llegada.Ubigueo,
                 LlegadaDireccion = dto.Envio.Llegada.Direccion,
                 LlegadaDepartamento = dto.Envio.Llegada.Departamento,
-                LlegadaProvincia    = dto.Envio.Llegada.Provincia,
-                LlegadaDistrito     = dto.Envio.Llegada.Distrito, 
+                LlegadaProvincia = dto.Envio.Llegada.Provincia,
+                LlegadaDistrito = dto.Envio.Llegada.Distrito,
                 PartidaUbigeo = dto.Envio.Partida.Ubigueo,
                 PartidaDireccion = dto.Envio.Partida.Direccion,
                 PartidaDepartamento = dto.Envio.Partida.Departamento,
-                PartidaProvincia    = dto.Envio.Partida.Provincia,
-                PartidaDistrito     = dto.Envio.Partida.Distrito,   
+                PartidaProvincia = dto.Envio.Partida.Provincia,
+                PartidaDistrito = dto.Envio.Partida.Distrito,
                 TransportistaTipoDoc = dto.Envio.Transportista?.TipoDoc,
                 TransportistaNumDoc = dto.Envio.Transportista?.NumDoc,
                 TransportistaRegistroMTC = dto.Envio.Transportista?.RegistroMTC,
@@ -183,10 +199,10 @@ public class GuiaService : IGuiaService
                 ChoferLicencia = dto.Envio.Transportista?.ChoferLicencia,
                 EstadoSunat = "PENDIENTE",
                 FechaCreacion = DateTime.UtcNow,
-                ClienteCorreo      = dto.ClienteCorreo,
-                ClienteWhatsapp    = dto.ClienteWhatsapp,
-                UsuarioCreacion    = dto.UsuarioCreacion,
-                EnviadoPorCorreo   = dto.EnviadoPorCorreo,
+                ClienteCorreo = dto.ClienteCorreo,
+                ClienteWhatsapp = dto.ClienteWhatsapp,
+                UsuarioCreacion = dto.UsuarioCreacion,
+                EnviadoPorCorreo = dto.EnviadoPorCorreo,
                 EnviadoPorWhatsapp = dto.EnviadoPorWhatsapp
             };
 
@@ -238,8 +254,9 @@ public class GuiaService : IGuiaService
 
         var details = (await _unitOfWork.GuiaDetalles.GetByGuiaIdAsync(guiaId)).ToList();
 
-        // ── Construir y firmar XML ────────────────────────────────────────
-        var xmlSinFirmar = guia.TipoDoc == "31" ? _xmlBuilder.BuildXmlTransportista(guia, details) : _xmlBuilder.BuildXml(guia, details);
+        var xmlSinFirmar = guia.TipoDoc == "31"
+            ? _xmlBuilder.BuildXmlTransportista(guia, details)
+            : _xmlBuilder.BuildXml(guia, details);
 
         var xmlFirmadoBytes = _xmlSigner.SignXmlToBytes(
             xmlSinFirmar,
@@ -249,14 +266,12 @@ public class GuiaService : IGuiaService
 
         var nombreArchivo = $"{empresa.Ruc}-{guia.TipoDoc}-{guia.Serie}-{guia.Correlativo:D8}";
 
-        // ── Guardar ZIP localmente ────────────────────────────────────────
         await GuardarArchivosAsync(
             empresa.Ruc,
             guia.EmpresaRazonSocial ?? empresa.RazonSocial,
             nombreArchivo,
             xmlFirmadoBytes, null);
 
-        // ── Enviar a SUNAT ────────────────────────────────────────────────
         var sunatResponse = await _sunatGuia.SendGuiaAsync(
             xmlFirmadoBytes,
             nombreArchivo,
@@ -268,7 +283,6 @@ public class GuiaService : IGuiaService
             empresa.Environment
         );
 
-        // ── Guardar CDR ───────────────────────────────────────────────────
         if (!string.IsNullOrEmpty(sunatResponse.CdrBase64))
             await GuardarArchivosAsync(
                 empresa.Ruc,
@@ -276,13 +290,9 @@ public class GuiaService : IGuiaService
                 nombreArchivo,
                 null, sunatResponse.CdrBase64);
 
-        string nuevoEstado;
-        if (sunatResponse.CodigoRespuesta == "EN_PROCESO")
-            nuevoEstado = "EN_PROCESO";
-        else if (sunatResponse.Success)
-            nuevoEstado = "ACEPTADO";
-        else
-            nuevoEstado = "RECHAZADO";
+        string nuevoEstado = sunatResponse.CodigoRespuesta == "EN_PROCESO"
+            ? "EN_PROCESO"
+            : sunatResponse.Success ? "ACEPTADO" : "RECHAZADO";
 
         await _unitOfWork.Guias.UpdateEstadoAsync(
             guiaId,
@@ -310,7 +320,21 @@ public class GuiaService : IGuiaService
             guiaId, "ANULADO", null, "Anulado por el usuario", null, null, null);
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /// <summary>Mapea una colección de entidades a DTOs cargando sus detalles.</summary>
+    private async Task<IEnumerable<GuiaDto>> MapListAsync(IEnumerable<GuiaEntity> guias)
+    {
+        var result = new List<GuiaDto>();
+        foreach (var guia in guias)
+        {
+            var dto = MapToDto(guia);
+            dto.Details = (await _unitOfWork.GuiaDetalles.GetByGuiaIdAsync(guia.GuiaId))
+                .Select(MapDetalleToDto).ToList();
+            result.Add(dto);
+        }
+        return result;
+    }
 
     private async Task GuardarArchivosAsync(
         string ruc, string razonSocial, string nombreArchivo,
@@ -342,7 +366,7 @@ public class GuiaService : IGuiaService
         }
     }
 
-    // ── Mappers ───────────────────────────────────────────────────────────
+    // ── Mappers ───────────────────────────────────────────────────────────────
 
     private static GuiaDto MapToDto(GuiaEntity g) => new()
     {
@@ -372,12 +396,12 @@ public class GuiaService : IGuiaService
         LlegadaDireccion = g.LlegadaDireccion,
         LlegadaDepartamento = g.LlegadaDepartamento,
         LlegadaProvincia = g.LlegadaProvincia,
-        LlegadaDistrito = g.LlegadaDistrito,  
+        LlegadaDistrito = g.LlegadaDistrito,
         PartidaUbigeo = g.PartidaUbigeo,
         PartidaDireccion = g.PartidaDireccion,
         PartidaDepartamento = g.PartidaDepartamento,
         PartidaProvincia = g.PartidaProvincia,
-        PartidaDistrito = g.PartidaDistrito, 
+        PartidaDistrito = g.PartidaDistrito,
         TransportistaNumDoc = g.TransportistaNumDoc,
         TransportistaRznSocial = g.TransportistaRznSocial,
         TransportistaRegistroMTC = g.TransportistaRegistroMTC,
@@ -401,17 +425,19 @@ public class GuiaService : IGuiaService
         ChoferSecundario2Nombres = g.ChoferSecundario2Nombres,
         ChoferSecundario2Apellidos = g.ChoferSecundario2Apellidos,
         ChoferSecundario2Licencia = g.ChoferSecundario2Licencia,
+        AutorizacionVehiculoEntidad = g.AutorizacionVehiculoEntidad,
+        AutorizacionVehiculoNumero = g.AutorizacionVehiculoNumero,
         EstadoSunat = g.EstadoSunat,
         CodigoRespuestaSunat = g.CodigoRespuestaSunat,
         MensajeRespuestaSunat = g.MensajeRespuestaSunat,
         TicketSunat = g.TicketSunat,
         FechaEnvioSunat = g.FechaEnvioSunat,
         FechaCreacion = g.FechaCreacion,
-        ClienteCorreo      = g.ClienteCorreo,
-        EnviadoPorCorreo   = g.EnviadoPorCorreo,
-        ClienteWhatsapp    = g.ClienteWhatsapp,
+        ClienteCorreo = g.ClienteCorreo,
+        EnviadoPorCorreo = g.EnviadoPorCorreo,
+        ClienteWhatsapp = g.ClienteWhatsapp,
         EnviadoPorWhatsapp = g.EnviadoPorWhatsapp,
-        UsuarioCreacion    = g.UsuarioCreacion
+        UsuarioCreacion = g.UsuarioCreacion
     };
 
     private static GuiaDetalleDto MapDetalleToDto(GuiaDetalleEntity d) => new()

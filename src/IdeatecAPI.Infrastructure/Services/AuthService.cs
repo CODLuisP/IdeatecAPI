@@ -84,6 +84,7 @@ public class AuthService : IAuthService
                     Ruc = usuario.Ruc,
                     SucursalID = usuario.SucursalID,
                     NombreSucursal = usuario.NombreSucursal,
+                    Igv = usuario.Igv,
                     NombreEmpresa = usuario.NombreEmpresa,
                     Environment = usuario.Environment,
                     LogoBase64 = usuario.LogoBase64

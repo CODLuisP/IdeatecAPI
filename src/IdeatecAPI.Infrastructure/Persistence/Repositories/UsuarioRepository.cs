@@ -26,6 +26,7 @@ public class UsuarioRepository : DapperRepository<Usuario>, IUsuarioRepository
             u.sucursalID          AS SucursalID,
             s.nombre              AS NombreSucursal,
             COALESCE(e.nombreComercial, e.razonSocial) AS NombreEmpresa,
+            e.igv                 AS Igv,
             e.environment         AS Environment,
             e.logoBase64          AS LogoBase64,
             u.tokenVersion        AS TokenVersion,

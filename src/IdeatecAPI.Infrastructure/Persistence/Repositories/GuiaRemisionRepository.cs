@@ -113,6 +113,37 @@ public class GuiaRemisionRepository : IGuiaRemisionRepository
         return await _connection.QueryAsync<GuiaRemision>(sql, new { EmpresaId = empresaId }, _transaction);
     }
 
+    public async Task<IEnumerable<GuiaRemision>> GetAllByRucAsync(string empresaRuc, string tipoDoc, int? sucursalId)
+    {
+        var sql = @"SELECT
+                    guiaId                 AS GuiaId,
+                    sucursalId             AS SucursalId,
+                    tipoDoc                AS TipoDoc,
+                    numeroCompleto         AS NumeroCompleto,
+                    fechaEmision           AS FechaEmision,
+                    fechaCreacion          AS FechaCreacion,
+                    destinatarioNumDoc     AS DestinatarioNumDoc,
+                    destinatarioRznSocial  AS DestinatarioRznSocial,
+                    partidaDireccion       AS PartidaDireccion,
+                    llegadaDireccion       AS LlegadaDireccion,
+                    transportistaRznSocial AS TransportistaRznSocial,
+                    transportistaPlaca     AS TransportistaPlaca,
+                    clienteCorreo          AS ClienteCorreo,
+                    enviadoPorCorreo       AS EnviadoPorCorreo,
+                    clienteWhatsapp        AS ClienteWhatsapp,
+                    enviadoPorWhatsapp     AS EnviadoPorWhatsapp,
+                    estadoSunat            AS EstadoSunat,
+                    codigoRespuestaSunat   AS CodigoRespuestaSunat,
+                    mensajeRespuestaSunat  AS MensajeRespuestaSunat
+                FROM guiaRemision
+                WHERE empresaRuc = @EmpresaRuc
+                  AND tipoDoc    = @TipoDoc
+                  AND (@SucursalId IS NULL OR sucursalId = @SucursalId)
+                ORDER BY fechaCreacion DESC LIMIT 100";
+
+        return await _connection.QueryAsync<GuiaRemision>(sql, new { EmpresaRuc = empresaRuc, TipoDoc = tipoDoc, SucursalId = sucursalId }, _transaction);
+    }
+
     public async Task<GuiaRemision?> GetByIdAsync(int guiaId)
     {
         var sql = @"SELECT
