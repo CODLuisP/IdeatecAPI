@@ -69,7 +69,7 @@ public class DetalleCuotasDTO
     public DateTime FechaVencimiento { get; set; }
     public string? MontoPagado { get; set; }
     public DateTime? FechaPago { get; set; } 
-    public string? Estado { get; set; }
+    public string? Estado { get; set; } = "PENDIENTE";
 }
 
 public class GuiaComprobanteDTO

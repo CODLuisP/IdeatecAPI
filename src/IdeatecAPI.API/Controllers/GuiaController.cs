@@ -63,6 +63,26 @@ public class GuiaController : ControllerBase
         return Ok(guia);
     }
 
+    /// GET api/guias/por-fechas?empresaRuc=20601234567&tipoDoc=09&sucursalId=3&fechaDesde=2026-01-01&fechaHasta=2026-04-26
+    [HttpGet("por-fechas")]
+    public async Task<IActionResult> GetByFechas(
+        [FromQuery] string empresaRuc,
+        [FromQuery] string tipoDoc,
+        [FromQuery] int? sucursalId = null,
+        [FromQuery] DateOnly? fechaDesde = null,
+        [FromQuery] DateOnly? fechaHasta = null)
+    {
+        if (string.IsNullOrWhiteSpace(empresaRuc))
+            return BadRequest(new { mensaje = "El parámetro empresaRuc es requerido." });
+
+        if (string.IsNullOrWhiteSpace(tipoDoc))
+            return BadRequest(new { mensaje = "El parámetro tipoDoc es requerido." });
+
+        var guias = await _guiaService.GetAllByRucFechasAsync(
+            empresaRuc, tipoDoc, sucursalId, fechaDesde, fechaHasta);
+        return Ok(guias);
+    }
+
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateGuiaDto dto)
     {

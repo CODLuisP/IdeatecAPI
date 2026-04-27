@@ -17,7 +17,12 @@ public class GuiaDto
     public string? DestinatarioTipoDoc { get; set; }
     public string? DestinatarioNumDoc { get; set; }
     public string? DestinatarioRznSocial { get; set; }
-
+    public string? Observacion { get; set; }
+    public string? RelDocTipoDoc { get; set; }
+    public string? RelDocNroDoc { get; set; }
+    public string? TerceroTipoDoc { get; set; }
+    public string? TerceroNumDoc { get; set; }
+    public string? TerceroRznSocial { get; set; }
     public string? CodTraslado { get; set; }
     public string? DesTraslado { get; set; }
     public string? ModTraslado { get; set; }

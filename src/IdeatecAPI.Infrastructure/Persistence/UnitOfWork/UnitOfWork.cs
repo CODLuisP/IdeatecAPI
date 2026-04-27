@@ -4,6 +4,7 @@ using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Infrastructure.Persistence.Repositories;
 using IdeatecAPI.Infrastructure.Persistence.Repositories.Comprobantes;
 using IdeatecAPI.Domain.Entities;
+using IdeatecAPI.Infrastructure.Persistence.Repositories.CuentasPorCobrar;
 
 namespace IdeatecAPI.Infrastructure.Persistence.UnitOfWork;
 
@@ -36,6 +37,7 @@ public class UnitOfWork : IUnitOfWork
     private IGuiaRemisionDetalleRepository? _guiaDetalles;
     private IDashboardRepository? _dashboard;
     private IReportesRepository? _reportes;
+    private ICuentasPorCobrarRepository? _cuentasPorCobrar;
 
     public UnitOfWork(string connectionString)
     {
@@ -215,6 +217,15 @@ public class UnitOfWork : IUnitOfWork
         }
     }
 
+    public ICuentasPorCobrarRepository CuentasPorCobrar
+    {
+        get
+        {
+            _cuentasPorCobrar ??= new CuentasPorCobrarRepository(Connection, _transaction);
+            return _cuentasPorCobrar;
+        }
+    }
+
     public void BeginTransaction()
     {
         _transaction = Connection.BeginTransaction();
@@ -272,6 +283,7 @@ public class UnitOfWork : IUnitOfWork
         _resumenComprobante = null;
         _dashboard = null;
         _reportes = null;
+        _cuentasPorCobrar = null;
     }
 
     public IRepository<T> Repository<T>() where T : class
