@@ -1,11 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+namespace IdeatecAPI.Application.Features.CuentasPorCobrar.DTOs;
 
-namespace IdeatecAPI.Domain.Entities;
-
-public class Cuota
+public class CuotaDto
 {
     public int CuotaId { get; set; }
     public int? ComprobanteId { get; set; }
@@ -13,10 +8,8 @@ public class Cuota
     public decimal? Monto { get; set; }
     public DateTime FechaVencimiento { get; set; }
     public string? MontoPagado { get; set; }
-    public DateTime? FechaPago { get; set; } 
+    public DateTime? FechaPago { get; set; }
     public string? Estado { get; set; }
-
-    // Campos nuevos para manejar cuentas por cobrar
     public decimal? MontoDescuento { get; set; }
     public string? MotivoDescuento { get; set; }
     public decimal? MontoFinal { get; set; }
