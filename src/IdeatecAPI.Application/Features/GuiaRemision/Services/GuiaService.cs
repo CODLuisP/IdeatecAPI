@@ -11,6 +11,7 @@ public interface IGuiaService
 {
     Task<IEnumerable<GuiaDto>> GetAllAsync(int empresaId);
     Task<IEnumerable<GuiaListadoDto>> GetAllByRucAsync(string empresaRuc, string tipoDoc, int? sucursalId);
+    Task<IEnumerable<GuiaListadoDto>> GetAllByRucFechasAsync(string empresaRuc, string tipoDoc, int? sucursalId, DateOnly? fechaDesde, DateOnly? fechaHasta);
     Task<GuiaDto?> GetByIdAsync(int guiaId);
     Task<GuiaDto?> GetBySerieCorrelativoAsync(string ruc, string serie, int correlativo);
     Task<GuiaDto> CreateAsync(CreateGuiaDto dto);
@@ -47,10 +48,37 @@ public class GuiaService : IGuiaService
         return await MapListAsync(guias);
     }
 
-    // ── Nuevo método ──────────────────────────────────────────────────────────
     public async Task<IEnumerable<GuiaListadoDto>> GetAllByRucAsync(string empresaRuc, string tipoDoc, int? sucursalId)
     {
         var guias = await _unitOfWork.Guias.GetAllByRucAsync(empresaRuc, tipoDoc, sucursalId);
+        return guias.Select(g => new GuiaListadoDto
+        {
+            GuiaId = g.GuiaId,
+            SucursalId = g.SucursalId,
+            TipoDoc = g.TipoDoc,
+            NumeroCompleto = g.NumeroCompleto,
+            FechaEmision = g.FechaEmision,
+            FechaCreacion = g.FechaCreacion,
+            DestinatarioNumDoc = g.DestinatarioNumDoc,
+            DestinatarioRznSocial = g.DestinatarioRznSocial,
+            PartidaDireccion = g.PartidaDireccion,
+            LlegadaDireccion = g.LlegadaDireccion,
+            TransportistaRznSocial = g.TransportistaRznSocial,
+            TransportistaPlaca = g.TransportistaPlaca,
+            ClienteCorreo = g.ClienteCorreo,
+            EnviadoPorCorreo = g.EnviadoPorCorreo,
+            ClienteWhatsapp = g.ClienteWhatsapp,
+            EnviadoPorWhatsapp = g.EnviadoPorWhatsapp,
+            EstadoSunat = g.EstadoSunat,
+            CodigoRespuestaSunat = g.CodigoRespuestaSunat,
+            MensajeRespuestaSunat = g.MensajeRespuestaSunat,
+        });
+    }
+
+    public async Task<IEnumerable<GuiaListadoDto>> GetAllByRucFechasAsync(string empresaRuc, string tipoDoc, int? sucursalId, DateOnly? fechaDesde, DateOnly? fechaHasta)
+    {
+        var guias = await _unitOfWork.Guias.GetAllByRucFechasAsync(
+            empresaRuc, tipoDoc, sucursalId, fechaDesde, fechaHasta);
         return guias.Select(g => new GuiaListadoDto
         {
             GuiaId = g.GuiaId,
@@ -383,6 +411,12 @@ public class GuiaService : IGuiaService
         DestinatarioTipoDoc = g.DestinatarioTipoDoc,
         DestinatarioNumDoc = g.DestinatarioNumDoc,
         DestinatarioRznSocial = g.DestinatarioRznSocial,
+        Observacion = g.Observacion,
+        RelDocTipoDoc = g.RelDocTipoDoc,
+        RelDocNroDoc = g.RelDocNroDoc,
+        TerceroTipoDoc = g.TerceroTipoDoc,
+        TerceroNumDoc = g.TerceroNumDoc,
+        TerceroRznSocial = g.TerceroRznSocial,
         CodTraslado = g.CodTraslado,
         DesTraslado = g.DesTraslado,
         ModTraslado = g.ModTraslado,
