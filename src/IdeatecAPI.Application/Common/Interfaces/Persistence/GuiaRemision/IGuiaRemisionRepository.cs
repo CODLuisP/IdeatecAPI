@@ -4,12 +4,9 @@ namespace IdeatecAPI.Application.Common.Interfaces.Persistence;
 
 public interface IGuiaRemisionRepository
 {
-    // ── Antes recibía empresaId (int), ahora queda como fallback interno ──
     Task<IEnumerable<GuiaRemision>> GetAllAsync(int empresaId);
-
-    // ── Nuevo: listado por RUC + tipoDoc, con sucursalId opcional ──
     Task<IEnumerable<GuiaRemision>> GetAllByRucAsync(string empresaRuc, string tipoDoc, int? sucursalId);
-
+    Task<IEnumerable<GuiaRemision>> GetAllByRucFechasAsync(string empresaRuc, string tipoDoc, int? sucursalId, DateOnly? fechaDesde, DateOnly? fechaHasta);
     Task<GuiaRemision?> GetByIdAsync(int guiaId);
     Task<GuiaRemision?> GetBySerieCorrelativoAsync(string empresaRuc, string serie, int correlativo);
     Task<int> CreateAsync(GuiaRemision guia);
