@@ -22,18 +22,13 @@ public class ClienteController : ControllerBase
     // GET api/cliente/ruc/{empresaRuc}
     [HttpGet("ruc/{empresaRuc}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetAllClientesRucAsync(string empresaRuc)
     {
         try
         {
             var clientes = await _clienteService.GetAllClientesRucAsync(empresaRuc);
-
-            if (clientes == null || !clientes.Any())
-                return NotFound(new { mensaje = $"No se encontraron clientes para el RUC '{empresaRuc}'." });
-
-            return Ok(clientes);
+            return Ok(clientes ?? []);
         }
         catch (Exception ex)
         {
@@ -49,18 +44,13 @@ public class ClienteController : ControllerBase
     // GET api/cliente/sucursal/{sucursalId}
     [HttpGet("sucursal/{sucursalId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetAllClientesSucursalAsync(int sucursalId)
     {
         try
         {
             var clientes = await _clienteService.GetAllClientesSucursalAsync(sucursalId);
-
-            if (clientes == null || !clientes.Any())
-                return NotFound(new { mensaje = $"No se encontraron clientes para la sucursal con ID {sucursalId}." });
-
-            return Ok(clientes);
+            return Ok(clientes ?? []);
         }
         catch (Exception ex)
         {
