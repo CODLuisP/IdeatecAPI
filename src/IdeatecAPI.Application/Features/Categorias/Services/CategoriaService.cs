@@ -7,6 +7,7 @@ public interface ICategoriaService
 {
     Task<IEnumerable<CategoriaDto>> GetAllCategoriasAsync();
     Task<CategoriaDto?> GetCategoriaByIdAsync(int id);
+    Task<IEnumerable<CategoriaDto>> GetCategoriasByEmpresaRucAsync(string empresaRuc);
     Task<bool> RegistrarCategoriaAsync(RegistrarCategoriaDto categoria);
     Task<bool> EditarCategoriaAsync(EditarCategoriaDto categoria);
     Task<bool> EliminarCategoriaAsync(int CategoriaId);
@@ -29,6 +30,7 @@ public class CategoriaService : ICategoriaService
         return categorias.Select(c => new CategoriaDto
         {
             CategoriaId = c.CategoriaId,
+            EmpresaRuc = c.EmpresaRuc,
             CategoriaNombre = c.CategoriaNombre,
             Descripcion = c.Descripcion,
             Estado = c.Estado
@@ -45,10 +47,25 @@ public class CategoriaService : ICategoriaService
         return new CategoriaDto
         {
             CategoriaId = categoria.CategoriaId,
+            EmpresaRuc = categoria.EmpresaRuc,
             CategoriaNombre = categoria.CategoriaNombre,
             Descripcion = categoria.Descripcion,
             Estado = categoria.Estado
         };
+    }
+
+    public async Task<IEnumerable<CategoriaDto>> GetCategoriasByEmpresaRucAsync(string empresaRuc)
+    {
+        var categorias = await _unitOfWork.Categorias.GetCategoriasByEmpresaRucAsync(empresaRuc);
+
+        return categorias.Select(c => new CategoriaDto
+        {
+            CategoriaId = c.CategoriaId,
+            EmpresaRuc = c.EmpresaRuc,
+            CategoriaNombre = c.CategoriaNombre,
+            Descripcion = c.Descripcion,
+            Estado = c.Estado
+        });
     }
 
     public async Task<bool> RegistrarCategoriaAsync(RegistrarCategoriaDto dto)
@@ -59,6 +76,7 @@ public class CategoriaService : ICategoriaService
         {
             var categoria = new Domain.Entities.Categoria
             {
+                EmpresaRuc = dto.EmpresaRuc,
                 CategoriaNombre = dto.CategoriaNombre,
                 Descripcion = dto.Descripcion,
             };
@@ -87,6 +105,7 @@ public class CategoriaService : ICategoriaService
             var categoria = new Domain.Entities.Categoria
             {
                 CategoriaId = dto.CategoriaId,
+                EmpresaRuc = dto.EmpresaRuc,
                 CategoriaNombre = dto.CategoriaNombre,
                 Descripcion = dto.Descripcion,
             };
