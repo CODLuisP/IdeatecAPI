@@ -26,8 +26,6 @@ public class CategoriasController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(int id)
     {
         var categoria = await _categoriaService.GetCategoriaByIdAsync(id);
@@ -36,6 +34,14 @@ public class CategoriasController : ControllerBase
             return NotFound(new { message = $"Categoría con ID {id} no encontrada" });
 
         return Ok(categoria);
+    }
+
+    [HttpGet("empresa/{empresaRuc}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetByEmpresaRuc(string empresaRuc)
+    {
+        var categorias = await _categoriaService.GetCategoriasByEmpresaRucAsync(empresaRuc);
+        return Ok(categorias);
     }
 
     [HttpPost]

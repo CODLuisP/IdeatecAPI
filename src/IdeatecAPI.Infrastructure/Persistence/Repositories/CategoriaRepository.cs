@@ -23,13 +23,19 @@ public class CategoriaRepository : DapperRepository<Categoria>, ICategoriaReposi
         return await _connection.QueryFirstOrDefaultAsync<Categoria>(sql, new { Id = id }, _transaction);
     }
 
+    public async Task<IEnumerable<Categoria>> GetCategoriasByEmpresaRucAsync(string empresaRuc)
+    {
+        var sql = "SELECT * FROM categoria WHERE empresaRuc = @EmpresaRuc";
+        return await _connection.QueryAsync<Categoria>(sql, new { EmpresaRuc = empresaRuc }, _transaction);
+    }
+
     public async Task<bool> RegistrarCategoriaAsync(Categoria categoria)
     {
         var sql = @"
             INSERT INTO categoria 
-            (categoriaNombre, descripcion)
+            (empresaRuc, categoriaNombre, descripcion)
             VALUES 
-            (@CategoriaNombre, @Descripcion);";
+            (@EmpresaRuc, @CategoriaNombre, @Descripcion);";
 
         var result = await _connection.ExecuteAsync(sql, categoria, _transaction);
 
@@ -41,6 +47,7 @@ public class CategoriaRepository : DapperRepository<Categoria>, ICategoriaReposi
         var sql = @"
             UPDATE categoria
             SET 
+                empresaRuc      = @EmpresaRuc,
                 categoriaNombre = @CategoriaNombre,
                 descripcion     = @Descripcion
             WHERE categoriaID = @CategoriaId;";
