@@ -34,8 +34,11 @@ public interface IComprobanteService
     //Traer solo detalles de un comprobante
     Task<ComprobanteDetallesDTO?> GetDetallesByComprobanteIdAsync(int comprobanteId);
 
-    //Comprobante unico por ruc
+    //Comprobante unico por ruc estado sunat ACEPTADO
     Task<ObtenerComprobanteDTO?> GetByRucSerieNumeroAsync(string ruc, string serie, int numero);
+
+    //Comprobante unico por ruc estado todos
+    Task<ObtenerComprobanteDTO?> GetByComprobanteUnicoAsync(string ruc, string serie, int numero);
 
     Task ActualizarCorreoWhatsappAsync(int comprobanteId, ActualizarCorreoWhatsappDTO dto);
     Task<int> GetCantidadByClienteNumDocAsync(string clienteNumDoc);
@@ -817,6 +820,23 @@ public class ComprobanteService : IComprobanteService
         var leyendas = (await _unitOfWork.Comprobantes.GetLeyendasByIdAsync(comprobanteId)).ToList();
         var guias = (await _unitOfWork.Comprobantes.GetGuiasByIdAsync(comprobanteId)).ToList();
         var detracciones = (await _unitOfWork.Comprobantes.GetDetraccionesByIdAsync(comprobanteId)).ToList();
+
+        return MapToDto(comprobante, detalles, pagos, cuotas, leyendas, guias, detracciones);
+    }
+
+    public async Task<ObtenerComprobanteDTO?> GetByComprobanteUnicoAsync(string ruc, string serie, int numero)
+    {
+        var comprobante = await _unitOfWork.Comprobantes.GetByComprobanteUnicoAsync(ruc, serie, numero);
+        if (comprobante == null)
+            return null;
+
+        var comprobanteId = comprobante.ComprobanteId;
+        var detalles      = (await _unitOfWork.Comprobantes.GetDetallesByIdAsync(comprobanteId)).ToList();
+        var pagos         = (await _unitOfWork.Comprobantes.GetPagosByIdAsync(comprobanteId)).ToList();
+        var cuotas        = (await _unitOfWork.Comprobantes.GetCuotasByIdAsync(comprobanteId)).ToList();
+        var leyendas      = (await _unitOfWork.Comprobantes.GetLeyendasByIdAsync(comprobanteId)).ToList();
+        var guias         = (await _unitOfWork.Comprobantes.GetGuiasByIdAsync(comprobanteId)).ToList();
+        var detracciones  = (await _unitOfWork.Comprobantes.GetDetraccionesByIdAsync(comprobanteId)).ToList();
 
         return MapToDto(comprobante, detalles, pagos, cuotas, leyendas, guias, detracciones);
     }

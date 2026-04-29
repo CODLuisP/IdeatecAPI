@@ -488,6 +488,7 @@ public class ComprobantesController : ControllerBase
         }
     }
 
+    //toma en cuenta estado sunat aceptado
     [HttpGet("{ruc}/{serie}/{numero}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -506,6 +507,28 @@ public class ComprobantesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error al obtener comprobante {Ruc}/{Serie}/{Numero}", ruc, serie, numero);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al obtener el comprobante.",
+                detalle = ex.Message
+            });
+        }
+    }
+
+    //Busca sin tener encunta estado sunat
+    [HttpGet("{ruc}/{serie}/{numero}/unico")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetByComprobanteUnico(string ruc, string serie, int numero)
+    {
+        try
+        {
+            var comprobante = await _comprobanteService.GetByComprobanteUnicoAsync(ruc, serie, numero);
+            return Ok(comprobante);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener comprobante único {Ruc}/{Serie}/{Numero}", ruc, serie, numero);
             return StatusCode(StatusCodes.Status500InternalServerError, new
             {
                 mensaje = "Ocurrió un error al obtener el comprobante.",
