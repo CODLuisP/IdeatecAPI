@@ -8,7 +8,6 @@ namespace IdeatecAPI.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-
 public class ComprobantesController : ControllerBase
 {
     private readonly IComprobanteService _comprobanteService;
@@ -19,7 +18,7 @@ public class ComprobantesController : ControllerBase
     {
         _comprobanteService = comprobanteService;
         _pdfService         = pdfService;
-        _logger = logger;
+        _logger             = logger;
     }
 
     [HttpGet("cliente/{clienteNumDoc}/cantidad")]
@@ -43,35 +42,20 @@ public class ComprobantesController : ControllerBase
         }
     }
 
-    //comrpobantes completos por Ruc
     [HttpGet("ruc/{ruc}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetByRucAndFechas(string ruc, [FromQuery] DateTime? fechaDesde, [FromQuery] DateTime? fechaHasta, [FromQuery] int? limit = null)
+    public async Task<IActionResult> GetByRucAndFechas(
+        string ruc,
+        [FromQuery] DateTime? fechaDesde,
+        [FromQuery] DateTime? fechaHasta,
+        [FromQuery] int? limit = null)
     {
         try
         {
-            // Caso 1: solo RUC → sin filtro de fechas (null ambas)
-            // Caso 2: solo fechaDesde → filtrar ese día completo
-            // Caso 3: ambas → rango completo
-
-            DateTime? desde = null;
-            DateTime? hasta = null;
-
-            if (fechaDesde.HasValue)
-            {
-                desde = fechaDesde.Value.Date; // 00:00:00
-                hasta = fechaHasta.HasValue
-                    ? fechaHasta.Value.Date.AddDays(1).AddSeconds(-1) // 23:59:59
-                    : fechaDesde.Value.Date.AddDays(1).AddSeconds(-1); // mismo día
-            }
+            var (desde, hasta) = NormalizarFechas(fechaDesde, fechaHasta);
             var comprobantes = await _comprobanteService.GetByRucAndFechasAsync(ruc, desde, hasta, limit);
-
-            if (comprobantes == null || !comprobantes.Any())
-                return NotFound(new { mensaje = $"No se encontraron comprobantes para el RUC '{ruc}' en el rango de fechas indicado." });
-
-            return Ok(comprobantes);
+            return Ok(comprobantes ?? []);
         }
         catch (Exception ex)
         {
@@ -84,10 +68,8 @@ public class ComprobantesController : ControllerBase
         }
     }
 
-    //comrpobantes completos de Un clinte dentro de la empresa
     [HttpGet("empresa/{rucEmpresa}/cliente/{clienteNumDoc}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetByDocClienteAndFechas(
         string rucEmpresa,
@@ -97,23 +79,9 @@ public class ComprobantesController : ControllerBase
     {
         try
         {
-            DateTime? desde = null;
-            DateTime? hasta = null;
-
-            if (fechaDesde.HasValue)
-            {
-                desde = fechaDesde.Value.Date;
-                hasta = fechaHasta.HasValue
-                    ? fechaHasta.Value.Date.AddDays(1).AddSeconds(-1)
-                    : fechaDesde.Value.Date.AddDays(1).AddSeconds(-1);
-            }
-
+            var (desde, hasta) = NormalizarFechas(fechaDesde, fechaHasta);
             var comprobantes = await _comprobanteService.GetByDocClienteAndFechasAsync(rucEmpresa, clienteNumDoc, desde, hasta);
-
-            if (comprobantes == null || !comprobantes.Any())
-                return NotFound(new { mensaje = $"No se encontraron comprobantes para el cliente '{clienteNumDoc}'." });
-
-            return Ok(comprobantes);
+            return Ok(comprobantes ?? []);
         }
         catch (Exception ex)
         {
@@ -126,10 +94,9 @@ public class ComprobantesController : ControllerBase
         }
     }
 
-    //comrpobantes completos por SucursalId
     [HttpGet("sucursal/{sucursalId}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)] // solo si sucursal no existe
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetBySucursal(
         int sucursalId,
@@ -139,26 +106,13 @@ public class ComprobantesController : ControllerBase
     {
         try
         {
-            DateTime? desde = null;
-            DateTime? hasta = null;
-
-            if (fechaDesde.HasValue)
-            {
-                desde = fechaDesde.Value.Date;
-                hasta = fechaHasta.HasValue
-                    ? fechaHasta.Value.Date.AddDays(1).AddSeconds(-1)
-                    : fechaDesde.Value.Date.AddDays(1).AddSeconds(-1);
-            }
-
+            var (desde, hasta) = NormalizarFechas(fechaDesde, fechaHasta);
             var comprobantes = await _comprobanteService.GetBySucursalAndFechasAsync(sucursalId, desde, hasta, limit);
-
-            if (comprobantes == null || !comprobantes.Any())
-                return NotFound(new { mensaje = $"No se encontraron comprobantes para la sucursal {sucursalId}." });
-
-            return Ok(comprobantes);
+            return Ok(comprobantes ?? []);
         }
         catch (KeyNotFoundException ex)
         {
+            // 404 solo cuando la sucursal no existe, no cuando no hay comprobantes
             _logger.LogWarning("Sucursal no encontrada: {Mensaje}", ex.Message);
             return NotFound(new { mensaje = ex.Message });
         }
@@ -173,10 +127,8 @@ public class ComprobantesController : ControllerBase
         }
     }
 
-    //comrpobantes completos de un usuario por Ruc
     [HttpGet("empresa/{rucEmpresa}/usuario/{usuarioId}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetByDocUsuario(
         string rucEmpresa,
@@ -186,23 +138,9 @@ public class ComprobantesController : ControllerBase
     {
         try
         {
-            DateTime? desde = null;
-            DateTime? hasta = null;
-
-            if (fechaDesde.HasValue)
-            {
-                desde = fechaDesde.Value.Date;
-                hasta = fechaHasta.HasValue
-                    ? fechaHasta.Value.Date.AddDays(1).AddSeconds(-1)
-                    : fechaDesde.Value.Date.AddDays(1).AddSeconds(-1);
-            }
-
+            var (desde, hasta) = NormalizarFechas(fechaDesde, fechaHasta);
             var comprobantes = await _comprobanteService.GetByDocUsuarioAndFechasAsync(rucEmpresa, usuarioId, desde, hasta);
-
-            if (comprobantes == null || !comprobantes.Any())
-                return NotFound(new { mensaje = $"No se encontraron comprobantes para el usuario {usuarioId}." });
-
-            return Ok(comprobantes);
+            return Ok(comprobantes ?? []);
         }
         catch (Exception ex)
         {
@@ -215,20 +153,20 @@ public class ComprobantesController : ControllerBase
         }
     }
 
-    //Campos de la tabla comrpobantes por Ruc
     [HttpGet("listado/ruc/{ruc}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetListadoByRuc(string ruc, [FromQuery] DateTime? fechaDesde, [FromQuery] DateTime? fechaHasta, [FromQuery] int? limit = null)
+    public async Task<IActionResult> GetListadoByRuc(
+        string ruc,
+        [FromQuery] DateTime? fechaDesde,
+        [FromQuery] DateTime? fechaHasta,
+        [FromQuery] int? limit = null)
     {
         try
         {
             var (desde, hasta) = NormalizarFechas(fechaDesde, fechaHasta);
             var result = await _comprobanteService.GetListadoByRucAndFechasAsync(ruc, desde, hasta, limit);
-            if (!result.Any())
-                return NotFound(new { mensaje = $"No se encontraron comprobantes para el RUC '{ruc}'." });
-            return Ok(result);
+            return Ok(result ?? Enumerable.Empty<object>());
         }
         catch (Exception ex)
         {
@@ -241,20 +179,21 @@ public class ComprobantesController : ControllerBase
         }
     }
 
-    //Campos de la tabla comrpobantes por Sucursal
     [HttpGet("listado/sucursal/{sucursalId}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)] // solo si sucursal no existe
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetListadoBySucursal(int sucursalId, [FromQuery] DateTime? fechaDesde, [FromQuery] DateTime? fechaHasta, [FromQuery] int? limit = null)
+    public async Task<IActionResult> GetListadoBySucursal(
+        int sucursalId,
+        [FromQuery] DateTime? fechaDesde,
+        [FromQuery] DateTime? fechaHasta,
+        [FromQuery] int? limit = null)
     {
         try
         {
             var (desde, hasta) = NormalizarFechas(fechaDesde, fechaHasta);
             var result = await _comprobanteService.GetListadoBySucursalAndFechasAsync(sucursalId, desde, hasta, limit);
-            if (!result.Any())
-                return NotFound(new { mensaje = $"No se encontraron comprobantes para la sucursal {sucursalId}." });
-            return Ok(result);
+            return Ok(result ?? Enumerable.Empty<object>());
         }
         catch (KeyNotFoundException ex)
         {
@@ -272,20 +211,20 @@ public class ComprobantesController : ControllerBase
         }
     }
 
-    //Campos de la tabla comrpobantes por Ruc y Doc del cleinte
     [HttpGet("listado/empresa/{rucEmpresa}/cliente/{clienteNumDoc}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetListadoByCliente(string rucEmpresa, string clienteNumDoc, [FromQuery] DateTime? fechaDesde, [FromQuery] DateTime? fechaHasta)
+    public async Task<IActionResult> GetListadoByCliente(
+        string rucEmpresa,
+        string clienteNumDoc,
+        [FromQuery] DateTime? fechaDesde,
+        [FromQuery] DateTime? fechaHasta)
     {
         try
         {
             var (desde, hasta) = NormalizarFechas(fechaDesde, fechaHasta);
             var result = await _comprobanteService.GetListadoByDocClienteAndFechasAsync(rucEmpresa, clienteNumDoc, desde, hasta);
-            if (!result.Any())
-                return NotFound(new { mensaje = $"No se encontraron comprobantes para el cliente '{clienteNumDoc}'." });
-            return Ok(result);
+            return Ok(result ?? Enumerable.Empty<object>());
         }
         catch (Exception ex)
         {
@@ -298,20 +237,20 @@ public class ComprobantesController : ControllerBase
         }
     }
 
-    //Campos de la tabla comrpobantes por Ruc y IdUsuario del cleinte
     [HttpGet("listado/empresa/{rucEmpresa}/usuario/{usuarioId}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetListadoByUsuario(string rucEmpresa, int usuarioId, [FromQuery] DateTime? fechaDesde, [FromQuery] DateTime? fechaHasta)
+    public async Task<IActionResult> GetListadoByUsuario(
+        string rucEmpresa,
+        int usuarioId,
+        [FromQuery] DateTime? fechaDesde,
+        [FromQuery] DateTime? fechaHasta)
     {
         try
         {
             var (desde, hasta) = NormalizarFechas(fechaDesde, fechaHasta);
             var result = await _comprobanteService.GetListadoByDocUsuarioAndFechasAsync(rucEmpresa, usuarioId, desde, hasta);
-            if (!result.Any())
-                return NotFound(new { mensaje = $"No se encontraron comprobantes para el usuario {usuarioId}." });
-            return Ok(result);
+            return Ok(result ?? Enumerable.Empty<object>());
         }
         catch (Exception ex)
         {
@@ -324,10 +263,9 @@ public class ComprobantesController : ControllerBase
         }
     }
 
-    //Campos de la tabla comrpobantes de un cliente en una ucursal
     [HttpGet("listado/sucursal/{sucursalId}/cliente/{clienteNumDoc}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)] // solo si sucursal no existe
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetListadoByClienteAndSucursal(
         int sucursalId,
@@ -339,9 +277,7 @@ public class ComprobantesController : ControllerBase
         {
             var (desde, hasta) = NormalizarFechas(fechaDesde, fechaHasta);
             var result = await _comprobanteService.GetListadoByClienteAndSucursalAsync(sucursalId, clienteNumDoc, desde, hasta);
-            if (!result.Any())
-                return NotFound(new { mensaje = $"No se encontraron comprobantes para el cliente '{clienteNumDoc}' en la sucursal {sucursalId}." });
-            return Ok(result);
+            return Ok(result ?? Enumerable.Empty<object>());
         }
         catch (KeyNotFoundException ex)
         {
@@ -359,7 +295,6 @@ public class ComprobantesController : ControllerBase
         }
     }
 
-    //Solo detalles de un comprobante por su ComprobanteId
     [HttpGet("{id}/detalles")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -383,6 +318,9 @@ public class ComprobantesController : ControllerBase
             });
         }
     }
+
+    // resto de métodos sin cambios...
+    // (EnviarSunat, Generar, DescargarPdf, GetById, GetByRucSerieNumero, GetByEstado, ActualizarCorreoWhatsapp)
 
     private static (DateTime? desde, DateTime? hasta) NormalizarFechas(DateTime? fechaDesde, DateTime? fechaHasta)
     {

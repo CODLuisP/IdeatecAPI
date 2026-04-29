@@ -239,11 +239,10 @@ public class ReportesRepository : IReportesRepository
         DateTime fechaHasta,
         int? usuarioId)
     {
-        // Para año agrupamos por mes, para el resto por día
         var esAnio = periodo.ToLower() == "año";
 
-        var groupExpr  = esAnio ? "DATE_FORMAT(c.fechaEmision, '%Y-%m')" : "c.fechaEmision";
-        var labelExpr  = esAnio ? "DATE_FORMAT(c.fechaEmision, '%b')"    : "DAY(c.fechaEmision)";
+        var groupExpr = esAnio ? "DATE_FORMAT(c.fechaEmision, '%Y-%m')" : "c.fechaEmision";
+        var labelExpr = esAnio ? "DATE_FORMAT(c.fechaEmision, '%Y-%m')" : "DAY(c.fechaEmision)";
 
         var dp = new DynamicParameters(parametrosBase);
         dp.Add("Desde", fechaDesde);
@@ -255,47 +254,96 @@ public class ReportesRepository : IReportesRepository
                 {labelExpr} AS Etiqueta,
                 COALESCE(SUM(
                     CASE WHEN c.tipoMoneda = 'USD' THEN c.importeTotal * c.tipoCambio
-                         ELSE c.importeTotal END
+                        ELSE c.importeTotal END
                 ), 0) AS Ventas,
                 COALESCE(SUM(
                     CASE WHEN c.tipoMoneda = 'USD' THEN c.totalIGV * c.tipoCambio
-                         ELSE c.totalIGV END
+                        ELSE c.totalIGV END
                 ), 0) AS Igv
             FROM comprobante c
             WHERE {whereBase}
-              AND {whereEstados}
-              AND c.tipoComprobante IN ('01','03')
-              AND c.fechaEmision >= @Desde
-              AND c.fechaEmision <= @Hasta
-              {whereUsuario}
+            AND {whereEstados}
+            AND c.tipoComprobante IN ('01','03')
+            AND c.fechaEmision >= @Desde
+            AND c.fechaEmision <= @Hasta
+            {whereUsuario}
             GROUP BY {groupExpr}
             ORDER BY {groupExpr} ASC;";
 
         var raw = (await _connection.QueryAsync<GraficoBarraDto>(sql, dp, _transaction)).ToList();
 
-        // Para semana: convertir número de día a nombre corto
-        if (periodo.ToLower() == "semana")
-            raw = CompletarDiasSemana(raw, fechaDesde, fechaHasta);
-
-        return raw;
+        return periodo.ToLower() switch
+        {
+            "semana"        => CompletarDiasSemana(raw, fechaDesde, fechaHasta),
+            "mes"           => CompletarDiasMes(raw, fechaDesde, fechaHasta),
+            "personalizado" => CompletarDiasMes(raw, fechaDesde, fechaHasta),
+            "año"           => CompletarMesesAnio(raw, fechaDesde, fechaHasta),
+            _               => raw, // hoy — solo 1 punto
+        };
     }
 
-    // Rellena días sin ventas en el rango semana/mes/personalizado
+    // ── Semana: Lun-Dom con nombres ───────────────────────────────────────────────
     private static List<GraficoBarraDto> CompletarDiasSemana(
         List<GraficoBarraDto> raw, DateTime desde, DateTime hasta)
     {
         var diasSemana = new[] { "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom" };
-        var resultado = new List<GraficoBarraDto>();
+        var resultado  = new List<GraficoBarraDto>();
 
         for (var d = desde; d <= hasta; d = d.AddDays(1))
         {
             var etiqueta = diasSemana[(int)d.DayOfWeek == 0 ? 6 : (int)d.DayOfWeek - 1];
-            var existe = raw.FirstOrDefault(r => r.Etiqueta == d.Day.ToString());
+            var existe   = raw.FirstOrDefault(r => r.Etiqueta == d.Day.ToString());
             resultado.Add(new GraficoBarraDto
             {
                 Etiqueta = etiqueta,
                 Ventas   = existe?.Ventas ?? 0,
-                Igv      = existe?.Igv ?? 0,
+                Igv      = existe?.Igv    ?? 0,
+            });
+        }
+        return resultado;
+    }
+
+    // ── Mes / Personalizado: número de día con 0 donde no hay ventas ──────────────
+    private static List<GraficoBarraDto> CompletarDiasMes(
+        List<GraficoBarraDto> raw, DateTime desde, DateTime hasta)
+    {
+        var resultado = new List<GraficoBarraDto>();
+
+        for (var d = desde; d <= hasta; d = d.AddDays(1))
+        {
+            var etiqueta = d.Day.ToString();
+            var existe   = raw.FirstOrDefault(r => r.Etiqueta == etiqueta);
+            resultado.Add(new GraficoBarraDto
+            {
+                Etiqueta = etiqueta,
+                Ventas   = existe?.Ventas ?? 0,
+                Igv      = existe?.Igv    ?? 0,
+            });
+        }
+        return resultado;
+    }
+
+    // ── Año: Ene→mes actual con nombres cortos y 0 donde no hay ventas ────────────
+    private static List<GraficoBarraDto> CompletarMesesAnio(
+        List<GraficoBarraDto> raw, DateTime desde, DateTime hasta)
+    {
+        var nombresMes = new[] { "Ene", "Feb", "Mar", "Abr", "May", "Jun",
+                                "Jul", "Ago", "Sep", "Oct", "Nov", "Dic" };
+        var resultado  = new List<GraficoBarraDto>();
+
+        for (var m = new DateTime(desde.Year, desde.Month, 1);
+            m <= new DateTime(hasta.Year, hasta.Month, 1);
+            m = m.AddMonths(1))
+        {
+            // La clave del raw es 'YYYY-MM' (ej: "2026-04")
+            var clave    = m.ToString("yyyy-MM");
+            var etiqueta = nombresMes[m.Month - 1];
+            var existe   = raw.FirstOrDefault(r => r.Etiqueta == clave);
+            resultado.Add(new GraficoBarraDto
+            {
+                Etiqueta = etiqueta,
+                Ventas   = existe?.Ventas ?? 0,
+                Igv      = existe?.Igv    ?? 0,
             });
         }
         return resultado;

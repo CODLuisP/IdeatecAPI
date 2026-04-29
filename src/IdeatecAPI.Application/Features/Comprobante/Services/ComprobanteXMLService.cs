@@ -664,14 +664,40 @@ public class ComprobanteService : IComprobanteService
         );
 
         // 8. Enviar a SUNAT
-        var sunatResponse = await _sunatSender.SendNoteAsync(
-            xmlFirmadoBytes,
-            nombreArchivo,
-            empresa.Ruc,
-            empresa.SolUsuario!,
-            empresa.SolClave!,
-            empresa.Environment
-        );
+        SunatResponse sunatResponse;
+        try
+        {
+            sunatResponse = await _sunatSender.SendNoteAsync(
+                xmlFirmadoBytes,
+                nombreArchivo,
+                empresa.Ruc,
+                empresa.SolUsuario!,
+                empresa.SolClave!,
+                empresa.Environment
+            );
+        }
+        catch (HttpRequestException ex)
+        {
+            await _unitOfWork.Comprobantes.UpdateEstadoSunatAsync(
+                comprobanteId,
+                "PENDIENTE",
+                null,
+                $"Error de conexión con SUNAT: {ex.Message}",
+                xmlFirmadoString,
+                null
+            );
+
+            return new ComprobanteResponse
+            {
+                Exitoso = false,
+                Mensaje = "No se pudo conectar con SUNAT. El comprobante quedó como PENDIENTE para reenvío.",
+                ComprobanteId = comprobanteId,
+                EstadoSunat = "PENDIENTE",
+                CodigoRespuesta = null,
+                MensajeRespuesta = ex.Message,
+                CdrBase64 = null
+            };
+        }
 
         // 9. Guardar CDR
         if (!string.IsNullOrEmpty(sunatResponse.CdrBase64))

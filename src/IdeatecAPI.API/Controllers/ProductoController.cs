@@ -21,18 +21,13 @@ public class ProductoController : ControllerBase
 
     [HttpGet("{sucursalId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetAllProductosAsync(int sucursalId)
     {
         try
         {
             var productos = await _productoService.GetAllProductosAsync(sucursalId);
-
-            if (productos == null || !productos.Any())
-                return NotFound(new { mensaje = $"No se encontraron productos para la sucursal con ID {sucursalId}." });
-
-            return Ok(productos);
+            return Ok(productos ?? []);
         }
         catch (Exception ex)
         {
@@ -47,18 +42,13 @@ public class ProductoController : ControllerBase
 
     [HttpGet("base/{empresaRuc}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetAllProductosBaseRucAsync(string empresaRuc)
     {
         try
         {
             var productos = await _productoService.GetAllProductosBaseRucAsync(empresaRuc);
-
-            if (productos == null || !productos.Any())
-                return NotFound(new { mensaje = $"No se encontraron productos para el RUC '{empresaRuc}'." });
-
-            return Ok(productos);
+            return Ok(productos ?? []);
         }
         catch (Exception ex)
         {
@@ -73,18 +63,13 @@ public class ProductoController : ControllerBase
 
     [HttpGet("disponibles/{sucursalId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetProductosRucDisponiblesAsync(int sucursalId)
     {
         try
         {
             var productos = await _productoService.GetProductosRucDisponiblesAsync(sucursalId);
-
-            if (productos == null || !productos.Any())
-                return NotFound(new { mensaje = "No hay productos disponibles para agregar a esta sucursal." });
-
-            return Ok(productos);
+            return Ok(productos ?? []);
         }
         catch (Exception ex)
         {
@@ -389,18 +374,13 @@ public class ProductoController : ControllerBase
 
     [HttpGet("{empresaRuc}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetAllProductosRucAsync(string empresaRuc)
     {
         try
         {
             var productos = await _productoService.GetAllProductosRucAsync(empresaRuc);
-
-            if (productos == null || !productos.Any())
-                return NotFound(new { mensaje = $"No se encontraron productos para el RUC '{empresaRuc}'." });
-
-            return Ok(productos);
+            return Ok(productos ?? []);
         }
         catch (Exception ex)
         {
