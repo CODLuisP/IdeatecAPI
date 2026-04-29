@@ -531,6 +531,20 @@ public async Task<IEnumerable<Comprobante>> GetByRucAndFechasAsync(string ruc, D
         );
     }
 
+    public async Task<Comprobante?> GetByComprobanteUnicoAsync(string ruc, string serie, int numero)
+    {
+        var sql = BaseSelect + @"
+        WHERE empresaRuc  = @Ruc
+        AND serie       = @Serie
+        AND correlativo = @Numero";
+
+        return await _connection.QueryFirstOrDefaultAsync<Comprobante>(
+            sql,
+            new { Ruc = ruc, Serie = serie, Numero = numero },
+            _transaction
+        );
+    }
+
     private const string BaseSelect = @"
     SELECT 
         comprobanteID           AS ComprobanteId,
