@@ -20,21 +20,19 @@ public class DashboardRepository : IDashboardRepository
 
     public async Task<DashboardResponseDto> GetDashboardPorEmpresaAsync(
         string ruc,
-        DateTime? desde,
-        DateTime? hasta,
+        DateTime? fecha,
         int limite)
     {
         return await CalcularDashboard(
             whereBase: "c.empresaRuc = @Ruc",
             parametrosBase: new { Ruc = ruc },
-            desde, hasta, limite
+            fecha, limite
         );
     }
 
     public async Task<DashboardResponseDto> GetDashboardPorSucursalAsync(
         int sucursalId,
-        DateTime? desde,
-        DateTime? hasta,
+        DateTime? fecha,
         int limite)
     {
         var sqlSucursal = @"
@@ -55,49 +53,38 @@ public class DashboardRepository : IDashboardRepository
         return await CalcularDashboard(
             whereBase: "c.empresaRuc = @Ruc AND c.establecimientoAnexo = @CodEstablecimiento",
             parametrosBase: new { Ruc = sucursal.Ruc, CodEstablecimiento = sucursal.CodEstablecimiento },
-            desde, hasta, limite
+            fecha, limite
         );
     }
 
     private async Task<DashboardResponseDto> CalcularDashboard(
         string whereBase,
         object parametrosBase,
-        DateTime? desde,
-        DateTime? hasta,
+        DateTime? fecha,
         int limite)
     {
         var estadosExcluidos = string.Join("','", EstadosExcluidos);
         var whereEstados = $"c.estadoSunat NOT IN ('{estadosExcluidos}')";
 
-        var hoy = DateTime.Today;
+        // Si no se pasa fecha, se usa hoy
+        var hoy = fecha.HasValue ? fecha.Value.Date : DateTime.Today;
         var hace7Dias = hoy.AddDays(-6);
 
-        // ── Parámetros para ventas del día ──
+        // ── Parámetros ventas del día ──
         var dpHoy = new DynamicParameters(parametrosBase);
         dpHoy.Add("Hoy", hoy);
 
-        // ── Parámetros para conteos con rango ──
-        var dpRango = new DynamicParameters(parametrosBase);
-        dpRango.Add("Desde", desde.HasValue ? desde.Value.Date : (DateTime?)null);
-        dpRango.Add("Hasta", hasta.HasValue ? hasta.Value.Date.AddDays(1).AddTicks(-1) : (DateTime?)null);
-
-        // ── Parámetros para rendimiento (siempre últimos 7 días) ──
+        // ── Parámetros rendimiento (7 días hacia atrás desde `hoy`) ──
         var dpRendimiento = new DynamicParameters(parametrosBase);
         dpRendimiento.Add("Hace7Dias", hace7Dias);
         dpRendimiento.Add("Hoy", hoy);
 
-        // ── Parámetros para recientes ──
+        // ── Parámetros recientes ──
         var dpRecientes = new DynamicParameters(parametrosBase);
+        dpRecientes.Add("Hoy", hoy);
         dpRecientes.Add("Limite", limite);
 
-        // Filtro de rango de fechas para conteos
-        var whereRango = whereEstados;
-        if (desde.HasValue)
-            whereRango += " AND c.fechaEmision >= @Desde";
-        if (hasta.HasValue)
-            whereRango += " AND c.fechaEmision <= @Hasta";
-
-        // ── Ventas del día (siempre hoy) ──
+        // ── Ventas del día ──
         var sqlVentasDelDia = $@"
             SELECT COALESCE(SUM(
                 CASE WHEN c.tipoMoneda = 'USD' THEN c.importeTotal * c.tipoCambio
@@ -112,43 +99,47 @@ public class DashboardRepository : IDashboardRepository
         var ventasDelDia = await _connection.ExecuteScalarAsync<decimal>(
             sqlVentasDelDia, dpHoy, _transaction);
 
-        // ── Facturas emitidas ──
+        // ── Facturas emitidas del día ──
         var sqlFacturas = $@"
             SELECT COUNT(*) FROM comprobante c
-            WHERE {whereBase} AND {whereRango}
-              AND c.tipoComprobante = '01';";
+            WHERE {whereBase} AND {whereEstados}
+              AND c.tipoComprobante = '01'
+              AND c.fechaEmision = @Hoy;";
 
         var facturasEmitidas = await _connection.ExecuteScalarAsync<int>(
-            sqlFacturas, dpRango, _transaction);
+            sqlFacturas, dpHoy, _transaction);
 
-        // ── Boletas emitidas ──
+        // ── Boletas emitidas del día ──
         var sqlBoletas = $@"
             SELECT COUNT(*) FROM comprobante c
-            WHERE {whereBase} AND {whereRango}
-              AND c.tipoComprobante = '03';";
+            WHERE {whereBase} AND {whereEstados}
+              AND c.tipoComprobante = '03'
+              AND c.fechaEmision = @Hoy;";
 
         var boletasEmitidas = await _connection.ExecuteScalarAsync<int>(
-            sqlBoletas, dpRango, _transaction);
+            sqlBoletas, dpHoy, _transaction);
 
-        // ── Notas de crédito ──
+        // ── Notas de crédito del día ──
         var sqlNC = $@"
             SELECT COUNT(*) FROM comprobante c
-            WHERE {whereBase} AND {whereRango}
-              AND c.tipoComprobante = '07';";
+            WHERE {whereBase} AND {whereEstados}
+              AND c.tipoComprobante = '07'
+              AND c.fechaEmision = @Hoy;";
 
         var notasCreditoEmitidas = await _connection.ExecuteScalarAsync<int>(
-            sqlNC, dpRango, _transaction);
+            sqlNC, dpHoy, _transaction);
 
-        // ── Notas de débito ──
+        // ── Notas de débito del día ──
         var sqlND = $@"
             SELECT COUNT(*) FROM comprobante c
-            WHERE {whereBase} AND {whereRango}
-              AND c.tipoComprobante = '08';";
+            WHERE {whereBase} AND {whereEstados}
+              AND c.tipoComprobante = '08'
+              AND c.fechaEmision = @Hoy;";
 
         var notasDebitoEmitidas = await _connection.ExecuteScalarAsync<int>(
-            sqlND, dpRango, _transaction);
+            sqlND, dpHoy, _transaction);
 
-        // ── Rendimiento siempre últimos 7 días ──
+        // ── Rendimiento últimos 7 días desde `hoy` ──
         var sqlRendimiento = $@"
             SELECT
                 c.fechaEmision AS Fecha,
@@ -168,7 +159,7 @@ public class DashboardRepository : IDashboardRepository
         var rendimientoVentas = (await _connection.QueryAsync<RendimientoVentasDto>(
             sqlRendimiento, dpRendimiento, _transaction)).ToList();
 
-        // ── Comprobantes recientes ──
+        // ── Comprobantes recientes hasta `hoy` ──
         var sqlRecientes = $@"
             SELECT
                 c.comprobanteID    AS ComprobanteID,
@@ -181,6 +172,7 @@ public class DashboardRepository : IDashboardRepository
                 c.estadoSunat      AS EstadoSunat
             FROM comprobante c
             WHERE {whereBase} AND {whereEstados}
+              AND c.fechaEmision <= @Hoy
             ORDER BY c.fechaEmision DESC, c.horaEmision DESC
             LIMIT @Limite;";
 
@@ -189,12 +181,12 @@ public class DashboardRepository : IDashboardRepository
 
         return new DashboardResponseDto
         {
-            VentasDelDia         = ventasDelDia,
-            FacturasEmitidas     = facturasEmitidas,
-            BoletasEmitidas      = boletasEmitidas,
-            NotasCreditoEmitidas = notasCreditoEmitidas,
-            NotasDebitoEmitidas  = notasDebitoEmitidas,
-            RendimientoVentas    = rendimientoVentas,
+            VentasDelDia          = ventasDelDia,
+            FacturasEmitidas      = facturasEmitidas,
+            BoletasEmitidas       = boletasEmitidas,
+            NotasCreditoEmitidas  = notasCreditoEmitidas,
+            NotasDebitoEmitidas   = notasDebitoEmitidas,
+            RendimientoVentas     = rendimientoVentas,
             ComprobantesRecientes = comprobantesRecientes
         };
     }

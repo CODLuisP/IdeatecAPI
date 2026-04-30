@@ -7,14 +7,12 @@ public interface IDashboardService
 {
     Task<DashboardResponseDto> GetDashboardPorEmpresaAsync(
         string ruc,
-        DateTime? desde,
-        DateTime? hasta,
+        DateTime? fecha,
         int limite);
 
     Task<DashboardResponseDto> GetDashboardPorSucursalAsync(
         int sucursalId,
-        DateTime? desde,
-        DateTime? hasta,
+        DateTime? fecha,
         int limite);
 }
 
@@ -29,19 +27,17 @@ public class DashboardService : IDashboardService
 
     public async Task<DashboardResponseDto> GetDashboardPorEmpresaAsync(
         string ruc,
-        DateTime? desde,
-        DateTime? hasta,
+        DateTime? fecha,
         int limite)
     {
-        return await _unitOfWork.Dashboard.GetDashboardPorEmpresaAsync(ruc, desde, hasta, limite);
+        return await _unitOfWork.Dashboard.GetDashboardPorEmpresaAsync(ruc, fecha, limite);
     }
 
     public async Task<DashboardResponseDto> GetDashboardPorSucursalAsync(
         int sucursalId,
-        DateTime? desde,
-        DateTime? hasta,
+        DateTime? fecha,
         int limite)
     {
-        return await _unitOfWork.Dashboard.GetDashboardPorSucursalAsync(sucursalId, desde, hasta, limite);
+        return await _unitOfWork.Dashboard.GetDashboardPorSucursalAsync(sucursalId, fecha, limite);
     }
 }

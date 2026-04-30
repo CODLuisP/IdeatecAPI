@@ -6,13 +6,11 @@ public interface IDashboardRepository
 {
     Task<DashboardResponseDto> GetDashboardPorEmpresaAsync(
         string ruc,
-        DateTime? desde,
-        DateTime? hasta,
+        DateTime? fecha,
         int limite);
 
     Task<DashboardResponseDto> GetDashboardPorSucursalAsync(
         int sucursalId,
-        DateTime? desde,
-        DateTime? hasta,
+        DateTime? fecha,
         int limite);
 }
