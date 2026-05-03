@@ -1,5 +1,4 @@
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
-using IdeatecAPI.Application.Features.Comprobante.DTOs;
 using IdeatecAPI.Application.Features.Comprobante.Services;
 using IdeatecAPI.Application.Features.Empresas.DTOs;
 using QuestPDF.Fluent;
@@ -140,9 +139,8 @@ public class ComprobantePdfService : IComprobantePdfService
             if (!string.IsNullOrEmpty(empresa.Direccion))
                 col.Item().AlignCenter().Text(empresa.Direccion)
                     .FontSize(6).FontColor(ColorTextoSuave);
-
-            if (!string.IsNullOrEmpty(empresa.Telefono))
-                col.Item().AlignCenter().Text($"Telf: {empresa.Telefono}")
+            if (!string.IsNullOrEmpty(empresa.Email))
+                col.Item().AlignCenter().Text($"Email: {empresa.Email}")
                     .FontSize(6).FontColor(ColorTextoSuave);
 
             col.Item().Height(6);
@@ -166,12 +164,13 @@ public class ComprobantePdfService : IComprobantePdfService
             // 4. DATOS CLIENTE
             col.Item().PaddingTop(3).Column(cli =>
             {
-                TicketFila(cli, "Fecha", $"{c.FechaEmision:dd/MM/yyyy} {c.HoraEmision:HH:mm:ss}");
                 TicketFila(cli, "Cliente", c.ClienteRazonSocial ?? "-");
                 TicketFila(cli, ObtenerLabelTipoDoc(c.ClienteTipoDoc), c.ClienteNumDoc ?? "-");
-
                 if (!string.IsNullOrEmpty(c.ClienteDireccion))
                     TicketFila(cli, "Dir.", c.ClienteDireccion);
+                TicketFila(cli, "Fecha", $"{c.FechaEmision:dd/MM/yyyy} {c.HoraEmision:HH:mm:ss}");
+                if ((c.TipoPago?.ToLower() ?? "") is "credito" or "crédito")
+                    TicketFila(cli, "Fecha Vcto.", $"{c.FechaVencimiento:dd/MM/yyyy}");
 
                 if (c.TipoMoneda != "PEN" && c.TipoCambio.HasValue)
                     TicketFila(cli, "Moneda", $"{c.TipoMoneda} T.C. S/{c.TipoCambio:F3}");
@@ -203,7 +202,7 @@ public class ComprobantePdfService : IComprobantePdfService
                 });
 
                 void TH(IContainer tc, string txt) =>
-                    tc.Background(ColorAzulMarino).Padding(2).AlignCenter()
+                    tc.Background(ColorAzulMarino).Padding(2).AlignLeft()
                       .Text(txt).Bold().FontSize(6).FontColor(ColorBlanco);
 
                 table.Header(h =>
@@ -230,15 +229,15 @@ public class ComprobantePdfService : IComprobantePdfService
                     }
 
                     table.Cell().Element(tc => TD(tc, d.Codigo ?? "-"));
-                    table.Cell().Element(tc => TD(tc, d.Cantidad.ToString("F2"), right: true));
+                    table.Cell().Element(tc => TD(tc, d.Cantidad.ToString("F2")));
                     table.Cell().Element(tc =>
                     {
                         var desc = d.Descripcion ?? "-";
                         if (esGratuito) desc += " (GR)";
                         TD(tc, desc);
                     });
-                    table.Cell().Element(tc => TD(tc, (d.PrecioVenta ?? 0).ToString("F2"), right: true));
-                    table.Cell().Element(tc => TD(tc, (esGratuito ? 0 : d.TotalVentaItem ?? 0).ToString("F2"), right: true));
+                    table.Cell().Element(tc => TD(tc, (d.PrecioVenta ?? 0).ToString("F2")));
+                    table.Cell().Element(tc => TD(tc, (esGratuito ? 0 : d.TotalVentaItem ?? 0).ToString("F2")));
                 }
             });
 
@@ -333,13 +332,13 @@ public class ComprobantePdfService : IComprobantePdfService
 
             if (!esCredito)
             {
-                col.Item().Text("Tipo de Pago: CONTADO").Bold().FontSize(6).FontColor(ColorAzulMarino);
+                col.Item().Text("Tipo de Pago: Contado").Bold().FontSize(6).FontColor(ColorAzulMarino);
                 foreach (var p in pagos)
                     TicketFilaTotal(col, p.MedioPago ?? "Efectivo", FormatearMoneda(p.Monto ?? 0, moneda));
             }
             else if (tieneInicialYCuotas)
             {
-                col.Item().Text("Tipo de Pago: CRÉDITO CON INICIAL").Bold().FontSize(7).FontColor(ColorAzulMarino);
+                col.Item().Text("Tipo de Pago: Crédito con inicial").Bold().FontSize(7).FontColor(ColorAzulMarino);
                 foreach (var p in pagos)
                     TicketFilaTotal(col, $"Inicial ({p.MedioPago ?? "Efectivo"})", FormatearMoneda(p.Monto ?? 0, moneda));
 
@@ -349,7 +348,7 @@ public class ComprobantePdfService : IComprobantePdfService
             }
             else
             {
-                col.Item().Text("Tipo de Pago: CRÉDITO").Bold().FontSize(7).FontColor(ColorAzulMarino);
+                col.Item().Text("Tipo de Pago: Crédito").Bold().FontSize(7).FontColor(ColorAzulMarino);
                 TicketFilaTotal(col, "Monto Crédito", FormatearMoneda(c.MontoCredito ?? 0, moneda));
 
                 if (cuotas.Any())
@@ -398,7 +397,9 @@ public class ComprobantePdfService : IComprobantePdfService
                             empresa.LogoBase64.Contains(",")
                                 ? empresa.LogoBase64.Split(',')[1]
                                 : empresa.LogoBase64);
-                        row.ConstantItem(70).Padding(2).Image(logoBytes).FitArea();
+
+                        var (lw, lh) = ResolverTamanoLogo(logoBytes);
+                        row.ConstantItem(lw).Height(lh).Padding(2).AlignMiddle().Image(logoBytes).FitArea();
                     }
                     catch { row.ConstantItem(70); }
                 }
@@ -455,7 +456,7 @@ public class ComprobantePdfService : IComprobantePdfService
             // Cliente (lado izquierdo)
             row.RelativeItem(6).Column(rec =>
             {
-                BuildFilaDato(rec, "Señores", c.ClienteRazonSocial ?? "-");
+                BuildFilaDato(rec, "Cliente", c.ClienteRazonSocial ?? "-");
                 BuildFilaDato(rec, tipoDocLabel, c.ClienteNumDoc ?? "-");
 
                 if (!string.IsNullOrEmpty(c.ClienteDireccion))
@@ -463,6 +464,8 @@ public class ComprobantePdfService : IComprobantePdfService
                         $"{c.ClienteDireccion}, {c.ClienteDistrito} {c.ClienteProvincia} {c.ClienteDepartamento}".Trim());
 
                 BuildFilaDato(rec, "Fecha Emisión", $"{c.FechaEmision:dd/MM/yyyy} {c.HoraEmision:HH:mm:ss}");
+                if ((c.TipoPago?.ToLower() ?? "") is "credito" or "crédito")
+                    BuildFilaDato(rec, "Fecha Vencimiento", $"{c.FechaVencimiento:dd/MM/yyyy}");
 
                 if (c.TipoMoneda != "PEN" && c.TipoCambio.HasValue)
                     BuildFilaDato(rec, "Moneda", $"{c.TipoMoneda} (T.C. S/ {c.TipoCambio:F3})");
@@ -583,7 +586,7 @@ public class ComprobantePdfService : IComprobantePdfService
                         g.Item().Text("Guías de Remisión Enlazadas")
                             .Bold().FontSize(8).FontColor(ColorAzulMarino);
                         foreach (var guia in guias)
-                            g.Item().Text($"• [{ObtenerNombreGuia(guia.GuiaTipoDoc)}] {guia.GuiaNumeroCompleto}")
+                            g.Item().Text($"[{ObtenerNombreGuia(guia.GuiaTipoDoc)}] {guia.GuiaNumeroCompleto}")
                                 .FontSize(8);
                     });
             }
@@ -656,7 +659,7 @@ public class ComprobantePdfService : IComprobantePdfService
             });
 
             void TH(IContainer c, string txt) =>
-                c.Background(ColorAzulMarino).Padding(4).AlignCenter()
+                c.Background(ColorAzulMarino).Padding(4).AlignLeft()
                  .Text(txt).Bold().FontSize(8).FontColor(ColorBlanco);
 
             table.Header(h =>
@@ -685,7 +688,7 @@ public class ComprobantePdfService : IComprobantePdfService
                 }
 
                 table.Cell().Element(c => TD(c, d.Codigo ?? "-"));
-                table.Cell().Element(c => TD(c, d.Cantidad.ToString("F2"), right: true));
+                table.Cell().Element(c => TD(c, d.Cantidad.ToString("F2")));
                 table.Cell().Element(c => TD(c, d.UnidadMedida ?? "NIU"));
                 table.Cell().Element(c =>
                 {
@@ -693,9 +696,9 @@ public class ComprobantePdfService : IComprobantePdfService
                     if (esGratuito) desc += " (GRATUITO)";
                     TD(c, desc);
                 });
-                table.Cell().Element(c => TD(c, FormatearMoneda(d.PrecioUnitario, moneda), right: true));
-                table.Cell().Element(c => TD(c, FormatearMoneda(d.PrecioVenta ?? 0, moneda), right: true));
-                table.Cell().Element(c => TD(c, FormatearMoneda(esGratuito ? 0 : d.TotalVentaItem ?? 0, moneda), right: true));
+                table.Cell().Element(c => TD(c, FormatearMoneda(d.PrecioUnitario, moneda)));
+                table.Cell().Element(c => TD(c, FormatearMoneda(d.PrecioVenta ?? 0, moneda)));
+                table.Cell().Element(c => TD(c, FormatearMoneda(esGratuito ? 0 : d.TotalVentaItem ?? 0, moneda)));
             }
         });
     }
@@ -718,13 +721,13 @@ public class ComprobantePdfService : IComprobantePdfService
 
                     if (!esCredito)
                     {
-                        p.Item().Text("Tipo: CONTADO").Bold().FontSize(8);
+                        p.Item().Text("Tipo: Contado").Bold().FontSize(8);
                         foreach (var pago in pagos)
                             FilaPago(p, pago.MedioPago ?? "Efectivo", FormatearMoneda(pago.Monto ?? 0, moneda));
                     }
                     else if (tieneInicialYCuotas)
                     {
-                        p.Item().Text("Tipo: CRÉDITO CON INICIAL").Bold().FontSize(8);
+                        p.Item().Text("Tipo: Crédito con inicial").Bold().FontSize(8);
                         foreach (var pago in pagos)
                             FilaPago(p, $"Inicial ({pago.MedioPago ?? "Efectivo"})", FormatearMoneda(pago.Monto ?? 0, moneda));
 
@@ -734,7 +737,7 @@ public class ComprobantePdfService : IComprobantePdfService
                     }
                     else
                     {
-                        p.Item().Text("Tipo: CRÉDITO").Bold().FontSize(8);
+                        p.Item().Text("Tipo: Crédito").Bold().FontSize(8);
                         FilaPago(p, "Monto Crédito", FormatearMoneda(c.MontoCredito ?? 0, moneda));
 
                         if (cuotas.Any())
@@ -926,4 +929,42 @@ public class ComprobantePdfService : IComprobantePdfService
     
     private static float ResolverAnchoTicket(TamanoPdf tamano) =>
     tamano == TamanoPdf.Ticket58mm ? 165f : 227f;
+
+    private static (int w, int h) LeerDimensionesImagen(byte[] data)
+    {
+        // PNG: ancho y alto en bytes 16-23
+        if (data.Length > 24 && data[0] == 0x89 && data[1] == 0x50)
+        {
+            int w = (data[16] << 24) | (data[17] << 16) | (data[18] << 8) | data[19];
+            int h = (data[20] << 24) | (data[21] << 16) | (data[22] << 8) | data[23];
+            return (w, h);
+        }
+        // JPEG: buscar marcador SOF0 o SOF2
+        if (data.Length > 4 && data[0] == 0xFF && data[1] == 0xD8)
+        {
+            for (int i = 0; i < data.Length - 8; i++)
+            {
+                if (data[i] == 0xFF && data[i + 1] is 0xC0 or 0xC2)
+                {
+                    int h = (data[i + 5] << 8) | data[i + 6];
+                    int w = (data[i + 7] << 8) | data[i + 8];
+                    return (w, h);
+                }
+            }
+        }
+        return (400, 400); // fallback: asume cuadrado
+    }
+
+    private static (float w, float h) ResolverTamanoLogo(byte[] logoBytes)
+    {
+        var (pw, ph) = LeerDimensionesImagen(logoBytes);
+        float ratio  = (float)pw / ph;
+
+        return ratio switch
+        {
+            > 1.5f  => (110f, 55f),  // Rectangular horizontal (ej. 800x400)
+            < 0.75f => (45f,  80f),  // Vertical               (ej. 400x600)
+            _       => (60f,  60f)   // Cuadrado               (ej. 400x400)
+        };
+    }
 }

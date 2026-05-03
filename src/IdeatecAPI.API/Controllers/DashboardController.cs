@@ -17,21 +17,20 @@ public class DashboardController : ControllerBase
         _dashboardService = dashboardService;
         _logger = logger;
     }
-
-    // GET api/dashboard/empresa/{ruc}?desde=2025-01-01&hasta=2025-01-31&limite=10
+    
+    // GET api/dashboard/empresa/{ruc}?fecha=2025-04-28&limite=10
     [HttpGet("empresa/{ruc}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetDashboardPorEmpresa(
         string ruc,
-        [FromQuery] DateTime? desde,
-        [FromQuery] DateTime? hasta,
+        [FromQuery] DateTime? fecha,
         [FromQuery] int limite = 10)
     {
         try
         {
-            var result = await _dashboardService.GetDashboardPorEmpresaAsync(ruc, desde, hasta, limite);
+            var result = await _dashboardService.GetDashboardPorEmpresaAsync(ruc, fecha, limite);
             return Ok(result);
         }
         catch (Exception ex)
@@ -45,20 +44,19 @@ public class DashboardController : ControllerBase
         }
     }
 
-    // GET api/dashboard/sucursal/{sucursalId}?desde=2025-01-01&hasta=2025-01-31&limite=10
+    // GET api/dashboard/sucursal/{sucursalId}?fecha=2025-04-28&limite=10
     [HttpGet("sucursal/{sucursalId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetDashboardPorSucursal(
         int sucursalId,
-        [FromQuery] DateTime? desde,
-        [FromQuery] DateTime? hasta,
+        [FromQuery] DateTime? fecha,
         [FromQuery] int limite = 10)
     {
         try
         {
-            var result = await _dashboardService.GetDashboardPorSucursalAsync(sucursalId, desde, hasta, limite);
+            var result = await _dashboardService.GetDashboardPorSucursalAsync(sucursalId, fecha, limite);
             return Ok(result);
         }
         catch (KeyNotFoundException ex)
