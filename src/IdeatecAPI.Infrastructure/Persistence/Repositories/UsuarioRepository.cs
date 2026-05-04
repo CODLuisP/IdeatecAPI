@@ -138,7 +138,7 @@ public class UsuarioRepository : DapperRepository<Usuario>, IUsuarioRepository
 
         if (!string.IsNullOrEmpty(sucursalID))
             sql += " AND u.sucursalID = @SucursalID AND u.rol != 'superadmin'";
-        
+
         if (usuarioId.HasValue)
             sql += " AND u.usuarioID = @UsuarioId";
 
@@ -150,14 +150,15 @@ public class UsuarioRepository : DapperRepository<Usuario>, IUsuarioRepository
     public new async Task<bool> UpdateAsync(Usuario usuario)
     {
         var sql = @"
-            UPDATE usuario SET
-                username            = @Username,
-                email               = @Email,
-                sucursalID          = @SucursalID,
-                rol                 = @Rol,
-                ruc                 = @Ruc,
-                fechaActualizacion  = @FechaActualizacion
-            WHERE usuarioID = @UsuarioID";
+        UPDATE usuario SET
+            username            = @Username,
+            email               = @Email,
+            sucursalID          = @SucursalID,
+            rol                 = @Rol,
+            ruc                 = @Ruc,
+            password            = @Password,      -- ✅ AÑADIR ESTO
+            fechaActualizacion  = @FechaActualizacion
+        WHERE usuarioID = @UsuarioID";
 
         usuario.FechaActualizacion = DateTime.UtcNow;
 
@@ -165,7 +166,6 @@ public class UsuarioRepository : DapperRepository<Usuario>, IUsuarioRepository
 
         return rowsAffected > 0;
     }
-
     public new async Task<bool> DeleteAsync(int id)
     {
         var sql = "DELETE FROM usuario WHERE usuarioID = @Id";
@@ -174,17 +174,17 @@ public class UsuarioRepository : DapperRepository<Usuario>, IUsuarioRepository
     }
 
     public async Task<bool> ExistsAsync(string username, string? email = null, string? ruc = null, int? excludeId = null)
-{
-    var sql = @"SELECT COUNT(1) FROM usuario WHERE username = @Username";
+    {
+        var sql = @"SELECT COUNT(1) FROM usuario WHERE username = @Username";
 
-    if (excludeId.HasValue)
-        sql += " AND usuarioID != @ExcludeId";
+        if (excludeId.HasValue)
+            sql += " AND usuarioID != @ExcludeId";
 
-    var count = await _connection.ExecuteScalarAsync<int>(
-        sql, new { Username = username, ExcludeId = excludeId }, _transaction);
+        var count = await _connection.ExecuteScalarAsync<int>(
+            sql, new { Username = username, ExcludeId = excludeId }, _transaction);
 
-    return count > 0;
-}
+        return count > 0;
+    }
 
     // ── Recuperación de contraseña ─────────────────────────────────────────
 

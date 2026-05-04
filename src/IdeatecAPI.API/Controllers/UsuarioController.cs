@@ -134,6 +134,9 @@ public class UsuarioController : ControllerBase
         if (!string.IsNullOrEmpty(dto.Rol))
             usuarioExistente.Rol = dto.Rol;
 
+        if (!string.IsNullOrEmpty(dto.NuevaContrasena))
+            usuarioExistente.Password = BCrypt.Net.BCrypt.HashPassword(dto.NuevaContrasena);
+
         var actualizado = await _unitOfWork.Usuarios.UpdateAsync(usuarioExistente);
         if (!actualizado)
             return BadRequest(new { success = false, message = "Error al actualizar" });
@@ -233,18 +236,18 @@ public class UsuarioController : ControllerBase
         var resultado = usuarios.Select(u => new UsuarioPorRucDto
         {
             UsuarioID = u.UsuarioID,
-            Username  = u.Username,
-            Rol       = u.Rol,
+            Username = u.Username,
+            Rol = u.Rol,
             SucursalID = u.SucursalID,
-            Email     = u.Email,
-            Ruc       = u.Ruc
+            Email = u.Email,
+            Ruc = u.Ruc
         });
 
         return Ok(new
         {
             success = true,
-            data    = resultado,
-            total   = resultado.Count()
+            data = resultado,
+            total = resultado.Count()
         });
     }
 }
