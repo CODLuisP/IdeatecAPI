@@ -122,8 +122,28 @@ public class ComprobantePdfService : IComprobantePdfService
                             ? empresa.LogoBase64.Split(',')[1]
                             : empresa.LogoBase64);
 
-                    col.Item().AlignCenter().Width(35).Height(35).Image(logoBytes).FitArea();
-                    col.Item().PaddingTop(2);
+                    var (pw, ph) = LeerDimensionesImagen(logoBytes);
+                    float ratio = (float)pw / ph;
+
+                    const float maxAlto  = 28f;
+                    const float maxAncho = 55f;
+
+                    float alto  = maxAlto;
+                    float ancho = alto * ratio;
+
+                    if (ancho > maxAncho)
+                    {
+                        ancho = maxAncho;
+                        alto  = ancho / ratio;
+                    }
+
+                    col.Item().AlignCenter()
+                        .Width(ancho)
+                        .Height(alto)
+                        .Image(logoBytes)
+                        .FitArea();
+
+                    col.Item().PaddingTop(3);
                 }
                 catch { }
             }
@@ -381,8 +401,7 @@ public class ComprobantePdfService : IComprobantePdfService
     // ════════════════════════════════════════════════════════════════════════
     // LAYOUT A4 / CARTA / MEDIA CARTA
     // ════════════════════════════════════════════════════════════════════════
-    private static void BuildHeader(IContainer container,
-        Domain.Entities.Comprobante c, EmpresaDto empresa)
+    private static void BuildHeader(IContainer container, Domain.Entities.Comprobante c, EmpresaDto empresa)
     {
         container.Column(col =>
         {
@@ -399,7 +418,13 @@ public class ComprobantePdfService : IComprobantePdfService
                                 : empresa.LogoBase64);
 
                         var (lw, lh) = ResolverTamanoLogo(logoBytes);
-                        row.ConstantItem(lw).Height(lh).Padding(2).AlignMiddle().Image(logoBytes).FitArea();
+                        row.ConstantItem(lw)
+                            .AlignMiddle()
+                            .AlignCenter() 
+                            .Padding(4)
+                            .Height(lh)
+                            .Image(logoBytes)
+                            .FitArea();
                     }
                     catch { row.ConstantItem(70); }
                 }
@@ -436,6 +461,7 @@ public class ComprobantePdfService : IComprobantePdfService
                         .Bold().FontSize(9).FontColor(ColorAzulMarino);
                 });
             });
+
             col.Item().PaddingTop(4).LineHorizontal(1).LineColor(ColorAzulMarino);
             col.Item().Height(6);
         });

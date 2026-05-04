@@ -22,7 +22,7 @@ public class SucursalController : ControllerBase
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    [AllowAnonymous] 
+    [AllowAnonymous]
     public async Task<IActionResult> ObtenerTodos([FromQuery] string? ruc = null)
     {
         try
@@ -169,30 +169,76 @@ public class SucursalController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     [Authorize(Roles = "admin,superadmin")]
-    public async Task<IActionResult> Eliminar(int sucursalId)
+    public async Task<IActionResult> Inhabilitar(int sucursalId)
     {
         try
         {
-            var resultado = await _sucursalService.EliminarSucursalAsync(sucursalId);
+            var resultado = await _sucursalService.InhabilitarSucursalAsync(sucursalId);
 
             if (!resultado)
                 return NotFound(new { mensaje = $"No se encontró la sucursal con ID {sucursalId}." });
 
-            return Ok(new { mensaje = "Sucursal eliminada correctamente." });
+            return Ok(new { mensaje = "Sucursal inhabilitada correctamente." });
         }
         catch (KeyNotFoundException ex)
         {
-            _logger.LogWarning("Sucursal no encontrada al eliminar: ID {SucursalId}", sucursalId);
+            _logger.LogWarning("Sucursal no encontrada al inhabilitar: ID {SucursalId}", sucursalId);
             return NotFound(new { mensaje = ex.Message });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error al eliminar sucursal con ID {SucursalId}", sucursalId);
+            _logger.LogError(ex, "Error al inhabilitar sucursal con ID {SucursalId}", sucursalId);
             return StatusCode(StatusCodes.Status500InternalServerError, new
             {
-                mensaje = "Ocurrió un error al eliminar la sucursal.",
+                mensaje = "Ocurrió un error al inhabilitar la sucursal.",
                 detalle = ex.Message
             });
+        }
+    }
+
+    [HttpGet("todas")]
+    [Authorize(Roles = "superadmin")]
+    public async Task<IActionResult> ObtenerTodas()
+    {
+        try
+        {
+            var ruc = User.FindFirst("ruc")?.Value;
+
+            if (string.IsNullOrEmpty(ruc))
+                return BadRequest(new { mensaje = "RUC es requerido" });
+
+            var resultado = await _sucursalService.GetByRucTodasAsync(ruc);
+            return Ok(resultado);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener todas las sucursales");
+            return StatusCode(500, new { mensaje = "Error al obtener las sucursales.", detalle = ex.Message });
+        }
+    }
+
+    [HttpPost("{sucursalId:int}/habilitar")]
+    [Authorize(Roles = "superadmin")]
+    public async Task<IActionResult> Habilitar(int sucursalId)
+    {
+        try
+        {
+            var resultado = await _sucursalService.HabilitarSucursalAsync(sucursalId);
+
+            if (!resultado)
+                return NotFound(new { mensaje = $"No se encontró la sucursal con ID {sucursalId}." });
+
+            return Ok(new { mensaje = "Sucursal habilitada correctamente." });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            _logger.LogWarning("Sucursal no encontrada al habilitar: ID {SucursalId}", sucursalId);
+            return NotFound(new { mensaje = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al habilitar sucursal con ID {SucursalId}", sucursalId);
+            return StatusCode(500, new { mensaje = "Ocurrió un error al habilitar la sucursal.", detalle = ex.Message });
         }
     }
 }
