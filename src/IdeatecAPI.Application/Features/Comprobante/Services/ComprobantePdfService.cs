@@ -491,7 +491,7 @@ public class ComprobantePdfService : IComprobantePdfService
                 });
             });
 
-            col.Item().Height(3);
+            col.Item().Height(6);
         });
     }
 
