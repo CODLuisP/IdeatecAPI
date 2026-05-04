@@ -18,4 +18,5 @@ public class UpdateUsuarioDto
 
     [StringLength(20)]
     public string? Rol { get; set; }
+    public string? NuevaContrasena { get; set; }
 }
