@@ -250,4 +250,35 @@ public class UsuarioController : ControllerBase
             total = resultado.Count()
         });
     }
+
+    /// POST: api/usuario/register-completo
+    /// </summary>
+    [HttpPost("register-completo")]
+    [AllowAnonymous]
+    public async Task<IActionResult> RegisterCompleto([FromBody] RegisterEmpresaCompletoDto dto)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(new
+            {
+                success = false,
+                message = "Datos inválidos",
+                errors = ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage)
+            });
+        }
+
+        var result = await _usuarioService.RegisterEmpresaCompletoAsync(dto);
+
+        if (!result.Success)
+            return BadRequest(new { success = false, message = result.Message });
+
+        return Ok(new
+        {
+            success = true,
+            message = result.Message,
+            user = result.User
+        });
+    }
 }
