@@ -51,7 +51,10 @@ public class EmpresaRepository : DapperRepository<Empresa>, IEmpresaRepository
         @CertificadoPem, @CertificadoPassword, @ClientId, @ClientSecret, @Plan, @Environment)";
 
         await _connection.ExecuteAsync(sql, empresa, _transaction);
-        return await _connection.ExecuteScalarAsync<int>("SELECT LAST_INSERT_ID();", _transaction);
+        return await _connection.ExecuteScalarAsync<int>(
+        "SELECT LAST_INSERT_ID();", 
+        param: null, 
+        transaction: _transaction);
     }
 
     public async Task UpdateEmpresaAsync(Empresa empresa)
