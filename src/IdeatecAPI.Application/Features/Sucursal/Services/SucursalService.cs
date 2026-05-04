@@ -10,8 +10,10 @@ public interface ISucursalService
     Task<IEnumerable<ObtenerSucursalDTO>> GetByRucSucursalAsync(string empresaRuc, string? sucursalID = null);
     Task<ObtenerSucursalDTO> RegistrarSucursalAsync(AgregarSucursalDTO agregarSucursalDTO);
     Task<bool> EditarSucursalAsync(EditarSucursalDTO editarSucursalDTO);
-    Task<bool> EliminarSucursalAsync(int SucursalId);
+    Task<bool> InhabilitarSucursalAsync(int SucursalId);
     Task<bool> EditarInfoSucursalAsync(int sucursalId, string? nombre, string? direccion);
+    Task<IEnumerable<ObtenerSucursalDTO>> GetByRucTodasAsync(string empresaRuc);
+    Task<bool> HabilitarSucursalAsync(int sucursalId);
 }
 
 public class SucursalService : ISucursalService
@@ -39,6 +41,52 @@ public class SucursalService : ISucursalService
     {
         var sucursales = await _unitOfWork.Sucursal.GetByRucSucursalAsync(empresaRuc, sucursalID);
         return sucursales.Select(MapToDTO);
+    }
+
+    public async Task<IEnumerable<ObtenerSucursalDTO>> GetByRucTodasAsync(string empresaRuc)
+    {
+        var sucursales = await _unitOfWork.Sucursal.GetByRucTodasAsync(empresaRuc);
+        return sucursales.Select(MapToDTO);
+    }
+
+    public async Task<bool> InhabilitarSucursalAsync(int sucursalId)
+    {
+
+        var sucursal = await _unitOfWork.Sucursal.GetByIdSinFiltroAsync(sucursalId)
+            ?? throw new KeyNotFoundException($"Sucursal con ID {sucursalId} no encontrada.");
+
+        _unitOfWork.BeginTransaction();
+        try
+        {
+            await _unitOfWork.Sucursal.InhabilitarSucursalAsync(sucursalId);
+            _unitOfWork.Commit();
+            return true;
+        }
+        catch
+        {
+            _unitOfWork.Rollback();
+            throw;
+        }
+    }
+
+    public async Task<bool> HabilitarSucursalAsync(int sucursalId)
+    {
+
+        var sucursal = await _unitOfWork.Sucursal.GetByIdSinFiltroAsync(sucursalId)
+            ?? throw new KeyNotFoundException($"Sucursal con ID {sucursalId} no encontrada.");
+
+        _unitOfWork.BeginTransaction();
+        try
+        {
+            await _unitOfWork.Sucursal.HabilitarSucursalAsync(sucursalId);
+            _unitOfWork.Commit();
+            return true;
+        }
+        catch
+        {
+            _unitOfWork.Rollback();
+            throw;
+        }
     }
 
     public async Task<ObtenerSucursalDTO> RegistrarSucursalAsync(AgregarSucursalDTO dto)
@@ -150,14 +198,6 @@ public class SucursalService : ISucursalService
         sucursal.CorrelativoGuiaTransportista = dto.CorrelativoGuiaTransportista;
 
         return await _unitOfWork.Sucursal.EditarSucursalAsync(sucursal);
-    }
-
-    public async Task<bool> EliminarSucursalAsync(int sucursalId)
-    {
-        var sucursal = await _unitOfWork.Sucursal.GetByIdSucursalAsync(sucursalId)
-                       ?? throw new KeyNotFoundException($"Sucursal con ID {sucursalId} no encontrada.");
-
-        return await _unitOfWork.Sucursal.EliminarSucursalAsync(sucursal.SucursalId);
     }
 
     private static ObtenerSucursalDTO MapToDTO(Domain.Entities.Sucursal s) => new ObtenerSucursalDTO

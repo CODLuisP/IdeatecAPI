@@ -120,14 +120,6 @@ public class SucursalRepository : DapperRepository<Sucursal>, ISucursalRepositor
         return filas > 0;
     }
 
-    public async Task<bool> EliminarSucursalAsync(int sucursalId)
-    {
-        var sql = @"DELETE FROM sucursal WHERE sucursalID = @SucursalId";
-
-        var filas = await _connection.ExecuteAsync(sql, new { SucursalId = sucursalId }, _transaction);
-        return filas > 0;
-    }
-
     public async Task<bool> EditarInfoAsync(int sucursalId, string? nombre, string? direccion)
     {
         var sql = @"
@@ -139,5 +131,73 @@ public class SucursalRepository : DapperRepository<Sucursal>, ISucursalRepositor
         var filas = await _connection.ExecuteAsync(sql,
             new { Nombre = nombre, Direccion = direccion, SucursalId = sucursalId }, _transaction);
         return filas > 0;
+    }
+
+    public async Task<IEnumerable<Sucursal>> GetByRucTodasAsync(string empresaRuc)
+    {
+        var sql = @"
+        SELECT sucursalID                        AS SucursalId,
+               empresaRuc                        AS EmpresaRuc,
+               codEstablecimiento                AS CodEstablecimiento,
+               nombre                            AS Nombre,
+               direccion                         AS Direccion,
+               serieFactura                      AS SerieFactura,
+               correlativoFactura                AS CorrelativoFactura,
+               serieBoleta                       AS SerieBoleta,
+               correlativoBoleta                 AS CorrelativoBoleta,
+               serieNotaCreditoFactura           AS SerieNotaCreditoFactura,
+               correlativoNotaCreditoFactura     AS CorrelativoNotaCreditoFactura,
+               serieNotaCreditoBoleta            AS SerieNotaCreditoBoleta,
+               correlativoNotaCreditoBoleta      AS CorrelativoNotaCreditoBoleta,
+               serieNotaDebitoFactura            AS SerieNotaDebitoFactura,
+               correlativoNotaDebitoFactura      AS CorrelativoNotaDebitoFactura,
+               serieNotaDebitoBoleta             AS SerieNotaDebitoBoleta,
+               correlativoNotaDebitoBoleta       AS CorrelativoNotaDebitoBoleta,
+               serieGuiaRemision                 AS SerieGuiaRemision,
+               correlativoGuiaRemision           AS CorrelativoGuiaRemision,
+               serieGuiaTransportista            AS SerieGuiaTransportista,
+               correlativoGuiaTransportista      AS CorrelativoGuiaTransportista,
+               estado                            AS Estado
+        FROM sucursal
+        WHERE empresaRuc = @EmpresaRuc";
+
+        return await _connection.QueryAsync<Sucursal>(sql, new { EmpresaRuc = empresaRuc }, _transaction);
+    }
+
+    public async Task<Sucursal?> GetByIdSinFiltroAsync(int sucursalId)
+    {
+        var sql = @"
+        SELECT sucursalID AS SucursalId
+        FROM sucursal
+        WHERE sucursalID = @SucursalId";
+
+        return await _connection.QueryFirstOrDefaultAsync<Sucursal>(
+            sql, new { SucursalId = sucursalId }, _transaction);
+    }
+
+    public async Task<bool> InhabilitarSucursalAsync(int sucursalId)
+    {
+        await _connection.ExecuteAsync(
+            "UPDATE sucursal SET estado = 0 WHERE sucursalID = @SucursalId",
+            new { SucursalId = sucursalId }, _transaction);
+
+        await _connection.ExecuteAsync(
+            "UPDATE usuario SET estado = 0 WHERE sucursalID = @SucursalId",
+            new { SucursalId = sucursalId }, _transaction);
+
+        return true;
+    }
+
+    public async Task<bool> HabilitarSucursalAsync(int sucursalId)
+    {
+        await _connection.ExecuteAsync(
+            "UPDATE sucursal SET estado = 1 WHERE sucursalID = @SucursalId",
+            new { SucursalId = sucursalId }, _transaction);
+
+        await _connection.ExecuteAsync(
+            "UPDATE usuario SET estado = 1 WHERE sucursalID = @SucursalId",
+            new { SucursalId = sucursalId }, _transaction);
+
+        return true;
     }
 }
