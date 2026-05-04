@@ -6,4 +6,5 @@ public interface IUsuarioService
 {
     Task<RegisterResponseDto> RegisterAsync(RegisterRequestDto request);
     Task<bool> ChangePasswordAsync(int usuarioId, string currentPassword, string newPassword);
+    Task<RegisterResponseDto> RegisterEmpresaCompletoAsync(RegisterEmpresaCompletoDto dto);
 }
