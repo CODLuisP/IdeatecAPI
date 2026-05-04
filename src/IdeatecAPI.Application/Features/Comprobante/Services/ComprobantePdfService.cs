@@ -401,8 +401,7 @@ public class ComprobantePdfService : IComprobantePdfService
     // ════════════════════════════════════════════════════════════════════════
     // LAYOUT A4 / CARTA / MEDIA CARTA
     // ════════════════════════════════════════════════════════════════════════
-    private static void BuildHeader(IContainer container, Domain.Entities.Comprobante c, EmpresaDto empresa)
-    {
+    private static void BuildHeader(IContainer container, Domain.Entities.Comprobante c, EmpresaDto empresa){
         container.Column(col =>
         {
             col.Item().Row(row =>
@@ -417,12 +416,38 @@ public class ComprobantePdfService : IComprobantePdfService
                                 ? empresa.LogoBase64.Split(',')[1]
                                 : empresa.LogoBase64);
 
-                        var (lw, lh) = ResolverTamanoLogo(logoBytes);
-                        row.ConstantItem(lw)
+                        var (pw, ph) = LeerDimensionesImagen(logoBytes);
+                        float ratio = (float)pw / ph;
+
+                        // Límites para A4
+                        const float maxAlto  = 70f;
+                        const float maxAncho = 110f;
+
+                        float alto, ancho;
+
+                        if (ratio > 1.5f)
+                        {
+                            // Rectangular horizontal (800x400) → escala desde ancho máximo
+                            ancho = maxAncho;
+                            alto  = ancho / ratio; // ~55pt
+                        }
+                        else if (ratio < 0.75f)
+                        {
+                            // Vertical (400x600) → escala desde alto máximo
+                            alto  = maxAlto;
+                            ancho = alto * ratio; // ~46pt
+                        }
+                        else
+                        {
+                            // Cuadrado (400x400) → escala desde alto máximo
+                            alto  = maxAlto;
+                            ancho = alto * ratio; // ~70pt
+                        }
+
+                        row.ConstantItem(ancho)
                             .AlignMiddle()
-                            .AlignCenter() 
-                            .Padding(4)
-                            .Height(lh)
+                            .AlignCenter()
+                            .Height(alto)
                             .Image(logoBytes)
                             .FitArea();
                     }
@@ -430,8 +455,8 @@ public class ComprobantePdfService : IComprobantePdfService
                 }
                 else { row.ConstantItem(70); }
 
-                // DATOS EMPRESA
-                row.RelativeItem().PaddingLeft(6).Column(emp =>
+                // DATOS EMPRESA — con padding derecho para no invadir el recuadro
+                row.RelativeItem().PaddingLeft(6).PaddingRight(10).AlignMiddle().Column(emp =>
                 {
                     emp.Item().Text(empresa.NombreComercial ?? empresa.RazonSocial)
                         .Bold().FontSize(14).FontColor(ColorAzulMarino);
@@ -439,17 +464,21 @@ public class ComprobantePdfService : IComprobantePdfService
                         .FontSize(9).FontColor(ColorTextoSuave);
 
                     if (!string.IsNullOrEmpty(empresa.Direccion))
-                        emp.Item().Text(empresa.Direccion).FontSize(8).FontColor(ColorTextoSuave);
+                        emp.Item().PaddingRight(20).Text(empresa.Direccion)
+                        .FontSize(8).FontColor(ColorTextoSuave);
                     if (!string.IsNullOrEmpty(empresa.Telefono))
-                        emp.Item().Text($"Telf: {empresa.Telefono}").FontSize(8).FontColor(ColorTextoSuave);
+                        emp.Item().Text($"Telf: {empresa.Telefono}")
+                            .FontSize(8).FontColor(ColorTextoSuave);
                     if (!string.IsNullOrEmpty(empresa.Email))
-                        emp.Item().Text($"Email: {empresa.Email}").FontSize(8).FontColor(ColorTextoSuave);
+                        emp.Item().Text($"Email: {empresa.Email}")
+                            .FontSize(8).FontColor(ColorTextoSuave);
 
-                    emp.Item().Text("Web: www.ideatec.pe").FontSize(8).FontColor(ColorTextoSuave);
+                    emp.Item().Text("Web: www.ideatec.pe")
+                        .FontSize(8).FontColor(ColorTextoSuave);
                 });
 
                 // RECUADRO COMPROBANTE
-                row.ConstantItem(160).Border(1).BorderColor(ColorAzulMarino).Column(box =>
+                row.ConstantItem(160).AlignMiddle().Border(1).BorderColor(ColorAzulMarino).Column(box =>
                 {
                     box.Item().Background(ColorGrisClaro).Padding(5).AlignCenter()
                         .Text($"R.U.C. {empresa.Ruc}").Bold().FontSize(9).FontColor(ColorAzulMarino);
@@ -462,8 +491,7 @@ public class ComprobantePdfService : IComprobantePdfService
                 });
             });
 
-            col.Item().PaddingTop(4).LineHorizontal(1).LineColor(ColorAzulMarino);
-            col.Item().Height(6);
+            col.Item().Height(3);
         });
     }
 
