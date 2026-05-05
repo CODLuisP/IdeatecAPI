@@ -475,6 +475,58 @@ public async Task<IEnumerable<Comprobante>> GetByRucAndFechasAsync(string ruc, D
             sql, new { ComprobanteId = comprobanteId }, _transaction);
     }
 
+    // ── NUEVO: Obtener Datos Completos en un solo viaje (Optimización) ───────
+    public async Task<(
+        IEnumerable<ComprobanteDetalle> Detalles,
+        IEnumerable<Pago> Pagos,
+        IEnumerable<Cuota> Cuotas,
+        IEnumerable<NoteLegend> Leyendas,
+        IEnumerable<GuiaComprobante> Guias,
+        IEnumerable<Detraccion> Detracciones
+    )> GetDatosCompletosByComprobanteIdAsync(int comprobanteId)
+    {
+        var sql = @"
+            SELECT comprobanteId, item, productoId, codigo, descripcion, cantidad,
+                   unidadMedida, precioUnitario, tipoAfectacionIGV, porcentajeIGV,
+                   montoIGV, baseIgv, codigoTipoDescuento, descuentoUnitario, descuentoTotal,
+                   valorVenta, precioVenta, totalVentaItem, icbper, factorIcbper
+            FROM comprobantedetalle WHERE comprobanteId = @Id;
+
+            SELECT pagoID AS PagoId, comprobanteID AS ComprobanteId, medioPago AS MedioPago,
+                   monto AS Monto, fechaPago AS FechaPago, numeroOperacion AS NumeroOperacion,
+                   entidadFinanciera AS EntidadFinanciera, observaciones AS Observaciones
+            FROM pago WHERE comprobanteID = @Id;
+
+            SELECT cuotaId, comprobanteId, numeroCuota, monto, fechaVencimiento,
+                   montoPagado, fechaPago, estado
+            FROM cuota WHERE comprobanteId = @Id;
+
+            SELECT comprobanteId, code, value
+            FROM notelegend WHERE comprobanteId = @Id;
+
+            SELECT guiaComprobanteID AS GuiaComprobanteId, comprobanteID AS ComprobanteId,
+                   guiaTipoDoc AS GuiaTipoDoc, guiaNumeroCompleto AS GuiaNumeroCompleto
+            FROM guiacomprobante WHERE comprobanteID = @Id;
+
+            SELECT detraccionID AS DetraccionID, comprobanteID AS ComprobanteID,
+                   codigoBienDetraccion AS CodigoBienDetraccion, codigoMedioPago AS CodigoMedioPago,
+                   cuentaBancoDetraccion AS CuentaBancoDetraccion, porcentajeDetraccion AS PorcentajeDetraccion,
+                   montoDetraccion AS MontoDetraccion, observacion AS Observacion
+            FROM detraccion WHERE comprobanteID = @Id;
+        ";
+
+        using var multi = await _connection.QueryMultipleAsync(sql, new { Id = comprobanteId }, _transaction);
+
+        var detalles = await multi.ReadAsync<ComprobanteDetalle>();
+        var pagos = await multi.ReadAsync<Pago>();
+        var cuotas = await multi.ReadAsync<Cuota>();
+        var leyendas = await multi.ReadAsync<NoteLegend>();
+        var guias = await multi.ReadAsync<GuiaComprobante>();
+        var detracciones = await multi.ReadAsync<Detraccion>();
+
+        return (detalles, pagos, cuotas, leyendas, guias, detracciones);
+    }
+
     // ── NUEVO: Actualizar estado SUNAT ───────────────────────────────────────
     public async Task UpdateEstadoSunatAsync(
         int comprobanteId,

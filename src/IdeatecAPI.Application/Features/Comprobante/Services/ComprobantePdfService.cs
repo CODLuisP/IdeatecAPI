@@ -48,12 +48,14 @@ public class ComprobantePdfService : IComprobantePdfService
             LogoBase64      = empresaEntidad.LogoBase64,
         };
 
-        var detalles     = (await _unitOfWork.Comprobantes.GetDetallesByIdAsync(comprobanteId)).ToList();
-        var pagos        = (await _unitOfWork.Comprobantes.GetPagosByIdAsync(comprobanteId)).ToList();
-        var cuotas       = (await _unitOfWork.Comprobantes.GetCuotasByIdAsync(comprobanteId)).ToList();
-        var leyendas     = (await _unitOfWork.Comprobantes.GetLeyendasByIdAsync(comprobanteId)).ToList();
-        var guias        = (await _unitOfWork.Comprobantes.GetGuiasByIdAsync(comprobanteId)).ToList();
-        var detracciones = (await _unitOfWork.Comprobantes.GetDetraccionesByIdAsync(comprobanteId)).ToList();
+        var datos = await _unitOfWork.Comprobantes.GetDatosCompletosByComprobanteIdAsync(comprobanteId);
+        
+        var detalles     = datos.Detalles.ToList();
+        var pagos        = datos.Pagos.ToList();
+        var cuotas       = datos.Cuotas.ToList();
+        var leyendas     = datos.Leyendas.ToList();
+        var guias        = datos.Guias.ToList();
+        var detracciones = datos.Detracciones.ToList();
 
         bool esTicket = tamano == TamanoPdf.Ticket80mm || tamano == TamanoPdf.Ticket58mm;
 
