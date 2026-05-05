@@ -40,21 +40,39 @@ public class ResumenComprobanteController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Registrar([FromBody] AgregarResumenComprobanteDTO dto)
     {
-        var resultado = await _resumenComprobanteService.RegistrarResumenComprobanteAsync(dto);
-        if (!resultado.Exitoso)
-            return BadRequest(resultado.Mensaje);
+        try
+        {
+            var resultado = await _resumenComprobanteService.RegistrarResumenComprobanteAsync(dto);
+            if (!resultado.Exitoso)
+                return BadRequest(resultado.Mensaje);
 
-        return Ok(resultado);
+            return Ok(resultado);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { mensaje = ex.Message });
+        }
     }
 
     // POST: api/ResumenComprobante/5/enviar-sunat
     [HttpPost("{id:int}/enviar-sunat")]
     public async Task<IActionResult> EnviarSunat(int id)
     {
-        var resultado = await _resumenComprobanteService.SendToSunatAsync(id);
-        if (!resultado.Exitoso)
-            return BadRequest(resultado);
+        try
+        {
+            var resultado = await _resumenComprobanteService.SendToSunatAsync(id);
+            if (!resultado.Exitoso)
+                return BadRequest(resultado);
 
-        return Ok(resultado);
+            return Ok(resultado);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { mensaje = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { mensaje = ex.Message });
+        }
     }
 }

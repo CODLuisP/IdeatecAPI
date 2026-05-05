@@ -82,36 +82,49 @@ public class ResumenComprobanteService : IResumenComprobanteService
 
             var resumen = new Domain.Entities.ResumenComprobante
             {
-                EmpresaId                   = dto.EmpresaId,
-                EmpresaRuc                  = dto.EmpresaRuc,
-                EmpresaRazonSocial          = dto.EmpresaRazonSocial,
-                NumeroEnvio                 = dto.NumeroEnvio,
-                FechaEmisionDocumentos      = dto.FechaEmisionDocumentos,
-                FechaGeneracion             = dto.FechaGeneracion,
-                Identificador               = dto.Identificador,
-                EstadoSunat                 = dto.EstadoSunat,
-                Ticket                      = dto.Ticket,
-                CodigoRespuesta             = dto.CodigoRespuesta,
-                MensajeRespuesta            = dto.MensajeRespuesta,
-                XmlGenerado                 = dto.XmlGenerado,
-                FechaEnvio                  = dto.FechaEnvio,
+                EmpresaId              = dto.EmpresaId,
+                EmpresaRuc             = dto.EmpresaRuc,
+                EmpresaRazonSocial     = dto.EmpresaRazonSocial,
+                EmpresaDireccion       = dto.EmpresaDireccion,
+                EmpresaProvincia       = dto.EmpresaProvincia,
+                EmpresaDepartamento    = dto.EmpresaDepartamento,
+                EmpresaDistrito        = dto.EmpresaDistrito,
+                EmpresaUbigeo          = dto.EmpresaUbigeo,
+                EstablecimientoAnexo   = dto.EstablecimientoAnexo,
+                NumeroEnvio            = dto.NumeroEnvio,
+                FechaEmisionDocumentos = dto.FechaEmisionDocumentos,
+                FechaGeneracion        = dto.FechaGeneracion,
+                Identificador          = dto.Identificador,
+                EstadoSunat            = dto.EstadoSunat,
+                Ticket                 = dto.Ticket,
+                CodigoRespuesta        = dto.CodigoRespuesta,
+                MensajeRespuesta       = dto.MensajeRespuesta,
+                XmlGenerado            = dto.XmlGenerado,
+                PdfGenerado            = dto.PdfGenerado,
+                UsuarioCreacion        = dto.UsuarioCreacion,
+                FechaEnvio             = dto.FechaEnvio,
 
                 DetallesResumen = dto.DetallesResumen.Select(d => new Domain.Entities.ResumenComprobanteDetalle
                 {
-                    LineID                          = d.LineID,
-                    ComprobanteId                   = d.ComprobanteId,
-                    TipoComprobante                 = d.TipoComprobante,
-                    Serie                           = d.Serie,
-                    Correlativo                     = d.Correlativo,
-                    CodigoCondicion                 = d.CodigoCondicion,
-                    Moneda                          = d.Moneda,
-                    MontoTotalVenta                 = d.MontoTotalVenta,
-                    TotalGravado                    = d.TotalGravado,
-                    TotalExonerado                  = d.TotalExonerado,
-                    TotalInafecto                   = d.TotalInafecto,
-                    TotalGratuito                   = d.TotalGratuito,
-                    TotalIGV                        = d.TotalIGV,
-                    IGVReferencial                  = d.IGVReferencial
+                    LineID                   = d.LineID,
+                    ComprobanteId            = d.ComprobanteId,
+                    TipoComprobante          = d.TipoComprobante,
+                    Serie                    = d.Serie,
+                    Correlativo              = d.Correlativo,
+                    ClienteTipoDoc           = d.ClienteTipoDoc,
+                    ClienteNumDoc            = d.ClienteNumDoc,
+                    ClienteNombre            = d.ClienteNombre,
+                    DocumentoAfectadoTipo    = d.DocumentoAfectadoTipo,
+                    DocumentoAfectadoNumero  = d.DocumentoAfectadoNumero,
+                    CodigoCondicion          = d.CodigoCondicion,
+                    Moneda                   = d.Moneda,
+                    MontoTotalVenta          = d.MontoTotalVenta,
+                    TotalGravado             = d.TotalGravado,
+                    TotalExonerado           = d.TotalExonerado,
+                    TotalInafecto            = d.TotalInafecto,
+                    TotalGratuito            = d.TotalGratuito,
+                    TotalIGV                 = d.TotalIGV,
+                    IGVReferencial           = d.IGVReferencial
                 }).ToList()
             };
 
@@ -138,39 +151,52 @@ public class ResumenComprobanteService : IResumenComprobanteService
     {
         return new ObtenerResumenComprobanteDTO
         {
-            ResumenComprobanteId        = r.ResumenComprobanteId,
-            EmpresaId                   = r.EmpresaId,
-            EmpresaRuc                  = r.EmpresaRuc,
-            EmpresaRazonSocial          = r.EmpresaRazonSocial,
-            NumeroEnvio                 = r.NumeroEnvio,
-            FechaEmisionDocumentos      = r.FechaEmisionDocumentos,
-            FechaGeneracion             = r.FechaGeneracion,
-            Identificador               = r.Identificador    ?? string.Empty,
-            EstadoSunat                 = r.EstadoSunat      ?? string.Empty,
-            Ticket                      = r.Ticket           ?? string.Empty,
-            CodigoRespuesta             = r.CodigoRespuesta  ?? string.Empty,
-            MensajeRespuesta            = r.MensajeRespuesta ?? string.Empty,
-            XmlGenerado                 = r.XmlGenerado      ?? string.Empty,
-            FechaEnvio                  = r.FechaEnvio,
+            ResumenComprobanteId   = r.ResumenComprobanteId,
+            EmpresaId              = r.EmpresaId,
+            EmpresaRuc             = r.EmpresaRuc,
+            EmpresaRazonSocial     = r.EmpresaRazonSocial,
+            EmpresaDireccion       = r.EmpresaDireccion,
+            EmpresaProvincia       = r.EmpresaProvincia,
+            EmpresaDepartamento    = r.EmpresaDepartamento,
+            EmpresaDistrito        = r.EmpresaDistrito,
+            EmpresaUbigeo          = r.EmpresaUbigeo,
+            EstablecimientoAnexo   = r.EstablecimientoAnexo,
+            NumeroEnvio            = r.NumeroEnvio,
+            FechaEmisionDocumentos = r.FechaEmisionDocumentos,
+            FechaGeneracion        = r.FechaGeneracion,
+            Identificador          = r.Identificador    ?? string.Empty,
+            EstadoSunat            = r.EstadoSunat      ?? string.Empty,
+            Ticket                 = r.Ticket           ?? string.Empty,
+            CodigoRespuesta        = r.CodigoRespuesta  ?? string.Empty,
+            MensajeRespuesta       = r.MensajeRespuesta ?? string.Empty,
+            XmlGenerado            = r.XmlGenerado      ?? string.Empty,
+            PdfGenerado            = r.PdfGenerado,
+            UsuarioCreacion        = r.UsuarioCreacion,
+            FechaEnvio             = r.FechaEnvio,
 
             DetallesResumen = r.DetallesResumen?.Select(d => new ObtenerResumenDetalleDTO
             {
-                ResumenComprobanteDetalleId     = d.ResumenComprobanteDetalleId,
-                LineID                          = d.LineID,
-                ComprobanteId                   = d.ComprobanteId,
-                ResumenComprobanteId            = d.ResumenComprobanteId,
-                TipoComprobante                 = d.TipoComprobante,
-                Serie                           = d.Serie,
-                Correlativo                     = d.Correlativo,
-                CodigoCondicion                 = d.CodigoCondicion,
-                Moneda                          = d.Moneda,
-                MontoTotalVenta                 = d.MontoTotalVenta,
-                TotalGravado                    = d.TotalGravado,
-                TotalExonerado                  = d.TotalExonerado,
-                TotalInafecto                   = d.TotalInafecto,
-                TotalGratuito                   = d.TotalGratuito,
-                TotalIGV                        = d.TotalIGV,
-                IGVReferencial                  = d.IGVReferencial
+                ResumenComprobanteDetalleId = d.ResumenComprobanteDetalleId,
+                LineID                      = d.LineID,
+                ComprobanteId               = d.ComprobanteId,
+                ResumenComprobanteId        = d.ResumenComprobanteId,
+                TipoComprobante             = d.TipoComprobante,
+                Serie                       = d.Serie,
+                Correlativo                 = d.Correlativo,
+                ClienteTipoDoc              = d.ClienteTipoDoc,
+                ClienteNumDoc               = d.ClienteNumDoc,
+                ClienteNombre               = d.ClienteNombre,
+                DocumentoAfectadoTipo       = d.DocumentoAfectadoTipo,
+                DocumentoAfectadoNumero     = d.DocumentoAfectadoNumero,
+                CodigoCondicion             = d.CodigoCondicion,
+                Moneda                      = d.Moneda,
+                MontoTotalVenta             = d.MontoTotalVenta,
+                TotalGravado                = d.TotalGravado,
+                TotalExonerado              = d.TotalExonerado,
+                TotalInafecto               = d.TotalInafecto,
+                TotalGratuito               = d.TotalGratuito,
+                TotalIGV                    = d.TotalIGV,
+                IGVReferencial              = d.IGVReferencial
             }).ToList() ?? []
         };
     }
@@ -297,16 +323,19 @@ public class ResumenComprobanteService : IResumenComprobanteService
             string.Empty, DateTime.Now);
 
         // 13. Actualizar estado de comprobantes en tabla comprobantes
-        if (nuevoEstado == "ACEPTADO")
+        if (nuevoEstado == "ACEPTADO" || nuevoEstado == "ACEPTADO_CON_OBSERVACIONES")
         {
-            foreach (var detalle in resumen.DetallesResumen
-                .Where(d => d.ComprobanteId > 0))
+            foreach (var detalle in resumen.DetallesResumen.Where(d => d.ComprobanteId > 0))
             {
+                var nuevoEstadoComprobante = detalle.CodigoCondicion == "3"
+                    ? "ANULADO"
+                    : "ACEPTADO";
+
                 await _unitOfWork.Comprobantes.UpdateEstadoSunatAsync(
                     detalle.ComprobanteId,
-                    "ACEPTADO",
+                    nuevoEstadoComprobante,
                     "0",
-                    $"Aceptado mediante resumen diario {resumen.Identificador}",
+                    $"Procesado mediante resumen diario {resumen.Identificador}",
                     null,
                     null
                 );
