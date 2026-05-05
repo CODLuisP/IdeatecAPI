@@ -4,6 +4,7 @@ using IdeatecAPI.Application.Features.Notas.Services;
 using Microsoft.Extensions.Configuration;
 using GuiaEntity = IdeatecAPI.Domain.Entities.GuiaRemision;
 using GuiaDetalleEntity = IdeatecAPI.Domain.Entities.GuiaRemisionDetalle;
+using IdeatecAPI.Application.Common.Interfaces;
 
 namespace IdeatecAPI.Application.Features.GuiaRemision.Services;
 
@@ -26,18 +27,21 @@ public class GuiaService : IGuiaService
     private readonly IXmlSignerService _xmlSigner;
     private readonly ISunatGuiaService _sunatGuia;
     private readonly string _rutaXml;
+    private readonly IWebSocketNotifier _wsNotifier;
 
     public GuiaService(
         IUnitOfWork unitOfWork,
         IXmlGuiaBuilderService xmlBuilder,
         IXmlSignerService xmlSigner,
         ISunatGuiaService sunatGuia,
+        IWebSocketNotifier wsNotifier,
         IConfiguration configuration)
     {
         _unitOfWork = unitOfWork;
         _xmlBuilder = xmlBuilder;
         _xmlSigner = xmlSigner;
         _sunatGuia = sunatGuia;
+        _wsNotifier  = wsNotifier;  
         _rutaXml = configuration["Storage:RutaXml"] ?? "C:/FacturacionStorage";
     }
 
@@ -250,6 +254,8 @@ public class GuiaService : IGuiaService
 
             _unitOfWork.Commit();
 
+            await _wsNotifier.NotifyAsync(guia.SucursalId, guia.EmpresaRuc);
+
             return await GetByIdAsync(newId)
                 ?? throw new InvalidOperationException("Error al recuperar la guía creada");
         }
@@ -331,6 +337,8 @@ public class GuiaService : IGuiaService
             null,
             sunatResponse.Success ? DateTime.UtcNow : null
         );
+
+        await _wsNotifier.NotifyAsync(guia.SucursalId, guia.EmpresaRuc);
 
         return await GetByIdAsync(guiaId)
             ?? throw new InvalidOperationException("Error al recuperar la guía actualizada");

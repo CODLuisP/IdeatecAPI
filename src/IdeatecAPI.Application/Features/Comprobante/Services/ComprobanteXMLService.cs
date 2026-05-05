@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Text;
+using IdeatecAPI.Application.Common.Interfaces;
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Application.Features.Comprobante.DTOs;
 using IdeatecAPI.Application.Features.Detraccion.DTOs;
@@ -21,7 +22,7 @@ public interface IComprobanteService
     Task<IEnumerable<ObtenerComprobanteDTO>> GetByDocUsuarioAndFechasAsync(string rucEmpresa, int usuarioCreacion, DateTime? fechaDesde, DateTime? fechaHasta);
 
     //comprobantes de una sucursal, la empresa se obtiene internamente de esa sucursal
-    Task<IEnumerable<ObtenerComprobanteDTO>> GetBySucursalAndFechasAsync(int sucursalId, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null); 
+    Task<IEnumerable<ObtenerComprobanteDTO>> GetBySucursalAndFechasAsync(int sucursalId, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null);
 
 
     //obtener Listado de campos solo de la tabla comrpobantes sin su relaciones
@@ -69,6 +70,7 @@ public class ComprobanteService : IComprobanteService
     private readonly IXmlSignerService _xmlSigner;
     private readonly ISunatSenderService _sunatSender;
     private readonly IConfiguration _configuration;
+    private readonly IWebSocketNotifier _wsNotifier;
     private readonly string _rutaXml;
 
     public ComprobanteService(
@@ -76,6 +78,7 @@ public class ComprobanteService : IComprobanteService
         IComprobanteXmlService xmlService,
         IXmlSignerService xmlSigner,
         ISunatSenderService sunatSender,
+        IWebSocketNotifier wsNotifier,
         IConfiguration configuration)
     {
         _unitOfWork = unitOfWork;
@@ -83,6 +86,7 @@ public class ComprobanteService : IComprobanteService
         _xmlSigner = xmlSigner;
         _sunatSender = sunatSender;
         _configuration = configuration;
+        _wsNotifier = wsNotifier;
         _rutaXml = configuration["Storage:RutaXml"] ?? Path.Combine(Directory.GetCurrentDirectory(), "XmlFiles");
     }
 
@@ -233,11 +237,11 @@ public class ComprobanteService : IComprobanteService
         var existe = await _unitOfWork.Comprobantes.GetByIdAsync(comprobanteId);
         if (existe == null) return null;
 
-        var detalles     = (await _unitOfWork.Comprobantes.GetDetallesByIdAsync(comprobanteId)).ToList();
-        var pagos        = (await _unitOfWork.Comprobantes.GetPagosByIdAsync(comprobanteId)).ToList();
-        var cuotas       = (await _unitOfWork.Comprobantes.GetCuotasByIdAsync(comprobanteId)).ToList();
-        var leyendas     = (await _unitOfWork.Comprobantes.GetLeyendasByIdAsync(comprobanteId)).ToList();
-        var guias        = (await _unitOfWork.Comprobantes.GetGuiasByIdAsync(comprobanteId)).ToList();
+        var detalles = (await _unitOfWork.Comprobantes.GetDetallesByIdAsync(comprobanteId)).ToList();
+        var pagos = (await _unitOfWork.Comprobantes.GetPagosByIdAsync(comprobanteId)).ToList();
+        var cuotas = (await _unitOfWork.Comprobantes.GetCuotasByIdAsync(comprobanteId)).ToList();
+        var leyendas = (await _unitOfWork.Comprobantes.GetLeyendasByIdAsync(comprobanteId)).ToList();
+        var guias = (await _unitOfWork.Comprobantes.GetGuiasByIdAsync(comprobanteId)).ToList();
         var detracciones = (await _unitOfWork.Comprobantes.GetDetraccionesByIdAsync(comprobanteId)).ToList();
 
         return new ComprobanteDetallesDTO
@@ -245,73 +249,73 @@ public class ComprobanteService : IComprobanteService
             ComprobanteId = comprobanteId,
             Details = detalles.Select(d => new DetalleFacturaDTO
             {
-                DetalleId          = d.DetalleId,
-                ComprobanteId      = d.ComprobanteId,
-                Item               = d.Item,
-                ProductoId         = d.ProductoId,
-                Codigo             = d.Codigo,
-                Descripcion        = d.Descripcion,
-                Cantidad           = d.Cantidad,
-                UnidadMedida       = d.UnidadMedida,
-                PrecioUnitario     = d.PrecioUnitario,
-                TipoAfectacionIGV  = d.TipoAfectacionIGV,
-                PorcentajeIGV      = d.PorcentajeIGV ?? 0,
-                MontoIGV           = d.MontoIGV ?? 0,
-                BaseIgv            = d.BaseIgv ?? 0,
+                DetalleId = d.DetalleId,
+                ComprobanteId = d.ComprobanteId,
+                Item = d.Item,
+                ProductoId = d.ProductoId,
+                Codigo = d.Codigo,
+                Descripcion = d.Descripcion,
+                Cantidad = d.Cantidad,
+                UnidadMedida = d.UnidadMedida,
+                PrecioUnitario = d.PrecioUnitario,
+                TipoAfectacionIGV = d.TipoAfectacionIGV,
+                PorcentajeIGV = d.PorcentajeIGV ?? 0,
+                MontoIGV = d.MontoIGV ?? 0,
+                BaseIgv = d.BaseIgv ?? 0,
                 CodigoTipoDescuento = d.CodigoTipoDescuento ?? "",
-                DescuentoUnitario  = d.DescuentoUnitario ?? 0,
-                DescuentoTotal     = d.DescuentoTotal ?? 0,
-                ValorVenta         = d.ValorVenta ?? 0,
-                PrecioVenta        = d.PrecioVenta ?? 0,
-                TotalVentaItem     = d.TotalVentaItem ?? 0,
-                Icbper             = d.Icbper ?? 0,
-                FactorIcbper       = d.FactorIcbper ?? 0
+                DescuentoUnitario = d.DescuentoUnitario ?? 0,
+                DescuentoTotal = d.DescuentoTotal ?? 0,
+                ValorVenta = d.ValorVenta ?? 0,
+                PrecioVenta = d.PrecioVenta ?? 0,
+                TotalVentaItem = d.TotalVentaItem ?? 0,
+                Icbper = d.Icbper ?? 0,
+                FactorIcbper = d.FactorIcbper ?? 0
             }).ToList(),
 
             Pagos = pagos.Select(p => new DetallePagosDTO
             {
-                ComprobanteId     = p.ComprobanteId,
-                MedioPago         = p.MedioPago,
-                Monto             = p.Monto,
-                FechaPago         = p.FechaPago,
-                NumeroOperacion   = p.NumeroOperacion,
+                ComprobanteId = p.ComprobanteId,
+                MedioPago = p.MedioPago,
+                Monto = p.Monto,
+                FechaPago = p.FechaPago,
+                NumeroOperacion = p.NumeroOperacion,
                 EntidadFinanciera = p.EntidadFinanciera,
-                Observaciones     = p.Observaciones
+                Observaciones = p.Observaciones
             }).ToList(),
 
             Cuotas = cuotas.Select(c => new DetalleCuotasDTO
             {
-                ComprobanteId    = c.ComprobanteId,
-                NumeroCuota      = c.NumeroCuota,
-                Monto            = c.Monto,
+                ComprobanteId = c.ComprobanteId,
+                NumeroCuota = c.NumeroCuota,
+                Monto = c.Monto,
                 FechaVencimiento = c.FechaVencimiento,
-                MontoPagado      = c.MontoPagado,
-                FechaPago        = c.FechaPago,
-                Estado           = c.Estado
+                MontoPagado = c.MontoPagado,
+                FechaPago = c.FechaPago,
+                Estado = c.Estado
             }).ToList(),
 
             Legends = leyendas.Select(l => new NoteLegendDto
             {
-                Code  = l.Code,
+                Code = l.Code,
                 Value = l.Value
             }).ToList(),
 
             Guias = guias.Select(g => new GuiaComprobanteDTO
             {
-                ComprobanteId      = g.ComprobanteId,
-                GuiaTipoDoc        = g.GuiaTipoDoc,
+                ComprobanteId = g.ComprobanteId,
+                GuiaTipoDoc = g.GuiaTipoDoc,
                 GuiaNumeroCompleto = g.GuiaNumeroCompleto
             }).ToList(),
 
             Detracciones = detracciones.Select(d => new DetraccionDTO
             {
-                ComprobanteID         = d.ComprobanteID,
-                CodigoBienDetraccion  = d.CodigoBienDetraccion,
-                CodigoMedioPago       = d.CodigoMedioPago,
+                ComprobanteID = d.ComprobanteID,
+                CodigoBienDetraccion = d.CodigoBienDetraccion,
+                CodigoMedioPago = d.CodigoMedioPago,
                 CuentaBancoDetraccion = d.CuentaBancoDetraccion,
-                PorcentajeDetraccion  = d.PorcentajeDetraccion,
-                MontoDetraccion       = d.MontoDetraccion,
-                Observacion           = d.Observacion
+                PorcentajeDetraccion = d.PorcentajeDetraccion,
+                MontoDetraccion = d.MontoDetraccion,
+                Observacion = d.Observacion
             }).ToList()
         };
     }
@@ -483,6 +487,12 @@ public class ComprobanteService : IComprobanteService
             comprobante.ComprobanteId = newComprobanteId;
 
             _unitOfWork.Commit();
+
+            var sucursalIdNotify = await _unitOfWork.Comprobantes.GetSucursalIdByRucAndAnexoAsync(
+    comprobante.EmpresaRuc!,
+    comprobante.EmpresaEstablecimientoAnexo!
+);
+            await _wsNotifier.NotifyAsync(sucursalIdNotify, comprobante.EmpresaRuc);
 
             return new ComprobanteResponse
             {
@@ -690,6 +700,13 @@ public class ComprobanteService : IComprobanteService
                 null
             );
 
+            var sucursalIdNotify = await _unitOfWork.Comprobantes.GetSucursalIdByRucAndAnexoAsync(
+        comprobante.EmpresaRuc!,
+        comprobante.EmpresaEstablecimientoAnexo!
+    );
+
+            await _wsNotifier.NotifyAsync(sucursalIdNotify, comprobante.EmpresaRuc);
+
             return new ComprobanteResponse
             {
                 Exitoso = false,
@@ -728,6 +745,14 @@ public class ComprobanteService : IComprobanteService
             xmlFirmadoString,
             sunatResponse.CdrBase64
         );
+
+        // Obtener sucursalId desde ruc + anexo
+        var sucursalId = await _unitOfWork.Comprobantes.GetSucursalIdByRucAndAnexoAsync(
+            comprobante.EmpresaRuc!,
+            comprobante.EmpresaEstablecimientoAnexo!
+        );
+
+        await _wsNotifier.NotifyAsync(sucursalId, comprobante.EmpresaRuc);
 
         return new ComprobanteResponse
         {
@@ -831,12 +856,12 @@ public class ComprobanteService : IComprobanteService
             return null;
 
         var comprobanteId = comprobante.ComprobanteId;
-        var detalles      = (await _unitOfWork.Comprobantes.GetDetallesByIdAsync(comprobanteId)).ToList();
-        var pagos         = (await _unitOfWork.Comprobantes.GetPagosByIdAsync(comprobanteId)).ToList();
-        var cuotas        = (await _unitOfWork.Comprobantes.GetCuotasByIdAsync(comprobanteId)).ToList();
-        var leyendas      = (await _unitOfWork.Comprobantes.GetLeyendasByIdAsync(comprobanteId)).ToList();
-        var guias         = (await _unitOfWork.Comprobantes.GetGuiasByIdAsync(comprobanteId)).ToList();
-        var detracciones  = (await _unitOfWork.Comprobantes.GetDetraccionesByIdAsync(comprobanteId)).ToList();
+        var detalles = (await _unitOfWork.Comprobantes.GetDetallesByIdAsync(comprobanteId)).ToList();
+        var pagos = (await _unitOfWork.Comprobantes.GetPagosByIdAsync(comprobanteId)).ToList();
+        var cuotas = (await _unitOfWork.Comprobantes.GetCuotasByIdAsync(comprobanteId)).ToList();
+        var leyendas = (await _unitOfWork.Comprobantes.GetLeyendasByIdAsync(comprobanteId)).ToList();
+        var guias = (await _unitOfWork.Comprobantes.GetGuiasByIdAsync(comprobanteId)).ToList();
+        var detracciones = (await _unitOfWork.Comprobantes.GetDetraccionesByIdAsync(comprobanteId)).ToList();
 
         return MapToDto(comprobante, detalles, pagos, cuotas, leyendas, guias, detracciones);
     }
@@ -1039,86 +1064,86 @@ public class ComprobanteService : IComprobanteService
 
     private static ListarComprobanteDTO MapToListarDto(Domain.Entities.Comprobante c) => new()
     {
-        ComprobanteId               = c.ComprobanteId,
-        TipoOperacion               = c.TipoOperacion ?? "0101",
-        TipoComprobante             = c.TipoComprobante,
-        Serie                       = c.Serie ?? "",
-        Correlativo                 = c.Correlativo?.ToString() ?? "",
-        NumeroCompleto              = c.NumeroCompleto ?? "",
-        TipoCambio                  = c.TipoCambio ?? 0,
-        FechaEmision                = c.FechaEmision,
-        HoraEmision                 = c.HoraEmision,
-        FechaVencimiento            = c.FechaVencimiento,
-        TipoMoneda                  = c.TipoMoneda ?? "PEN",
-        TipoPago                    = c.TipoPago,
+        ComprobanteId = c.ComprobanteId,
+        TipoOperacion = c.TipoOperacion ?? "0101",
+        TipoComprobante = c.TipoComprobante,
+        Serie = c.Serie ?? "",
+        Correlativo = c.Correlativo?.ToString() ?? "",
+        NumeroCompleto = c.NumeroCompleto ?? "",
+        TipoCambio = c.TipoCambio ?? 0,
+        FechaEmision = c.FechaEmision,
+        HoraEmision = c.HoraEmision,
+        FechaVencimiento = c.FechaVencimiento,
+        TipoMoneda = c.TipoMoneda ?? "PEN",
+        TipoPago = c.TipoPago,
 
         Cliente = new ClienteDTO
         {
-            ClienteId          = c.ClienteId,
-            TipoDocumento      = c.ClienteTipoDoc,
-            NumeroDocumento    = c.ClienteNumDoc,
-            RazonSocial        = c.ClienteRazonSocial,
-            DireccionLineal    = c.ClienteDireccion,
-            Provincia          = c.ClienteProvincia,
-            Departamento       = c.ClienteDepartamento,
-            Distrito           = c.ClienteDistrito,
-            Ubigeo             = c.ClienteUbigeo,
-            Correo             = c.ClienteCorreo,
-            EnviadoPorCorreo   = c.EnviadoPorCorreo,
-            WhatsApp           = c.ClienteWhatsApp,
+            ClienteId = c.ClienteId,
+            TipoDocumento = c.ClienteTipoDoc,
+            NumeroDocumento = c.ClienteNumDoc,
+            RazonSocial = c.ClienteRazonSocial,
+            DireccionLineal = c.ClienteDireccion,
+            Provincia = c.ClienteProvincia,
+            Departamento = c.ClienteDepartamento,
+            Distrito = c.ClienteDistrito,
+            Ubigeo = c.ClienteUbigeo,
+            Correo = c.ClienteCorreo,
+            EnviadoPorCorreo = c.EnviadoPorCorreo,
+            WhatsApp = c.ClienteWhatsApp,
             EnviadoPorWhatsApp = c.EnviadoPorWhatsApp
         },
 
         Company = new EmpresaDTO
         {
-            EmpresaId              = c.EmpresaId,
-            NumeroDocumento        = c.EmpresaRuc,
-            RazonSocial            = c.EmpresaRazonSocial,
-            NombreComercial        = c.EmpresaNombreComercial,
-            EstablecimientoAnexo   = c.EmpresaEstablecimientoAnexo,
-            DireccionLineal        = c.EmpresaDireccion,
-            Provincia              = c.EmpresaProvincia,
-            Departamento           = c.EmpresaDepartamento,
-            Distrito               = c.EmpresaDistrito,
-            Ubigeo                 = c.EmpresaUbigeo
+            EmpresaId = c.EmpresaId,
+            NumeroDocumento = c.EmpresaRuc,
+            RazonSocial = c.EmpresaRazonSocial,
+            NombreComercial = c.EmpresaNombreComercial,
+            EstablecimientoAnexo = c.EmpresaEstablecimientoAnexo,
+            DireccionLineal = c.EmpresaDireccion,
+            Provincia = c.EmpresaProvincia,
+            Departamento = c.EmpresaDepartamento,
+            Distrito = c.EmpresaDistrito,
+            Ubigeo = c.EmpresaUbigeo
         },
 
-        CodigoTipoDescGlobal        = c.CodigoTipoDescGlobal ?? "",
-        DescuentoGlobal             = c.DescuentoGlobal ?? 0,
-        TotalOperacionesGravadas    = c.TotalOperacionesGravadas ?? 0,
-        TotalOperacionesExoneradas  = c.TotalOperacionesExoneradas ?? 0,
-        TotalOperacionesInafectas   = c.TotalOperacionesInafectas ?? 0,
-        TotalOperacionesGratuitas   = c.TotalOperacionesGratuitas ?? 0,
-        TotalIgvGratuitas           = c.TotalIgvGratuitas ?? 0,
-        TotalIGV                    = c.TotalIGV ?? 0,
-        TotalImpuestos              = c.TotalImpuestos ?? 0,
-        TotalDescuentos             = c.TotalDescuentos ?? 0,
-        TotalOtrosCargos            = c.TotalOtrosCargos ?? 0,
-        TotalIcbper                 = c.TotalIcbper ?? 0,
-        ValorVenta                  = c.ValorVenta ?? 0,
-        SubTotal                    = c.SubTotal ?? 0,
-        ImporteTotal                = c.ImporteTotal ?? 0,
-        MontoCredito                = c.MontoCredito ?? 0,
+        CodigoTipoDescGlobal = c.CodigoTipoDescGlobal ?? "",
+        DescuentoGlobal = c.DescuentoGlobal ?? 0,
+        TotalOperacionesGravadas = c.TotalOperacionesGravadas ?? 0,
+        TotalOperacionesExoneradas = c.TotalOperacionesExoneradas ?? 0,
+        TotalOperacionesInafectas = c.TotalOperacionesInafectas ?? 0,
+        TotalOperacionesGratuitas = c.TotalOperacionesGratuitas ?? 0,
+        TotalIgvGratuitas = c.TotalIgvGratuitas ?? 0,
+        TotalIGV = c.TotalIGV ?? 0,
+        TotalImpuestos = c.TotalImpuestos ?? 0,
+        TotalDescuentos = c.TotalDescuentos ?? 0,
+        TotalOtrosCargos = c.TotalOtrosCargos ?? 0,
+        TotalIcbper = c.TotalIcbper ?? 0,
+        ValorVenta = c.ValorVenta ?? 0,
+        SubTotal = c.SubTotal ?? 0,
+        ImporteTotal = c.ImporteTotal ?? 0,
+        MontoCredito = c.MontoCredito ?? 0,
 
-        ComprobanteAfectadoId       = c.ComprobanteAfectadoId,
-        TipDocAfectado              = c.TipDocAfectado,
-        NumDocAfectado              = c.NumDocAfectado,
-        TipoNotaCreditoDebito       = c.TipoNotaCreditoDebito,
-        MotivoNota                  = c.MotivoNota,
-        Observaciones               = c.Observaciones,
+        ComprobanteAfectadoId = c.ComprobanteAfectadoId,
+        TipDocAfectado = c.TipDocAfectado,
+        NumDocAfectado = c.NumDocAfectado,
+        TipoNotaCreditoDebito = c.TipoNotaCreditoDebito,
+        MotivoNota = c.MotivoNota,
+        Observaciones = c.Observaciones,
 
-        EstadoSunat                 = c.EstadoSunat,
-        CodigoHashCPE               = c.CodigoHashCPE,
-        CodigoRespuestaSunat        = c.CodigoRespuestaSunat,
-        MensajeRespuestaSunat       = c.MensajeRespuestaSunat,
-        PdfGenerado                 = c.PdfGenerado,
-        EnviadoEnResumen            = c.EnviadoEnResumen,
-        FechaEnvioSunat             = c.FechaEnvioSunat,
+        EstadoSunat = c.EstadoSunat,
+        CodigoHashCPE = c.CodigoHashCPE,
+        CodigoRespuestaSunat = c.CodigoRespuestaSunat,
+        MensajeRespuestaSunat = c.MensajeRespuestaSunat,
+        PdfGenerado = c.PdfGenerado,
+        EnviadoEnResumen = c.EnviadoEnResumen,
+        FechaEnvioSunat = c.FechaEnvioSunat,
 
-        UsuarioCreacion             = c.UsuarioCreacion,
-        FechaCreacion               = c.FechaCreacion,
-        UsuarioModificacion         = c.UsuarioModificacion,
-        FechaModificacion           = c.FechaModificacion
+        UsuarioCreacion = c.UsuarioCreacion,
+        FechaCreacion = c.FechaCreacion,
+        UsuarioModificacion = c.UsuarioModificacion,
+        FechaModificacion = c.FechaModificacion
     };
 
 }
