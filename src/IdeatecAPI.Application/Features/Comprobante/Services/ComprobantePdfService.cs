@@ -460,11 +460,8 @@ public class ComprobantePdfService : IComprobantePdfService
                 // DATOS EMPRESA — con padding derecho para no invadir el recuadro
                 row.RelativeItem().PaddingLeft(6).PaddingRight(10).AlignMiddle().Column(emp =>
                 {
-                    emp.Item().Text(empresa.NombreComercial ?? empresa.RazonSocial)
-                        .Bold().FontSize(14).FontColor(ColorAzulMarino);
                     emp.Item().Text(empresa.RazonSocial)
-                        .FontSize(9).FontColor(ColorTextoSuave);
-
+                        .Bold().FontSize(14).FontColor(ColorAzulMarino);
                     if (!string.IsNullOrEmpty(empresa.Direccion))
                         emp.Item().PaddingRight(20).Text(empresa.Direccion)
                         .FontSize(8).FontColor(ColorTextoSuave);
