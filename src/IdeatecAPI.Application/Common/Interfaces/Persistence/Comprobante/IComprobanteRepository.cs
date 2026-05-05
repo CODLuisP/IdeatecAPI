@@ -30,5 +30,13 @@ public interface IComprobanteRepository : IRepository<Comprobante>
     Task<IEnumerable<NoteLegend>> GetLeyendasByIdAsync(int comprobanteId);
     Task<IEnumerable<GuiaComprobante>> GetGuiasByIdAsync(int comprobanteId);
     Task<IEnumerable<Detraccion>> GetDetraccionesByIdAsync(int comprobanteId);
+    Task<(
+        IEnumerable<ComprobanteDetalle> Detalles,
+        IEnumerable<Pago> Pagos,
+        IEnumerable<Cuota> Cuotas,
+        IEnumerable<NoteLegend> Leyendas,
+        IEnumerable<GuiaComprobante> Guias,
+        IEnumerable<Detraccion> Detracciones
+    )> GetDatosCompletosByComprobanteIdAsync(int comprobanteId);
     Task UpdateEstadoSunatAsync(int comprobanteId, string estado, string? codigo, string? mensaje, string? xmlFirmado, string? cdrBase64);
 }
