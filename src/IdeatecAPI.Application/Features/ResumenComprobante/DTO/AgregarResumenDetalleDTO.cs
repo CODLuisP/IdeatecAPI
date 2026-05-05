@@ -1,9 +1,5 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-
 namespace IdeatecAPI.Application.Features.ResumenComprobante.DTO;
+
 public class AgregarResumenDetalleDTO
 {
     public int LineID { get; set; }
@@ -11,6 +7,16 @@ public class AgregarResumenDetalleDTO
     public string TipoComprobante { get; set; } = string.Empty;
     public string Serie { get; set; } = string.Empty;
     public string Correlativo { get; set; } = string.Empty;
+
+    // ── Nuevos campos cliente ──────────────────────────
+    public string? ClienteTipoDoc { get; set; }
+    public string? ClienteNumDoc { get; set; }
+    public string? ClienteNombre { get; set; }
+
+    // ── Nuevos campos doc afectado ─────────────────────
+    public string? DocumentoAfectadoTipo { get; set; }
+    public string? DocumentoAfectadoNumero { get; set; }
+
     public string CodigoCondicion { get; set; } = "1";
     public string Moneda { get; set; } = "PEN";
     public decimal MontoTotalVenta { get; set; }

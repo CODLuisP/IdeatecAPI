@@ -12,42 +12,55 @@ public class ResumenComprobanteRepository : DapperRepository<ResumenComprobante>
     {
     }
 
-    // ── 1. OBTENER TODOS CON SUS DETALLES ────────────────────────────────────
+    // ── 1. OBTENER TODOS ─────────────────────────────────────────────────────
     public async Task<IEnumerable<ResumenComprobante>> GetAllResumenComprobanteAsync()
     {
         const string sql = @"
             SELECT
-                r.resumenID                     AS ResumenComprobanteId,
-                r.empresaID                     AS EmpresaId,
-                r.empresaRuc                    AS EmpresaRuc,
-                r.empresaRazonSocial            AS EmpresaRazonSocial,
-                r.numeroEnvio                   AS NumeroEnvio,
-                r.fechaEmisionDocumentos        AS FechaEmisionDocumentos,
-                r.fechaGeneracion               AS FechaGeneracion,
-                r.identificador                 AS Identificador,
-                r.estadoSunat                   AS EstadoSunat,
-                r.ticket                        AS Ticket,
-                r.codigoRespuesta               AS CodigoRespuesta,
-                r.mensajeRespuesta              AS MensajeRespuesta,
-                r.xmlGenerado                   AS XmlGenerado,
-                r.fechaEnvio                    AS FechaEnvio,
-                r.estado                        AS Estado,
-                d.resumendiariodetalleID        AS ResumenComprobanteDetalleId,
-                d.lineaId                       AS LineID,
-                d.comprobanteId                 AS ComprobanteId,
-                d.resumenID                     AS ResumenComprobanteId,
-                d.tipoComprobanteId             AS TipoComprobante,
-                d.serie                         AS Serie,
-                d.correlativo                   AS Correlativo,
-                d.codigoCondicion               AS CodigoCondicion,
-                d.moneda                        AS Moneda,
-                d.montoTotalVenta               AS MontoTotalVenta,
-                d.totalGrabado                  AS TotalGravado,
-                d.totalExonerado                AS TotalExonerado,
-                d.totalInafecto                 AS TotalInafecto,
-                d.totalGratuito                 AS TotalGratuito,
-                d.totalIGV                      AS TotalIGV,
-                d.igvReferencial                AS IGVReferencial
+                r.resumenID                  AS ResumenComprobanteId,
+                r.empresaID                  AS EmpresaId,
+                r.empresaRuc                 AS EmpresaRuc,
+                r.empresaRazonSocial         AS EmpresaRazonSocial,
+                r.empresaDireccion           AS EmpresaDireccion,
+                r.empresaProvincia           AS EmpresaProvincia,
+                r.empresaDepartamento        AS EmpresaDepartamento,
+                r.empresaDistrito            AS EmpresaDistrito,
+                r.empresaUbigeo              AS EmpresaUbigeo,
+                r.establecimientoAnexo       AS EstablecimientoAnexo,
+                r.numeroEnvio                AS NumeroEnvio,
+                r.fechaEmisionDocumentos     AS FechaEmisionDocumentos,
+                r.fechaGeneracion            AS FechaGeneracion,
+                r.identificador              AS Identificador,
+                r.estadoSunat                AS EstadoSunat,
+                r.ticket                     AS Ticket,
+                r.codigoRespuesta            AS CodigoRespuesta,
+                r.mensajeRespuesta           AS MensajeRespuesta,
+                r.xmlGenerado                AS XmlGenerado,
+                r.pdfGenerado                AS PdfGenerado,
+                r.fechaEnvio                 AS FechaEnvio,
+                r.estado                     AS Estado,
+                r.usuarioCreacion            AS UsuarioCreacion,
+                d.resumendiariodetalleID     AS ResumenComprobanteDetalleId,
+                d.lineaId                    AS LineID,
+                d.comprobanteId              AS ComprobanteId,
+                d.resumenID                  AS ResumenComprobanteId,
+                d.tipoComprobanteId          AS TipoComprobante,
+                d.serie                      AS Serie,
+                d.correlativo                AS Correlativo,
+                d.clienteTipoDoc             AS ClienteTipoDoc,
+                d.clienteNumDoc              AS ClienteNumDoc,
+                d.clienteNombre              AS ClienteNombre,
+                d.documentoAfectadoTipo      AS DocumentoAfectadoTipo,
+                d.documentoAfectadoNumero    AS DocumentoAfectadoNumero,
+                d.codigoCondicion            AS CodigoCondicion,
+                d.moneda                     AS Moneda,
+                d.montoTotalVenta            AS MontoTotalVenta,
+                d.totalGrabado               AS TotalGravado,
+                d.totalExonerado             AS TotalExonerado,
+                d.totalInafecto              AS TotalInafecto,
+                d.totalGratuito              AS TotalGratuito,
+                d.totalIGV                   AS TotalIGV,
+                d.igvReferencial             AS IGVReferencial
             FROM resumendiario r
             LEFT JOIN resumendiariodetalle d ON d.resumenID = r.resumenID";
 
@@ -76,42 +89,55 @@ public class ResumenComprobanteRepository : DapperRepository<ResumenComprobante>
         return resumenDict.Values;
     }
 
-    // ── 2. OBTENER POR ID CON SUS DETALLES ───────────────────────────────────
+    // ── 2. OBTENER POR ID ────────────────────────────────────────────────────
     public async Task<ResumenComprobante?> GetResumenComprobanteByIdAsync(int id)
     {
         const string sql = @"
             SELECT
-                r.resumenID                     AS ResumenComprobanteId,
-                r.empresaID                     AS EmpresaId,
-                r.empresaRuc                    AS EmpresaRuc,
-                r.empresaRazonSocial            AS EmpresaRazonSocial,
-                r.numeroEnvio                   AS NumeroEnvio,
-                r.fechaEmisionDocumentos        AS FechaEmisionDocumentos,
-                r.fechaGeneracion               AS FechaGeneracion,
-                r.identificador                 AS Identificador,
-                r.estadoSunat                   AS EstadoSunat,
-                r.ticket                        AS Ticket,
-                r.codigoRespuesta               AS CodigoRespuesta,
-                r.mensajeRespuesta              AS MensajeRespuesta,
-                r.xmlGenerado                   AS XmlGenerado,
-                r.fechaEnvio                    AS FechaEnvio,
-                r.estado                        AS Estado,
-                d.resumendiariodetalleID        AS ResumenComprobanteDetalleId,
-                d.lineaId                       AS LineID,
-                d.comprobanteId                 AS ComprobanteId,
-                d.resumenID                     AS ResumenComprobanteId,
-                d.tipoComprobanteId             AS TipoComprobante,
-                d.serie                         AS Serie,
-                d.correlativo                   AS Correlativo,
-                d.codigoCondicion               AS CodigoCondicion,
-                d.moneda                        AS Moneda,
-                d.montoTotalVenta               AS MontoTotalVenta,
-                d.totalGrabado                  AS TotalGravado,
-                d.totalExonerado                AS TotalExonerado,
-                d.totalInafecto                 AS TotalInafecto,
-                d.totalGratuito                 AS TotalGratuito,
-                d.totalIGV                      AS TotalIGV,
-                d.igvReferencial                AS IGVReferencial
+                r.resumenID                  AS ResumenComprobanteId,
+                r.empresaID                  AS EmpresaId,
+                r.empresaRuc                 AS EmpresaRuc,
+                r.empresaRazonSocial         AS EmpresaRazonSocial,
+                r.empresaDireccion           AS EmpresaDireccion,
+                r.empresaProvincia           AS EmpresaProvincia,
+                r.empresaDepartamento        AS EmpresaDepartamento,
+                r.empresaDistrito            AS EmpresaDistrito,
+                r.empresaUbigeo              AS EmpresaUbigeo,
+                r.establecimientoAnexo       AS EstablecimientoAnexo,
+                r.numeroEnvio                AS NumeroEnvio,
+                r.fechaEmisionDocumentos     AS FechaEmisionDocumentos,
+                r.fechaGeneracion            AS FechaGeneracion,
+                r.identificador              AS Identificador,
+                r.estadoSunat                AS EstadoSunat,
+                r.ticket                     AS Ticket,
+                r.codigoRespuesta            AS CodigoRespuesta,
+                r.mensajeRespuesta           AS MensajeRespuesta,
+                r.xmlGenerado                AS XmlGenerado,
+                r.pdfGenerado                AS PdfGenerado,
+                r.fechaEnvio                 AS FechaEnvio,
+                r.estado                     AS Estado,
+                r.usuarioCreacion            AS UsuarioCreacion,
+                d.resumendiariodetalleID     AS ResumenComprobanteDetalleId,
+                d.lineaId                    AS LineID,
+                d.comprobanteId              AS ComprobanteId,
+                d.resumenID                  AS ResumenComprobanteId,
+                d.tipoComprobanteId          AS TipoComprobante,
+                d.serie                      AS Serie,
+                d.correlativo                AS Correlativo,
+                d.clienteTipoDoc             AS ClienteTipoDoc,
+                d.clienteNumDoc              AS ClienteNumDoc,
+                d.clienteNombre              AS ClienteNombre,
+                d.documentoAfectadoTipo      AS DocumentoAfectadoTipo,
+                d.documentoAfectadoNumero    AS DocumentoAfectadoNumero,
+                d.codigoCondicion            AS CodigoCondicion,
+                d.moneda                     AS Moneda,
+                d.montoTotalVenta            AS MontoTotalVenta,
+                d.totalGrabado               AS TotalGravado,
+                d.totalExonerado             AS TotalExonerado,
+                d.totalInafecto              AS TotalInafecto,
+                d.totalGratuito              AS TotalGratuito,
+                d.totalIGV                   AS TotalIGV,
+                d.igvReferencial             AS IGVReferencial
             FROM resumendiario r
             LEFT JOIN resumendiariodetalle d ON d.resumenID = r.resumenID
             WHERE r.resumenID = @Id";
@@ -138,21 +164,26 @@ public class ResumenComprobanteRepository : DapperRepository<ResumenComprobante>
         return resumenEntry;
     }
 
+    // ── 3. REGISTRAR ─────────────────────────────────────────────────────────
     public async Task<int> RegistrarResumenComprobanteAsync(ResumenComprobante resumen)
     {
         const string sql = @"
             INSERT INTO resumendiario (
                 empresaID, empresaRuc, empresaRazonSocial,
+                empresaDireccion, empresaProvincia, empresaDepartamento,
+                empresaDistrito, empresaUbigeo, establecimientoAnexo,
                 numeroEnvio, fechaEmisionDocumentos, fechaGeneracion,
                 identificador, estadoSunat, ticket,
                 codigoRespuesta, mensajeRespuesta, xmlGenerado,
-                fechaEnvio, estado
+                pdfGenerado, fechaEnvio, estado, usuarioCreacion
             ) VALUES (
                 @EmpresaId, @EmpresaRuc, @EmpresaRazonSocial,
+                @EmpresaDireccion, @EmpresaProvincia, @EmpresaDepartamento,
+                @EmpresaDistrito, @EmpresaUbigeo, @EstablecimientoAnexo,
                 @NumeroEnvio, @FechaEmisionDocumentos, @FechaGeneracion,
                 @Identificador, @EstadoSunat, @Ticket,
                 @CodigoRespuesta, @MensajeRespuesta, @XmlGenerado,
-                @FechaEnvio, @Estado
+                @PdfGenerado, @FechaEnvio, @Estado, @UsuarioCreacion
             );
             SELECT LAST_INSERT_ID();";
 
@@ -161,6 +192,12 @@ public class ResumenComprobanteRepository : DapperRepository<ResumenComprobante>
             resumen.EmpresaId,
             resumen.EmpresaRuc,
             resumen.EmpresaRazonSocial,
+            resumen.EmpresaDireccion,
+            resumen.EmpresaProvincia,
+            resumen.EmpresaDepartamento,
+            resumen.EmpresaDistrito,
+            resumen.EmpresaUbigeo,
+            resumen.EstablecimientoAnexo,
             resumen.NumeroEnvio,
             FechaEmisionDocumentos = resumen.FechaEmisionDocumentos.Date,
             FechaGeneracion        = resumen.FechaGeneracion.Date,
@@ -170,8 +207,10 @@ public class ResumenComprobanteRepository : DapperRepository<ResumenComprobante>
             resumen.CodigoRespuesta,
             resumen.MensajeRespuesta,
             resumen.XmlGenerado,
+            resumen.PdfGenerado,
             resumen.FechaEnvio,
-            resumen.Estado
+            resumen.Estado,
+            resumen.UsuarioCreacion
         };
 
         int resumenId = await _connection.ExecuteScalarAsync<int>(sql, parameters, _transaction);
@@ -185,24 +224,32 @@ public class ResumenComprobanteRepository : DapperRepository<ResumenComprobante>
         return resumenId;
     }
 
+    // ── 4. REGISTRAR DETALLE ─────────────────────────────────────────────────
     private async Task RegistrarDetalleAsync(ResumenComprobanteDetalle d)
     {
         const string sql = @"
             INSERT INTO resumendiariodetalle (
                 resumenID, lineaId, comprobanteId, tipoComprobanteId,
-                serie, correlativo, codigoCondicion,
-                moneda, montoTotalVenta, totalGrabado, totalExonerado,
-                totalInafecto, totalGratuito, totalIGV, igvReferencial
+                serie, correlativo,
+                clienteTipoDoc, clienteNumDoc, clienteNombre,
+                documentoAfectadoTipo, documentoAfectadoNumero,
+                codigoCondicion, moneda, montoTotalVenta,
+                totalGrabado, totalExonerado, totalInafecto,
+                totalGratuito, totalIGV, igvReferencial
             ) VALUES (
                 @ResumenComprobanteId, @LineID, @ComprobanteId, @TipoComprobante,
-                @Serie, @Correlativo, @CodigoCondicion,
-                @Moneda, @MontoTotalVenta, @TotalGravado, @TotalExonerado,
-                @TotalInafecto, @TotalGratuito, @TotalIGV, @IGVReferencial
+                @Serie, @Correlativo,
+                @ClienteTipoDoc, @ClienteNumDoc, @ClienteNombre,
+                @DocumentoAfectadoTipo, @DocumentoAfectadoNumero,
+                @CodigoCondicion, @Moneda, @MontoTotalVenta,
+                @TotalGravado, @TotalExonerado, @TotalInafecto,
+                @TotalGratuito, @TotalIGV, @IGVReferencial
             );";
 
         await _connection.ExecuteAsync(sql, d, _transaction);
     }
 
+    // ── 5. EXISTE IDENTIFICADOR ──────────────────────────────────────────────
     public async Task<bool> ExisteIdentificadorAsync(string identificador)
     {
         const string sql = @"
@@ -211,15 +258,15 @@ public class ResumenComprobanteRepository : DapperRepository<ResumenComprobante>
             WHERE identificador = @Identificador";
 
         var count = await _connection.ExecuteScalarAsync<int>(
-            sql, 
-            new { Identificador = identificador }, 
+            sql,
+            new { Identificador = identificador },
             _transaction
         );
 
         return count > 0;
     }
 
-    // ResumenComprobanteRepository
+    // ── 6. ACTUALIZAR ESTADO ─────────────────────────────────────────────────
     public async Task UpdateEstadoResumenAsync(int resumenId, string estado, string ticket,
         string codigoRespuesta, string mensajeRespuesta, string xmlGenerado, DateTime fechaEnvio)
     {
