@@ -41,7 +41,7 @@ public class GuiaService : IGuiaService
         _xmlBuilder = xmlBuilder;
         _xmlSigner = xmlSigner;
         _sunatGuia = sunatGuia;
-        _wsNotifier  = wsNotifier;  
+        _wsNotifier = wsNotifier;
         _rutaXml = configuration["Storage:RutaXml"] ?? "C:/FacturacionStorage";
     }
 
@@ -230,7 +230,10 @@ public class GuiaService : IGuiaService
                 ChoferApellidos = dto.Envio.Transportista?.ChoferApellidos,
                 ChoferLicencia = dto.Envio.Transportista?.ChoferLicencia,
                 EstadoSunat = "PENDIENTE",
-                FechaCreacion = DateTime.UtcNow,
+                FechaCreacion = TimeZoneInfo.ConvertTimeFromUtc(
+                    DateTime.UtcNow,
+                    TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time")
+                ),
                 ClienteCorreo = dto.ClienteCorreo,
                 ClienteWhatsapp = dto.ClienteWhatsapp,
                 UsuarioCreacion = dto.UsuarioCreacion,
@@ -253,8 +256,6 @@ public class GuiaService : IGuiaService
             }
 
             _unitOfWork.Commit();
-
-            _ = Task.Run(() => _wsNotifier.NotifyAsync(guia.SucursalId, guia.EmpresaRuc));
 
             return await GetByIdAsync(newId)
                 ?? throw new InvalidOperationException("Error al recuperar la guía creada");
@@ -335,10 +336,13 @@ public class GuiaService : IGuiaService
             sunatResponse.Descripcion,
             sunatResponse.Ticket,
             null,
-            sunatResponse.Success ? DateTime.UtcNow : null
+            sunatResponse.Success ? TimeZoneInfo.ConvertTimeFromUtc(
+    DateTime.UtcNow,
+    TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time")
+) : null
         );
 
-        _ = Task.Run(() => _wsNotifier.NotifyAsync(guia.SucursalId, guia.EmpresaRuc));
+        _ = Task.Run(() => _wsNotifier.NotifyWithDelayAsync(guia.SucursalId, guia.EmpresaRuc, 4, "status"));
 
         return await GetByIdAsync(guiaId)
             ?? throw new InvalidOperationException("Error al recuperar la guía actualizada");
