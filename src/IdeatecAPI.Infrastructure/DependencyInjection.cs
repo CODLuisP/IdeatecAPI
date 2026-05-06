@@ -21,6 +21,7 @@ using IdeatecAPI.Application.Features.Sucursal.Services;
 using IdeatecAPI.Application.Features.Dashboard.Services;
 using IdeatecAPI.Application.Features.Reportes.Services;
 using IdeatecAPI.Application.Features.CuentasPorCobrar.Services;
+using IdeatecAPI.Application.Common.Interfaces;
 
 namespace IdeatecAPI.Infrastructure;
 
@@ -97,6 +98,12 @@ public static class DependencyInjection
         //Cuentas por cobrar
         services.AddScoped<ICuentasPorCobrarService, CuentasPorCobrarService>();
 
+        //Notificaciones WebSocket
+        services.AddHttpClient<IWebSocketNotifier, WebSocketNotifier>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(5);
+        });
+
         var jwtSecret = configuration["JwtSettings:Secret"]
             ?? throw new InvalidOperationException("JWT Secret not configured in appsettings.json");
 
@@ -126,7 +133,7 @@ public static class DependencyInjection
 
         services.AddAuthorization();
 
-         // ── CORREGIDO: MediatR debe escanear Application, no Infrastructure ──
+        // ── CORREGIDO: MediatR debe escanear Application, no Infrastructure ──
         services.AddMediatR(typeof(IdeatecAPI.Application.Features.Auth.ForgotPassword.ForgotPasswordCommand).Assembly);
 
         return services;

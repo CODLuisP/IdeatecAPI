@@ -256,18 +256,18 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         await _connection.ExecuteAsync(sql, parameters, _transaction);
     }
 
-public async Task<IEnumerable<Comprobante>> GetByRucAndFechasAsync(string ruc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null)
-{
-    var sql = BaseSelect + @"
+    public async Task<IEnumerable<Comprobante>> GetByRucAndFechasAsync(string ruc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null)
+    {
+        var sql = BaseSelect + @"
     WHERE empresaRuc = @Ruc
     AND (@FechaDesde IS NULL OR fechaEmision >= @FechaDesde)
     AND (@FechaHasta IS NULL OR fechaEmision <= @FechaHasta)
     ORDER BY fechaEmision DESC"
-    + (limit.HasValue ? " LIMIT @Limit" : "");
+        + (limit.HasValue ? " LIMIT @Limit" : "");
 
-    return await _connection.QueryAsync<Comprobante>(
-        sql, new { Ruc = ruc, FechaDesde = fechaDesde, FechaHasta = fechaHasta, Limit = limit }, _transaction);
-}
+        return await _connection.QueryAsync<Comprobante>(
+            sql, new { Ruc = ruc, FechaDesde = fechaDesde, FechaHasta = fechaHasta, Limit = limit }, _transaction);
+    }
 
     public async Task<IEnumerable<Comprobante>> GetBySucursalAndFechasAsync(string empresaRuc, string codEstablecimiento, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null)
     {
@@ -283,7 +283,7 @@ public async Task<IEnumerable<Comprobante>> GetByRucAndFechasAsync(string ruc, D
             sql, new { EmpresaRuc = empresaRuc, CodEstablecimiento = codEstablecimiento, FechaDesde = fechaDesde, FechaHasta = fechaHasta, Limit = limit }, _transaction);
     }
 
-   public async Task<IEnumerable<Comprobante>> GetByDocClienteAndFechasAsync(string rucEmpresa, string clienteNumDoc, DateTime? fechaDesde, DateTime? fechaHasta)
+    public async Task<IEnumerable<Comprobante>> GetByDocClienteAndFechasAsync(string rucEmpresa, string clienteNumDoc, DateTime? fechaDesde, DateTime? fechaHasta)
     {
         var sql = BaseSelect + @"
         WHERE empresaRuc = @RucEmpresa
@@ -294,7 +294,7 @@ public async Task<IEnumerable<Comprobante>> GetByRucAndFechasAsync(string ruc, D
 
         return await _connection.QueryAsync<Comprobante>(
             sql, new { RucEmpresa = rucEmpresa, ClienteNumDoc = clienteNumDoc, FechaDesde = fechaDesde, FechaHasta = fechaHasta }, _transaction);
-    } 
+    }
 
     public async Task<IEnumerable<Comprobante>> GetByDocUsuarioAndFechasAsync(string rucEmpresa, int usuarioCreacion, DateTime? fechaDesde, DateTime? fechaHasta)
     {
@@ -337,10 +337,10 @@ public async Task<IEnumerable<Comprobante>> GetByRucAndFechasAsync(string ruc, D
 
         await _connection.ExecuteAsync(sql, new
         {
-            ComprobanteId      = comprobanteId,
-            Correo             = correo,
-            EnviadoPorCorreo   = enviadoPorCorreo,
-            WhatsApp           = whatsApp,
+            ComprobanteId = comprobanteId,
+            Correo = correo,
+            EnviadoPorCorreo = enviadoPorCorreo,
+            WhatsApp = whatsApp,
             EnviadoPorWhatsApp = enviadoPorWhatsApp
         }, _transaction);
     }
@@ -595,6 +595,23 @@ public async Task<IEnumerable<Comprobante>> GetByRucAndFechasAsync(string ruc, D
             new { Ruc = ruc, Serie = serie, Numero = numero },
             _transaction
         );
+    }
+
+    public async Task<int?> GetSucursalIdByRucAndAnexoAsync(string empresaRuc, string codEstablecimiento)
+    {
+        var sql = @"
+        SELECT sucursalID 
+        FROM sucursal 
+        WHERE empresaRuc = @EmpresaRuc 
+          AND codEstablecimiento = @CodEstablecimiento
+          AND estado = 1
+        LIMIT 1";
+
+        return await _connection.QueryFirstOrDefaultAsync<int?>(sql, new
+        {
+            EmpresaRuc = empresaRuc,
+            CodEstablecimiento = codEstablecimiento
+        }, _transaction);
     }
 
     private const string BaseSelect = @"

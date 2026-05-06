@@ -103,13 +103,34 @@ public class GeneraResumenXmlService : IResumenXmlService
     }
 
     // ── Emisor ────────────────────────────────────────────────────────────────
-    private static XElement BuildSupplierParty(ObtenerResumenComprobanteDTO dto) =>
-        new(Cac + "AccountingSupplierParty",
-            new XElement(Cbc + "CustomerAssignedAccountID", dto.EmpresaRuc),
-            new XElement(Cbc + "AdditionalAccountID", "6"),
-            new XElement(Cac + "Party",
-                new XElement(Cac + "PartyLegalEntity",
-                    new XElement(Cbc + "RegistrationName", dto.EmpresaRazonSocial))));
+private static XElement BuildSupplierParty(ObtenerResumenComprobanteDTO dto) =>
+    new(Cac + "AccountingSupplierParty",
+        new XElement(Cbc + "CustomerAssignedAccountID", dto.EmpresaRuc),
+        new XElement(Cbc + "AdditionalAccountID", "6"),
+        new XElement(Cac + "Party",
+            new XElement(Cac + "PartyIdentification",
+                new XElement(Cbc + "ID",
+                    new XAttribute("schemeAgencyName", "PE:SUNAT"),
+                    new XAttribute("schemeID", "6"),
+                    dto.EmpresaRuc)),
+            new XElement(Cac + "PartyName",
+                new XElement(Cbc + "Name", dto.EmpresaRazonSocial)),
+            new XElement(Cac + "PostalAddress",
+                new XElement(Cbc + "ID", dto.EmpresaUbigeo ?? "000000"),
+                new XElement(Cbc + "StreetName", dto.EmpresaDireccion ?? string.Empty),
+                new XElement(Cbc + "CitySubdivisionName", dto.EmpresaDistrito ?? string.Empty),
+                new XElement(Cbc + "CityName", dto.EmpresaProvincia ?? string.Empty),
+                new XElement(Cbc + "CountrySubentity", dto.EmpresaDepartamento ?? string.Empty),
+                new XElement(Cac + "Country",
+                    new XElement(Cbc + "IdentificationCode", "PE"))),
+            new XElement(Cac + "PartyLegalEntity",
+                new XElement(Cbc + "RegistrationName", dto.EmpresaRazonSocial),
+                new XElement(Cbc + "CompanyID",
+                    new XAttribute("schemeAgencyName", "PE:SUNAT"),
+                    new XAttribute("schemeID", "6"),
+                    dto.EmpresaRuc),
+                new XElement(Cac + "RegistrationAddress",
+                    new XElement(Cbc + "AddressTypeCode", dto.EstablecimientoAnexo ?? "0000")))));
 
     // ── Línea de resumen ──────────────────────────────────────────────────────
     private static XElement BuildSummaryDocumentsLine(ObtenerResumenDetalleDTO d)

@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Text;
+using IdeatecAPI.Application.Common.Interfaces;
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Application.Features.Notas.DTOs;
 using IdeatecAPI.Domain.Entities;
@@ -24,18 +25,21 @@ public class NoteService : INoteService
     private readonly IXmlSignerService _xmlSigner;
     private readonly ISunatSenderService _sunatSender;
     private readonly string _rutaXml;
+    private readonly IWebSocketNotifier _wsNotifier;
 
     public NoteService(
         IUnitOfWork unitOfWork,
         IXmlNoteBuilderService xmlBuilder,
         IXmlSignerService xmlSigner,
         ISunatSenderService sunatSender,
+        IWebSocketNotifier wsNotifier,
         IConfiguration configuration)
     {
         _unitOfWork = unitOfWork;
         _xmlBuilder = xmlBuilder;
         _xmlSigner = xmlSigner;
         _sunatSender = sunatSender;
+        _wsNotifier = wsNotifier;
         _rutaXml = configuration["Storage:RutaXml"] ?? "C:/FacturacionStorage";
     }
 
@@ -225,6 +229,13 @@ public class NoteService : INoteService
 
             _unitOfWork.Commit();
 
+            var sucursalIdNotify = await _unitOfWork.Comprobantes.GetSucursalIdByRucAndAnexoAsync(
+    note.EmpresaRuc!,
+    note.EstablecimientoAnexo!
+);
+
+            await _wsNotifier.NotifyAsync(sucursalIdNotify, note.EmpresaRuc);
+
             return await GetNoteByIdAsync(newId)
                 ?? throw new InvalidOperationException("Error al recuperar la nota creada");
         }
@@ -315,6 +326,13 @@ public class NoteService : INoteService
                 );
             }
         }
+
+        var sucursalId = await _unitOfWork.Comprobantes.GetSucursalIdByRucAndAnexoAsync(
+            note.EmpresaRuc!,
+            note.EstablecimientoAnexo!
+        );
+
+        await _wsNotifier.NotifyAsync(sucursalId, note.EmpresaRuc);
 
         return await GetNoteByIdAsync(comprobanteId)
             ?? throw new InvalidOperationException("Error al recuperar la nota actualizada");
