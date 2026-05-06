@@ -28,7 +28,20 @@ public class WebSocketNotifier : IWebSocketNotifier
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"⚠️ WebSocket notify falló: {ex.Message}");
+            Console.WriteLine($"WebSocket notify falló: {ex.Message}");
+        }
+    }
+
+    public async Task NotifyWithDelayAsync(int? sucursalId, string? empresaRuc, int delaySeconds = 6)
+    {
+        try
+        {
+            await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
+            await NotifyAsync(sucursalId, empresaRuc);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"WebSocket notify con delay falló: {ex.Message}");
         }
     }
 }
