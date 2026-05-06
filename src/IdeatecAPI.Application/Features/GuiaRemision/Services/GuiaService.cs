@@ -27,21 +27,21 @@ public class GuiaService : IGuiaService
     private readonly IXmlSignerService _xmlSigner;
     private readonly ISunatGuiaService _sunatGuia;
     private readonly string _rutaXml;
-    private readonly IWebSocketNotifier _wsNotifier;
+    //private readonly IWebSocketNotifier _wsNotifier;
 
     public GuiaService(
         IUnitOfWork unitOfWork,
         IXmlGuiaBuilderService xmlBuilder,
         IXmlSignerService xmlSigner,
         ISunatGuiaService sunatGuia,
-        IWebSocketNotifier wsNotifier,
+        //IWebSocketNotifier wsNotifier,
         IConfiguration configuration)
     {
         _unitOfWork = unitOfWork;
         _xmlBuilder = xmlBuilder;
         _xmlSigner = xmlSigner;
         _sunatGuia = sunatGuia;
-        _wsNotifier  = wsNotifier;  
+        //_wsNotifier  = wsNotifier;  
         _rutaXml = configuration["Storage:RutaXml"] ?? "C:/FacturacionStorage";
     }
 

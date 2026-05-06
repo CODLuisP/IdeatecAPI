@@ -70,7 +70,7 @@ public class ComprobanteService : IComprobanteService
     private readonly IXmlSignerService _xmlSigner;
     private readonly ISunatSenderService _sunatSender;
     private readonly IConfiguration _configuration;
-    private readonly IWebSocketNotifier _wsNotifier;
+    //private readonly IWebSocketNotifier _wsNotifier;
     private readonly string _rutaXml;
 
     public ComprobanteService(
@@ -78,7 +78,7 @@ public class ComprobanteService : IComprobanteService
         IComprobanteXmlService xmlService,
         IXmlSignerService xmlSigner,
         ISunatSenderService sunatSender,
-        IWebSocketNotifier wsNotifier,
+        //IWebSocketNotifier wsNotifier,
         IConfiguration configuration)
     {
         _unitOfWork = unitOfWork;
@@ -86,7 +86,7 @@ public class ComprobanteService : IComprobanteService
         _xmlSigner = xmlSigner;
         _sunatSender = sunatSender;
         _configuration = configuration;
-        _wsNotifier = wsNotifier;
+        //_wsNotifier = wsNotifier;
         _rutaXml = configuration["Storage:RutaXml"] ?? Path.Combine(Directory.GetCurrentDirectory(), "XmlFiles");
     }
 
