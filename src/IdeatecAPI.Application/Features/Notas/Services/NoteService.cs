@@ -25,21 +25,21 @@ public class NoteService : INoteService
     private readonly IXmlSignerService _xmlSigner;
     private readonly ISunatSenderService _sunatSender;
     private readonly string _rutaXml;
-    private readonly IWebSocketNotifier _wsNotifier;
+    //private readonly IWebSocketNotifier _wsNotifier;
 
     public NoteService(
         IUnitOfWork unitOfWork,
         IXmlNoteBuilderService xmlBuilder,
         IXmlSignerService xmlSigner,
         ISunatSenderService sunatSender,
-        IWebSocketNotifier wsNotifier,
+        //IWebSocketNotifier wsNotifier,
         IConfiguration configuration)
     {
         _unitOfWork = unitOfWork;
         _xmlBuilder = xmlBuilder;
         _xmlSigner = xmlSigner;
         _sunatSender = sunatSender;
-        _wsNotifier = wsNotifier;
+        //_wsNotifier = wsNotifier;
         _rutaXml = configuration["Storage:RutaXml"] ?? "C:/FacturacionStorage";
     }
 
