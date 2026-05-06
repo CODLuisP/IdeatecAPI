@@ -254,7 +254,7 @@ public class GuiaService : IGuiaService
 
             _unitOfWork.Commit();
 
-            _ = Task.Run(() => _wsNotifier.NotifyAsync(guia.SucursalId, guia.EmpresaRuc));
+            //_ = Task.Run(() => _wsNotifier.NotifyAsync(guia.SucursalId, guia.EmpresaRuc));
 
             return await GetByIdAsync(newId)
                 ?? throw new InvalidOperationException("Error al recuperar la guía creada");
@@ -338,7 +338,7 @@ public class GuiaService : IGuiaService
             sunatResponse.Success ? DateTime.UtcNow : null
         );
 
-        _ = Task.Run(() => _wsNotifier.NotifyAsync(guia.SucursalId, guia.EmpresaRuc));
+        //_ = Task.Run(() => _wsNotifier.NotifyAsync(guia.SucursalId, guia.EmpresaRuc));
 
         return await GetByIdAsync(guiaId)
             ?? throw new InvalidOperationException("Error al recuperar la guía actualizada");

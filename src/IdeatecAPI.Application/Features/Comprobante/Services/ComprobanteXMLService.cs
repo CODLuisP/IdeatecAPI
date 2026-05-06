@@ -495,7 +495,7 @@ public class ComprobanteService : IComprobanteService
                 comprobante.EmpresaEstablecimientoAnexo!
             );
 
-            _ = Task.Run(() => _wsNotifier.NotifyAsync(sucursalIdNotify, comprobante.EmpresaRuc));
+            //_ = Task.Run(() => _wsNotifier.NotifyAsync(sucursalIdNotify, comprobante.EmpresaRuc));
 
             return new ComprobanteResponse
             {
@@ -714,7 +714,7 @@ public class ComprobanteService : IComprobanteService
                 comprobante.EmpresaEstablecimientoAnexo!
             );
 
-            _ = Task.Run(() => _wsNotifier.NotifyAsync(sucursalIdNotify, comprobante.EmpresaRuc));
+            //_ = Task.Run(() => _wsNotifier.NotifyAsync(sucursalIdNotify, comprobante.EmpresaRuc));
 
             return new ComprobanteResponse
             {
@@ -761,7 +761,7 @@ public class ComprobanteService : IComprobanteService
             comprobante.EmpresaEstablecimientoAnexo!
         );
 
-        _ = Task.Run(() => _wsNotifier.NotifyAsync(sucursalId, comprobante.EmpresaRuc));
+        //_ = Task.Run(() => _wsNotifier.NotifyAsync(sucursalId, comprobante.EmpresaRuc));
 
         return new ComprobanteResponse
         {

@@ -234,7 +234,7 @@ public class NoteService : INoteService
                 note.EstablecimientoAnexo!
             );
 
-            _ = Task.Run(() => _wsNotifier.NotifyAsync(sucursalIdNotify, note.EmpresaRuc));
+            //_ = Task.Run(() => _wsNotifier.NotifyAsync(sucursalIdNotify, note.EmpresaRuc));
 
             return await GetNoteByIdAsync(newId)
                 ?? throw new InvalidOperationException("Error al recuperar la nota creada");
@@ -332,7 +332,7 @@ public class NoteService : INoteService
             note.EstablecimientoAnexo!
         );
 
-        _ = Task.Run(() => _wsNotifier.NotifyAsync(sucursalId, note.EmpresaRuc));
+        //_ = Task.Run(() => _wsNotifier.NotifyAsync(sucursalId, note.EmpresaRuc));
 
         return await GetNoteByIdAsync(comprobanteId)
             ?? throw new InvalidOperationException("Error al recuperar la nota actualizada");
