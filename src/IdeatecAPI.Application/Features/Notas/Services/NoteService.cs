@@ -325,7 +325,7 @@ public class NoteService : INoteService
             note.EstablecimientoAnexo!
         );
 
-        _ = Task.Run(() => _wsNotifier.NotifyWithDelayAsync(sucursalId, note.EmpresaRuc));
+        _ = Task.Run(() => _wsNotifier.NotifyWithDelayAsync(sucursalId, note.EmpresaRuc, 4, "status"));
 
         return await GetNoteByIdAsync(comprobanteId)
             ?? throw new InvalidOperationException("Error al recuperar la nota actualizada");
