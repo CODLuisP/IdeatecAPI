@@ -342,7 +342,7 @@ public class GuiaService : IGuiaService
 ) : null
         );
 
-        _ = Task.Run(() => _wsNotifier.NotifyWithDelayAsync(guia.SucursalId, guia.EmpresaRuc));
+        _ = Task.Run(() => _wsNotifier.NotifyWithDelayAsync(guia.SucursalId, guia.EmpresaRuc, 4, "status"));
 
         return await GetByIdAsync(guiaId)
             ?? throw new InvalidOperationException("Error al recuperar la guía actualizada");
