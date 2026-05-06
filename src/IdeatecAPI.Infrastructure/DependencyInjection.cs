@@ -99,7 +99,7 @@ public static class DependencyInjection
         services.AddScoped<ICuentasPorCobrarService, CuentasPorCobrarService>();
 
         //Notificaciones WebSocket
-        //services.AddHttpClient<IWebSocketNotifier, WebSocketNotifier>();
+        services.AddHttpClient<IWebSocketNotifier, WebSocketNotifier>();
 
         var jwtSecret = configuration["JwtSettings:Secret"]
             ?? throw new InvalidOperationException("JWT Secret not configured in appsettings.json");
