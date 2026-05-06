@@ -256,17 +256,18 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         await _connection.ExecuteAsync(sql, parameters, _transaction);
     }
 
-    public async Task<IEnumerable<Comprobante>> GetByRucAndFechasAsync(string ruc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null)
+    public async Task<IEnumerable<Comprobante>> GetByRucAndFechasAsync(string ruc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null)
     {
         var sql = BaseSelect + @"
     WHERE empresaRuc = @Ruc
     AND (@FechaDesde IS NULL OR fechaEmision >= @FechaDesde)
     AND (@FechaHasta IS NULL OR fechaEmision <= @FechaHasta)
     ORDER BY fechaEmision DESC"
-        + (limit.HasValue ? " LIMIT @Limit" : "");
+        + (limit.HasValue ? " LIMIT @Limit" : "")
+        + (limit.HasValue && offset.HasValue ? " OFFSET @Offset" : "");
 
         return await _connection.QueryAsync<Comprobante>(
-            sql, new { Ruc = ruc, FechaDesde = fechaDesde, FechaHasta = fechaHasta, Limit = limit }, _transaction);
+            sql, new { Ruc = ruc, FechaDesde = fechaDesde, FechaHasta = fechaHasta, Limit = limit, Offset = offset }, _transaction);
     }
 
     public async Task<IEnumerable<Comprobante>> GetBySucursalAndFechasAsync(string empresaRuc, string codEstablecimiento, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null)

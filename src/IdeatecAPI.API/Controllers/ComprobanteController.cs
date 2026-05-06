@@ -49,12 +49,13 @@ public class ComprobantesController : ControllerBase
         string ruc,
         [FromQuery] DateTime? fechaDesde,
         [FromQuery] DateTime? fechaHasta,
-        [FromQuery] int? limit = null)
+        [FromQuery] int? limit = null,
+        [FromQuery] int? offset = null)
     {
         try
         {
             var (desde, hasta) = NormalizarFechas(fechaDesde, fechaHasta);
-            var comprobantes = await _comprobanteService.GetByRucAndFechasAsync(ruc, desde, hasta, limit);
+            var comprobantes = await _comprobanteService.GetByRucAndFechasAsync(ruc, desde, hasta, limit, offset);
             return Ok(comprobantes ?? []);
         }
         catch (Exception ex)
@@ -160,12 +161,13 @@ public class ComprobantesController : ControllerBase
         string ruc,
         [FromQuery] DateTime? fechaDesde,
         [FromQuery] DateTime? fechaHasta,
-        [FromQuery] int? limit = null)
+        [FromQuery] int? limit = null,
+        [FromQuery] int? offset = null)
     {
         try
         {
             var (desde, hasta) = NormalizarFechas(fechaDesde, fechaHasta);
-            var result = await _comprobanteService.GetListadoByRucAndFechasAsync(ruc, desde, hasta, limit);
+            var result = await _comprobanteService.GetListadoByRucAndFechasAsync(ruc, desde, hasta, limit, offset);
             return Ok(result ?? Enumerable.Empty<object>());
         }
         catch (Exception ex)
@@ -434,16 +436,25 @@ public class ComprobantesController : ControllerBase
     {
         try
         {
-            var pdfBytes = await _pdfService.GenerarPdfAsync(id, tamano);
-    
-            // Recuperar número de comprobante para el nombre del archivo
+            var swDb = System.Diagnostics.Stopwatch.StartNew();
+            
             var comprobante = await _comprobanteService.GetComprobanteByIdAsync(id);
             var nombreArchivo = comprobante?.NumeroCompleto ?? id.ToString();
             nombreArchivo = string.Concat(nombreArchivo
                 .Replace("/", "-").Replace("\\", "-")
                 .Where(c => !Path.GetInvalidFileNameChars().Contains(c)));
+
+            swDb.Stop();
+            var timeDbOnly = swDb.ElapsedMilliseconds;
+
+            var swPdf = System.Diagnostics.Stopwatch.StartNew();
+            var pdfBytes = await _pdfService.GenerarPdfAsync(id, tamano);
+            swPdf.Stop();
+            var timePdfGen = swPdf.ElapsedMilliseconds;
     
             Response.Headers["Content-Disposition"] = $"inline; filename=\"{nombreArchivo}.pdf\"";
+            Response.Headers["X-Debug-Time-DB"] = timeDbOnly.ToString() + " ms";
+            Response.Headers["X-Debug-Time-PDF"] = timePdfGen.ToString() + " ms";
             return File(pdfBytes, "application/pdf");
         }
         catch (KeyNotFoundException ex)

@@ -13,7 +13,7 @@ namespace IdeatecAPI.Application.Features.Comprobante.Services;
 public interface IComprobanteService
 {
     //comprobantes por ruc
-    Task<IEnumerable<ObtenerComprobanteDTO>> GetByRucAndFechasAsync(string ruc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null);
+    Task<IEnumerable<ObtenerComprobanteDTO>> GetByRucAndFechasAsync(string ruc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null);
 
     //Comprobantes de un cliente en un ruc
     Task<IEnumerable<ObtenerComprobanteDTO>> GetByDocClienteAndFechasAsync(string rucEmpresa, string clienteNumDoc, DateTime? fechaDesde, DateTime? fechaHasta);
@@ -26,7 +26,7 @@ public interface IComprobanteService
 
 
     //obtener Listado de campos solo de la tabla comrpobantes sin su relaciones
-    Task<IEnumerable<ListarComprobanteDTO>> GetListadoByRucAndFechasAsync(string ruc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null);
+    Task<IEnumerable<ListarComprobanteDTO>> GetListadoByRucAndFechasAsync(string ruc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null);
     Task<IEnumerable<ListarComprobanteDTO>> GetListadoByDocClienteAndFechasAsync(string rucEmpresa, string clienteNumDoc, DateTime? fechaDesde, DateTime? fechaHasta);
     Task<IEnumerable<ListarComprobanteDTO>> GetListadoByDocUsuarioAndFechasAsync(string rucEmpresa, int usuarioCreacion, DateTime? fechaDesde, DateTime? fechaHasta);
     Task<IEnumerable<ListarComprobanteDTO>> GetListadoBySucursalAndFechasAsync(int sucursalId, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null);
@@ -70,7 +70,7 @@ public class ComprobanteService : IComprobanteService
     private readonly IXmlSignerService _xmlSigner;
     private readonly ISunatSenderService _sunatSender;
     private readonly IConfiguration _configuration;
-    private readonly IWebSocketNotifier _wsNotifier;
+    //private readonly IWebSocketNotifier _wsNotifier;
     private readonly string _rutaXml;
 
     public ComprobanteService(
@@ -78,7 +78,7 @@ public class ComprobanteService : IComprobanteService
         IComprobanteXmlService xmlService,
         IXmlSignerService xmlSigner,
         ISunatSenderService sunatSender,
-        IWebSocketNotifier wsNotifier,
+        //IWebSocketNotifier wsNotifier,
         IConfiguration configuration)
     {
         _unitOfWork = unitOfWork;
@@ -86,13 +86,13 @@ public class ComprobanteService : IComprobanteService
         _xmlSigner = xmlSigner;
         _sunatSender = sunatSender;
         _configuration = configuration;
-        _wsNotifier = wsNotifier;
+        //_wsNotifier = wsNotifier;
         _rutaXml = configuration["Storage:RutaXml"] ?? Path.Combine(Directory.GetCurrentDirectory(), "XmlFiles");
     }
 
-    public async Task<IEnumerable<ObtenerComprobanteDTO>> GetByRucAndFechasAsync(string ruc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null)
+    public async Task<IEnumerable<ObtenerComprobanteDTO>> GetByRucAndFechasAsync(string ruc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null)
     {
-        var comprobantes = await _unitOfWork.Comprobantes.GetByRucAndFechasAsync(ruc, fechaDesde, fechaHasta, limit);
+        var comprobantes = await _unitOfWork.Comprobantes.GetByRucAndFechasAsync(ruc, fechaDesde, fechaHasta, limit, offset);
 
         var lista = new List<ObtenerComprobanteDTO>();
         foreach (var comprobante in comprobantes)
@@ -176,9 +176,9 @@ public class ComprobanteService : IComprobanteService
         return await _unitOfWork.Comprobantes.GetCantidadByClienteNumDocAsync(clienteNumDoc);
     }
 
-    public async Task<IEnumerable<ListarComprobanteDTO>> GetListadoByRucAndFechasAsync(string ruc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null)
+    public async Task<IEnumerable<ListarComprobanteDTO>> GetListadoByRucAndFechasAsync(string ruc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null)
     {
-        var comprobantes = await _unitOfWork.Comprobantes.GetByRucAndFechasAsync(ruc, fechaDesde, fechaHasta, limit);
+        var comprobantes = await _unitOfWork.Comprobantes.GetByRucAndFechasAsync(ruc, fechaDesde, fechaHasta, limit, offset);
         return comprobantes.Select(MapToListarDto);
     }
 
@@ -491,10 +491,11 @@ public class ComprobanteService : IComprobanteService
             _unitOfWork.Commit();
 
             var sucursalIdNotify = await _unitOfWork.Comprobantes.GetSucursalIdByRucAndAnexoAsync(
-    comprobante.EmpresaRuc!,
-    comprobante.EmpresaEstablecimientoAnexo!
-);
-            await _wsNotifier.NotifyAsync(sucursalIdNotify, comprobante.EmpresaRuc);
+                comprobante.EmpresaRuc!,
+                comprobante.EmpresaEstablecimientoAnexo!
+            );
+
+            //_ = Task.Run(() => _wsNotifier.NotifyAsync(sucursalIdNotify, comprobante.EmpresaRuc));
 
             return new ComprobanteResponse
             {
@@ -674,15 +675,15 @@ public class ComprobanteService : IComprobanteService
         var xmlFirmadoString = Encoding.UTF8.GetString(xmlFirmadoBytes);
         var nombreArchivo = $"{empresa.Ruc}-{comprobante.TipoComprobante}-{comprobante.Serie}-{comprobante.Correlativo:D8}";
 
-        // 7. Guardar ZIP firmado localmente
-        await GuardarArchivosAsync(
+        // 7. Guardar ZIP firmado localmente (En segundo plano para no demorar la respuesta de la API)
+        _ = Task.Run(() => GuardarArchivosAsync(
             ruc: empresa.Ruc,
             razonSocial: comprobante.EmpresaRazonSocial!,
             tipoComprobante: comprobante.TipoComprobante!,
             nombreArchivo: nombreArchivo,
             xmlFirmadoBytes: xmlFirmadoBytes,
             cdrBase64: null
-        );
+        ));
 
         // 8. Enviar a SUNAT
         SunatResponse sunatResponse;
@@ -709,11 +710,11 @@ public class ComprobanteService : IComprobanteService
             );
 
             var sucursalIdNotify = await _unitOfWork.Comprobantes.GetSucursalIdByRucAndAnexoAsync(
-        comprobante.EmpresaRuc!,
-        comprobante.EmpresaEstablecimientoAnexo!
-    );
+                comprobante.EmpresaRuc!,
+                comprobante.EmpresaEstablecimientoAnexo!
+            );
 
-            await _wsNotifier.NotifyAsync(sucursalIdNotify, comprobante.EmpresaRuc);
+            //_ = Task.Run(() => _wsNotifier.NotifyAsync(sucursalIdNotify, comprobante.EmpresaRuc));
 
             return new ComprobanteResponse
             {
@@ -727,17 +728,17 @@ public class ComprobanteService : IComprobanteService
             };
         }
 
-        // 9. Guardar CDR
+        // 9. Guardar CDR (En segundo plano)
         if (!string.IsNullOrEmpty(sunatResponse.CdrBase64))
         {
-            await GuardarArchivosAsync(
+            _ = Task.Run(() => GuardarArchivosAsync(
                 ruc: empresa.Ruc,
                 razonSocial: comprobante.EmpresaRazonSocial!,
                 tipoComprobante: comprobante.TipoComprobante!,
                 nombreArchivo: nombreArchivo,
                 xmlFirmadoBytes: null,
                 cdrBase64: sunatResponse.CdrBase64
-            );
+            ));
         }
 
         // 10. Actualizar estado BD
@@ -760,7 +761,7 @@ public class ComprobanteService : IComprobanteService
             comprobante.EmpresaEstablecimientoAnexo!
         );
 
-        await _wsNotifier.NotifyAsync(sucursalId, comprobante.EmpresaRuc);
+        //_ = Task.Run(() => _wsNotifier.NotifyAsync(sucursalId, comprobante.EmpresaRuc));
 
         return new ComprobanteResponse
         {
@@ -830,14 +831,15 @@ public class ComprobanteService : IComprobanteService
         if (comprobante == null)
             return null;
 
-        var detalles = (await _unitOfWork.Comprobantes.GetDetallesByIdAsync(comprobanteId)).ToList();
-        var pagos = (await _unitOfWork.Comprobantes.GetPagosByIdAsync(comprobanteId)).ToList();
-        var cuotas = (await _unitOfWork.Comprobantes.GetCuotasByIdAsync(comprobanteId)).ToList();
-        var leyendas = (await _unitOfWork.Comprobantes.GetLeyendasByIdAsync(comprobanteId)).ToList();
-        var guias = (await _unitOfWork.Comprobantes.GetGuiasByIdAsync(comprobanteId)).ToList();
-        var detracciones = (await _unitOfWork.Comprobantes.GetDetraccionesByIdAsync(comprobanteId)).ToList();
+        var datos = await _unitOfWork.Comprobantes.GetDatosCompletosByComprobanteIdAsync(comprobanteId);
 
-        return MapToDto(comprobante, detalles, pagos, cuotas, leyendas, guias, detracciones);
+        return MapToDto(comprobante, 
+            datos.Detalles.ToList(), 
+            datos.Pagos.ToList(), 
+            datos.Cuotas.ToList(), 
+            datos.Leyendas.ToList(), 
+            datos.Guias.ToList(), 
+            datos.Detracciones.ToList());
     }
 
     public async Task<ObtenerComprobanteDTO?> GetByRucSerieNumeroAsync(string ruc, string serie, int numero)
@@ -847,14 +849,15 @@ public class ComprobanteService : IComprobanteService
             return null;
 
         var comprobanteId = comprobante.ComprobanteId;
-        var detalles = (await _unitOfWork.Comprobantes.GetDetallesByIdAsync(comprobanteId)).ToList();
-        var pagos = (await _unitOfWork.Comprobantes.GetPagosByIdAsync(comprobanteId)).ToList();
-        var cuotas = (await _unitOfWork.Comprobantes.GetCuotasByIdAsync(comprobanteId)).ToList();
-        var leyendas = (await _unitOfWork.Comprobantes.GetLeyendasByIdAsync(comprobanteId)).ToList();
-        var guias = (await _unitOfWork.Comprobantes.GetGuiasByIdAsync(comprobanteId)).ToList();
-        var detracciones = (await _unitOfWork.Comprobantes.GetDetraccionesByIdAsync(comprobanteId)).ToList();
+        var datos = await _unitOfWork.Comprobantes.GetDatosCompletosByComprobanteIdAsync(comprobanteId);
 
-        return MapToDto(comprobante, detalles, pagos, cuotas, leyendas, guias, detracciones);
+        return MapToDto(comprobante, 
+            datos.Detalles.ToList(), 
+            datos.Pagos.ToList(), 
+            datos.Cuotas.ToList(), 
+            datos.Leyendas.ToList(), 
+            datos.Guias.ToList(), 
+            datos.Detracciones.ToList());
     }
 
     public async Task<ObtenerComprobanteDTO?> GetByComprobanteUnicoAsync(string ruc, string serie, int numero)
