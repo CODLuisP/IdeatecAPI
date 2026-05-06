@@ -900,7 +900,7 @@ public class ComprobantePdfService : IComprobantePdfService
     {
         col.Item().Row(r =>
         {
-            r.ConstantItem(85).Text(label + " :").Bold().FontSize(8).FontColor(ColorAzulMarino);
+            r.ConstantItem(85).Text(label + ":").Bold().FontSize(8).FontColor(ColorAzulMarino);
             r.RelativeItem().Text(valor).FontSize(8);
         });
     }
