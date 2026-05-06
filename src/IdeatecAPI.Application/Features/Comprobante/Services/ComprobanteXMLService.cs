@@ -13,7 +13,7 @@ namespace IdeatecAPI.Application.Features.Comprobante.Services;
 public interface IComprobanteService
 {
     //comprobantes por ruc
-    Task<IEnumerable<ObtenerComprobanteDTO>> GetByRucAndFechasAsync(string ruc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null);
+    Task<IEnumerable<ObtenerComprobanteDTO>> GetByRucAndFechasAsync(string ruc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null);
 
     //Comprobantes de un cliente en un ruc
     Task<IEnumerable<ObtenerComprobanteDTO>> GetByDocClienteAndFechasAsync(string rucEmpresa, string clienteNumDoc, DateTime? fechaDesde, DateTime? fechaHasta);
@@ -26,7 +26,7 @@ public interface IComprobanteService
 
 
     //obtener Listado de campos solo de la tabla comrpobantes sin su relaciones
-    Task<IEnumerable<ListarComprobanteDTO>> GetListadoByRucAndFechasAsync(string ruc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null);
+    Task<IEnumerable<ListarComprobanteDTO>> GetListadoByRucAndFechasAsync(string ruc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null);
     Task<IEnumerable<ListarComprobanteDTO>> GetListadoByDocClienteAndFechasAsync(string rucEmpresa, string clienteNumDoc, DateTime? fechaDesde, DateTime? fechaHasta);
     Task<IEnumerable<ListarComprobanteDTO>> GetListadoByDocUsuarioAndFechasAsync(string rucEmpresa, int usuarioCreacion, DateTime? fechaDesde, DateTime? fechaHasta);
     Task<IEnumerable<ListarComprobanteDTO>> GetListadoBySucursalAndFechasAsync(int sucursalId, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null);
@@ -90,9 +90,9 @@ public class ComprobanteService : IComprobanteService
         _rutaXml = configuration["Storage:RutaXml"] ?? Path.Combine(Directory.GetCurrentDirectory(), "XmlFiles");
     }
 
-    public async Task<IEnumerable<ObtenerComprobanteDTO>> GetByRucAndFechasAsync(string ruc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null)
+    public async Task<IEnumerable<ObtenerComprobanteDTO>> GetByRucAndFechasAsync(string ruc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null)
     {
-        var comprobantes = await _unitOfWork.Comprobantes.GetByRucAndFechasAsync(ruc, fechaDesde, fechaHasta, limit);
+        var comprobantes = await _unitOfWork.Comprobantes.GetByRucAndFechasAsync(ruc, fechaDesde, fechaHasta, limit, offset);
 
         var lista = new List<ObtenerComprobanteDTO>();
         foreach (var comprobante in comprobantes)
@@ -176,9 +176,9 @@ public class ComprobanteService : IComprobanteService
         return await _unitOfWork.Comprobantes.GetCantidadByClienteNumDocAsync(clienteNumDoc);
     }
 
-    public async Task<IEnumerable<ListarComprobanteDTO>> GetListadoByRucAndFechasAsync(string ruc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null)
+    public async Task<IEnumerable<ListarComprobanteDTO>> GetListadoByRucAndFechasAsync(string ruc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null)
     {
-        var comprobantes = await _unitOfWork.Comprobantes.GetByRucAndFechasAsync(ruc, fechaDesde, fechaHasta, limit);
+        var comprobantes = await _unitOfWork.Comprobantes.GetByRucAndFechasAsync(ruc, fechaDesde, fechaHasta, limit, offset);
         return comprobantes.Select(MapToListarDto);
     }
 
@@ -675,15 +675,15 @@ public class ComprobanteService : IComprobanteService
         var xmlFirmadoString = Encoding.UTF8.GetString(xmlFirmadoBytes);
         var nombreArchivo = $"{empresa.Ruc}-{comprobante.TipoComprobante}-{comprobante.Serie}-{comprobante.Correlativo:D8}";
 
-        // 7. Guardar ZIP firmado localmente
-        await GuardarArchivosAsync(
+        // 7. Guardar ZIP firmado localmente (En segundo plano para no demorar la respuesta de la API)
+        _ = Task.Run(() => GuardarArchivosAsync(
             ruc: empresa.Ruc,
             razonSocial: comprobante.EmpresaRazonSocial!,
             tipoComprobante: comprobante.TipoComprobante!,
             nombreArchivo: nombreArchivo,
             xmlFirmadoBytes: xmlFirmadoBytes,
             cdrBase64: null
-        );
+        ));
 
         // 8. Enviar a SUNAT
         SunatResponse sunatResponse;
@@ -728,17 +728,17 @@ public class ComprobanteService : IComprobanteService
             };
         }
 
-        // 9. Guardar CDR
+        // 9. Guardar CDR (En segundo plano)
         if (!string.IsNullOrEmpty(sunatResponse.CdrBase64))
         {
-            await GuardarArchivosAsync(
+            _ = Task.Run(() => GuardarArchivosAsync(
                 ruc: empresa.Ruc,
                 razonSocial: comprobante.EmpresaRazonSocial!,
                 tipoComprobante: comprobante.TipoComprobante!,
                 nombreArchivo: nombreArchivo,
                 xmlFirmadoBytes: null,
                 cdrBase64: sunatResponse.CdrBase64
-            );
+            ));
         }
 
         // 10. Actualizar estado BD

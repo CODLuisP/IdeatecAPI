@@ -49,12 +49,13 @@ public class ComprobantesController : ControllerBase
         string ruc,
         [FromQuery] DateTime? fechaDesde,
         [FromQuery] DateTime? fechaHasta,
-        [FromQuery] int? limit = null)
+        [FromQuery] int? limit = null,
+        [FromQuery] int? offset = null)
     {
         try
         {
             var (desde, hasta) = NormalizarFechas(fechaDesde, fechaHasta);
-            var comprobantes = await _comprobanteService.GetByRucAndFechasAsync(ruc, desde, hasta, limit);
+            var comprobantes = await _comprobanteService.GetByRucAndFechasAsync(ruc, desde, hasta, limit, offset);
             return Ok(comprobantes ?? []);
         }
         catch (Exception ex)
@@ -160,12 +161,13 @@ public class ComprobantesController : ControllerBase
         string ruc,
         [FromQuery] DateTime? fechaDesde,
         [FromQuery] DateTime? fechaHasta,
-        [FromQuery] int? limit = null)
+        [FromQuery] int? limit = null,
+        [FromQuery] int? offset = null)
     {
         try
         {
             var (desde, hasta) = NormalizarFechas(fechaDesde, fechaHasta);
-            var result = await _comprobanteService.GetListadoByRucAndFechasAsync(ruc, desde, hasta, limit);
+            var result = await _comprobanteService.GetListadoByRucAndFechasAsync(ruc, desde, hasta, limit, offset);
             return Ok(result ?? Enumerable.Empty<object>());
         }
         catch (Exception ex)
