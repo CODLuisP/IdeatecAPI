@@ -31,11 +31,20 @@ public class ComprobantePdfService : IComprobantePdfService
 
     public async Task<byte[]> GenerarPdfAsync(int comprobanteId, TamanoPdf tamano = TamanoPdf.A4)
     {
+        var swPdfInterno = System.Diagnostics.Stopwatch.StartNew();
+
         var comprobante = await _unitOfWork.Comprobantes.GetByIdAsync(comprobanteId)
             ?? throw new KeyNotFoundException($"Comprobante {comprobanteId} no encontrado.");
 
         var empresaEntidad = await _unitOfWork.Empresas.GetEmpresaByRucAsync(comprobante.EmpresaRuc ?? "")
             ?? throw new KeyNotFoundException($"Empresa con RUC '{comprobante.EmpresaRuc}' no encontrada.");
+
+        var datos = await _unitOfWork.Comprobantes.GetDatosCompletosByComprobanteIdAsync(comprobanteId);
+        
+        swPdfInterno.Stop();
+        Console.WriteLine($"[PERFORMANCE PDF] Tiempo en Base de Datos (PDF Service): {swPdfInterno.ElapsedMilliseconds} ms");
+
+        var swRender = System.Diagnostics.Stopwatch.StartNew();
 
         var empresa = new EmpresaDto
         {
@@ -47,8 +56,6 @@ public class ComprobantePdfService : IComprobantePdfService
             Email           = empresaEntidad.Email,
             LogoBase64      = empresaEntidad.LogoBase64,
         };
-
-        var datos = await _unitOfWork.Comprobantes.GetDatosCompletosByComprobanteIdAsync(comprobanteId);
         
         var detalles     = datos.Detalles.ToList();
         var pagos        = datos.Pagos.ToList();

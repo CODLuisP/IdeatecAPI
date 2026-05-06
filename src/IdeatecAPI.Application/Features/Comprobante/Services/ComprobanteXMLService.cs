@@ -805,14 +805,15 @@ public class ComprobanteService : IComprobanteService
         if (comprobante == null)
             return null;
 
-        var detalles = (await _unitOfWork.Comprobantes.GetDetallesByIdAsync(comprobanteId)).ToList();
-        var pagos = (await _unitOfWork.Comprobantes.GetPagosByIdAsync(comprobanteId)).ToList();
-        var cuotas = (await _unitOfWork.Comprobantes.GetCuotasByIdAsync(comprobanteId)).ToList();
-        var leyendas = (await _unitOfWork.Comprobantes.GetLeyendasByIdAsync(comprobanteId)).ToList();
-        var guias = (await _unitOfWork.Comprobantes.GetGuiasByIdAsync(comprobanteId)).ToList();
-        var detracciones = (await _unitOfWork.Comprobantes.GetDetraccionesByIdAsync(comprobanteId)).ToList();
+        var datos = await _unitOfWork.Comprobantes.GetDatosCompletosByComprobanteIdAsync(comprobanteId);
 
-        return MapToDto(comprobante, detalles, pagos, cuotas, leyendas, guias, detracciones);
+        return MapToDto(comprobante, 
+            datos.Detalles.ToList(), 
+            datos.Pagos.ToList(), 
+            datos.Cuotas.ToList(), 
+            datos.Leyendas.ToList(), 
+            datos.Guias.ToList(), 
+            datos.Detracciones.ToList());
     }
 
     public async Task<ObtenerComprobanteDTO?> GetByRucSerieNumeroAsync(string ruc, string serie, int numero)
@@ -822,14 +823,15 @@ public class ComprobanteService : IComprobanteService
             return null;
 
         var comprobanteId = comprobante.ComprobanteId;
-        var detalles = (await _unitOfWork.Comprobantes.GetDetallesByIdAsync(comprobanteId)).ToList();
-        var pagos = (await _unitOfWork.Comprobantes.GetPagosByIdAsync(comprobanteId)).ToList();
-        var cuotas = (await _unitOfWork.Comprobantes.GetCuotasByIdAsync(comprobanteId)).ToList();
-        var leyendas = (await _unitOfWork.Comprobantes.GetLeyendasByIdAsync(comprobanteId)).ToList();
-        var guias = (await _unitOfWork.Comprobantes.GetGuiasByIdAsync(comprobanteId)).ToList();
-        var detracciones = (await _unitOfWork.Comprobantes.GetDetraccionesByIdAsync(comprobanteId)).ToList();
+        var datos = await _unitOfWork.Comprobantes.GetDatosCompletosByComprobanteIdAsync(comprobanteId);
 
-        return MapToDto(comprobante, detalles, pagos, cuotas, leyendas, guias, detracciones);
+        return MapToDto(comprobante, 
+            datos.Detalles.ToList(), 
+            datos.Pagos.ToList(), 
+            datos.Cuotas.ToList(), 
+            datos.Leyendas.ToList(), 
+            datos.Guias.ToList(), 
+            datos.Detracciones.ToList());
     }
 
     public async Task<ObtenerComprobanteDTO?> GetByComprobanteUnicoAsync(string ruc, string serie, int numero)
@@ -839,14 +841,15 @@ public class ComprobanteService : IComprobanteService
             return null;
 
         var comprobanteId = comprobante.ComprobanteId;
-        var detalles      = (await _unitOfWork.Comprobantes.GetDetallesByIdAsync(comprobanteId)).ToList();
-        var pagos         = (await _unitOfWork.Comprobantes.GetPagosByIdAsync(comprobanteId)).ToList();
-        var cuotas        = (await _unitOfWork.Comprobantes.GetCuotasByIdAsync(comprobanteId)).ToList();
-        var leyendas      = (await _unitOfWork.Comprobantes.GetLeyendasByIdAsync(comprobanteId)).ToList();
-        var guias         = (await _unitOfWork.Comprobantes.GetGuiasByIdAsync(comprobanteId)).ToList();
-        var detracciones  = (await _unitOfWork.Comprobantes.GetDetraccionesByIdAsync(comprobanteId)).ToList();
+        var datos = await _unitOfWork.Comprobantes.GetDatosCompletosByComprobanteIdAsync(comprobanteId);
 
-        return MapToDto(comprobante, detalles, pagos, cuotas, leyendas, guias, detracciones);
+        return MapToDto(comprobante, 
+            datos.Detalles.ToList(), 
+            datos.Pagos.ToList(), 
+            datos.Cuotas.ToList(), 
+            datos.Leyendas.ToList(), 
+            datos.Guias.ToList(), 
+            datos.Detracciones.ToList());
     }
 
     public async Task<IEnumerable<ObtenerComprobanteDTO>> GetComprobanteByEstadoAsync(string estado)
