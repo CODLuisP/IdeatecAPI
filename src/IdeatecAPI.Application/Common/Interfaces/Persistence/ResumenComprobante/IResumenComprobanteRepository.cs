@@ -13,4 +13,16 @@ public interface IResumenComprobanteRepository : IRepository<ResumenComprobante>
     Task<bool> ExisteIdentificadorAsync(string identificador);
     Task UpdateEstadoResumenAsync(int resumenId, string estado, string ticket,
         string codigoRespuesta, string mensajeRespuesta, string xmlGenerado, DateTime fechaEnvio);
+    Task<IEnumerable<ResumenComprobante>> GetResumenesByFiltroAsync(
+    string ruc,
+    string? establecimiento,
+    DateTime? fechaDesde,
+    DateTime? fechaHasta,
+    int page = 1,
+    int limit = 50);
+
+    Task<ResumenComprobante?> GetResumenConDetallesAsync(int idResumen);
+
+    Task<int> GetProximoNumeroEnvioAsync( string ruc, string establecimiento, DateTime fecha);
+    
 }
