@@ -13,7 +13,22 @@ public interface IResumenComprobanteService
     Task<ObtenerResumenComprobanteDTO?> GetResumenComprobanteByIdAsync(int id);
     Task<ComprobanteResponse> RegistrarResumenComprobanteAsync(AgregarResumenComprobanteDTO dto);
     Task<ComprobanteResponse> SendToSunatAsync(int resumenId);
-}
+
+    Task<IEnumerable<ObtenerResumenComprobanteDTO>> GetResumenesByFiltroAsync(
+    string ruc,
+    string? establecimiento,
+    DateTime? fechaDesde,
+    DateTime? fechaHasta,
+    int page = 1,
+    int limit = 50);
+
+    Task<ObtenerResumenComprobanteDTO?> GetResumenConDetallesAsync(int idResumen);
+
+    Task<int> GetProximoNumeroEnvioAsync(
+        string ruc,
+        string establecimiento,
+        DateTime fecha);
+    }
 
 public class ComprobanteResponse
 {
@@ -65,6 +80,39 @@ public class ResumenComprobanteService : IResumenComprobanteService
         var resumen = await _unitOfWork.ResumenComprobante.GetResumenComprobanteByIdAsync(id);
         if (resumen is null) return null;
         return MapToDto(resumen);
+    }
+
+    // ── NUEVO 1: Listado con filtros ─────────────────────────────────────────────
+    public async Task<IEnumerable<ObtenerResumenComprobanteDTO>> GetResumenesByFiltroAsync(
+        string ruc,
+        string? establecimiento,
+        DateTime? fechaDesde,
+        DateTime? fechaHasta,
+        int page = 1,
+        int limit = 50)
+    {
+        var resumenes = await _unitOfWork.ResumenComprobante.GetResumenesByFiltroAsync(
+            ruc, establecimiento, fechaDesde, fechaHasta, page, limit);
+
+        return resumenes.Select(MapToDto);
+    }
+
+    // ── NUEVO 2: Detalle con comprobantes ────────────────────────────────────────
+    public async Task<ObtenerResumenComprobanteDTO?> GetResumenConDetallesAsync(int idResumen)
+    {
+        var resumen = await _unitOfWork.ResumenComprobante.GetResumenConDetallesAsync(idResumen);
+        if (resumen is null) return null;
+        return MapToDto(resumen);
+    }
+
+    // ── NUEVO 3: Próximo número de envío ─────────────────────────────────────────
+    public async Task<int> GetProximoNumeroEnvioAsync(
+        string ruc,
+        string establecimiento,
+        DateTime fecha)
+    {
+        return await _unitOfWork.ResumenComprobante.GetProximoNumeroEnvioAsync(
+            ruc, establecimiento, fecha);
     }
 
     // ── 3. REGISTRAR ─────────────────────────────────────────────────────────
@@ -353,6 +401,8 @@ public class ResumenComprobanteService : IResumenComprobanteService
             CdrBase64        = sunatResponse.CdrBase64
         };
     }
+
+    
 
     // ── HELPERS ───────────────────────────────────────────────────────────────
     private async Task GuardarArchivosAsync(string ruc, string razonSocial,
