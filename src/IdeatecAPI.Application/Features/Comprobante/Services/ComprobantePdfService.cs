@@ -42,7 +42,6 @@ public class ComprobantePdfService : IComprobantePdfService
         var datos = await _unitOfWork.Comprobantes.GetDatosCompletosByComprobanteIdAsync(comprobanteId);
         
         swPdfInterno.Stop();
-        Console.WriteLine($"[PERFORMANCE PDF] Tiempo en Base de Datos (PDF Service): {swPdfInterno.ElapsedMilliseconds} ms");
 
         var swRender = System.Diagnostics.Stopwatch.StartNew();
 
@@ -900,7 +899,7 @@ public class ComprobantePdfService : IComprobantePdfService
     {
         col.Item().Row(r =>
         {
-            r.ConstantItem(85).Text(label + " :").Bold().FontSize(8).FontColor(ColorAzulMarino);
+            r.ConstantItem(85).Text(label + ":").Bold().FontSize(8).FontColor(ColorAzulMarino);
             r.RelativeItem().Text(valor).FontSize(8);
         });
     }
