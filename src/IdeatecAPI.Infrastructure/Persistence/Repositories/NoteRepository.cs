@@ -190,7 +190,7 @@ public class NoteRepository : DapperRepository<Note>, INoteRepository
             note.MotivoNota,
             note.EstadoSunat,
             note.UsuarioCreacion,
-            FechaCreacion = DateTime.UtcNow
+            FechaCreacion = AhoraLima()
         }, _transaction);
 
         await ActualizarSerieCorrelativoAsync(note);
@@ -271,18 +271,16 @@ public class NoteRepository : DapperRepository<Note>, INoteRepository
     }
 
     public async Task UpdateEstadoSunatAsync(int comprobanteId, string estado, string? codigo,
-        string? mensaje, string? xml, string? cdr)
+    string? mensaje, string? xml, string? cdr)
     {
         var sql = @"
-            UPDATE comprobante SET
-                estadoSunat          = @Estado,
-                codigoRespuestaSunat = @Codigo,
-                mensajeRespuestaSunat = @Mensaje,
-                xmlGenerado          = COALESCE(@Xml, xmlGenerado),
-                cdrSunat             = COALESCE(@Cdr, cdrSunat),
-                fechaEnvioSunat      = @FechaEnvio,
-                fechaModificacion    = NOW()
-            WHERE comprobanteID = @ComprobanteId";
+        UPDATE comprobante SET
+            estadoSunat           = @Estado,
+            codigoRespuestaSunat  = @Codigo,
+            mensajeRespuestaSunat = @Mensaje,
+            fechaEnvioSunat       = @FechaEnvio,
+            fechaModificacion     = NOW()
+        WHERE comprobanteID = @ComprobanteId";
 
         await _connection.ExecuteAsync(sql, new
         {
@@ -290,9 +288,24 @@ public class NoteRepository : DapperRepository<Note>, INoteRepository
             Estado = estado,
             Codigo = codigo,
             Mensaje = mensaje,
-            Xml = xml,
-            Cdr = cdr,
-            FechaEnvio = DateTime.UtcNow
+            FechaEnvio = AhoraLima()
         }, _transaction);
     }
+
+    public async Task UpdateXmlGeneradoAsync(int comprobanteId, string rutaZip)
+    {
+        var sql = @"UPDATE comprobante SET xmlGenerado = @RutaZip WHERE comprobanteID = @ComprobanteId";
+        await _connection.ExecuteAsync(sql, new { ComprobanteId = comprobanteId, RutaZip = rutaZip }, _transaction);
+    }
+
+    public async Task UpdateXmlRespuestaSunatAsync(int comprobanteId, string rutaCdr)
+    {
+        var sql = @"UPDATE comprobante SET xmlRespuestaSunat = @RutaCdr WHERE comprobanteID = @ComprobanteId";
+        await _connection.ExecuteAsync(sql, new { ComprobanteId = comprobanteId, RutaCdr = rutaCdr }, _transaction);
+    }
+
+    private static DateTime AhoraLima() => TimeZoneInfo.ConvertTimeFromUtc(
+        DateTime.UtcNow,
+        TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time")
+    );
 }

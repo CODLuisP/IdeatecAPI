@@ -24,7 +24,7 @@ public class NoteService : INoteService
     private readonly IXmlNoteBuilderService _xmlBuilder;
     private readonly IXmlSignerService _xmlSigner;
     private readonly ISunatSenderService _sunatSender;
-    private readonly string _rutaXml;
+    private readonly IStorageService _storageService;
     private readonly IWebSocketNotifier _wsNotifier;
 
     public NoteService(
@@ -33,6 +33,7 @@ public class NoteService : INoteService
         IXmlSignerService xmlSigner,
         ISunatSenderService sunatSender,
         IWebSocketNotifier wsNotifier,
+        IStorageService storageService,
         IConfiguration configuration)
     {
         _unitOfWork = unitOfWork;
@@ -40,7 +41,7 @@ public class NoteService : INoteService
         _xmlSigner = xmlSigner;
         _sunatSender = sunatSender;
         _wsNotifier = wsNotifier;
-        _rutaXml = configuration["Storage:RutaXml"] ?? "C:/FacturacionStorage";
+        _storageService = storageService;
     }
 
     public async Task<IEnumerable<NoteDto>> GetAllNotesAsync(int empresaId)
@@ -247,7 +248,6 @@ public class NoteService : INoteService
         if (note.EstadoSunat == "ACEPTADO")
             throw new InvalidOperationException("La nota ya fue aceptada por SUNAT");
 
-        // ← Usar EmpresaId guardado en la nota, sin parámetro externo
         var empresa = await _unitOfWork.Empresas.GetEmpresaByIdAsync(note.EmpresaId)
             ?? throw new KeyNotFoundException($"Empresa {note.EmpresaId} no encontrada");
 
@@ -260,17 +260,43 @@ public class NoteService : INoteService
         var details = (await _unitOfWork.NoteDetails.GetByComprobanteIdAsync(comprobanteId)).ToList();
         var legends = (await _unitOfWork.NoteLegends.GetByComprobanteIdAsync(comprobanteId)).ToList();
 
+        // 1. Generar y firmar XML
         var xmlSinFirmar = _xmlBuilder.BuildXml(note, details, legends);
-
         var xmlFirmadoBytes = _xmlSigner.SignXmlToBytes(
             xmlSinFirmar,
             empresa.CertificadoPem!,
             empresa.CertificadoPassword ?? "123456"
         );
 
-        var xmlFirmadoString = Encoding.UTF8.GetString(xmlFirmadoBytes);
         var nombreArchivo = $"{empresa.Ruc}-{note.TipoDoc}-{note.Serie}-{note.Correlativo:D8}";
 
+        // 2. Subir ZIP al microservicio en segundo plano
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                using var memStream = new MemoryStream();
+                using (var zip = new ZipArchive(memStream, ZipArchiveMode.Create, leaveOpen: true))
+                {
+                    var entry = zip.CreateEntry($"{nombreArchivo}.xml");
+                    using var entryStream = entry.Open();
+                    await entryStream.WriteAsync(xmlFirmadoBytes);
+                }
+                var rutaXml = await _storageService.SubirZipAsync(
+                    empresa.Ruc,
+                    note.TipoDoc!,
+                    nombreArchivo,
+                    memStream.ToArray()
+                );
+                await _unitOfWork.Notes.UpdateXmlGeneradoAsync(comprobanteId, rutaXml);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[STORAGE ❌] Error subiendo ZIP nota: {ex.Message}");
+            }
+        });
+
+        // 3. Enviar a SUNAT
         var sunatResponse = await _sunatSender.SendNoteAsync(
             xmlFirmadoBytes,
             nombreArchivo,
@@ -280,33 +306,53 @@ public class NoteService : INoteService
             empresa.Environment
         );
 
-        // ← Guardar archivos localmente
-        await GuardarArchivosAsync(
-            empresa.Ruc,
-            note.EmpresaRazonSocial ?? empresa.RazonSocial,
-            note.TipoDoc,
-            note.Serie,
-            note.Correlativo.ToString(),
-            xmlFirmadoBytes,
-            sunatResponse.CdrBase64
-        );
+        // 4. Subir CDR en segundo plano
+        if (!string.IsNullOrEmpty(sunatResponse.CdrBase64))
+        {
+            var cdrBase64Capture = sunatResponse.CdrBase64;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var rutaCdr = await _storageService.SubirCdrAsync(
+                        empresa.Ruc,
+                        note.TipoDoc!,
+                        nombreArchivo,
+                        cdrBase64Capture
+                    );
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[STORAGE ❌] Error subiendo CDR nota: {ex.Message}");
+                }
+            });
+        }
 
-        var nuevoEstado = sunatResponse.Success ? (sunatResponse.TieneObservaciones ? "ACEPTADO_CON_OBSERVACIONES" : "ACEPTADO") : "RECHAZADO";
+        // 5. Actualizar estado en BD
+        var nuevoEstado = sunatResponse.Success
+            ? (sunatResponse.TieneObservaciones ? "ACEPTADO_CON_OBSERVACIONES" : "ACEPTADO")
+            : "RECHAZADO";
 
         await _unitOfWork.Notes.UpdateEstadoSunatAsync(
             comprobanteId,
             nuevoEstado,
             sunatResponse.CodigoRespuesta,
             sunatResponse.Descripcion,
-            xmlFirmadoString,
-            sunatResponse.CdrBase64
+            null,
+            null
         );
 
-        // ── Pendiente 1: Anular comprobante original si es anulación total aceptada ──
+        // 6. Guardar ruta CDR en BD (hilo principal)
+        if (!string.IsNullOrEmpty(sunatResponse.CdrBase64))
+        {
+            var rutaCdr = $"/{empresa.Ruc}/{ObtenerTipoCarpeta(note.TipoDoc!)}/R-{nombreArchivo}.zip";
+            await _unitOfWork.Notes.UpdateXmlRespuestaSunatAsync(comprobanteId, rutaCdr);
+        }
+
+        // 7. Anular comprobante original si aplica
         if (sunatResponse.Success && note.ComprobanteAfectadoId.HasValue)
         {
             var esAnulacionTotal = note.TipoDoc == "07" && new[] { "01", "02" }.Contains(note.TipoNotaCreditoDebito);
-
             if (esAnulacionTotal)
             {
                 await _unitOfWork.Comprobantes.UpdateEstadoSunatAsync(
@@ -320,16 +366,23 @@ public class NoteService : INoteService
             }
         }
 
+        // 8. Notificar WebSocket
         var sucursalId = await _unitOfWork.Comprobantes.GetSucursalIdByRucAndAnexoAsync(
             note.EmpresaRuc!,
             note.EstablecimientoAnexo!
         );
-
         _ = Task.Run(() => _wsNotifier.NotifyAsync(sucursalId, note.EmpresaRuc, "status"));
 
         return await GetNoteByIdAsync(comprobanteId)
             ?? throw new InvalidOperationException("Error al recuperar la nota actualizada");
     }
+
+    private static string ObtenerTipoCarpeta(string tipoDoc) => tipoDoc switch
+    {
+        "07" => "notas-credito",
+        "08" => "notas-debito",
+        _ => tipoDoc
+    };
 
     public async Task<NoteDto> UpdateEstadoSunatAsync(int comprobanteId, UpdateNoteEstadoDto dto)
     {
@@ -415,44 +468,4 @@ public class NoteService : INoteService
         Code = l.Code,
         Value = l.Value
     };
-
-    private async Task GuardarArchivosAsync(
-        string ruc, string razonSocial, string tipoComprobante,
-        string serie, string correlativo,
-        byte[] xmlFirmadoBytes, string? cdrBase64)
-    {
-        var empresaCarpeta = string.Concat(razonSocial
-            .Replace("/", "").Replace("\\", "").Replace(":", "")
-            .Replace("*", "").Replace("?", "").Replace("\"", "")
-            .Replace("<", "").Replace(">", "").Replace("|", "").Trim());
-
-        var tipoCarpeta = tipoComprobante switch
-        {
-            "07" => "NotasCredito",
-            "08" => "NotasDebito",
-            _ => tipoComprobante
-        };
-
-        var nombreArchivo = $"{ruc}-{tipoComprobante}-{serie}-{correlativo.PadLeft(8, '0')}";
-        var carpeta = Path.Combine(_rutaXml, empresaCarpeta, tipoCarpeta);
-        Directory.CreateDirectory(carpeta);
-
-        // ── Guardar ZIP enviado ───────────────────────────────────────────────
-        var rutaZip = Path.Combine(carpeta, $"{nombreArchivo}.zip");
-        using (var zipStream = new FileStream(rutaZip, FileMode.Create))
-        using (var zipArchive = new ZipArchive(zipStream, ZipArchiveMode.Create))
-        {
-            var entry = zipArchive.CreateEntry($"{nombreArchivo}.xml");
-            using var entryStream = entry.Open();
-            await entryStream.WriteAsync(xmlFirmadoBytes);
-        }
-
-        // ── Guardar CDR recibido ──────────────────────────────────────────────
-        if (!string.IsNullOrEmpty(cdrBase64))
-        {
-            var cdrBytes = Convert.FromBase64String(cdrBase64);
-            var rutaCdr = Path.Combine(carpeta, $"R-{nombreArchivo}.zip");
-            await File.WriteAllBytesAsync(rutaCdr, cdrBytes);
-        }
-    }
 }

@@ -542,8 +542,6 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
                 estadoSunat           = @Estado,
                 codigoRespuestaSunat  = @Codigo,
                 mensajeRespuestaSunat = @Mensaje,
-                xmlRespuestaSunat     = @XmlFirmado,
-                cdrSunat              = @CdrBase64,
                 fechaEnvioSunat       = @FechaEnvio
             WHERE comprobanteID = @ComprobanteId";
 
@@ -553,8 +551,6 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
             Estado = estado,
             Codigo = codigo,
             Mensaje = mensaje,
-            XmlFirmado = xmlFirmado,
-            CdrBase64 = cdrBase64,
             FechaEnvio = DateTime.Now
         }, _transaction);
     }
@@ -615,6 +611,26 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         }, _transaction);
     }
 
+    public async Task UpdateXmlGeneradoAsync(int comprobanteId, string rutaZip)
+    {
+        var sql = @"
+        UPDATE comprobante SET
+            xmlGenerado = @RutaZip
+        WHERE comprobanteID = @ComprobanteId";
+
+        await _connection.ExecuteAsync(sql, new { ComprobanteId = comprobanteId, RutaZip = rutaZip }, _transaction);
+    }
+
+    public async Task UpdateXmlRespuestaSunatAsync(int comprobanteId, string rutaCdr)
+    {
+        var sql = @"
+        UPDATE comprobante SET
+            xmlRespuestaSunat = @RutaCdr
+        WHERE comprobanteID = @ComprobanteId";
+
+        await _connection.ExecuteAsync(sql, new { ComprobanteId = comprobanteId, RutaCdr = rutaCdr }, _transaction);
+    }
+
     private const string BaseSelect = @"
     SELECT 
         comprobanteID           AS ComprobanteId,
@@ -629,7 +645,6 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         fechaVencimiento        AS FechaVencimiento,
         tipoMoneda              AS TipoMoneda,
         tipoPago                AS TipoPago,
-
         empresaID               AS EmpresaId,
         empresaRuc              AS EmpresaRuc,
         empresaRazonSocial      AS EmpresaRazonSocial,
@@ -640,7 +655,6 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         empresaDepartamento     AS EmpresaDepartamento,
         empresaDistrito         AS EmpresaDistrito,
         empresaUbigeo           AS EmpresaUbigeo,
-
         clienteID               AS ClienteId,
         clienteTipoDoc          AS ClienteTipoDoc,
         clienteNumDoc           AS ClienteNumDoc,
@@ -654,7 +668,6 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         enviadoPorCorreo       AS EnviadoPorCorreo,
         clienteWhatsApp        AS ClienteWhatsApp,
         enviadoPorWhatsApp     AS EnviadoPorWhatsApp,
-
         codigoTipoDescGlobal        AS CodigoTipoDescGlobal,
         descuentoGlobal        AS DescuentoGlobal,
         totalOperacionesGravadas   AS TotalOperacionesGravadas,
@@ -671,14 +684,12 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         subTotal                AS SubTotal,
         importeTotal            AS ImporteTotal,
         montoCredito            AS MontoCredito,
-
         tipDocAfectado         AS TipDocAfectado,
         numDocAfectado         AS NumDocAfectado,
         tipoNotaCreditoDebito  AS TipoNotaCreditoDebito,
         motivoNota             AS MotivoNota,
         comprobanteAfectadoID  AS ComprobanteAfectadoId,
         observaciones          AS Observaciones,
-
         estadoSunat             AS EstadoSunat,
         pdfGenerado            AS PdfGenerado,
         enviadoEnResumen       AS EnviadoEnResumen,
@@ -686,14 +697,13 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         codigoRespuestaSunat    AS CodigoRespuestaSunat,
         mensajeRespuestaSunat   AS MensajeRespuestaSunat,
         fechaEnvioSunat         AS FechaEnvioSunat,
-
         xmlGenerado             AS XmlGenerado,
-
         usuarioCreacion         AS UsuarioCreacion,
         fechaCreacion           AS FechaCreacion,
         usuarioModificacion     AS UsuarioModificacion,
-        fechaModificacion       AS FechaModificacion
-
+        fechaModificacion       AS FechaModificacion,
+        xmlGenerado             AS XmlGenerado,
+        xmlRespuestaSunat       AS XmlRespuestaSunat
     FROM comprobante
     ";
 }

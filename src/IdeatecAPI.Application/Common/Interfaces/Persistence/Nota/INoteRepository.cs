@@ -11,4 +11,6 @@ public interface INoteRepository : IRepository<Note>
     Task<int> CreateNoteAsync(Note note);
     Task UpdateNoteAsync(Note note);
     Task UpdateEstadoSunatAsync(int comprobanteId, string estado, string? codigo, string? mensaje, string? xml, string? cdr);
+    Task UpdateXmlGeneradoAsync(int comprobanteId, string rutaZip);
+    Task UpdateXmlRespuestaSunatAsync(int comprobanteId, string rutaCdr);
 }

@@ -147,8 +147,8 @@ public class GuiaRemisionRepository : IGuiaRemisionRepository
     public async Task<IEnumerable<GuiaRemision>> GetAllByRucFechasAsync(
     string empresaRuc, string tipoDoc, int? sucursalId,
     DateOnly? fechaDesde, DateOnly? fechaHasta)
-{
-    var sql = @"SELECT
+    {
+        var sql = @"SELECT
                     guiaId                 AS GuiaId,
                     sucursalId             AS SucursalId,
                     tipoDoc                AS TipoDoc,
@@ -177,15 +177,15 @@ public class GuiaRemisionRepository : IGuiaRemisionRepository
                 ORDER BY fechaCreacion DESC
                 LIMIT 100";
 
-    return await _connection.QueryAsync<GuiaRemision>(sql, new
-    {
-        EmpresaRuc = empresaRuc,
-        TipoDoc    = tipoDoc,
-        SucursalId = sucursalId,
-        FechaDesde = fechaDesde?.ToString("yyyy-MM-dd"),
-        FechaHasta = fechaHasta?.ToString("yyyy-MM-dd"),
-    }, _transaction);
-}
+        return await _connection.QueryAsync<GuiaRemision>(sql, new
+        {
+            EmpresaRuc = empresaRuc,
+            TipoDoc = tipoDoc,
+            SucursalId = sucursalId,
+            FechaDesde = fechaDesde?.ToString("yyyy-MM-dd"),
+            FechaHasta = fechaHasta?.ToString("yyyy-MM-dd"),
+        }, _transaction);
+    }
 
     public async Task<GuiaRemision?> GetByIdAsync(int guiaId)
     {
@@ -367,14 +367,13 @@ public class GuiaRemisionRepository : IGuiaRemisionRepository
     public async Task UpdateEstadoAsync(int guiaId, string estado, string? codigo, string? mensaje, string? ticket, string? cdr, DateTime? fechaEnvio)
     {
         var sql = @"UPDATE guiaRemision SET
-                        estadoSunat           = @Estado,
-                        codigoRespuestaSunat  = @Codigo,
-                        mensajeRespuestaSunat = @Mensaje,
-                        ticketSunat           = @Ticket,
-                        cdrBase64             = @Cdr,
-                        fechaEnvioSunat       = @FechaEnvio,
-                        fechaModificacion     = NOW()
-                    WHERE guiaId = @GuiaId";
+                    estadoSunat           = @Estado,
+                    codigoRespuestaSunat  = @Codigo,
+                    mensajeRespuestaSunat = @Mensaje,
+                    ticketSunat           = @Ticket,
+                    fechaEnvioSunat       = @FechaEnvio,
+                    fechaModificacion     = NOW()
+                WHERE guiaId = @GuiaId";
 
         await _connection.ExecuteAsync(sql, new
         {
@@ -383,7 +382,6 @@ public class GuiaRemisionRepository : IGuiaRemisionRepository
             Codigo = codigo,
             Mensaje = mensaje,
             Ticket = ticket,
-            Cdr = cdr,
             FechaEnvio = fechaEnvio
         }, _transaction);
     }
@@ -432,5 +430,17 @@ public class GuiaRemisionRepository : IGuiaRemisionRepository
             guia.Serie,
             guia.SucursalId   // ← reemplaza EmpresaRuc
         }, _transaction);
+    }
+
+    public async Task UpdateXmlGeneradoAsync(int guiaId, string rutaZip)
+    {
+        var sql = @"UPDATE guiaRemision SET xmlGenerado = @RutaZip WHERE guiaId = @GuiaId";
+        await _connection.ExecuteAsync(sql, new { GuiaId = guiaId, RutaZip = rutaZip }, _transaction);
+    }
+
+    public async Task UpdateXmlRespuestaSunatAsync(int guiaId, string rutaCdr)
+    {
+        var sql = @"UPDATE guiaRemision SET xmlRespuestaSunat = @RutaCdr WHERE guiaId = @GuiaId";
+        await _connection.ExecuteAsync(sql, new { GuiaId = guiaId, RutaCdr = rutaCdr }, _transaction);
     }
 }
