@@ -101,6 +101,9 @@ public static class DependencyInjection
         //Notificaciones WebSocket
         services.AddHttpClient<IWebSocketNotifier, WebSocketNotifier>();
 
+        // Storage microservicio
+        services.AddScoped<IStorageService, StorageService>();
+
         var jwtSecret = configuration["JwtSettings:Secret"]
             ?? throw new InvalidOperationException("JWT Secret not configured in appsettings.json");
 

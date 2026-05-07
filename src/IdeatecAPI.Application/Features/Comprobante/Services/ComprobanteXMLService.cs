@@ -70,8 +70,8 @@ public class ComprobanteService : IComprobanteService
     private readonly IXmlSignerService _xmlSigner;
     private readonly ISunatSenderService _sunatSender;
     private readonly IConfiguration _configuration;
+    private readonly IStorageService _storageService;
     private readonly IWebSocketNotifier _wsNotifier;
-    private readonly string _rutaXml;
 
     public ComprobanteService(
         IUnitOfWork unitOfWork,
@@ -79,6 +79,7 @@ public class ComprobanteService : IComprobanteService
         IXmlSignerService xmlSigner,
         ISunatSenderService sunatSender,
         IWebSocketNotifier wsNotifier,
+        IStorageService storageService,
         IConfiguration configuration)
     {
         _unitOfWork = unitOfWork;
@@ -87,7 +88,7 @@ public class ComprobanteService : IComprobanteService
         _sunatSender = sunatSender;
         _configuration = configuration;
         _wsNotifier = wsNotifier;
-        _rutaXml = configuration["Storage:RutaXml"] ?? Path.Combine(Directory.GetCurrentDirectory(), "XmlFiles");
+        _storageService = storageService;
     }
 
     public async Task<IEnumerable<ObtenerComprobanteDTO>> GetByRucAndFechasAsync(string ruc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null)
@@ -238,12 +239,12 @@ public class ComprobanteService : IComprobanteService
         if (existe == null) return null;
 
         var datos = await _unitOfWork.Comprobantes.GetDatosCompletosByComprobanteIdAsync(comprobanteId);
-        
-        var detalles     = datos.Detalles.ToList();
-        var pagos        = datos.Pagos.ToList();
-        var cuotas       = datos.Cuotas.ToList();
-        var leyendas     = datos.Leyendas.ToList();
-        var guias        = datos.Guias.ToList();
+
+        var detalles = datos.Detalles.ToList();
+        var pagos = datos.Pagos.ToList();
+        var cuotas = datos.Cuotas.ToList();
+        var leyendas = datos.Leyendas.ToList();
+        var guias = datos.Guias.ToList();
         var detracciones = datos.Detracciones.ToList();
 
         return new ComprobanteDetallesDTO
@@ -532,141 +533,130 @@ public class ComprobanteService : IComprobanteService
         if (string.IsNullOrEmpty(empresa.SolUsuario) || string.IsNullOrEmpty(empresa.SolClave))
             throw new InvalidOperationException("La empresa no tiene credenciales SOL configuradas");
 
-        // 3. Recuperar el XML directamente de la BD (Ultrarrápido) o regenerar como Fallback
-        string xmlSinFirmar;
+        // 3. Siempre regenerar XML desde BD (xmlGenerado ahora contiene ruta, no XML)
+        var datos = await _unitOfWork.Comprobantes.GetDatosCompletosByComprobanteIdAsync(comprobanteId);
 
-        if (!string.IsNullOrEmpty(comprobante.XmlGenerado))
+        var dto = new GenerarComprobanteDTO
         {
-            // El XML ya existe, nos saltamos decenas de consultas y reconstrucción
-            xmlSinFirmar = comprobante.XmlGenerado;
-        }
-        else
-        {
-            // FALLBACK: Si es un comprobante muy antiguo sin XML guardado, usamos el método rápido (1 sola consulta)
-            var datos = await _unitOfWork.Comprobantes.GetDatosCompletosByComprobanteIdAsync(comprobanteId);
+            UblVersion = "2.1",
+            TipoOperacion = comprobante.TipoOperacion!,
+            TipoComprobante = comprobante.TipoComprobante!,
+            Serie = comprobante.Serie!,
+            Correlativo = comprobante.Correlativo?.ToString() ?? "0",
+            FechaEmision = comprobante.FechaEmision,
+            HoraEmision = comprobante.HoraEmision,
+            FechaVencimiento = comprobante.FechaVencimiento,
+            TipoMoneda = comprobante.TipoMoneda!,
+            TipoPago = comprobante.TipoPago,
+            TipoCambio = comprobante.TipoCambio,
+            CodigoTipoDescGlobal = comprobante.CodigoTipoDescGlobal ?? "",
+            DescuentoGlobal = comprobante.DescuentoGlobal ?? 0,
+            TotalOperacionesGravadas = comprobante.TotalOperacionesGravadas ?? 0,
+            TotalOperacionesExoneradas = comprobante.TotalOperacionesExoneradas ?? 0,
+            TotalOperacionesInafectas = comprobante.TotalOperacionesInafectas ?? 0,
+            TotalOperacionesGratuitas = comprobante.TotalOperacionesGratuitas ?? 0,
+            TotalIgvGratuitas = comprobante.TotalIgvGratuitas ?? 0,
+            TotalIGV = comprobante.TotalIGV ?? 0,
+            TotalImpuestos = comprobante.TotalImpuestos ?? 0,
+            TotalDescuentos = comprobante.TotalDescuentos ?? 0,
+            TotalOtrosCargos = comprobante.TotalOtrosCargos ?? 0,
+            ValorVenta = comprobante.ValorVenta ?? 0,
+            SubTotal = comprobante.SubTotal ?? 0,
+            TotalIcbper = comprobante.TotalIcbper ?? 0,
+            ImporteTotal = comprobante.ImporteTotal ?? 0,
+            MontoCredito = comprobante.MontoCredito ?? 0,
 
-            var dto = new GenerarComprobanteDTO
+            Company = new EmpresaDTO
             {
-                UblVersion = "2.1",
-                TipoOperacion = comprobante.TipoOperacion!,
-                TipoComprobante = comprobante.TipoComprobante!,
-                Serie = comprobante.Serie!,
-                Correlativo = comprobante.Correlativo?.ToString() ?? "0",
-                FechaEmision = comprobante.FechaEmision,
-                HoraEmision = comprobante.HoraEmision,
-                FechaVencimiento = comprobante.FechaVencimiento,
-                TipoMoneda = comprobante.TipoMoneda!,
-                TipoPago = comprobante.TipoPago,
-                TipoCambio = comprobante.TipoCambio,
-                CodigoTipoDescGlobal = comprobante.CodigoTipoDescGlobal ?? "",
-                DescuentoGlobal = comprobante.DescuentoGlobal ?? 0,
-                TotalOperacionesGravadas = comprobante.TotalOperacionesGravadas ?? 0,
-                TotalOperacionesExoneradas = comprobante.TotalOperacionesExoneradas ?? 0,
-                TotalOperacionesInafectas = comprobante.TotalOperacionesInafectas ?? 0,
-                TotalOperacionesGratuitas = comprobante.TotalOperacionesGratuitas ?? 0,
-                TotalIgvGratuitas = comprobante.TotalIgvGratuitas ?? 0,
-                TotalIGV = comprobante.TotalIGV ?? 0,
-                TotalImpuestos = comprobante.TotalImpuestos ?? 0,
-                TotalDescuentos = comprobante.TotalDescuentos ?? 0,
-                TotalOtrosCargos = comprobante.TotalOtrosCargos ?? 0,
-                ValorVenta = comprobante.ValorVenta ?? 0,
-                SubTotal = comprobante.SubTotal ?? 0,
-                TotalIcbper = comprobante.TotalIcbper ?? 0,
-                ImporteTotal = comprobante.ImporteTotal ?? 0,
-                MontoCredito = comprobante.MontoCredito ?? 0,
+                EmpresaId = comprobante.EmpresaId,
+                NumeroDocumento = comprobante.EmpresaRuc!,
+                RazonSocial = comprobante.EmpresaRazonSocial!,
+                NombreComercial = comprobante.EmpresaNombreComercial,
+                EstablecimientoAnexo = comprobante.EmpresaEstablecimientoAnexo,
+                DireccionLineal = comprobante.EmpresaDireccion,
+                Provincia = comprobante.EmpresaProvincia,
+                Departamento = comprobante.EmpresaDepartamento,
+                Distrito = comprobante.EmpresaDistrito,
+                Ubigeo = comprobante.EmpresaUbigeo
+            },
 
-                Company = new EmpresaDTO
-                {
-                    EmpresaId = comprobante.EmpresaId,
-                    NumeroDocumento = comprobante.EmpresaRuc!,
-                    RazonSocial = comprobante.EmpresaRazonSocial!,
-                    NombreComercial = comprobante.EmpresaNombreComercial,
-                    EstablecimientoAnexo = comprobante.EmpresaEstablecimientoAnexo,
-                    DireccionLineal = comprobante.EmpresaDireccion,
-                    Provincia = comprobante.EmpresaProvincia,
-                    Departamento = comprobante.EmpresaDepartamento,
-                    Distrito = comprobante.EmpresaDistrito,
-                    Ubigeo = comprobante.EmpresaUbigeo
-                },
+            Cliente = new ClienteDTO
+            {
+                ClienteId = comprobante.ClienteId ?? 0,
+                TipoDocumento = comprobante.ClienteTipoDoc!,
+                NumeroDocumento = comprobante.ClienteNumDoc!,
+                RazonSocial = comprobante.ClienteRazonSocial!,
+                DireccionLineal = comprobante.ClienteDireccion,
+                Provincia = comprobante.ClienteProvincia,
+                Departamento = comprobante.ClienteDepartamento,
+                Distrito = comprobante.ClienteDistrito,
+                Ubigeo = comprobante.ClienteUbigeo
+            },
 
-                Cliente = new ClienteDTO
-                {
-                    ClienteId = comprobante.ClienteId ?? 0,
-                    TipoDocumento = comprobante.ClienteTipoDoc!,
-                    NumeroDocumento = comprobante.ClienteNumDoc!,
-                    RazonSocial = comprobante.ClienteRazonSocial!,
-                    DireccionLineal = comprobante.ClienteDireccion,
-                    Provincia = comprobante.ClienteProvincia,
-                    Departamento = comprobante.ClienteDepartamento,
-                    Distrito = comprobante.ClienteDistrito,
-                    Ubigeo = comprobante.ClienteUbigeo
-                },
+            Details = datos.Detalles.Select(d => new DetalleFacturaDTO
+            {
+                Item = d.Item,
+                ProductoId = d.ProductoId ?? 0,
+                Codigo = d.Codigo,
+                Descripcion = d.Descripcion,
+                Cantidad = d.Cantidad,
+                UnidadMedida = d.UnidadMedida,
+                PrecioUnitario = d.PrecioUnitario,
+                TipoAfectacionIGV = d.TipoAfectacionIGV,
+                PorcentajeIGV = d.PorcentajeIGV ?? 0,
+                MontoIGV = d.MontoIGV ?? 0,
+                BaseIgv = d.BaseIgv ?? 0,
+                CodigoTipoDescuento = d.CodigoTipoDescuento ?? "",
+                DescuentoUnitario = d.DescuentoUnitario ?? 0,
+                DescuentoTotal = d.DescuentoTotal ?? 0,
+                ValorVenta = d.ValorVenta ?? 0,
+                PrecioVenta = d.PrecioVenta ?? 0,
+                TotalVentaItem = d.TotalVentaItem ?? 0,
+                Icbper = d.Icbper ?? 0,
+                FactorIcbper = d.FactorIcbper ?? 0
+            }).ToList(),
 
-                Details = datos.Detalles.Select(d => new DetalleFacturaDTO
-                {
-                    Item = d.Item,
-                    ProductoId = d.ProductoId ?? 0,
-                    Codigo = d.Codigo,
-                    Descripcion = d.Descripcion,
-                    Cantidad = d.Cantidad,
-                    UnidadMedida = d.UnidadMedida,
-                    PrecioUnitario = d.PrecioUnitario,
-                    TipoAfectacionIGV = d.TipoAfectacionIGV,
-                    PorcentajeIGV = d.PorcentajeIGV ?? 0,
-                    MontoIGV = d.MontoIGV ?? 0,
-                    BaseIgv = d.BaseIgv ?? 0,
-                    CodigoTipoDescuento = d.CodigoTipoDescuento ?? "",
-                    DescuentoUnitario = d.DescuentoUnitario ?? 0,
-                    DescuentoTotal = d.DescuentoTotal ?? 0,
-                    ValorVenta = d.ValorVenta ?? 0,
-                    PrecioVenta = d.PrecioVenta ?? 0,
-                    TotalVentaItem = d.TotalVentaItem ?? 0,
-                    Icbper = d.Icbper ?? 0,
-                    FactorIcbper = d.FactorIcbper ?? 0
-                }).ToList(),
+            Cuotas = datos.Cuotas.Select(c => new DetalleCuotasDTO
+            {
+                NumeroCuota = c.NumeroCuota,
+                Monto = c.Monto,
+                FechaVencimiento = c.FechaVencimiento,
+                MontoPagado = c.MontoPagado,
+                FechaPago = c.FechaPago,
+                Estado = c.Estado
+            }).ToList(),
 
-                Cuotas = datos.Cuotas.Select(c => new DetalleCuotasDTO
-                {
-                    NumeroCuota = c.NumeroCuota,
-                    Monto = c.Monto,
-                    FechaVencimiento = c.FechaVencimiento,
-                    MontoPagado = c.MontoPagado,
-                    FechaPago = c.FechaPago,
-                    Estado = c.Estado
-                }).ToList(),
+            Legends = datos.Leyendas.Select(l => new NoteLegendDto
+            {
+                Code = l.Code,
+                Value = l.Value
+            }).ToList(),
 
-                Legends = datos.Leyendas.Select(l => new NoteLegendDto
-                {
-                    Code = l.Code,
-                    Value = l.Value
-                }).ToList(),
+            Guias = datos.Guias.Select(g => new GuiaComprobanteDTO
+            {
+                GuiaTipoDoc = g.GuiaTipoDoc,
+                GuiaNumeroCompleto = g.GuiaNumeroCompleto,
+            }).ToList(),
 
-                Guias = datos.Guias.Select(g => new GuiaComprobanteDTO
-                {
-                    GuiaTipoDoc = g.GuiaTipoDoc,
-                    GuiaNumeroCompleto = g.GuiaNumeroCompleto,
-                }).ToList(),
+            Detracciones = datos.Detracciones.Select(d => new DetraccionDTO
+            {
+                ComprobanteID = d.ComprobanteID,
+                CodigoBienDetraccion = d.CodigoBienDetraccion,
+                CodigoMedioPago = d.CodigoMedioPago,
+                CuentaBancoDetraccion = d.CuentaBancoDetraccion,
+                PorcentajeDetraccion = d.PorcentajeDetraccion,
+                MontoDetraccion = d.MontoDetraccion,
+                Observacion = d.Observacion
+            }).ToList(),
+        };
 
-                Detracciones = datos.Detracciones.Select(d => new DetraccionDTO
-                {
-                    ComprobanteID = d.ComprobanteID,
-                    CodigoBienDetraccion = d.CodigoBienDetraccion,
-                    CodigoMedioPago = d.CodigoMedioPago,
-                    CuentaBancoDetraccion = d.CuentaBancoDetraccion,
-                    PorcentajeDetraccion = d.PorcentajeDetraccion,
-                    MontoDetraccion = d.MontoDetraccion,
-                    Observacion = d.Observacion
-                }).ToList(),
-            };
+        var xmlResultado = _xmlService.GenerarXml(dto);
+        if (!xmlResultado.Exitoso)
+            throw new InvalidOperationException($"Error regenerando XML: {xmlResultado.Error}");
 
-            var xmlResultado = _xmlService.GenerarXml(dto);
-            if (!xmlResultado.Exitoso)
-                throw new InvalidOperationException($"Error regenerando XML: {xmlResultado.Error}");
-            
-            xmlSinFirmar = xmlResultado.XmlString!;
-        }
+        string xmlSinFirmar = xmlResultado.XmlString!;
 
-        // 6. Firmar XML
+        // 4. Firmar XML
         var xmlFirmadoBytes = _xmlSigner.SignXmlToBytes(
             xmlSinFirmar,
             empresa.CertificadoPem!,
@@ -675,17 +665,33 @@ public class ComprobanteService : IComprobanteService
         var xmlFirmadoString = Encoding.UTF8.GetString(xmlFirmadoBytes);
         var nombreArchivo = $"{empresa.Ruc}-{comprobante.TipoComprobante}-{comprobante.Serie}-{comprobante.Correlativo:D8}";
 
-        // 7. Guardar ZIP firmado localmente (En segundo plano para no demorar la respuesta de la API)
-        _ = Task.Run(() => GuardarArchivosAsync(
-            ruc: empresa.Ruc,
-            razonSocial: comprobante.EmpresaRazonSocial!,
-            tipoComprobante: comprobante.TipoComprobante!,
-            nombreArchivo: nombreArchivo,
-            xmlFirmadoBytes: xmlFirmadoBytes,
-            cdrBase64: null
-        ));
+        // 5. Subir ZIP firmado al microservicio en segundo plano
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                using var memStream = new MemoryStream();
+                using (var zip = new System.IO.Compression.ZipArchive(memStream, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
+                {
+                    var entry = zip.CreateEntry($"{nombreArchivo}.xml");
+                    using var entryStream = entry.Open();
+                    await entryStream.WriteAsync(xmlFirmadoBytes);
+                }
+                var rutaXml = await _storageService.SubirZipAsync(
+                    empresa.Ruc,
+                    comprobante.TipoComprobante!,
+                    nombreArchivo,
+                    memStream.ToArray()
+                );
+                await _unitOfWork.Comprobantes.UpdateXmlGeneradoAsync(comprobanteId, rutaXml);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[STORAGE ❌] Error subiendo ZIP: {ex.Message}");
+            }
+        });
 
-        // 8. Enviar a SUNAT
+        // 6. Enviar a SUNAT
         SunatResponse sunatResponse;
         try
         {
@@ -705,7 +711,7 @@ public class ComprobanteService : IComprobanteService
                 "PENDIENTE",
                 null,
                 $"Error de conexión con SUNAT: {ex.Message}",
-                xmlFirmadoString,
+                null,
                 null
             );
 
@@ -728,20 +734,29 @@ public class ComprobanteService : IComprobanteService
             };
         }
 
-        // 9. Guardar CDR (En segundo plano)
+        // 7. Subir CDR en segundo plano
         if (!string.IsNullOrEmpty(sunatResponse.CdrBase64))
         {
-            _ = Task.Run(() => GuardarArchivosAsync(
-                ruc: empresa.Ruc,
-                razonSocial: comprobante.EmpresaRazonSocial!,
-                tipoComprobante: comprobante.TipoComprobante!,
-                nombreArchivo: nombreArchivo,
-                xmlFirmadoBytes: null,
-                cdrBase64: sunatResponse.CdrBase64
-            ));
+            var cdrBase64Capture = sunatResponse.CdrBase64;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var rutaCdr = await _storageService.SubirCdrAsync(
+                        empresa.Ruc,
+                        comprobante.TipoComprobante!,
+                        nombreArchivo,
+                        cdrBase64Capture
+                    );
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[STORAGE ❌] Error subiendo CDR: {ex.Message}");
+                }
+            });
         }
 
-        // 10. Actualizar estado BD
+        // 8. Actualizar estado BD
         var nuevoEstado = sunatResponse.Success
             ? (sunatResponse.TieneObservaciones ? "ACEPTADO_CON_OBSERVACIONES" : "ACEPTADO")
             : "RECHAZADO";
@@ -751,18 +766,24 @@ public class ComprobanteService : IComprobanteService
             nuevoEstado,
             sunatResponse.CodigoRespuesta,
             sunatResponse.Descripcion,
-            xmlFirmadoString,
-            sunatResponse.CdrBase64
+            null,
+            null
         );
 
-        // Obtener sucursalId desde ruc + anexo
+        // 9. Guardar ruta CDR en BD (hilo principal, conexión libre)
+        if (!string.IsNullOrEmpty(sunatResponse.CdrBase64))
+        {
+            var rutaCdr = $"/{empresa.Ruc}/{ObtenerTipoCarpeta(comprobante.TipoComprobante!)}/R-{nombreArchivo}.zip";
+            await _unitOfWork.Comprobantes.UpdateXmlRespuestaSunatAsync(comprobanteId, rutaCdr);
+        }
+
+        // 10. Notificar WebSocket
         var sucursalId = await _unitOfWork.Comprobantes.GetSucursalIdByRucAndAnexoAsync(
             comprobante.EmpresaRuc!,
             comprobante.EmpresaEstablecimientoAnexo!
         );
 
         _ = Task.Run(() => _wsNotifier.NotifyAsync(sucursalId, comprobante.EmpresaRuc, "status"));
-
 
         return new ComprobanteResponse
         {
@@ -775,57 +796,15 @@ public class ComprobanteService : IComprobanteService
             CdrBase64 = sunatResponse.CdrBase64
         };
     }
-
     // ── HELPERS ──────────────────────────────────────────────────────────────
-    private async Task GuardarArchivosAsync(string ruc, string razonSocial, string tipoComprobante,
-        string nombreArchivo, byte[]? xmlFirmadoBytes, string? cdrBase64)
+    private static string ObtenerTipoCarpeta(string tipoComprobante) => tipoComprobante switch
     {
-        var empresaCarpeta = LimpiarNombreCarpeta(razonSocial);
-        var tipoCarpeta = tipoComprobante switch
-        {
-            "01" => "Facturas",
-            "03" => "Boletas",
-            "07" => "NotasCredito",
-            "08" => "NotasDebito",
-            _ => tipoComprobante
-        };
-
-        var carpeta = Path.Combine(_rutaXml, empresaCarpeta, tipoCarpeta);
-        Directory.CreateDirectory(carpeta);
-
-        // Guardar ZIP firmado
-        if (xmlFirmadoBytes != null)
-        {
-            using var memStream = new MemoryStream();
-            using (var zip = new ZipArchive(memStream, ZipArchiveMode.Create, leaveOpen: true))
-            {
-                var entry = zip.CreateEntry($"{nombreArchivo}.xml");
-                using var entryStream = entry.Open();
-                await entryStream.WriteAsync(xmlFirmadoBytes);
-            }
-            await File.WriteAllBytesAsync(
-                Path.Combine(carpeta, $"{nombreArchivo}.zip"),
-                memStream.ToArray());
-        }
-
-        // Guardar CDR
-        if (!string.IsNullOrEmpty(cdrBase64))
-        {
-            var cdrBytes = Convert.FromBase64String(cdrBase64);
-            await File.WriteAllBytesAsync(
-                Path.Combine(carpeta, $"R-{nombreArchivo}.zip"),
-                cdrBytes);
-        }
-    }
-
-    private static string LimpiarNombreCarpeta(string nombre) =>
-        string.Concat(nombre
-            .Replace("/", "").Replace("\\", "").Replace(":", "")
-            .Replace("*", "").Replace("?", "").Replace("\"", "")
-            .Replace("<", "").Replace(">", "").Replace("|", "")
-            .Trim());
-
-
+        "01" => "facturas",
+        "03" => "boletas",
+        "07" => "notas-credito",
+        "08" => "notas-debito",
+        _ => tipoComprobante
+    };
     public async Task<ObtenerComprobanteDTO?> GetComprobanteByIdAsync(int comprobanteId)
     {
         var comprobante = await _unitOfWork.Comprobantes.GetByIdAsync(comprobanteId);
@@ -834,12 +813,12 @@ public class ComprobanteService : IComprobanteService
 
         var datos = await _unitOfWork.Comprobantes.GetDatosCompletosByComprobanteIdAsync(comprobanteId);
 
-        return MapToDto(comprobante, 
-            datos.Detalles.ToList(), 
-            datos.Pagos.ToList(), 
-            datos.Cuotas.ToList(), 
-            datos.Leyendas.ToList(), 
-            datos.Guias.ToList(), 
+        return MapToDto(comprobante,
+            datos.Detalles.ToList(),
+            datos.Pagos.ToList(),
+            datos.Cuotas.ToList(),
+            datos.Leyendas.ToList(),
+            datos.Guias.ToList(),
             datos.Detracciones.ToList());
     }
 
@@ -852,12 +831,12 @@ public class ComprobanteService : IComprobanteService
         var comprobanteId = comprobante.ComprobanteId;
         var datos = await _unitOfWork.Comprobantes.GetDatosCompletosByComprobanteIdAsync(comprobanteId);
 
-        return MapToDto(comprobante, 
-            datos.Detalles.ToList(), 
-            datos.Pagos.ToList(), 
-            datos.Cuotas.ToList(), 
-            datos.Leyendas.ToList(), 
-            datos.Guias.ToList(), 
+        return MapToDto(comprobante,
+            datos.Detalles.ToList(),
+            datos.Pagos.ToList(),
+            datos.Cuotas.ToList(),
+            datos.Leyendas.ToList(),
+            datos.Guias.ToList(),
             datos.Detracciones.ToList());
     }
 
@@ -1136,14 +1115,12 @@ public class ComprobanteService : IComprobanteService
         SubTotal = c.SubTotal ?? 0,
         ImporteTotal = c.ImporteTotal ?? 0,
         MontoCredito = c.MontoCredito ?? 0,
-
         ComprobanteAfectadoId = c.ComprobanteAfectadoId,
         TipDocAfectado = c.TipDocAfectado,
         NumDocAfectado = c.NumDocAfectado,
         TipoNotaCreditoDebito = c.TipoNotaCreditoDebito,
         MotivoNota = c.MotivoNota,
         Observaciones = c.Observaciones,
-
         EstadoSunat = c.EstadoSunat,
         CodigoHashCPE = c.CodigoHashCPE,
         CodigoRespuestaSunat = c.CodigoRespuestaSunat,
@@ -1151,11 +1128,12 @@ public class ComprobanteService : IComprobanteService
         PdfGenerado = c.PdfGenerado,
         EnviadoEnResumen = c.EnviadoEnResumen,
         FechaEnvioSunat = c.FechaEnvioSunat,
-
         UsuarioCreacion = c.UsuarioCreacion,
         FechaCreacion = c.FechaCreacion,
         UsuarioModificacion = c.UsuarioModificacion,
-        FechaModificacion = c.FechaModificacion
+        FechaModificacion = c.FechaModificacion,
+        XmlGenerado = c.XmlGenerado,
+        XmlRespuestaSunat = c.XmlRespuestaSunat
     };
 
 }

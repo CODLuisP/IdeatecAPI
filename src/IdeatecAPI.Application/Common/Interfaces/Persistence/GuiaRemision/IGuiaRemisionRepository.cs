@@ -12,4 +12,6 @@ public interface IGuiaRemisionRepository
     Task<int> CreateAsync(GuiaRemision guia);
     Task UpdateEstadoAsync(int guiaId, string estado, string? codigo, string? mensaje, string? ticket, string? cdr, DateTime? fechaEnvio);
     Task<bool> ExisteAsync(int empresaId, string tipoDoc, string serie, int correlativo);
+    Task UpdateXmlGeneradoAsync(int guiaId, string rutaZip);
+    Task UpdateXmlRespuestaSunatAsync(int guiaId, string rutaCdr);
 }
