@@ -269,7 +269,7 @@ public class ReportesController : ControllerBase
         }
     }
 
-    [HttpGet("medios-pagoTop/{ruc}")]
+    [HttpGet("medios-pago/{ruc}")]
     [ProducesResponseType(typeof(IEnumerable<MedioPagoTopDTO>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetMediosPagoTop(
