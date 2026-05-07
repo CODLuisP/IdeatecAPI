@@ -77,6 +77,8 @@ public class GuiaService : IGuiaService
             EstadoSunat = g.EstadoSunat,
             CodigoRespuestaSunat = g.CodigoRespuestaSunat,
             MensajeRespuestaSunat = g.MensajeRespuestaSunat,
+            XmlGenerado = g.XmlGenerado,
+            XmlRespuestaSunat = g.XmlRespuestaSunat
         });
     }
 
@@ -105,6 +107,8 @@ public class GuiaService : IGuiaService
             EstadoSunat = g.EstadoSunat,
             CodigoRespuestaSunat = g.CodigoRespuestaSunat,
             MensajeRespuestaSunat = g.MensajeRespuestaSunat,
+            XmlGenerado = g.XmlGenerado,
+            XmlRespuestaSunat = g.XmlRespuestaSunat
         });
     }
 

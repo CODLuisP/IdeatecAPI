@@ -87,6 +87,8 @@ public class GuiaDto
     public string? ClienteWhatsapp { get; set; }
     public bool EnviadoPorWhatsapp { get; set; }
     public int? UsuarioCreacion { get; set; }
+    public string? XmlGenerado { get; set; }
+    public string? XmlRespuestaSunat { get; set; }
     public List<GuiaDetalleDto> Details { get; set; } = new();
 }
 
