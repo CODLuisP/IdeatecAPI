@@ -1,4 +1,5 @@
 using IdeatecAPI.Application.Features.Reportes.DTOs;
+using IdeatecAPI.Domain.Entities;
 
 namespace IdeatecAPI.Application.Common.Interfaces.Persistence;
 
@@ -34,4 +35,31 @@ public interface IReportesRepository
         DateTime? desde,
         DateTime? hasta,
         int? usuarioId);
+    
+    Task<IEnumerable<Comprobante>> GetListadoParaReportesAsync(
+        string ruc,
+        string? codEstablecimiento = null,
+        DateTime? fechaDesde = null,
+        DateTime? fechaHasta = null,
+        int? usuarioCreacion = null,
+        string? clienteNumDoc = null,
+        int? limit = null);
+
+    Task<IEnumerable<ProductoTopDTO>> GetProductosTopAsync(
+        string ruc,
+        string? codEstablecimiento = null,
+        DateTime? fechaDesde = null,
+        DateTime? fechaHasta = null,
+        int? usuarioCreacion = null,
+        string? clienteNumDoc = null,
+        int? limit = null,
+        string orderBy = "monto");
+    Task<IEnumerable<MedioPagoTopDTO>> GetMediosPagoTopAsync(
+        string ruc,
+        string? codEstablecimiento = null,
+        DateTime? fechaDesde = null,
+        DateTime? fechaHasta = null,
+        int? usuarioCreacion = null,
+        string? clienteNumDoc = null,
+        int? limit = null);
 }
