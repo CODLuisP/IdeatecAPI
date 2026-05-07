@@ -1,3 +1,4 @@
+using IdeatecAPI.Application.Features.Comprobante.DTOs;
 using IdeatecAPI.Application.Features.Reportes.DTOs;
 using IdeatecAPI.Application.Features.Reportes.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -23,9 +24,6 @@ public class ReportesController : ControllerBase
     // POR EMPRESA (RUC)
     // ─────────────────────────────────────────────────────────────────────────
 
-    /// <summary>
-    /// GET api/reportes/empresa/{ruc}?periodo=hoy&desde=&hasta=&limite=10&usuarioId=
-    /// </summary>
     [HttpGet("empresa/{ruc}")]
     [ProducesResponseType(typeof(ReporteResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -50,18 +48,10 @@ public class ReportesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error al obtener reportes para RUC {Ruc}", ruc);
-            return StatusCode(StatusCodes.Status500InternalServerError, new
-            {
-                mensaje = "Ocurrió un error al obtener los reportes.",
-                detalle = ex.Message
-            });
+            return StatusCode(500, new { mensaje = "Ocurrió un error al obtener los reportes.", detalle = ex.Message });
         }
     }
 
-    /// <summary>
-    /// GET api/reportes/empresa/{ruc}/export?periodo=hoy&desde=&hasta=&usuarioId=
-    /// Sin límite — para exportar Excel completo
-    /// </summary>
     [HttpGet("empresa/{ruc}/export")]
     [ProducesResponseType(typeof(List<ClienteExportDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -85,11 +75,7 @@ public class ReportesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error al exportar clientes para RUC {Ruc}", ruc);
-            return StatusCode(StatusCodes.Status500InternalServerError, new
-            {
-                mensaje = "Ocurrió un error al exportar los datos.",
-                detalle = ex.Message
-            });
+            return StatusCode(500, new { mensaje = "Ocurrió un error al exportar los datos.", detalle = ex.Message });
         }
     }
 
@@ -97,9 +83,6 @@ public class ReportesController : ControllerBase
     // POR SUCURSAL
     // ─────────────────────────────────────────────────────────────────────────
 
-    /// <summary>
-    /// GET api/reportes/sucursal/{sucursalId}?periodo=hoy&desde=&hasta=&limite=10&usuarioId=
-    /// </summary>
     [HttpGet("sucursal/{sucursalId:int}")]
     [ProducesResponseType(typeof(ReporteResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -129,18 +112,10 @@ public class ReportesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error al obtener reportes para sucursal {SucursalId}", sucursalId);
-            return StatusCode(StatusCodes.Status500InternalServerError, new
-            {
-                mensaje = "Ocurrió un error al obtener los reportes.",
-                detalle = ex.Message
-            });
+            return StatusCode(500, new { mensaje = "Ocurrió un error al obtener los reportes.", detalle = ex.Message });
         }
     }
 
-    /// <summary>
-    /// GET api/reportes/sucursal/{sucursalId}/export?periodo=hoy&desde=&hasta=&usuarioId=
-    /// Sin límite — para exportar Excel completo
-    /// </summary>
     [HttpGet("sucursal/{sucursalId:int}/export")]
     [ProducesResponseType(typeof(List<ClienteExportDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -169,18 +144,192 @@ public class ReportesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error al exportar clientes para sucursal {SucursalId}", sucursalId);
-            return StatusCode(StatusCodes.Status500InternalServerError, new
-            {
-                mensaje = "Ocurrió un error al exportar los datos.",
-                detalle = ex.Message
-            });
+            return StatusCode(500, new { mensaje = "Ocurrió un error al exportar los datos.", detalle = ex.Message });
         }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // HELPER — validación de periodo
+    // LISTADO COMPROBANTES
     // ─────────────────────────────────────────────────────────────────────────
-    private static readonly string[] PeriodosValidos = 
+
+    [HttpGet("listado/{ruc}")]
+    [ProducesResponseType(typeof(IEnumerable<ListarComprobanteDTO>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetListado(
+        string ruc,
+        [FromQuery] string? codEstablecimiento = null,
+        [FromQuery] DateTime? fechaDesde = null,
+        [FromQuery] DateTime? fechaHasta = null,
+        [FromQuery] int? usuarioCreacion = null,
+        [FromQuery] string? clienteNumDoc = null,
+        [FromQuery] int? limit = null)
+    {
+        try
+        {
+            var result = await _reportesService.GetListadoParaReportesAsync(
+                ruc, codEstablecimiento, fechaDesde, fechaHasta, usuarioCreacion, clienteNumDoc, limit);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener listado reportes RUC {Ruc}", ruc);
+            return StatusCode(500, new { mensaje = "Error al obtener listado.", detalle = ex.Message });
+        }
+    }
+
+    [HttpGet("listado/{ruc}/excel")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> ExportarListadoExcel(
+        string ruc,
+        [FromQuery] string titulo = "Reporte de Comprobantes",
+        [FromQuery] string? codEstablecimiento = null,
+        [FromQuery] DateTime? fechaDesde = null,
+        [FromQuery] DateTime? fechaHasta = null,
+        [FromQuery] int? usuarioCreacion = null,
+        [FromQuery] string? clienteNumDoc = null,
+        [FromQuery] int? limit = null)
+    {
+        try
+        {
+            var bytes = await _reportesService.ExportarListadoReportesExcelAsync(
+                titulo, ruc, codEstablecimiento, fechaDesde, fechaHasta,
+                usuarioCreacion, clienteNumDoc, limit);
+
+            return File(bytes,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"comprobantes-{ruc}-{DateTime.Now:yyyyMMdd}.xlsx");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al exportar Excel listado RUC {Ruc}", ruc);
+            return StatusCode(500, new { mensaje = "Error al generar Excel.", detalle = ex.Message });
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // PRODUCTOS TOP
+    // ─────────────────────────────────────────────────────────────────────────
+
+    [HttpGet("productos-top/{ruc}")]
+    [ProducesResponseType(typeof(IEnumerable<ProductoTopDTO>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetProductosTop(
+        string ruc,
+        [FromQuery] string? codEstablecimiento = null,
+        [FromQuery] DateTime? fechaDesde = null,
+        [FromQuery] DateTime? fechaHasta = null,
+        [FromQuery] int? usuarioCreacion = null,
+        [FromQuery] string? clienteNumDoc = null,
+        [FromQuery] int? limit = null,
+        [FromQuery] string orderBy = "monto")
+    {
+        try
+        {
+            var result = await _reportesService.GetProductosTopAsync(
+                ruc, codEstablecimiento, fechaDesde, fechaHasta,
+                usuarioCreacion, clienteNumDoc, limit, orderBy);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener productos top RUC {Ruc}", ruc);
+            return StatusCode(500, new { mensaje = "Error al obtener productos.", detalle = ex.Message });
+        }
+    }
+
+    [HttpGet("productos-top/{ruc}/excel")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> ExportarProductosTopExcel(
+        string ruc,
+        [FromQuery] string titulo = "Top Productos",
+        [FromQuery] string? codEstablecimiento = null,
+        [FromQuery] DateTime? fechaDesde = null,
+        [FromQuery] DateTime? fechaHasta = null,
+        [FromQuery] int? usuarioCreacion = null,
+        [FromQuery] string? clienteNumDoc = null,
+        [FromQuery] int? limit = null,
+        [FromQuery] string orderBy = "monto")
+    {
+        try
+        {
+            var bytes = await _reportesService.ExportarProductosTopExcelAsync(
+                titulo, ruc, codEstablecimiento, fechaDesde, fechaHasta,
+                usuarioCreacion, clienteNumDoc, limit, orderBy);
+
+            return File(bytes,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"productos-top-{ruc}-{DateTime.Now:yyyyMMdd}.xlsx");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al exportar Excel productos top RUC {Ruc}", ruc);
+            return StatusCode(500, new { mensaje = "Error al generar Excel.", detalle = ex.Message });
+        }
+    }
+
+    [HttpGet("medios-pagoTop/{ruc}")]
+    [ProducesResponseType(typeof(IEnumerable<MedioPagoTopDTO>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetMediosPagoTop(
+        string ruc,
+        [FromQuery] string? codEstablecimiento = null,
+        [FromQuery] DateTime? fechaDesde = null,
+        [FromQuery] DateTime? fechaHasta = null,
+        [FromQuery] int? usuarioCreacion = null,
+        [FromQuery] string? clienteNumDoc = null,
+        [FromQuery] int? limit = null)
+    {
+        try
+        {
+            var result = await _reportesService.GetMediosPagoTopAsync(
+                ruc, codEstablecimiento, fechaDesde, fechaHasta,
+                usuarioCreacion, clienteNumDoc, limit);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener medios de pago RUC {Ruc}", ruc);
+            return StatusCode(500, new { mensaje = "Error al obtener medios de pago.", detalle = ex.Message });
+        }
+    }
+
+    [HttpGet("medios-pago/{ruc}/excel")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> ExportarMediosPagoTopExcel(
+        string ruc,
+        [FromQuery] string titulo = "Top Medios de Pago",
+        [FromQuery] string? codEstablecimiento = null,
+        [FromQuery] DateTime? fechaDesde = null,
+        [FromQuery] DateTime? fechaHasta = null,
+        [FromQuery] int? usuarioCreacion = null,
+        [FromQuery] string? clienteNumDoc = null,
+        [FromQuery] int? limit = null)
+    {
+        try
+        {
+            var bytes = await _reportesService.ExportarMediosPagoTopExcelAsync(
+                titulo, ruc, codEstablecimiento, fechaDesde, fechaHasta,
+                usuarioCreacion, clienteNumDoc, limit);
+
+            return File(bytes,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"medios-pago-{ruc}-{DateTime.Now:yyyyMMdd}.xlsx");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al exportar Excel medios de pago RUC {Ruc}", ruc);
+            return StatusCode(500, new { mensaje = "Error al generar Excel.", detalle = ex.Message });
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // HELPER
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private static readonly string[] PeriodosValidos =
         { "hoy", "semana", "mes", "año", "personalizado" };
 
     private static bool PeriodoValido(

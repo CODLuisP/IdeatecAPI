@@ -1,6 +1,7 @@
 using System.Data;
 using Dapper;
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
+using IdeatecAPI.Application.Features.Comprobante.DTOs;
 using IdeatecAPI.Domain.Entities;
 
 namespace IdeatecAPI.Infrastructure.Persistence.Repositories.Comprobantes;
@@ -359,7 +360,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
             _transaction);
     }
 
-    // ── NUEVO: Obtener comprobante por ID ────────────────────────────────────
+    // ──Obtener comprobante por ID ────────────────────────────────────
     public new async Task<Comprobante?> GetByIdAsync(int comprobanteId)
     {
         var sql = BaseSelect + " WHERE comprobanteID = @ComprobanteId";
@@ -370,7 +371,6 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
             _transaction
         );
     }
-
     public async Task<IEnumerable<Comprobante>> GetByEstadoAsync(string estadoSunat)
     {
         var sql = BaseSelect + " WHERE estadoSunat = @EstadoSunat";
@@ -696,5 +696,4 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
 
     FROM comprobante
     ";
-
 }

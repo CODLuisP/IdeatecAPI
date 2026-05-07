@@ -4,6 +4,7 @@ using System.Data;
 using Dapper;
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Application.Features.Reportes.DTOs;
+using IdeatecAPI.Domain.Entities;
 
 namespace IdeatecAPI.Infrastructure.Persistence.Repositories;
 
@@ -455,6 +456,222 @@ public class ReportesRepository : IReportesRepository
             _               => (desdeActual.AddDays(-duracion), hastaActual.AddDays(-duracion)),
         };
     }
+
+    public async Task<IEnumerable<Comprobante>> GetListadoParaReportesAsync(
+        string ruc,
+        string? codEstablecimiento = null,
+        DateTime? fechaDesde = null,
+        DateTime? fechaHasta = null,
+        int? usuarioCreacion = null,
+        string? clienteNumDoc = null,
+        int? limit = null)
+    {
+        var sql = BaseSelectReportes + @"
+            WHERE empresaRuc = @Ruc
+            AND estadoSunat IN ('ACEPTADO', 'ACEPTADO_CON_OBSERVACIONES')
+            AND (@CodEstablecimiento IS NULL OR establecimientoAnexo = @CodEstablecimiento)
+            AND (@FechaDesde IS NULL OR fechaEmision >= @FechaDesde)
+            AND (@FechaHasta IS NULL OR fechaEmision <= @FechaHasta)
+            AND (@UsuarioCreacion IS NULL OR usuarioCreacion = @UsuarioCreacion)
+            AND (@ClienteNumDoc IS NULL OR clienteNumDoc = @ClienteNumDoc)
+            ORDER BY fechaEmision DESC"
+            + (limit.HasValue ? " LIMIT @Limit" : "");
+
+        return await _connection.QueryAsync<Comprobante>(sql, new
+        {
+            Ruc = ruc,
+            CodEstablecimiento = codEstablecimiento,
+            FechaDesde = fechaDesde,
+            FechaHasta = fechaHasta,
+            UsuarioCreacion = usuarioCreacion,
+            ClienteNumDoc = clienteNumDoc,
+            Limit = limit
+        }, _transaction);
+    }
+
+    public async Task<IEnumerable<ProductoTopDTO>> GetProductosTopAsync(
+        string ruc,
+        string? codEstablecimiento = null,
+        DateTime? fechaDesde = null,
+        DateTime? fechaHasta = null,
+        int? usuarioCreacion = null,
+        string? clienteNumDoc = null,
+        int? limit = null,
+        string orderBy = "monto")
+    {
+        var orden = orderBy.ToLower() switch
+        {
+            "cantidad" => "TotalCantidad DESC",
+            "veces"    => "VecesVendido DESC",
+            _          => "TotalMonto DESC"
+        };
+
+        var sql = @"
+            SELECT 
+                cd.codigo                           AS Codigo,
+                cd.descripcion                      AS Descripcion,
+                SUM(cd.cantidad)                    AS TotalCantidad,
+                SUM(cd.totalVentaItem)              AS TotalMonto,
+                SUM(cd.montoIGV)                    AS TotalIGV,
+                COUNT(DISTINCT cd.comprobanteId)    AS VecesVendido,
+                AVG(cd.precioUnitario)              AS PrecioPromedio
+            FROM comprobantedetalle cd
+            INNER JOIN comprobante c ON c.comprobanteID = cd.comprobanteId
+            WHERE c.empresaRuc = @Ruc
+            AND c.estadoSunat IN ('ACEPTADO', 'ACEPTADO_CON_OBSERVACIONES')
+            AND (@CodEstablecimiento IS NULL OR c.establecimientoAnexo = @CodEstablecimiento)
+            AND (@FechaDesde IS NULL OR c.fechaEmision >= @FechaDesde)
+            AND (@FechaHasta IS NULL OR c.fechaEmision <= @FechaHasta)
+            AND (@UsuarioCreacion IS NULL OR c.usuarioCreacion = @UsuarioCreacion)
+            AND (@ClienteNumDoc IS NULL OR c.clienteNumDoc = @ClienteNumDoc)
+            GROUP BY cd.codigo, cd.descripcion
+            ORDER BY " + orden
+            + (limit.HasValue ? " LIMIT @Limit" : "");
+
+        return await _connection.QueryAsync<ProductoTopDTO>(sql, new
+        {
+            Ruc = ruc,
+            CodEstablecimiento = codEstablecimiento,
+            FechaDesde = fechaDesde,
+            FechaHasta = fechaHasta,
+            UsuarioCreacion = usuarioCreacion,
+            ClienteNumDoc = clienteNumDoc,
+            Limit = limit
+        }, _transaction);
+    }
+
+    public async Task<IEnumerable<MedioPagoTopDTO>> GetMediosPagoTopAsync(
+        string ruc,
+        string? codEstablecimiento = null,
+        DateTime? fechaDesde = null,
+        DateTime? fechaHasta = null,
+        int? usuarioCreacion = null,
+        string? clienteNumDoc = null,
+        int? limit = null)
+    {
+        var sql = @"
+            SELECT 
+                medioPago               AS MedioPago,
+                COUNT(*)                AS VecesUsado,
+                SUM(p.monto)            AS MontoTotal,
+                AVG(p.monto)            AS PromedioMonto
+            FROM pago p
+            INNER JOIN comprobante c ON c.comprobanteID = p.comprobanteID
+            WHERE c.empresaRuc = @Ruc
+            AND c.estadoSunat IN ('ACEPTADO', 'ACEPTADO_CON_OBSERVACIONES')
+            AND (@CodEstablecimiento IS NULL OR c.establecimientoAnexo = @CodEstablecimiento)
+            AND (@FechaDesde IS NULL OR c.fechaEmision >= @FechaDesde)
+            AND (@FechaHasta IS NULL OR c.fechaEmision <= @FechaHasta)
+            AND (@UsuarioCreacion IS NULL OR c.usuarioCreacion = @UsuarioCreacion)
+            AND (@ClienteNumDoc IS NULL OR c.clienteNumDoc = @ClienteNumDoc)
+
+            UNION ALL
+
+            SELECT
+                c2.tipoPago             AS MedioPago,
+                COUNT(*)                AS VecesUsado,
+                SUM(cu.monto)           AS MontoTotal,
+                AVG(cu.monto)           AS PromedioMonto
+            FROM cuota cu
+            INNER JOIN comprobante c2 ON c2.comprobanteID = cu.comprobanteID
+            WHERE cu.estado = 'PAGADO'
+            AND c2.empresaRuc = @Ruc
+            AND c2.estadoSunat IN ('ACEPTADO', 'ACEPTADO_CON_OBSERVACIONES')
+            AND (@CodEstablecimiento IS NULL OR c2.establecimientoAnexo = @CodEstablecimiento)
+            AND (@FechaDesde IS NULL OR c2.fechaEmision >= @FechaDesde)
+            AND (@FechaHasta IS NULL OR c2.fechaEmision <= @FechaHasta)
+            AND (@UsuarioCreacion IS NULL OR c2.usuarioCreacion = @UsuarioCreacion)
+            AND (@ClienteNumDoc IS NULL OR c2.clienteNumDoc = @ClienteNumDoc)
+
+            -- Agrupar ambos resultados juntos
+            GROUP BY MedioPago
+            ORDER BY VecesUsado DESC"
+            + (limit.HasValue ? " LIMIT @Limit" : "");
+
+        // Agrupar en memoria los resultados del UNION
+        var raw = await _connection.QueryAsync<MedioPagoTopDTO>(sql, new
+        {
+            Ruc = ruc,
+            CodEstablecimiento = codEstablecimiento,
+            FechaDesde = fechaDesde,
+            FechaHasta = fechaHasta,
+            UsuarioCreacion = usuarioCreacion,
+            ClienteNumDoc = clienteNumDoc,
+            Limit = limit
+        }, _transaction);
+
+        // Consolidar por MedioPago por si viene duplicado del UNION
+        var consolidado = raw
+            .GroupBy(x => x.MedioPago?.ToUpper() ?? "SIN MEDIO")
+            .Select(g => new MedioPagoTopDTO
+            {
+                MedioPago     = g.Key,
+                VecesUsado    = g.Sum(x => x.VecesUsado),
+                MontoTotal    = g.Sum(x => x.MontoTotal),
+                PromedioMonto = g.Average(x => x.PromedioMonto)
+            })
+            .OrderByDescending(x => x.VecesUsado);
+
+        return limit.HasValue ? consolidado.Take(limit.Value) : consolidado;
+    }
+
+    private const string BaseSelectReportes = @"
+    SELECT 
+        comprobanteID           AS ComprobanteId,
+        tipoOperacion           AS TipoOperacion,
+        tipoComprobante         AS TipoComprobante,
+        serie                   AS Serie,
+        correlativo             AS Correlativo,
+        numeroCompleto          AS NumeroCompleto,
+        tipoCambio              AS TipoCambio,
+        fechaEmision            AS FechaEmision,
+        TIMESTAMP(fechaEmision, horaEmision) AS HoraEmision,
+        fechaVencimiento        AS FechaVencimiento,
+        tipoMoneda              AS TipoMoneda,
+        tipoPago                AS TipoPago,
+        empresaRuc              AS EmpresaRuc,
+        empresaRazonSocial      AS EmpresaRazonSocial,
+        establecimientoAnexo    AS EmpresaEstablecimientoAnexo,
+        empresaDireccion        AS EmpresaDireccion,
+        clienteTipoDoc          AS ClienteTipoDoc,
+        clienteNumDoc           AS ClienteNumDoc,
+        clienteRznSocial        AS ClienteRazonSocial,
+        clienteDireccion        AS ClienteDireccion,
+        clienteProvincia        AS ClienteProvincia,
+        clienteDepartamento     AS ClienteDepartamento,
+        clienteDistrito         AS ClienteDistrito,
+        codigoTipoDescGlobal    AS CodigoTipoDescGlobal,
+        descuentoGlobal         AS DescuentoGlobal,
+        totalOperacionesGravadas   AS TotalOperacionesGravadas,
+        totalOperacionesExoneradas AS TotalOperacionesExoneradas,
+        totalOperacionesInafectas  AS TotalOperacionesInafectas,
+        totalOperacionesGratuitas  AS TotalOperacionesGratuitas,
+        totalIgvGratuitas       AS TotalIgvGratuitas,
+        totalIGV                AS TotalIGV,
+        totalImpuestos          AS TotalImpuestos,
+        totalDescuentos         AS TotalDescuentos,
+        totalOtrosCargos        AS TotalOtrosCargos,
+        totalIcbper             AS TotalIcbper,
+        valorVenta              AS ValorVenta,
+        subTotal                AS SubTotal,
+        importeTotal            AS ImporteTotal,
+        montoCredito            AS MontoCredito,
+        tipDocAfectado          AS TipDocAfectado,
+        numDocAfectado          AS NumDocAfectado,
+        tipoNotaCreditoDebito   AS TipoNotaCreditoDebito,
+        motivoNota              AS MotivoNota,
+        comprobanteAfectadoID   AS ComprobanteAfectadoId,
+        observaciones           AS Observaciones,
+        estadoSunat             AS EstadoSunat,
+        pdfGenerado             AS PdfGenerado,
+        codigoRespuestaSunat    AS CodigoRespuestaSunat,
+        mensajeRespuestaSunat   AS MensajeRespuestaSunat,
+        fechaEnvioSunat         AS FechaEnvioSunat,
+        xmlGenerado             AS XmlGenerado,
+        usuarioCreacion         AS UsuarioCreacion,
+        fechaCreacion           AS FechaCreacion
+    FROM comprobante
+    ";
 }
 
 // ── DTO interno para mapeo raw ────────────────────────────────────────────────

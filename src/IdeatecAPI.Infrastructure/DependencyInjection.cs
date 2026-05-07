@@ -93,6 +93,7 @@ public static class DependencyInjection
         services.AddScoped<IDashboardService, DashboardService>();
 
         //Reportes
+        services.AddScoped<IComprobanteExcelService, ComprobanteExcelService>();
         services.AddScoped<IReportesService, ReportesService>();
 
         //Cuentas por cobrar

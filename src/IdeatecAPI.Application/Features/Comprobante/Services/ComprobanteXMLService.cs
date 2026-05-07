@@ -6,6 +6,7 @@ using IdeatecAPI.Application.Features.Comprobante.DTOs;
 using IdeatecAPI.Application.Features.Detraccion.DTOs;
 using IdeatecAPI.Application.Features.Notas.DTOs;
 using IdeatecAPI.Application.Features.Notas.Services;
+using IdeatecAPI.Application.Features.Reportes.DTOs;
 using Microsoft.Extensions.Configuration;
 
 namespace IdeatecAPI.Application.Features.Comprobante.Services;
