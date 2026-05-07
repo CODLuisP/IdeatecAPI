@@ -42,7 +42,6 @@ public class ComprobantePdfService : IComprobantePdfService
         var datos = await _unitOfWork.Comprobantes.GetDatosCompletosByComprobanteIdAsync(comprobanteId);
         
         swPdfInterno.Stop();
-        Console.WriteLine($"[PERFORMANCE PDF] Tiempo en Base de Datos (PDF Service): {swPdfInterno.ElapsedMilliseconds} ms");
 
         var swRender = System.Diagnostics.Stopwatch.StartNew();
 
