@@ -4,6 +4,7 @@ public class CreateEmpresaDto
 {
     public string Ruc { get; set; } = string.Empty;
     public double Igv {get; set;} = 18;
+    public bool TipoEmision { get; set; }
     public string RazonSocial { get; set; } = string.Empty;
     public string? NombreComercial { get; set; }
     public string? Direccion { get; set; }
