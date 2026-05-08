@@ -29,4 +29,6 @@ public class GuiaListadoDto
     public string EstadoSunat { get; set; } = string.Empty;
     public string? CodigoRespuestaSunat { get; set; }
     public string? MensajeRespuestaSunat { get; set; }
+    public string? XmlGenerado { get; set; }
+    public string? XmlRespuestaSunat { get; set; }
 }

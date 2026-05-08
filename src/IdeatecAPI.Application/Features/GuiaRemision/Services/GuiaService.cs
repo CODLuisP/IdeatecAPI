@@ -26,7 +26,7 @@ public class GuiaService : IGuiaService
     private readonly IXmlGuiaBuilderService _xmlBuilder;
     private readonly IXmlSignerService _xmlSigner;
     private readonly ISunatGuiaService _sunatGuia;
-    private readonly string _rutaXml;
+    private readonly IStorageService _storageService;
     private readonly IWebSocketNotifier _wsNotifier;
 
     public GuiaService(
@@ -35,14 +35,15 @@ public class GuiaService : IGuiaService
         IXmlSignerService xmlSigner,
         ISunatGuiaService sunatGuia,
         IWebSocketNotifier wsNotifier,
+        IStorageService storageService,
         IConfiguration configuration)
     {
         _unitOfWork = unitOfWork;
         _xmlBuilder = xmlBuilder;
         _xmlSigner = xmlSigner;
         _sunatGuia = sunatGuia;
+        _storageService = storageService;
         _wsNotifier = wsNotifier;
-        _rutaXml = configuration["Storage:RutaXml"] ?? "C:/FacturacionStorage";
     }
 
     // ── Método original (sin cambios) ─────────────────────────────────────────
@@ -76,6 +77,8 @@ public class GuiaService : IGuiaService
             EstadoSunat = g.EstadoSunat,
             CodigoRespuestaSunat = g.CodigoRespuestaSunat,
             MensajeRespuestaSunat = g.MensajeRespuestaSunat,
+            XmlGenerado = g.XmlGenerado,
+            XmlRespuestaSunat = g.XmlRespuestaSunat
         });
     }
 
@@ -104,6 +107,8 @@ public class GuiaService : IGuiaService
             EstadoSunat = g.EstadoSunat,
             CodigoRespuestaSunat = g.CodigoRespuestaSunat,
             MensajeRespuestaSunat = g.MensajeRespuestaSunat,
+            XmlGenerado = g.XmlGenerado,
+            XmlRespuestaSunat = g.XmlRespuestaSunat
         });
     }
 
@@ -289,6 +294,7 @@ public class GuiaService : IGuiaService
 
         var details = (await _unitOfWork.GuiaDetalles.GetByGuiaIdAsync(guiaId)).ToList();
 
+        // 1. Generar y firmar XML
         var xmlSinFirmar = guia.TipoDoc == "31"
             ? _xmlBuilder.BuildXmlTransportista(guia, details)
             : _xmlBuilder.BuildXml(guia, details);
@@ -301,12 +307,33 @@ public class GuiaService : IGuiaService
 
         var nombreArchivo = $"{empresa.Ruc}-{guia.TipoDoc}-{guia.Serie}-{guia.Correlativo:D8}";
 
-        await GuardarArchivosAsync(
-            empresa.Ruc,
-            guia.EmpresaRazonSocial ?? empresa.RazonSocial,
-            nombreArchivo,
-            xmlFirmadoBytes, null);
+        // 2. Subir ZIP al microservicio en segundo plano
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                using var memStream = new MemoryStream();
+                using (var zip = new System.IO.Compression.ZipArchive(memStream, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
+                {
+                    var entry = zip.CreateEntry($"{nombreArchivo}.xml");
+                    using var entryStream = entry.Open();
+                    await entryStream.WriteAsync(xmlFirmadoBytes);
+                }
+                var rutaXml = await _storageService.SubirZipAsync(
+                    empresa.Ruc,
+                    "09",  // tipo guia de remision
+                    nombreArchivo,
+                    memStream.ToArray()
+                );
+                await _unitOfWork.Guias.UpdateXmlGeneradoAsync(guiaId, rutaXml);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[STORAGE ❌] Error subiendo ZIP guía: {ex.Message}");
+            }
+        });
 
+        // 3. Enviar a SUNAT
         var sunatResponse = await _sunatGuia.SendGuiaAsync(
             xmlFirmadoBytes,
             nombreArchivo,
@@ -318,13 +345,29 @@ public class GuiaService : IGuiaService
             empresa.Environment
         );
 
+        // 4. Subir CDR en segundo plano
         if (!string.IsNullOrEmpty(sunatResponse.CdrBase64))
-            await GuardarArchivosAsync(
-                empresa.Ruc,
-                guia.EmpresaRazonSocial ?? empresa.RazonSocial,
-                nombreArchivo,
-                null, sunatResponse.CdrBase64);
+        {
+            var cdrBase64Capture = sunatResponse.CdrBase64;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var rutaCdr = await _storageService.SubirCdrAsync(
+                        empresa.Ruc,
+                        "09",
+                        nombreArchivo,
+                        cdrBase64Capture
+                    );
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[STORAGE ❌] Error subiendo CDR guía: {ex.Message}");
+                }
+            });
+        }
 
+        // 5. Actualizar estado en BD
         string nuevoEstado = sunatResponse.CodigoRespuesta == "EN_PROCESO"
             ? "EN_PROCESO"
             : sunatResponse.Success ? "ACEPTADO" : "RECHAZADO";
@@ -336,17 +379,27 @@ public class GuiaService : IGuiaService
             sunatResponse.Descripcion,
             sunatResponse.Ticket,
             null,
-            sunatResponse.Success ? TimeZoneInfo.ConvertTimeFromUtc(
-    DateTime.UtcNow,
-    TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time")
-) : null
+            sunatResponse.Success ? AhoraLima() : null
         );
 
+        // 6. Guardar ruta CDR en BD (hilo principal)
+        if (!string.IsNullOrEmpty(sunatResponse.CdrBase64))
+        {
+            var rutaCdr = $"/{empresa.Ruc}/guias-remision/R-{nombreArchivo}.zip";
+            await _unitOfWork.Guias.UpdateXmlRespuestaSunatAsync(guiaId, rutaCdr);
+        }
+
+        // 7. Notificar WebSocket
         _ = Task.Run(() => _wsNotifier.NotifyAsync(guia.SucursalId, guia.EmpresaRuc, "status"));
 
         return await GetByIdAsync(guiaId)
             ?? throw new InvalidOperationException("Error al recuperar la guía actualizada");
     }
+
+    private static DateTime AhoraLima() => TimeZoneInfo.ConvertTimeFromUtc(
+        DateTime.UtcNow,
+        TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time")
+    );
 
     public async Task DeleteAsync(int guiaId)
     {
@@ -374,36 +427,6 @@ public class GuiaService : IGuiaService
             result.Add(dto);
         }
         return result;
-    }
-
-    private async Task GuardarArchivosAsync(
-        string ruc, string razonSocial, string nombreArchivo,
-        byte[]? xmlFirmadoBytes, string? cdrBase64)
-    {
-        var empresaCarpeta = string.Concat(razonSocial
-            .Replace("/", "").Replace("\\", "").Replace(":", "")
-            .Replace("*", "").Replace("?", "").Replace("\"", "")
-            .Replace("<", "").Replace(">", "").Replace("|", "").Trim());
-
-        var carpeta = Path.Combine(_rutaXml, empresaCarpeta, "GuiaRemision");
-        Directory.CreateDirectory(carpeta);
-
-        if (xmlFirmadoBytes != null)
-        {
-            var rutaZip = Path.Combine(carpeta, $"{nombreArchivo}.zip");
-            using var zipStream = new FileStream(rutaZip, FileMode.Create);
-            using var zipArchive = new System.IO.Compression.ZipArchive(zipStream, System.IO.Compression.ZipArchiveMode.Create);
-            var entry = zipArchive.CreateEntry($"{nombreArchivo}.xml");
-            using var entryStream = entry.Open();
-            await entryStream.WriteAsync(xmlFirmadoBytes);
-        }
-
-        if (!string.IsNullOrEmpty(cdrBase64))
-        {
-            var cdrBytes = Convert.FromBase64String(cdrBase64);
-            var rutaCdr = Path.Combine(carpeta, $"R-{nombreArchivo}.zip");
-            await File.WriteAllBytesAsync(rutaCdr, cdrBytes);
-        }
     }
 
     // ── Mappers ───────────────────────────────────────────────────────────────

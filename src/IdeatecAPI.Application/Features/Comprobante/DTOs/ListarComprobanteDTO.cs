@@ -58,4 +58,6 @@ public class ListarComprobanteDTO
     public DateTime? FechaCreacion { get; set; }
     public int? UsuarioModificacion { get; set; }
     public DateTime? FechaModificacion { get; set; }
+    public string? XmlGenerado { get; set; }
+    public string? XmlRespuestaSunat { get; set; }
 }

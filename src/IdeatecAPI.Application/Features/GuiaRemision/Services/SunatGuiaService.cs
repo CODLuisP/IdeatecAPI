@@ -122,10 +122,6 @@ public class SunatGuiaService : ISunatGuiaService
             var content = await response.Content.ReadAsStringAsync();
 
             var json = JsonDocument.Parse(content);
-            Console.WriteLine($"TOKEN URL: {url}");
-            Console.WriteLine($"TOKEN STATUS: {response.StatusCode}");
-            Console.WriteLine($"TOKEN RESPONSE: {content}");
-            Console.WriteLine($"TOKEN USERNAME: {ruc + solUsuario}");
 
             return json.RootElement.TryGetProperty("access_token", out var tokenProp)
                 ? tokenProp.GetString()
