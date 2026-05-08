@@ -50,6 +50,7 @@ public class EmpresaService : IEmpresaService
         {
             Ruc = dto.Ruc,
             Igv = dto.Igv,
+            TipoEmision = dto.TipoEmision,
             RazonSocial = dto.RazonSocial,
             NombreComercial = dto.NombreComercial,
             Direccion = dto.Direccion,
@@ -85,6 +86,7 @@ public class EmpresaService : IEmpresaService
 
         empresa.RazonSocial = dto.RazonSocial ?? empresa.RazonSocial;
         empresa.Igv = dto.Igv ?? empresa.Igv;
+        empresa.TipoEmision = dto.TipoEmision ?? empresa.TipoEmision;
         empresa.NombreComercial = dto.NombreComercial ?? empresa.NombreComercial;
         empresa.Direccion = dto.Direccion ?? empresa.Direccion;
         empresa.Ubigeo = dto.Ubigeo ?? empresa.Ubigeo;
@@ -312,6 +314,7 @@ public class EmpresaService : IEmpresaService
         Id = e.Id,
         Ruc = e.Ruc,
         Igv = e.Igv,
+        TipoEmision = e.TipoEmision,
         RazonSocial = e.RazonSocial,
         NombreComercial = e.NombreComercial,
         Direccion = e.Direccion,

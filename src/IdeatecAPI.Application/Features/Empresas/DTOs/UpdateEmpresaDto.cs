@@ -4,6 +4,7 @@ public class UpdateEmpresaDto
 {
     public string? RazonSocial { get; set; }
     public double? Igv {get; set;}
+    public bool? TipoEmision { get; set; }
     public string? NombreComercial { get; set; }
     public string? Direccion { get; set; }
     public string? Ubigeo { get; set; }

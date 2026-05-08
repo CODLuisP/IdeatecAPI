@@ -10,8 +10,6 @@ public class DashboardRepository : IDashboardRepository
     private readonly IDbConnection _connection;
     private readonly IDbTransaction? _transaction;
 
-    private static readonly string[] EstadosExcluidos = { "ANULADO", "RECHAZADO" };
-
     public DashboardRepository(IDbConnection connection, IDbTransaction? transaction = null)
     {
         _connection = connection;
@@ -63,98 +61,155 @@ public class DashboardRepository : IDashboardRepository
         DateTime? fecha,
         int limite)
     {
-        var estadosExcluidos = string.Join("','", EstadosExcluidos);
-        var whereEstados = $"c.estadoSunat NOT IN ('{estadosExcluidos}')";
-
         var hoy = fecha.HasValue ? fecha.Value.Date : DateTime.Today;
         var hace7Dias = hoy.AddDays(-6);
 
-        // ── Parámetros unificados para las 3 queries ──────────────────────────
         var dp = new DynamicParameters(parametrosBase);
         dp.Add("Hoy", hoy);
         dp.Add("Hace7Dias", hace7Dias);
         dp.Add("Limite", limite);
 
-        // ═════════════════════════════════════════════════════════════════════
-        // 1 sola llamada QueryMultiple = 1 roundtrip a la BD (antes eran 7)
-        // ═════════════════════════════════════════════════════════════════════
         var sql = $@"
-            -- KPIs del día: 5 queries anteriores unificadas en 1 con SUM+CASE
+            -- ── KPIs del día ─────────────────────────────────────────────────
             SELECT
+                -- Ventas brutas: solo facturas y boletas
                 COALESCE(SUM(
                     CASE WHEN c.tipoComprobante IN ('01','03')
+                              AND c.estadoSunat NOT IN ('PENDIENTE','RECHAZADO')
                          THEN CASE WHEN c.tipoMoneda = 'USD'
                                    THEN c.importeTotal * c.tipoCambio
                                    ELSE c.importeTotal END
                          ELSE 0 END
                 ), 0) AS VentasDelDia,
-                SUM(CASE WHEN c.tipoComprobante = '01' THEN 1 ELSE 0 END) AS FacturasEmitidas,
-                SUM(CASE WHEN c.tipoComprobante = '03' THEN 1 ELSE 0 END) AS BoletasEmitidas,
-                SUM(CASE WHEN c.tipoComprobante = '07' THEN 1 ELSE 0 END) AS NotasCreditoEmitidas,
-                SUM(CASE WHEN c.tipoComprobante = '08' THEN 1 ELSE 0 END) AS NotasDebitoEmitidas
+
+                -- Conteos (excluyen solo PENDIENTE)
+                SUM(CASE WHEN c.tipoComprobante = '01'
+                          AND c.estadoSunat != 'PENDIENTE' THEN 1 ELSE 0 END) AS FacturasEmitidas,
+                SUM(CASE WHEN c.tipoComprobante = '03'
+                          AND c.estadoSunat != 'PENDIENTE' THEN 1 ELSE 0 END) AS BoletasEmitidas,
+                SUM(CASE WHEN c.tipoComprobante = '07'
+                          AND c.estadoSunat != 'PENDIENTE' THEN 1 ELSE 0 END) AS NotasCreditoEmitidas,
+                SUM(CASE WHEN c.tipoComprobante = '08'
+                          AND c.estadoSunat != 'PENDIENTE' THEN 1 ELSE 0 END) AS NotasDebitoEmitidas,
+
+                -- Notas de Crédito separadas por fecha del doc afectado
+                COALESCE(SUM(
+                    CASE WHEN c.tipoComprobante = '07'
+                              AND c.estadoSunat NOT IN ('PENDIENTE','RECHAZADO')
+                              AND (origen.fechaEmision = @Hoy OR origen.fechaEmision IS NULL)
+                         THEN CASE WHEN c.tipoMoneda = 'USD'
+                                   THEN c.importeTotal * c.tipoCambio
+                                   ELSE c.importeTotal END
+                         ELSE 0 END
+                ), 0) AS TotalNotasCreditoDelDia,
+
+                COALESCE(SUM(
+                    CASE WHEN c.tipoComprobante = '07'
+                              AND c.estadoSunat NOT IN ('PENDIENTE','RECHAZADO')
+                              AND origen.fechaEmision < @Hoy
+                         THEN CASE WHEN c.tipoMoneda = 'USD'
+                                   THEN c.importeTotal * c.tipoCambio
+                                   ELSE c.importeTotal END
+                         ELSE 0 END
+                ), 0) AS TotalNotasCreditoOtrasFechas,
+
+                -- Notas de Débito separadas por fecha del doc afectado
+                COALESCE(SUM(
+                    CASE WHEN c.tipoComprobante = '08'
+                              AND c.estadoSunat NOT IN ('PENDIENTE','RECHAZADO')
+                              AND (origen.fechaEmision = @Hoy OR origen.fechaEmision IS NULL)
+                         THEN CASE WHEN c.tipoMoneda = 'USD'
+                                   THEN c.importeTotal * c.tipoCambio
+                                   ELSE c.importeTotal END
+                         ELSE 0 END
+                ), 0) AS TotalNotasDebitoDelDia,
+
+                COALESCE(SUM(
+                    CASE WHEN c.tipoComprobante = '08'
+                              AND c.estadoSunat NOT IN ('PENDIENTE','RECHAZADO')
+                              AND origen.fechaEmision < @Hoy
+                         THEN CASE WHEN c.tipoMoneda = 'USD'
+                                   THEN c.importeTotal * c.tipoCambio
+                                   ELSE c.importeTotal END
+                         ELSE 0 END
+                ), 0) AS TotalNotasDebitoOtrasFechas
+
             FROM comprobante c
+            LEFT JOIN comprobante origen ON origen.comprobanteID = c.comprobanteAfectadoID
             WHERE {whereBase}
-              AND {whereEstados}
               AND c.fechaEmision = @Hoy;
 
-            -- Rendimiento últimos 7 días
+            -- ── Rendimiento últimos 7 días ────────────────────────────────────
             SELECT
                 c.fechaEmision AS Fecha,
                 COALESCE(SUM(
-                    CASE WHEN c.tipoMoneda = 'USD' THEN c.importeTotal * c.tipoCambio
-                         ELSE c.importeTotal END
+                    CASE WHEN c.tipoComprobante IN ('01','03')
+                              AND c.estadoSunat NOT IN ('PENDIENTE','RECHAZADO')
+                         THEN CASE WHEN c.tipoMoneda = 'USD'
+                                   THEN c.importeTotal * c.tipoCambio
+                                   ELSE c.importeTotal END
+                         ELSE 0 END
                 ), 0) AS TotalVentas
             FROM comprobante c
             WHERE {whereBase}
-              AND {whereEstados}
               AND c.tipoComprobante IN ('01','03')
+              AND c.estadoSunat NOT IN ('PENDIENTE','RECHAZADO')
               AND c.fechaEmision >= @Hace7Dias
               AND c.fechaEmision <= @Hoy
             GROUP BY c.fechaEmision
             ORDER BY c.fechaEmision ASC;
 
-            -- Comprobantes recientes
+            -- ── Comprobantes recientes ────────────────────────────────────────
             SELECT
                 c.comprobanteID    AS ComprobanteID,
                 c.numeroCompleto   AS NumeroCompleto,
                 c.tipoComprobante  AS TipoComprobante,
                 c.clienteRznSocial AS ClienteRznSocial,
                 c.fechaEmision     AS FechaEmision,
-                CASE WHEN c.tipoMoneda = 'USD' THEN c.importeTotal * c.tipoCambio
+                CASE WHEN c.tipoMoneda = 'USD'
+                     THEN c.importeTotal * c.tipoCambio
                      ELSE c.importeTotal END AS ImporteTotal,
                 c.estadoSunat      AS EstadoSunat
             FROM comprobante c
             WHERE {whereBase}
-              AND {whereEstados}
+              AND c.estadoSunat != 'PENDIENTE'
               AND c.fechaEmision <= @Hoy
             ORDER BY c.fechaEmision DESC, c.horaEmision DESC
             LIMIT @Limite;";
 
         using var multi = await _connection.QueryMultipleAsync(sql, dp, _transaction);
 
-        var kpiDia              = await multi.ReadFirstOrDefaultAsync<KpiDiaDto>() ?? new KpiDiaDto();
-        var rendimientoVentas   = (await multi.ReadAsync<RendimientoVentasDto>()).ToList();
+        var kpiDia                = await multi.ReadFirstOrDefaultAsync<KpiDiaDto>() ?? new KpiDiaDto();
+        var rendimientoVentas     = (await multi.ReadAsync<RendimientoVentasDto>()).ToList();
         var comprobantesRecientes = (await multi.ReadAsync<ComprobanteRecienteDto>()).ToList();
 
         return new DashboardResponseDto
         {
-            VentasDelDia          = kpiDia.VentasDelDia,
-            FacturasEmitidas      = kpiDia.FacturasEmitidas,
-            BoletasEmitidas       = kpiDia.BoletasEmitidas,
-            NotasCreditoEmitidas  = kpiDia.NotasCreditoEmitidas,
-            NotasDebitoEmitidas   = kpiDia.NotasDebitoEmitidas,
-            RendimientoVentas     = rendimientoVentas,
-            ComprobantesRecientes = comprobantesRecientes
+            VentasDelDia                 = kpiDia.VentasDelDia,
+            FacturasEmitidas             = kpiDia.FacturasEmitidas,
+            BoletasEmitidas              = kpiDia.BoletasEmitidas,
+            NotasCreditoEmitidas         = kpiDia.NotasCreditoEmitidas,
+            NotasDebitoEmitidas          = kpiDia.NotasDebitoEmitidas,
+            TotalNotasCreditoDelDia      = kpiDia.TotalNotasCreditoDelDia,
+            TotalNotasCreditoOtrasFechas = kpiDia.TotalNotasCreditoOtrasFechas,
+            TotalNotasDebitoDelDia       = kpiDia.TotalNotasDebitoDelDia,
+            TotalNotasDebitoOtrasFechas  = kpiDia.TotalNotasDebitoOtrasFechas,
+            RendimientoVentas            = rendimientoVentas,
+            ComprobantesRecientes        = comprobantesRecientes
         };
     }
 }
 
-// ── DTO interno para los KPIs del día (5 métricas en 1 query) ─────────────────
+// ── DTO interno ───────────────────────────────────────────────────────────────
 internal class KpiDiaDto
 {
-    public decimal VentasDelDia        { get; set; }
-    public int     FacturasEmitidas    { get; set; }
-    public int     BoletasEmitidas     { get; set; }
+    public decimal VentasDelDia { get; set; }
+    public int     FacturasEmitidas { get; set; }
+    public int     BoletasEmitidas { get; set; }
     public int     NotasCreditoEmitidas { get; set; }
-    public int     NotasDebitoEmitidas  { get; set; }
+    public int     NotasDebitoEmitidas { get; set; }
+    public decimal TotalNotasCreditoDelDia { get; set; }
+    public decimal TotalNotasCreditoOtrasFechas { get; set; }
+    public decimal TotalNotasDebitoDelDia { get; set; }
+    public decimal TotalNotasDebitoOtrasFechas { get; set; }
 }

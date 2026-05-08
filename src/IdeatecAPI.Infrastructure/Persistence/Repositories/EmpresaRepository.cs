@@ -40,12 +40,12 @@ public class EmpresaRepository : DapperRepository<Empresa>, IEmpresaRepository
     public async Task<int> CreateEmpresaAsync(Empresa empresa)
     {
         var sql = @"INSERT IGNORE INTO empresa 
-        (ruc, igv, razonSocial, nombreComercial, direccion, ubigeo, urbanizacion,
+        (ruc, igv, tipoemision, razonSocial, nombreComercial, direccion, ubigeo, urbanizacion,
         provincia, departamento, distrito,
         solUsuario, solClave, activo, creadoEn, telefono, email, logoBase64,
         certificadoPem, certificadoPassword, clientId, clientSecret, plan, environment)
         VALUES 
-        (@Ruc, @Igv, @RazonSocial, @NombreComercial, @Direccion, @Ubigeo, @Urbanizacion,
+        (@Ruc, @Igv, @TipoEmision, @RazonSocial, @NombreComercial, @Direccion, @Ubigeo, @Urbanizacion,
         @Provincia, @Departamento, @Distrito,
         @SolUsuario, @SolClave, @Activo, @CreadoEn, @Telefono, @Email, @LogoBase64,
         @CertificadoPem, @CertificadoPassword, @ClientId, @ClientSecret, @Plan, @Environment)";
@@ -60,29 +60,30 @@ public class EmpresaRepository : DapperRepository<Empresa>, IEmpresaRepository
     public async Task UpdateEmpresaAsync(Empresa empresa)
     {
         var sql = @"UPDATE empresa SET
-    razonSocial = @RazonSocial,
-    igv = @Igv,
-    nombreComercial = @NombreComercial,
-    direccion = @Direccion,
-    ubigeo = @Ubigeo,
-    urbanizacion = @Urbanizacion,
-    provincia = @Provincia,
-    departamento = @Departamento,
-    distrito = @Distrito,
-    solUsuario = @SolUsuario,
-    solClave = @SolClave,
-    activo = @Activo,
-    telefono = @Telefono,
-    email = @Email,
-    logoBase64 = @LogoBase64,
-    certificadoPem = @CertificadoPem,
-    certificadoPassword = @CertificadoPassword,
-    clientId = @ClientId,
-    clientSecret = @ClientSecret,
-    plan = @Plan,
-    environment = @Environment,
-    actualizadoEn = @ActualizadoEn
-    WHERE empresaID = @Id";
+            razonSocial = @RazonSocial,
+            igv = @Igv,
+            tipoemision = @TipoEmision,
+            nombreComercial = @NombreComercial,
+            direccion = @Direccion,
+            ubigeo = @Ubigeo,
+            urbanizacion = @Urbanizacion,
+            provincia = @Provincia,
+            departamento = @Departamento,
+            distrito = @Distrito,
+            solUsuario = @SolUsuario,
+            solClave = @SolClave,
+            activo = @Activo,
+            telefono = @Telefono,
+            email = @Email,
+            logoBase64 = @LogoBase64,
+            certificadoPem = @CertificadoPem,
+            certificadoPassword = @CertificadoPassword,
+            clientId = @ClientId,
+            clientSecret = @ClientSecret,
+            plan = @Plan,
+            environment = @Environment,
+            actualizadoEn = @ActualizadoEn
+            WHERE empresaID = @Id";
 
         await _connection.ExecuteAsync(sql, empresa, _transaction);
     }

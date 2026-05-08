@@ -468,7 +468,7 @@ public class ReportesRepository : IReportesRepository
     {
         var sql = BaseSelectReportes + @"
             WHERE empresaRuc = @Ruc
-            AND estadoSunat IN ('ACEPTADO', 'ACEPTADO_CON_OBSERVACIONES')
+            AND estadoSunat NOT IN ('PENDIENTE')
             AND (@CodEstablecimiento IS NULL OR establecimientoAnexo = @CodEstablecimiento)
             AND (@FechaDesde IS NULL OR fechaEmision >= @FechaDesde)
             AND (@FechaHasta IS NULL OR fechaEmision <= @FechaHasta)

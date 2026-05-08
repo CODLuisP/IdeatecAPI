@@ -666,31 +666,32 @@ public class ComprobanteService : IComprobanteService
         var xmlFirmadoString = Encoding.UTF8.GetString(xmlFirmadoBytes);
         var nombreArchivo = $"{empresa.Ruc}-{comprobante.TipoComprobante}-{comprobante.Serie}-{comprobante.Correlativo:D8}";
 
-        // 5. Subir ZIP firmado al microservicio en segundo plano
-        _ = Task.Run(async () =>
+        // 5. Subir ZIP firmado al microservicio (hilo principal)
+        using var memStream = new MemoryStream();
+        using (var zip = new System.IO.Compression.ZipArchive(memStream, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
         {
-            try
-            {
-                using var memStream = new MemoryStream();
-                using (var zip = new System.IO.Compression.ZipArchive(memStream, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
-                {
-                    var entry = zip.CreateEntry($"{nombreArchivo}.xml");
-                    using var entryStream = entry.Open();
-                    await entryStream.WriteAsync(xmlFirmadoBytes);
-                }
-                var rutaXml = await _storageService.SubirZipAsync(
-                    empresa.Ruc,
-                    comprobante.TipoComprobante!,
-                    nombreArchivo,
-                    memStream.ToArray()
-                );
-                await _unitOfWork.Comprobantes.UpdateXmlGeneradoAsync(comprobanteId, rutaXml);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[STORAGE ❌] Error subiendo ZIP: {ex.Message}");
-            }
-        });
+            var entry = zip.CreateEntry($"{nombreArchivo}.xml");
+            using var entryStream = entry.Open();
+            await entryStream.WriteAsync(xmlFirmadoBytes);
+        }
+        try
+        {
+            var rutaXml = await _storageService.SubirZipAsync(
+                empresa.Ruc,
+                comprobante.TipoComprobante!,
+                nombreArchivo,
+                memStream.ToArray()
+            );
+            await _unitOfWork.Comprobantes.UpdateXmlGeneradoAsync(comprobanteId, rutaXml);
+            Console.WriteLine($"[STORAGE ✅] xmlGenerado guardado: {rutaXml}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[STORAGE ❌] Error subiendo ZIP: {ex.Message}");
+            // No bloquea el flujo — SUNAT continúa igual
+        }
+
+        // 6. Enviar a SUNAT
 
         // 6. Enviar a SUNAT
         SunatResponse sunatResponse;

@@ -1,17 +1,26 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-
 namespace IdeatecAPI.Application.Features.Dashboard.DTOs;
 
-    public class DashboardResponseDto
+public class DashboardResponseDto
 {
-    public decimal VentasDelDia { get; set; }
+    // ── Ventas ────────────────────────────────────────────────────────────────
+    public decimal VentasDelDia { get; set; }              // 01 + 03 del día
+    public decimal VentasNetas { get; set; }               // VentasDelDia + NDDelDia - NCDelDia
+
+    // ── Conteos ───────────────────────────────────────────────────────────────
     public int FacturasEmitidas { get; set; }
     public int BoletasEmitidas { get; set; }
     public int NotasCreditoEmitidas { get; set; }
     public int NotasDebitoEmitidas { get; set; }
+
+    // ── Notas de Crédito (07) ─────────────────────────────────────────────────
+    public decimal TotalNotasCreditoDelDia { get; set; }       // doc afectado es de hoy
+    public decimal TotalNotasCreditoOtrasFechas { get; set; }  // doc afectado es de otro día
+
+    // ── Notas de Débito (08) ──────────────────────────────────────────────────
+    public decimal TotalNotasDebitoDelDia { get; set; }        // doc afectado es de hoy
+    public decimal TotalNotasDebitoOtrasFechas { get; set; }   // doc afectado es de otro día
+
+    // ── Listas ────────────────────────────────────────────────────────────────
     public List<RendimientoVentasDto> RendimientoVentas { get; set; } = new();
     public List<ComprobanteRecienteDto> ComprobantesRecientes { get; set; } = new();
 }

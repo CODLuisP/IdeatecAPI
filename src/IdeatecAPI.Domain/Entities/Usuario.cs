@@ -8,6 +8,7 @@ namespace IdeatecAPI.Domain.Entities
     public string? SucursalID { get; set; }
     public string? NombreSucursal { get; set; }
     public double Igv { get; set; }
+    public bool TipoEmision { get; set; }
     public string? NombreEmpresa { get; set; }
     public string? Environment { get; set; }
     public string? LogoBase64 { get; set; }
