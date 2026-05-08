@@ -270,31 +270,31 @@ public class NoteService : INoteService
 
         var nombreArchivo = $"{empresa.Ruc}-{note.TipoDoc}-{note.Serie}-{note.Correlativo:D8}";
 
-        // 2. Subir ZIP al microservicio en segundo plano
-        _ = Task.Run(async () =>
+        // 2. Subir ZIP al microservicio (hilo principal)
+        using var memStream = new MemoryStream();
+        using (var zip = new ZipArchive(memStream, ZipArchiveMode.Create, leaveOpen: true))
         {
-            try
-            {
-                using var memStream = new MemoryStream();
-                using (var zip = new ZipArchive(memStream, ZipArchiveMode.Create, leaveOpen: true))
-                {
-                    var entry = zip.CreateEntry($"{nombreArchivo}.xml");
-                    using var entryStream = entry.Open();
-                    await entryStream.WriteAsync(xmlFirmadoBytes);
-                }
-                var rutaXml = await _storageService.SubirZipAsync(
-                    empresa.Ruc,
-                    note.TipoDoc!,
-                    nombreArchivo,
-                    memStream.ToArray()
-                );
-                await _unitOfWork.Notes.UpdateXmlGeneradoAsync(comprobanteId, rutaXml);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[STORAGE ❌] Error subiendo ZIP nota: {ex.Message}");
-            }
-        });
+            var entry = zip.CreateEntry($"{nombreArchivo}.xml");
+            using var entryStream = entry.Open();
+            await entryStream.WriteAsync(xmlFirmadoBytes);
+        }
+        try
+        {
+            var rutaXml = await _storageService.SubirZipAsync(
+                empresa.Ruc,
+                note.TipoDoc!,
+                nombreArchivo,
+                memStream.ToArray()
+            );
+            await _unitOfWork.Notes.UpdateXmlGeneradoAsync(comprobanteId, rutaXml);
+            Console.WriteLine($"[STORAGE ✅] xmlGenerado nota guardado: {rutaXml}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[STORAGE ❌] Error subiendo ZIP nota: {ex.Message}");
+        }
+
+        // 3. Enviar a SUNAT
 
         // 3. Enviar a SUNAT
         var sunatResponse = await _sunatSender.SendNoteAsync(

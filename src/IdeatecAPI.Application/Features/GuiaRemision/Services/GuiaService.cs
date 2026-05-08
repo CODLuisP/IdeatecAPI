@@ -307,31 +307,31 @@ public class GuiaService : IGuiaService
 
         var nombreArchivo = $"{empresa.Ruc}-{guia.TipoDoc}-{guia.Serie}-{guia.Correlativo:D8}";
 
-        // 2. Subir ZIP al microservicio en segundo plano
-        _ = Task.Run(async () =>
+        // 2. Subir ZIP al microservicio (hilo principal)
+        using var memStream = new MemoryStream();
+        using (var zip = new System.IO.Compression.ZipArchive(memStream, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
         {
-            try
-            {
-                using var memStream = new MemoryStream();
-                using (var zip = new System.IO.Compression.ZipArchive(memStream, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
-                {
-                    var entry = zip.CreateEntry($"{nombreArchivo}.xml");
-                    using var entryStream = entry.Open();
-                    await entryStream.WriteAsync(xmlFirmadoBytes);
-                }
-                var rutaXml = await _storageService.SubirZipAsync(
-                    empresa.Ruc,
-                    "09",  // tipo guia de remision
-                    nombreArchivo,
-                    memStream.ToArray()
-                );
-                await _unitOfWork.Guias.UpdateXmlGeneradoAsync(guiaId, rutaXml);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[STORAGE ❌] Error subiendo ZIP guía: {ex.Message}");
-            }
-        });
+            var entry = zip.CreateEntry($"{nombreArchivo}.xml");
+            using var entryStream = entry.Open();
+            await entryStream.WriteAsync(xmlFirmadoBytes);
+        }
+        try
+        {
+            var rutaXml = await _storageService.SubirZipAsync(
+                empresa.Ruc,
+                "09",
+                nombreArchivo,
+                memStream.ToArray()
+            );
+            await _unitOfWork.Guias.UpdateXmlGeneradoAsync(guiaId, rutaXml);
+            Console.WriteLine($"[STORAGE ✅] xmlGenerado guía guardado: {rutaXml}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[STORAGE ❌] Error subiendo ZIP guía: {ex.Message}");
+        }
+
+        // 3. Enviar a SUNAT
 
         // 3. Enviar a SUNAT
         var sunatResponse = await _sunatGuia.SendGuiaAsync(
