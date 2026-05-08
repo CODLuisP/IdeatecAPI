@@ -111,6 +111,8 @@ public class GuiaRemision
     public string? MensajeRespuestaSunat { get; set; }
     public string? TicketSunat { get; set; }
     public string? CdrBase64 { get; set; }
+    public string? XmlGenerado { get; set; }
+    public string? XmlRespuestaSunat { get; set; }
     public DateTime? FechaEnvioSunat { get; set; }
 
     // Auditoría

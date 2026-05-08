@@ -134,7 +134,9 @@ public class GuiaRemisionRepository : IGuiaRemisionRepository
                     enviadoPorWhatsapp     AS EnviadoPorWhatsapp,
                     estadoSunat            AS EstadoSunat,
                     codigoRespuestaSunat   AS CodigoRespuestaSunat,
-                    mensajeRespuestaSunat  AS MensajeRespuestaSunat
+                    mensajeRespuestaSunat  AS MensajeRespuestaSunat,
+                    xmlGenerado            AS XmlGenerado,
+                    xmlRespuestaSunat      AS XmlRespuestaSunat
                 FROM guiaRemision
                 WHERE empresaRuc = @EmpresaRuc
                   AND tipoDoc    = @TipoDoc
@@ -167,7 +169,9 @@ public class GuiaRemisionRepository : IGuiaRemisionRepository
                     enviadoPorWhatsapp     AS EnviadoPorWhatsapp,
                     estadoSunat            AS EstadoSunat,
                     codigoRespuestaSunat   AS CodigoRespuestaSunat,
-                    mensajeRespuestaSunat  AS MensajeRespuestaSunat
+                    mensajeRespuestaSunat  AS MensajeRespuestaSunat,
+                    xmlGenerado            AS XmlGenerado,
+                    xmlRespuestaSunat      AS XmlRespuestaSunat
                 FROM guiaRemision
                 WHERE empresaRuc = @EmpresaRuc
                   AND tipoDoc    = @TipoDoc
