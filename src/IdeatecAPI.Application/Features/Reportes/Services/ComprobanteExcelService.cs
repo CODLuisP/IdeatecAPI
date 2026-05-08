@@ -6,98 +6,229 @@ namespace IdeatecAPI.Application.Features.Comprobante.Services;
 
 public class ComprobanteExcelService : IComprobanteExcelService
 {
-    public Task<byte[]> ExportarListadoReportesAsync(
-        string titulo,
-        IEnumerable<ListarComprobanteDTO> datos,
-        string ruc,
-        string? codEstablecimiento = null,
-        DateTime? fechaDesde = null,
-        DateTime? fechaHasta = null,
-        int? usuarioCreacion = null,
-        string? clienteNumDoc = null)
+public Task<byte[]> ExportarListadoReportesAsync(
+    string titulo,
+    IEnumerable<ListarComprobanteDTO> datos,
+    string ruc,
+    string? codEstablecimiento = null,
+    DateTime? fechaDesde = null,
+    DateTime? fechaHasta = null,
+    int? usuarioCreacion = null,
+    string? clienteNumDoc = null)
+{
+    var lista = datos.ToList();
+
+    // ── Separar en grupos ─────────────────────────────────────────────────────
+    var numerosEnPeriodo = lista
+        .Where(x => x.TipoComprobante != "07" && x.TipoComprobante != "08")
+        .Select(x => x.NumeroCompleto?.Trim().ToUpper())
+        .Where(x => !string.IsNullOrEmpty(x))
+        .ToHashSet();
+
+    var listaRechazados = lista
+        .Where(x => x.EstadoSunat == "RECHAZADO")
+        .ToList();
+
+    var listaValidos = lista
+        .Where(x => x.EstadoSunat != "RECHAZADO")
+        .ToList();
+
+    var listaPeriodo = listaValidos.Where(x =>
+        (x.TipoComprobante != "07" && x.TipoComprobante != "08")
+        || (
+            (x.TipoComprobante == "07" || x.TipoComprobante == "08")
+            && !string.IsNullOrEmpty(x.NumDocAfectado)
+            && numerosEnPeriodo.Contains(x.NumDocAfectado?.Trim().ToUpper())
+        )
+    ).ToList();
+
+    var listaFueraPeriodo = listaValidos.Where(x =>
+        (x.TipoComprobante == "07" || x.TipoComprobante == "08")
+        && (
+            string.IsNullOrEmpty(x.NumDocAfectado)
+            || !numerosEnPeriodo.Contains(x.NumDocAfectado?.Trim().ToUpper())
+        )
+    ).ToList();
+
+    using var wb = new XLWorkbook();
+    var ws = wb.Worksheets.Add("Comprobantes");
+
+    // ── Título ────────────────────────────────────────────────────────────────
+    ws.Cell(1, 1).Value = titulo;
+    ws.Range(1, 1, 1, 12).Merge();
+    ws.Cell(1, 1).Style
+        .Font.SetBold(true)
+        .Font.SetFontSize(14)
+        .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center)
+        .Fill.SetBackgroundColor(XLColor.FromHtml("#2E75B6"))
+        .Font.SetFontColor(XLColor.White);
+    ws.Row(1).Height = 25;
+
+    // ── Subtítulo filtros ─────────────────────────────────────────────────────
+    ws.Cell(2, 1).Value = BuildFiltros(ruc, codEstablecimiento, fechaDesde, fechaHasta, usuarioCreacion, clienteNumDoc);
+    ws.Range(2, 1, 2, 12).Merge();
+    ws.Cell(2, 1).Style
+        .Font.SetItalic(true)
+        .Font.SetFontSize(9)
+        .Font.SetFontColor(XLColor.Gray)
+        .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+
+    var headers = new[]
     {
-        var lista = datos.ToList();
+        "N° Comprobante", "Tipo", "F. Emisión", "Cliente", "Doc. Cliente",
+        "Val. Venta", "IGV", "Importe Total", "Moneda", "Estado SUNAT",
+        "Doc. Afectado", "Tipo Pago"
+    };
 
-        using var wb = new XLWorkbook();
-        var ws = wb.Worksheets.Add("Comprobantes");
+    int filaActual = 4;
 
-        // ── Título ────────────────────────────────────────────────────────────
-        ws.Cell(1, 1).Value = titulo;
-        ws.Range(1, 1, 1, 10).Merge();
-        ws.Cell(1, 1).Style
+    // ═════════════════════════════════════════════════════════════════════════
+    // SECCIÓN 1 — Ventas del período (aceptados + anulados)
+    // ═════════════════════════════════════════════════════════════════════════
+    ws.Cell(filaActual, 1).Value = "VENTAS DEL PERÍODO";
+    ws.Range(filaActual, 1, filaActual, 12).Merge();
+    ws.Cell(filaActual, 1).Style
+        .Font.SetBold(true)
+        .Font.SetFontSize(10)
+        .Font.SetFontColor(XLColor.White)
+        .Fill.SetBackgroundColor(XLColor.FromHtml("#2E75B6"))
+        .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Left);
+    filaActual++;
+
+    SetHeaders(ws, filaActual, headers);
+    filaActual++;
+
+    int primeraFilaSeccion1 = filaActual;
+
+    foreach (var item in listaPeriodo)
+    {
+        EscribirFila(ws, filaActual, item, listaPeriodo.IndexOf(item));
+        filaActual++;
+    }
+
+    int ultimaFilaSeccion1 = filaActual - 1;
+
+    // Total sección 1
+    ws.Cell(filaActual, 1).Value = "TOTAL NETO DEL PERÍODO";
+    ws.Cell(filaActual, 6).FormulaA1 = $"=SUM(F{primeraFilaSeccion1}:F{ultimaFilaSeccion1})";
+    ws.Cell(filaActual, 7).FormulaA1 = $"=SUM(G{primeraFilaSeccion1}:G{ultimaFilaSeccion1})";
+    ws.Cell(filaActual, 8).FormulaA1 = $"=SUM(H{primeraFilaSeccion1}:H{ultimaFilaSeccion1})";
+    ws.Range(filaActual, 1, filaActual, 12).Style
+        .Font.SetBold(true)
+        .Fill.SetBackgroundColor(XLColor.FromHtml("#BDD7EE"))
+        .NumberFormat.SetFormat("#,##0.00")
+        .Border.SetOutsideBorder(XLBorderStyleValues.Medium);
+    filaActual++;
+
+    // Leyenda sección 1
+    ws.Cell(filaActual, 1).Value = "N. Credito (resta al total)";
+    ws.Range(filaActual, 1, filaActual, 6).Merge();
+    ws.Cell(filaActual, 1).Style
+        .Font.SetItalic(true)
+        .Font.SetFontSize(8)
+        .Font.SetFontColor(XLColor.Red)
+        .Fill.SetBackgroundColor(XLColor.FromHtml("#FFF2CC"));
+
+    ws.Cell(filaActual, 7).Value = "N. Debito (suma al total)";
+    ws.Range(filaActual, 7, filaActual, 12).Merge();
+    ws.Cell(filaActual, 7).Style
+        .Font.SetItalic(true)
+        .Font.SetFontSize(8)
+        .Font.SetFontColor(XLColor.FromHtml("#375623"))
+        .Fill.SetBackgroundColor(XLColor.FromHtml("#E2EFDA"));
+    filaActual += 2;
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // SECCIÓN 2 — Rechazados (solo informativo)
+    // ═════════════════════════════════════════════════════════════════════════
+    if (listaRechazados.Any())
+    {
+        ws.Cell(filaActual, 1).Value = "RECHAZADOS (solo informativo, no afectan totales)";
+        ws.Range(filaActual, 1, filaActual, 12).Merge();
+        ws.Cell(filaActual, 1).Style
             .Font.SetBold(true)
-            .Font.SetFontSize(14)
-            .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center)
-            .Fill.SetBackgroundColor(XLColor.FromHtml("#2E75B6"))
-            .Font.SetFontColor(XLColor.White);
-        ws.Row(1).Height = 25;
+            .Font.SetFontSize(10)
+            .Font.SetFontColor(XLColor.White)
+            .Fill.SetBackgroundColor(XLColor.FromHtml("#808080"))
+            .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Left);
+        filaActual++;
 
-        // ── Subtítulo filtros ─────────────────────────────────────────────────
-        ws.Cell(2, 1).Value = BuildFiltros(ruc, codEstablecimiento, fechaDesde, fechaHasta, usuarioCreacion, clienteNumDoc);
-        ws.Range(2, 1, 2, 10).Merge();
-        ws.Cell(2, 1).Style
-            .Font.SetItalic(true)
-            .Font.SetFontSize(9)
-            .Font.SetFontColor(XLColor.Gray)
-            .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+        SetHeaders(ws, filaActual, headers);
+        filaActual++;
 
-        // ── Encabezados ───────────────────────────────────────────────────────
-        var headers = new[]
+        foreach (var item in listaRechazados)
         {
-            "N° Comprobante", "Tipo", "F. Emisión", "Cliente", "Doc. Cliente",
-            "Val. Venta", "IGV", "Importe Total", "Moneda", "Estado SUNAT"
-        };
-        SetHeaders(ws, 4, headers);
-
-        // ── Datos ─────────────────────────────────────────────────────────────
-        for (int i = 0; i < lista.Count; i++)
-        {
-            var fila = i + 5;
-            var item = lista[i];
-            var bgColor = i % 2 == 0 ? XLColor.White : XLColor.FromHtml("#EBF3FB");
-
-            ws.Cell(fila, 1).Value  = item.NumeroCompleto;
-            ws.Cell(fila, 2).Value  = item.TipoComprobante;
-            ws.Cell(fila, 3).Value  = item.FechaEmision.ToString("dd/MM/yyyy");
-            ws.Cell(fila, 4).Value  = item.Cliente?.RazonSocial;
-            ws.Cell(fila, 5).Value  = item.Cliente?.NumeroDocumento;
-            ws.Cell(fila, 6).Value  = item.ValorVenta;
-            ws.Cell(fila, 7).Value  = item.TotalIGV;
-            ws.Cell(fila, 8).Value  = item.ImporteTotal;
-            ws.Cell(fila, 9).Value  = item.TipoMoneda;
-            ws.Cell(fila, 10).Value = item.EstadoSunat;
-
-            ws.Cell(fila, 6).Style.NumberFormat.Format = "#,##0.00";
-            ws.Cell(fila, 7).Style.NumberFormat.Format = "#,##0.00";
-            ws.Cell(fila, 8).Style.NumberFormat.Format = "#,##0.00";
-
-            ws.Range(fila, 1, fila, 10).Style
-                .Fill.SetBackgroundColor(bgColor)
-                .Border.SetOutsideBorder(XLBorderStyleValues.Thin)
-                .Border.SetInsideBorder(XLBorderStyleValues.Hair);
+            EscribirFila(ws, filaActual, item, listaRechazados.IndexOf(item));
+            filaActual++;
         }
 
-        // ── Totales ───────────────────────────────────────────────────────────
-        var filaTotal = lista.Count + 5;
-        ws.Cell(filaTotal, 1).Value = "TOTAL";
-        ws.Cell(filaTotal, 6).FormulaA1 = $"=SUM(F5:F{filaTotal - 1})";
-        ws.Cell(filaTotal, 7).FormulaA1 = $"=SUM(G5:G{filaTotal - 1})";
-        ws.Cell(filaTotal, 8).FormulaA1 = $"=SUM(H5:H{filaTotal - 1})";
-        ws.Range(filaTotal, 1, filaTotal, 10).Style
+        ws.Cell(filaActual, 1).Value = "Estos comprobantes fueron rechazados por SUNAT y no tienen efecto contable.";
+        ws.Range(filaActual, 1, filaActual, 12).Merge();
+        ws.Cell(filaActual, 1).Style
+            .Font.SetItalic(true)
+            .Font.SetFontSize(8)
+            .Font.SetFontColor(XLColor.Gray);
+        filaActual += 2;
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // SECCIÓN 3 — Ajustes fuera del período
+    // ═════════════════════════════════════════════════════════════════════════
+    if (listaFueraPeriodo.Any())
+    {
+        ws.Cell(filaActual, 1).Value = "AJUSTES DE OTROS PERÍODOS (no afectan el total anterior)";
+        ws.Range(filaActual, 1, filaActual, 12).Merge();
+        ws.Cell(filaActual, 1).Style
             .Font.SetBold(true)
-            .Fill.SetBackgroundColor(XLColor.FromHtml("#BDD7EE"))
+            .Font.SetFontSize(10)
+            .Font.SetFontColor(XLColor.White)
+            .Fill.SetBackgroundColor(XLColor.FromHtml("#7030A0"))
+            .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Left);
+        filaActual++;
+
+        SetHeaders(ws, filaActual, headers);
+        filaActual++;
+
+        int primeraFilaSeccion3 = filaActual;
+
+        foreach (var item in listaFueraPeriodo)
+        {
+            EscribirFila(ws, filaActual, item, listaFueraPeriodo.IndexOf(item));
+            filaActual++;
+        }
+
+        int ultimaFilaSeccion3 = filaActual - 1;
+
+        ws.Cell(filaActual, 1).Value = "TOTAL AJUSTES";
+        ws.Cell(filaActual, 6).FormulaA1 = $"=SUM(F{primeraFilaSeccion3}:F{ultimaFilaSeccion3})";
+        ws.Cell(filaActual, 7).FormulaA1 = $"=SUM(G{primeraFilaSeccion3}:G{ultimaFilaSeccion3})";
+        ws.Cell(filaActual, 8).FormulaA1 = $"=SUM(H{primeraFilaSeccion3}:H{ultimaFilaSeccion3})";
+        ws.Range(filaActual, 1, filaActual, 12).Style
+            .Font.SetBold(true)
+            .Fill.SetBackgroundColor(XLColor.FromHtml("#E2CFED"))
             .NumberFormat.SetFormat("#,##0.00")
             .Border.SetOutsideBorder(XLBorderStyleValues.Medium);
+        filaActual++;
 
-        // ── Ancho columnas ────────────────────────────────────────────────────
-        ws.Column(1).Width = 20; ws.Column(2).Width = 10;
-        ws.Column(3).Width = 14; ws.Column(4).Width = 35;
-        ws.Column(5).Width = 16; ws.Column(6).Width = 14;
-        ws.Column(7).Width = 14; ws.Column(8).Width = 14;
-        ws.Column(9).Width = 10; ws.Column(10).Width = 20;
-
-        return Task.FromResult(ToBytes(wb));
+        ws.Cell(filaActual, 1).Value = "Estas notas afectan comprobantes emitidos en otros períodos y no se incluyen en el total del período.";
+        ws.Range(filaActual, 1, filaActual, 12).Merge();
+        ws.Cell(filaActual, 1).Style
+            .Font.SetItalic(true)
+            .Font.SetFontSize(8)
+            .Font.SetFontColor(XLColor.FromHtml("#7030A0"));
     }
+
+    // ── Ancho columnas ────────────────────────────────────────────────────────
+    ws.Column(1).Width = 20; ws.Column(2).Width = 12;
+    ws.Column(3).Width = 14; ws.Column(4).Width = 35;
+    ws.Column(5).Width = 16; ws.Column(6).Width = 14;
+    ws.Column(7).Width = 14; ws.Column(8).Width = 14;
+    ws.Column(9).Width = 10; ws.Column(10).Width = 20;
+    ws.Column(11).Width = 20; ws.Column(12).Width = 12;
+
+    return Task.FromResult(ToBytes(wb));
+}
+
 
     public Task<byte[]> ExportarMediosPagoTopAsync(
         string titulo,
@@ -300,6 +431,70 @@ public class ComprobanteExcelService : IComprobanteExcelService
         return filtros;
     }
 
+private static void EscribirFila(IXLWorksheet ws, int fila, ListarComprobanteDTO item, int index)
+{
+    var esRechazado = item.EstadoSunat == "RECHAZADO";
+
+    var bgColor = esRechazado
+        ? XLColor.FromHtml("#F2F2F2")
+        : item.EstadoSunat == "ANULADO"
+            ? XLColor.FromHtml("#D9D9D9")
+            : item.TipoComprobante switch
+            {
+                "07" => XLColor.FromHtml("#FFF2CC"),
+                "08" => XLColor.FromHtml("#E2EFDA"),
+                _    => index % 2 == 0 ? XLColor.White : XLColor.FromHtml("#EBF3FB")
+            };
+
+    var valorVenta = (!esRechazado && item.TipoComprobante == "07") ? -item.ValorVenta   : item.ValorVenta;
+    var igv        = (!esRechazado && item.TipoComprobante == "07") ? -item.TotalIGV     : item.TotalIGV;
+    var importe    = (!esRechazado && item.TipoComprobante == "07") ? -item.ImporteTotal : item.ImporteTotal;
+
+    ws.Cell(fila, 1).Value  = item.NumeroCompleto;
+    ws.Cell(fila, 2).Value  = item.TipoComprobante switch
+    {
+        "01" => "Factura",
+        "03" => "Boleta",
+        "07" => "N. Credito",
+        "08" => "N. Debito",
+        _    => item.TipoComprobante
+    };
+    ws.Cell(fila, 3).Value  = item.FechaEmision.ToString("dd/MM/yyyy");
+    ws.Cell(fila, 4).Value  = item.Cliente?.RazonSocial;
+    ws.Cell(fila, 5).Value  = item.Cliente?.NumeroDocumento;
+    ws.Cell(fila, 6).Value  = valorVenta;
+    ws.Cell(fila, 7).Value  = igv;
+    ws.Cell(fila, 8).Value  = importe;
+    ws.Cell(fila, 9).Value  = item.TipoMoneda;
+    ws.Cell(fila, 10).Value = item.EstadoSunat;
+    ws.Cell(fila, 11).Value = !string.IsNullOrEmpty(item.NumDocAfectado) ? item.NumDocAfectado : "-";
+    ws.Cell(fila, 12).Value = item.TipoPago switch
+    {
+        "Contado" => "Contado",
+        "Credito" => "Crédito",
+        null or "" => "-",
+        _ => item.TipoPago
+    };
+
+    ws.Cell(fila, 6).Style.NumberFormat.Format = "#,##0.00";
+    ws.Cell(fila, 7).Style.NumberFormat.Format = "#,##0.00";
+    ws.Cell(fila, 8).Style.NumberFormat.Format = "#,##0.00";
+
+    if (!esRechazado && item.TipoComprobante == "07")
+    {
+        ws.Cell(fila, 6).Style.Font.SetFontColor(XLColor.Red);
+        ws.Cell(fila, 7).Style.Font.SetFontColor(XLColor.Red);
+        ws.Cell(fila, 8).Style.Font.SetFontColor(XLColor.Red);
+    }
+
+    if (esRechazado)
+        ws.Range(fila, 1, fila, 12).Style.Font.SetFontColor(XLColor.Gray);
+
+    ws.Range(fila, 1, fila, 12).Style
+        .Fill.SetBackgroundColor(bgColor)
+        .Border.SetOutsideBorder(XLBorderStyleValues.Thin)
+        .Border.SetInsideBorder(XLBorderStyleValues.Hair);
+}
     private static byte[] ToBytes(XLWorkbook wb)
     {
         using var stream = new MemoryStream();
