@@ -136,7 +136,7 @@ public class GuiaPdfService : IGuiaPdfService
                         });
                         r.RelativeItem().Column(c =>
                         {
-                            FilaDato(c, "Peso Total", $"{g.PesoTotal:F2} {g.UndPesoTotal ?? "KGM"}");
+                            FilaDato(c, "Peso Total", $"{g.PesoTotal:F2} {g.UndPesoTotal ?? "KG"}");
                             if (g.IndTransbordo)
                                 FilaDato(c, "Transbordo", "Sí");
                             if (g.IndVehiculoM1L)
@@ -272,22 +272,23 @@ public class GuiaPdfService : IGuiaPdfService
                     r.RelativeItem().Text("Peso Bruto Total:")
                         .Bold().FontSize(9).FontColor(ColorBlanco);
                     r.AutoItem().AlignRight()
-                        .Text($"{g.PesoTotal:F2} {g.UndPesoTotal ?? "KGM"}")
+                        .Text($"{g.PesoTotal:F2} {g.UndPesoTotal ?? "KG"}")
                         .Bold().FontSize(9).FontColor(ColorBlanco);
                 });
         });
     }
 
     // ── TABLA DETALLES ────────────────────────────────────────────────────
-
     private static void BuildTablaDetalles(IContainer container,
         List<Domain.Entities.GuiaRemisionDetalle> detalles)
     {
+        bool mostrarCodigo = detalles.Any(d => !string.IsNullOrWhiteSpace(d.Codigo));
+
         container.Table(table =>
         {
             table.ColumnsDefinition(cols =>
             {
-                cols.ConstantColumn(50);  // Código
+                if (mostrarCodigo) cols.ConstantColumn(50); // Código (solo si existe)
                 cols.RelativeColumn();    // Descripción
                 cols.ConstantColumn(55);  // Cantidad
                 cols.ConstantColumn(55);  // Unidad
@@ -299,7 +300,7 @@ public class GuiaPdfService : IGuiaPdfService
 
             table.Header(h =>
             {
-                h.Cell().Element(c => TH(c, "Código"));
+                if (mostrarCodigo) h.Cell().Element(c => TH(c, "Código"));
                 h.Cell().Element(c => TH(c, "Descripción"));
                 h.Cell().Element(c => TH(c, "Cantidad"));
                 h.Cell().Element(c => TH(c, "Unidad"));
@@ -319,7 +320,7 @@ public class GuiaPdfService : IGuiaPdfService
                     else el.Text(txt).FontSize(8);
                 }
 
-                table.Cell().Element(c => TD(c, d.Codigo ?? "-"));
+                if (mostrarCodigo) table.Cell().Element(c => TD(c, d.Codigo ?? "-"));
                 table.Cell().Element(c => TD(c, d.Descripcion));
                 table.Cell().Element(c => TD(c, d.Cantidad.ToString("F2"), center: true));
                 table.Cell().Element(c => TD(c, d.Unidad, center: true));
@@ -355,7 +356,7 @@ public class GuiaPdfService : IGuiaPdfService
     {
         col.Item().Row(r =>
         {
-            r.ConstantItem(120).Text(label + " :").Bold().FontSize(8).FontColor(ColorAzulMarino);
+            r.ConstantItem(120).Text(label + ":").Bold().FontSize(8).FontColor(ColorAzulMarino);
             r.RelativeItem().Text(valor).FontSize(8);
         });
     }
