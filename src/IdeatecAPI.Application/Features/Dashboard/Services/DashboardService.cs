@@ -30,7 +30,9 @@ public class DashboardService : IDashboardService
         DateTime? fecha,
         int limite)
     {
-        return await _unitOfWork.Dashboard.GetDashboardPorEmpresaAsync(ruc, fecha, limite);
+        var result = await _unitOfWork.Dashboard.GetDashboardPorEmpresaAsync(ruc, fecha, limite);
+        result.VentasNetas = CalcularVentasNetas(result);
+        return result;
     }
 
     public async Task<DashboardResponseDto> GetDashboardPorSucursalAsync(
@@ -38,6 +40,14 @@ public class DashboardService : IDashboardService
         DateTime? fecha,
         int limite)
     {
-        return await _unitOfWork.Dashboard.GetDashboardPorSucursalAsync(sucursalId, fecha, limite);
+        var result = await _unitOfWork.Dashboard.GetDashboardPorSucursalAsync(sucursalId, fecha, limite);
+        result.VentasNetas = CalcularVentasNetas(result);
+        return result;
     }
+
+    // ── VentasNetas solo considera notas que afectan documentos del mismo día ──
+    private static decimal CalcularVentasNetas(DashboardResponseDto dto) =>
+        dto.VentasDelDia
+        + dto.TotalNotasDebitoDelDia
+        - dto.TotalNotasCreditoDelDia;
 }
