@@ -456,8 +456,7 @@ public class ReportesRepository : IReportesRepository
             _               => (desdeActual.AddDays(-duracion), hastaActual.AddDays(-duracion)),
         };
     }
-
-    public async Task<IEnumerable<Comprobante>> GetListadoParaReportesAsync(
+        public async Task<IEnumerable<Comprobante>> GetListadoParaReportesAsync(
         string ruc,
         string? codEstablecimiento = null,
         DateTime? fechaDesde = null,
@@ -465,16 +464,28 @@ public class ReportesRepository : IReportesRepository
         int? usuarioCreacion = null,
         string? clienteNumDoc = null,
         int? limit = null)
-    {
+        {
         var sql = BaseSelectReportes + @"
-            WHERE empresaRuc = @Ruc
-            AND estadoSunat NOT IN ('PENDIENTE')
-            AND (@CodEstablecimiento IS NULL OR establecimientoAnexo = @CodEstablecimiento)
-            AND (@FechaDesde IS NULL OR fechaEmision >= @FechaDesde)
-            AND (@FechaHasta IS NULL OR fechaEmision <= @FechaHasta)
-            AND (@UsuarioCreacion IS NULL OR usuarioCreacion = @UsuarioCreacion)
-            AND (@ClienteNumDoc IS NULL OR clienteNumDoc = @ClienteNumDoc)
-            ORDER BY fechaEmision DESC"
+            WHERE c.empresaRuc = @Ruc
+            AND c.estadoSunat NOT IN ('PENDIENTE')
+            AND (@CodEstablecimiento IS NULL OR c.establecimientoAnexo = @CodEstablecimiento)
+            AND (@UsuarioCreacion IS NULL OR c.usuarioCreacion = @UsuarioCreacion)
+            AND (@ClienteNumDoc IS NULL OR c.clienteNumDoc = @ClienteNumDoc)
+            AND (
+                (c.tipoComprobante NOT IN ('07','08')
+                    AND (@FechaDesde IS NULL OR c.fechaEmision >= @FechaDesde)
+                    AND (@FechaHasta IS NULL OR c.fechaEmision <= @FechaHasta))
+                OR
+                (c.tipoComprobante IN ('07','08')
+                    AND c.comprobanteAfectadoID IS NOT NULL
+                    AND EXISTS (
+                        SELECT 1 FROM comprobante ca
+                        WHERE ca.comprobanteID = c.comprobanteAfectadoID
+                        AND (@FechaDesde IS NULL OR ca.fechaEmision >= @FechaDesde)
+                        AND (@FechaHasta IS NULL OR ca.fechaEmision <= @FechaHasta)
+                    ))
+            )
+            ORDER BY c.fechaEmision DESC"
             + (limit.HasValue ? " LIMIT @Limit" : "");
 
         return await _connection.QueryAsync<Comprobante>(sql, new
@@ -487,7 +498,7 @@ public class ReportesRepository : IReportesRepository
             ClienteNumDoc = clienteNumDoc,
             Limit = limit
         }, _transaction);
-    }
+        }
 
     public async Task<IEnumerable<ProductoTopDTO>> GetProductosTopAsync(
         string ruc,
@@ -616,64 +627,63 @@ public class ReportesRepository : IReportesRepository
     }
 
     private const string BaseSelectReportes = @"
-    SELECT 
-        comprobanteID           AS ComprobanteId,
-        tipoOperacion           AS TipoOperacion,
-        tipoComprobante         AS TipoComprobante,
-        serie                   AS Serie,
-        correlativo             AS Correlativo,
-        numeroCompleto          AS NumeroCompleto,
-        tipoCambio              AS TipoCambio,
-        fechaEmision            AS FechaEmision,
-        TIMESTAMP(fechaEmision, horaEmision) AS HoraEmision,
-        fechaVencimiento        AS FechaVencimiento,
-        tipoMoneda              AS TipoMoneda,
-        tipoPago                AS TipoPago,
-        empresaRuc              AS EmpresaRuc,
-        empresaRazonSocial      AS EmpresaRazonSocial,
-        establecimientoAnexo    AS EmpresaEstablecimientoAnexo,
-        empresaDireccion        AS EmpresaDireccion,
-        clienteTipoDoc          AS ClienteTipoDoc,
-        clienteNumDoc           AS ClienteNumDoc,
-        clienteRznSocial        AS ClienteRazonSocial,
-        clienteDireccion        AS ClienteDireccion,
-        clienteProvincia        AS ClienteProvincia,
-        clienteDepartamento     AS ClienteDepartamento,
-        clienteDistrito         AS ClienteDistrito,
-        codigoTipoDescGlobal    AS CodigoTipoDescGlobal,
-        descuentoGlobal         AS DescuentoGlobal,
-        totalOperacionesGravadas   AS TotalOperacionesGravadas,
-        totalOperacionesExoneradas AS TotalOperacionesExoneradas,
-        totalOperacionesInafectas  AS TotalOperacionesInafectas,
-        totalOperacionesGratuitas  AS TotalOperacionesGratuitas,
-        totalIgvGratuitas       AS TotalIgvGratuitas,
-        totalIGV                AS TotalIGV,
-        totalImpuestos          AS TotalImpuestos,
-        totalDescuentos         AS TotalDescuentos,
-        totalOtrosCargos        AS TotalOtrosCargos,
-        totalIcbper             AS TotalIcbper,
-        valorVenta              AS ValorVenta,
-        subTotal                AS SubTotal,
-        importeTotal            AS ImporteTotal,
-        montoCredito            AS MontoCredito,
-        tipDocAfectado          AS TipDocAfectado,
-        numDocAfectado          AS NumDocAfectado,
-        tipoNotaCreditoDebito   AS TipoNotaCreditoDebito,
-        motivoNota              AS MotivoNota,
-        comprobanteAfectadoID   AS ComprobanteAfectadoId,
-        observaciones           AS Observaciones,
-        estadoSunat             AS EstadoSunat,
-        pdfGenerado             AS PdfGenerado,
-        codigoRespuestaSunat    AS CodigoRespuestaSunat,
-        mensajeRespuestaSunat   AS MensajeRespuestaSunat,
-        fechaEnvioSunat         AS FechaEnvioSunat,
-        xmlGenerado             AS XmlGenerado,
-        usuarioCreacion         AS UsuarioCreacion,
-        fechaCreacion           AS FechaCreacion
-    FROM comprobante
-    ";
-}
-
+        SELECT 
+            c.comprobanteID           AS ComprobanteId,
+            c.tipoOperacion           AS TipoOperacion,
+            c.tipoComprobante         AS TipoComprobante,
+            c.serie                   AS Serie,
+            c.correlativo             AS Correlativo,
+            c.numeroCompleto          AS NumeroCompleto,
+            c.tipoCambio              AS TipoCambio,
+            c.fechaEmision            AS FechaEmision,
+            TIMESTAMP(c.fechaEmision, c.horaEmision) AS HoraEmision,
+            c.fechaVencimiento        AS FechaVencimiento,
+            c.tipoMoneda              AS TipoMoneda,
+            c.tipoPago                AS TipoPago,
+            c.empresaRuc              AS EmpresaRuc,
+            c.empresaRazonSocial      AS EmpresaRazonSocial,
+            c.establecimientoAnexo    AS EmpresaEstablecimientoAnexo,
+            c.empresaDireccion        AS EmpresaDireccion,
+            c.clienteTipoDoc          AS ClienteTipoDoc,
+            c.clienteNumDoc           AS ClienteNumDoc,
+            c.clienteRznSocial        AS ClienteRazonSocial,
+            c.clienteDireccion        AS ClienteDireccion,
+            c.clienteProvincia        AS ClienteProvincia,
+            c.clienteDepartamento     AS ClienteDepartamento,
+            c.clienteDistrito         AS ClienteDistrito,
+            c.codigoTipoDescGlobal    AS CodigoTipoDescGlobal,
+            c.descuentoGlobal         AS DescuentoGlobal,
+            c.totalOperacionesGravadas   AS TotalOperacionesGravadas,
+            c.totalOperacionesExoneradas AS TotalOperacionesExoneradas,
+            c.totalOperacionesInafectas  AS TotalOperacionesInafectas,
+            c.totalOperacionesGratuitas  AS TotalOperacionesGratuitas,
+            c.totalIgvGratuitas       AS TotalIgvGratuitas,
+            c.totalIGV                AS TotalIGV,
+            c.totalImpuestos          AS TotalImpuestos,
+            c.totalDescuentos         AS TotalDescuentos,
+            c.totalOtrosCargos        AS TotalOtrosCargos,
+            c.totalIcbper             AS TotalIcbper,
+            c.valorVenta              AS ValorVenta,
+            c.subTotal                AS SubTotal,
+            c.importeTotal            AS ImporteTotal,
+            c.montoCredito            AS MontoCredito,
+            c.tipDocAfectado          AS TipDocAfectado,
+            c.numDocAfectado          AS NumDocAfectado,
+            c.tipoNotaCreditoDebito   AS TipoNotaCreditoDebito,
+            c.motivoNota              AS MotivoNota,
+            c.comprobanteAfectadoID   AS ComprobanteAfectadoId,
+            c.observaciones           AS Observaciones,
+            c.estadoSunat             AS EstadoSunat,
+            c.pdfGenerado             AS PdfGenerado,
+            c.codigoRespuestaSunat    AS CodigoRespuestaSunat,
+            c.mensajeRespuestaSunat   AS MensajeRespuestaSunat,
+            c.fechaEnvioSunat         AS FechaEnvioSunat,
+            c.xmlGenerado             AS XmlGenerado,
+            c.usuarioCreacion         AS UsuarioCreacion,
+            c.fechaCreacion           AS FechaCreacion
+        FROM comprobante c
+        ";
+    }
 // ── DTO interno para mapeo raw ────────────────────────────────────────────────
 internal class KpiRawDto
 {
