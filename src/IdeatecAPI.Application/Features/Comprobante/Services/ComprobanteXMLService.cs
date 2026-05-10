@@ -690,9 +690,7 @@ public class ComprobanteService : IComprobanteService
             Console.WriteLine($"[STORAGE ❌] Error subiendo ZIP: {ex.Message}");
             // No bloquea el flujo — SUNAT continúa igual
         }
-
-        // 6. Enviar a SUNAT
-
+        
         // 6. Enviar a SUNAT
         SunatResponse sunatResponse;
         try
