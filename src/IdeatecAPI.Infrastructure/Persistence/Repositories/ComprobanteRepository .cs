@@ -535,23 +535,29 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         string? codigo,
         string? mensaje,
         string? xmlFirmado,
-        string? cdrBase64)
+        string? cdrBase64,
+        string? mensajeAdicional = null)
     {
         var sql = @"
             UPDATE comprobante SET
                 estadoSunat           = @Estado,
                 codigoRespuestaSunat  = @Codigo,
-                mensajeRespuestaSunat = @Mensaje,
+                mensajeRespuestaSunat = CASE 
+                    WHEN @MensajeAdicional IS NOT NULL 
+                    THEN CONCAT(COALESCE(mensajeRespuestaSunat, ''), '. ', @MensajeAdicional)
+                    ELSE @Mensaje
+                END,
                 fechaEnvioSunat       = @FechaEnvio
             WHERE comprobanteID = @ComprobanteId";
 
         await _connection.ExecuteAsync(sql, new
         {
-            ComprobanteId = comprobanteId,
-            Estado = estado,
-            Codigo = codigo,
-            Mensaje = mensaje,
-            FechaEnvio = DateTime.Now
+            ComprobanteId    = comprobanteId,
+            Estado           = estado,
+            Codigo           = codigo,
+            Mensaje          = mensaje,
+            MensajeAdicional = mensajeAdicional,
+            FechaEnvio       = DateTime.Now
         }, _transaction);
     }
 

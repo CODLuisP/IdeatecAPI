@@ -352,18 +352,53 @@ public class NoteService : INoteService
         // 7. Anular comprobante original si aplica
         if (sunatResponse.Success && note.ComprobanteAfectadoId.HasValue)
         {
-            var esAnulacionTotal = note.TipoDoc == "07" && new[] { "01", "02" }.Contains(note.TipoNotaCreditoDebito);
-            if (esAnulacionTotal)
+            var esNC = note.TipoDoc == "07";
+            var esND = note.TipoDoc == "08";
+            var motivo = note.TipoNotaCreditoDebito;
+            var referencia = $"{note.Serie}-{note.Correlativo:D8}";
+
+            var motivosAnulacion = new[] { "01", "02" };
+            var motivosDevolucion = new[] { "06" };
+            var motivosDescuento = new[] { "04", "05", "08", "09" };
+
+            string? mensajeAfectado = null;
+            string? estadoAfectado = null;
+
+            if (esNC)
             {
-                await _unitOfWork.Comprobantes.UpdateEstadoSunatAsync(
-                    note.ComprobanteAfectadoId.Value,
-                    "ANULADO",
-                    null,
-                    $"Anulado por nota de crédito {note.Serie}-{note.Correlativo:D8}",
-                    null,
-                    null
-                );
+                if (motivosAnulacion.Contains(motivo))
+                {
+                    estadoAfectado   = "ANULADO";
+                    mensajeAfectado  = $"Anulado por NC {referencia}";
+                }
+                else if (motivosDevolucion.Contains(motivo))
+                {
+                    estadoAfectado   = "DEVOLUCION_TOTAL";
+                    mensajeAfectado  = $"Devolución total por NC {referencia}";
+                }
+                else if (motivosDescuento.Contains(motivo))
+                {
+                    mensajeAfectado  = $"Descuento/ajuste por NC {referencia}";
+                }
+                else
+                {
+                    mensajeAfectado  = $"Afectado por NC {referencia}";
+                }
             }
+            else if (esND)
+            {
+                mensajeAfectado = $"Afectado por ND {referencia}";
+            }
+
+            await _unitOfWork.Comprobantes.UpdateEstadoSunatAsync(
+                note.ComprobanteAfectadoId.Value,
+                estadoAfectado ?? "ACEPTADO",
+                null,
+                null,
+                null,
+                null,
+                mensajeAfectado
+            );
         }
 
         // 8. Notificar WebSocket
