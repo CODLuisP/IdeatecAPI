@@ -228,30 +228,32 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
 
     private async Task ActualizarSerieCorrelativoAsync(Comprobante comprobante)
     {
+        // 1. Obtener el ID de la sucursal para asegurar precisión
+        var sucursalId = await GetSucursalIdByRucAndAnexoAsync(comprobante.EmpresaRuc!, comprobante.EmpresaEstablecimientoAnexo!);
+        
+        if (sucursalId == null)
+            throw new InvalidOperationException($"No se encontró una sucursal activa para el RUC {comprobante.EmpresaRuc} y establecimiento {comprobante.EmpresaEstablecimientoAnexo}");
+
+        // 2. Definir SQL de actualización por ID (Independencia total por entorno ya que _connection es dinámica)
         string sql = comprobante.TipoComprobante switch
         {
             "01" => @"UPDATE sucursal SET 
                         serieFactura       = @Serie,
                         correlativoFactura = correlativoFactura + 1
-                    WHERE empresaRuc           = @EmpresaRuc 
-                    AND codEstablecimiento     = @EmpresaEstablecimientoAnexo
-                    AND estado                = 1",
+                    WHERE sucursalID = @SucursalId",
 
             "03" => @"UPDATE sucursal SET 
                         serieBoleta       = @Serie,
                         correlativoBoleta = correlativoBoleta + 1
-                    WHERE empresaRuc           = @EmpresaRuc 
-                    AND codEstablecimiento     = @EmpresaEstablecimientoAnexo
-                    AND estado                = 1",
+                    WHERE sucursalID = @SucursalId",
 
-            _ => throw new InvalidOperationException($"Tipo de comprobante '{comprobante.TipoComprobante}' no soportado.")
+            _ => throw new InvalidOperationException($"Tipo de comprobante '{comprobante.TipoComprobante}' no soportado para incremento automático.")
         };
 
         var parameters = new
         {
             comprobante.Serie,
-            comprobante.EmpresaRuc,
-            comprobante.EmpresaEstablecimientoAnexo
+            SucursalId = sucursalId
         };
 
         await _connection.ExecuteAsync(sql, parameters, _transaction);

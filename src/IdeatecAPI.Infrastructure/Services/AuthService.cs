@@ -20,7 +20,11 @@ public class AuthService : IAuthService
     {
         try
         {
-            // 1. Buscar usuario por email, username o RUC
+            // ── NUEVO: Establecer el entorno antes de autenticar ──
+            var env = request.Environment?.ToLower() ?? "production";
+            _unitOfWork.SetEnvironment(env);
+
+            // 1. Buscar usuario por email, username o RUC (Ahora en la DB del entorno solicitado)
             var usuario = await _unitOfWork.Usuarios.GetByIdentifierAsync(request.Identifier);
 
             if (usuario == null)
@@ -31,6 +35,9 @@ public class AuthService : IAuthService
                     Message = "Credenciales incorrectas"
                 };
             }
+
+            // Asegurar que el entorno sea el solicitado para el token
+            usuario.Environment = env;
 
             // 2. Verificar si la cuenta está activa
             if (!usuario.Estado)

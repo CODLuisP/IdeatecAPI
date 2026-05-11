@@ -32,10 +32,10 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("DefaultConnection")
-            ?? throw new InvalidOperationException("Connection string not found");
+        services.AddHttpContextAccessor();
+        services.AddScoped<ICurrentUserService, CurrentUserService>();
 
-        services.AddScoped<IUnitOfWork>(provider => new UnitOfWork(connectionString));
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         // HttpClient para SUNAT
         services.AddHttpClient();

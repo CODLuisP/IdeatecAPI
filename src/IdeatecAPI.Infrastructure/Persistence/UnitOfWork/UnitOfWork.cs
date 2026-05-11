@@ -4,12 +4,15 @@ using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Infrastructure.Persistence.Repositories;
 using IdeatecAPI.Infrastructure.Persistence.Repositories.Comprobantes;
 using IdeatecAPI.Infrastructure.Persistence.Repositories.CuentasPorCobrar;
+using Microsoft.Extensions.Configuration;
+using IdeatecAPI.Application.Common.Interfaces;
 
 namespace IdeatecAPI.Infrastructure.Persistence.UnitOfWork;
 
 public class UnitOfWork : IUnitOfWork
 {
-    private readonly string _connectionString;
+    private readonly IConfiguration _configuration;
+    private string _connectionString;
     private IDbConnection? _connection;
     private IDbTransaction? _transaction;
     private bool _disposed;
@@ -19,7 +22,6 @@ public class UnitOfWork : IUnitOfWork
     private IUsuarioRepository? _usuarios;
     private IClienteRepository? _clientes;
     private IDireccionRepository? _direccion;
-
     private IEmpresaRepository? _empresas;
     private INoteRepository? _notes;
     private INoteDetailRepository? _noteDetails;
@@ -27,11 +29,9 @@ public class UnitOfWork : IUnitOfWork
     private IComprobanteRepository? _comprobantes;
     private IProductoRepository? _productos;
     private ISucursalRepository? _sucursales;
-
     private IComunicacionBajaRepository? _bajas;
     private IComunicacionBajaDetalleRepository? _bajaDetalles;
     private IResumenComprobanteRepository? _resumenComprobante;
-
     private IGuiaRemisionRepository? _guias;
     private IGuiaRemisionDetalleRepository? _guiaDetalles;
     private IDashboardRepository? _dashboard;
@@ -39,12 +39,42 @@ public class UnitOfWork : IUnitOfWork
     private ICuentasPorCobrarRepository? _cuentasPorCobrar;
     private ITrabajadorRepository? _trabajadores;
 
-    public UnitOfWork(string connectionString)
+    public UnitOfWork(IConfiguration configuration, ICurrentUserService currentUserService)
     {
-        _connectionString = connectionString;
+        _configuration = configuration;
+        
+        // Determinar entorno inicial desde el usuario (claim JWT)
+        var env = currentUserService.Environment?.ToLower();
+        _connectionString = GetConnectionStringByEnv(env);
     }
 
-    private IDbConnection Connection
+    public void SetEnvironment(string env)
+    {
+        var newConnectionString = GetConnectionStringByEnv(env);
+        
+        if (_connectionString != newConnectionString)
+        {
+            _connectionString = newConnectionString;
+            
+            // Cerrar conexión anterior si existe
+            if (_connection != null)
+            {
+                _connection.Dispose();
+                _connection = null;
+            }
+            
+            ResetRepositories();
+        }
+    }
+
+    private string GetConnectionStringByEnv(string? env)
+    {
+        return env == "beta" 
+            ? _configuration.GetConnectionString("BetaConnection")!
+            : _configuration.GetConnectionString("ProductionConnection")!;
+    }
+
+    private IDbConnection CurrentConnection
     {
         get
         {
@@ -57,38 +87,13 @@ public class UnitOfWork : IUnitOfWork
         }
     }
 
-    public ICategoriaRepository Categorias
-    {
-        get
-        {
-            _categorias ??= new CategoriaRepository(Connection, _transaction);
-            return _categorias;
-        }
-    }
-
-    public IClienteRepository Clientes
-    {
-        get
-        {
-            _clientes ??= new ClienteRepository(Connection, _transaction);
-            return _clientes;
-        }
-    }
-
-    public IDireccionRepository Direcciones
-    {
-        get
-        {
-            _direccion ??= new DireccionRepository(Connection, _transaction);
-            return _direccion;
-        }
-    }
+    // ── Repositorios (Todos dinámicos según el entorno activo) ──
 
     public IUsuarioRepository Usuarios
     {
         get
         {
-            _usuarios ??= new UsuarioRepository(Connection, _transaction);
+            _usuarios ??= new UsuarioRepository(CurrentConnection, _transaction);
             return _usuarios;
         }
     }
@@ -97,8 +102,44 @@ public class UnitOfWork : IUnitOfWork
     {
         get
         {
-            _empresas ??= new EmpresaRepository(Connection, _transaction);
+            _empresas ??= new EmpresaRepository(CurrentConnection, _transaction);
             return _empresas;
+        }
+    }
+
+    public ISucursalRepository Sucursal
+    {
+        get
+        {
+            _sucursales ??= new SucursalRepository(CurrentConnection, _transaction);
+            return _sucursales;
+        }
+    }
+
+    public ICategoriaRepository Categorias
+    {
+        get
+        {
+            _categorias ??= new CategoriaRepository(CurrentConnection, _transaction);
+            return _categorias;
+        }
+    }
+
+    public IClienteRepository Clientes
+    {
+        get
+        {
+            _clientes ??= new ClienteRepository(CurrentConnection, _transaction);
+            return _clientes;
+        }
+    }
+
+    public IDireccionRepository Direcciones
+    {
+        get
+        {
+            _direccion ??= new DireccionRepository(CurrentConnection, _transaction);
+            return _direccion;
         }
     }
 
@@ -106,7 +147,7 @@ public class UnitOfWork : IUnitOfWork
     {
         get
         {
-            _notes ??= new NoteRepository(Connection, _transaction);
+            _notes ??= new NoteRepository(CurrentConnection, _transaction);
             return _notes;
         }
     }
@@ -115,7 +156,7 @@ public class UnitOfWork : IUnitOfWork
     {
         get
         {
-            _noteDetails ??= new NoteDetailRepository(Connection, _transaction);
+            _noteDetails ??= new NoteDetailRepository(CurrentConnection, _transaction);
             return _noteDetails;
         }
     }
@@ -124,7 +165,7 @@ public class UnitOfWork : IUnitOfWork
     {
         get
         {
-            _noteLegends ??= new NoteLegendRepository(Connection, _transaction);
+            _noteLegends ??= new NoteLegendRepository(CurrentConnection, _transaction);
             return _noteLegends;
         }
     }
@@ -133,7 +174,7 @@ public class UnitOfWork : IUnitOfWork
     {
         get
         {
-            _bajas ??= new ComunicacionBajaRepository(Connection, _transaction);
+            _bajas ??= new ComunicacionBajaRepository(CurrentConnection, _transaction);
             return _bajas;
         }
     }
@@ -142,7 +183,7 @@ public class UnitOfWork : IUnitOfWork
     {
         get
         {
-            _bajaDetalles ??= new ComunicacionBajaDetalleRepository(Connection, _transaction);
+            _bajaDetalles ??= new ComunicacionBajaDetalleRepository(CurrentConnection, _transaction);
             return _bajaDetalles;
         }
     }
@@ -151,7 +192,7 @@ public class UnitOfWork : IUnitOfWork
     {
         get
         {
-            _comprobantes ??= new ComprobanteRepository(Connection, _transaction);
+            _comprobantes ??= new ComprobanteRepository(CurrentConnection, _transaction);
             return _comprobantes;
         }
     }
@@ -160,17 +201,8 @@ public class UnitOfWork : IUnitOfWork
     {
         get
         {
-            _productos ??= new ProductoRepository(Connection, _transaction);
+            _productos ??= new ProductoRepository(CurrentConnection, _transaction);
             return _productos;
-        }
-    }
-
-    public ISucursalRepository Sucursal
-    {
-        get
-        {
-            _sucursales ??= new SucursalRepository(Connection, _transaction);
-            return _sucursales;
         }
     }
 
@@ -178,7 +210,7 @@ public class UnitOfWork : IUnitOfWork
     {
         get
         {
-            _guias ??= new GuiaRemisionRepository(Connection, _transaction);
+            _guias ??= new GuiaRemisionRepository(CurrentConnection, _transaction);
             return _guias;
         }
     }
@@ -187,14 +219,16 @@ public class UnitOfWork : IUnitOfWork
     {
         get
         {
-            _guiaDetalles ??= new GuiaRemisionDetalleRepository(Connection, _transaction);
-            return _guiaDetalles;}
+            _guiaDetalles ??= new GuiaRemisionDetalleRepository(CurrentConnection, _transaction);
+            return _guiaDetalles;
+        }
     }
+
     public IResumenComprobanteRepository ResumenComprobante
     {
         get
         {
-            _resumenComprobante ??= new ResumenComprobanteRepository(Connection, _transaction);
+            _resumenComprobante ??= new ResumenComprobanteRepository(CurrentConnection, _transaction);
             return _resumenComprobante;
         }
     }
@@ -203,7 +237,7 @@ public class UnitOfWork : IUnitOfWork
     {
         get
         {
-            _dashboard ??= new DashboardRepository(Connection, _transaction);
+            _dashboard ??= new DashboardRepository(CurrentConnection, _transaction);
             return _dashboard;
         }
     }
@@ -212,7 +246,7 @@ public class UnitOfWork : IUnitOfWork
     {
         get
         {
-            _reportes ??= new ReportesRepository(Connection, _transaction);
+            _reportes ??= new ReportesRepository(CurrentConnection, _transaction);
             return _reportes;
         }
     }
@@ -221,25 +255,24 @@ public class UnitOfWork : IUnitOfWork
     {
         get
         {
-            _cuentasPorCobrar ??= new CuentasPorCobrarRepository(Connection, _transaction);
+            _cuentasPorCobrar ??= new CuentasPorCobrarRepository(CurrentConnection, _transaction);
             return _cuentasPorCobrar;
         }
     }
 
     public ITrabajadorRepository Trabajadores
-{
-    get
     {
-        _trabajadores ??= new TrabajadorRepository(Connection, _transaction);
-        return _trabajadores;
+        get
+        {
+            _trabajadores ??= new TrabajadorRepository(CurrentConnection, _transaction);
+            return _trabajadores;
+        }
     }
-}
 
     public void BeginTransaction()
     {
-        _transaction = Connection.BeginTransaction();
-        ResetRepositories(); // ← repos se crean con la transacción activa
-
+        _transaction = CurrentConnection.BeginTransaction();
+        ResetRepositories();
     }
 
     public void Commit()
@@ -257,8 +290,7 @@ public class UnitOfWork : IUnitOfWork
         {
             _transaction?.Dispose();
             _transaction = null;
-            ResetRepositories(); // ← repos se recrean sin transacción
-
+            ResetRepositories();
         }
     }
 
@@ -267,11 +299,9 @@ public class UnitOfWork : IUnitOfWork
         _transaction?.Rollback();
         _transaction?.Dispose();
         _transaction = null;
-        ResetRepositories(); // ← repos se recrean sin transacción
-
+        ResetRepositories();
     }
 
-    // Agregar este método privado al final de la clase
     private void ResetRepositories()
     {
         _notes = null;
@@ -286,9 +316,9 @@ public class UnitOfWork : IUnitOfWork
         _bajaDetalles = null;
         _guias = null;
         _guiaDetalles = null;
-        _productos = null;     
-        _comprobantes = null;    
-        _sucursales = null; 
+        _productos = null;
+        _comprobantes = null;
+        _sucursales = null;
         _resumenComprobante = null;
         _dashboard = null;
         _reportes = null;
@@ -298,7 +328,7 @@ public class UnitOfWork : IUnitOfWork
 
     public IRepository<T> Repository<T>() where T : class
     {
-        return new DapperRepository<T>(Connection, _transaction);
+        return new DapperRepository<T>(CurrentConnection, _transaction);
     }
 
     public void Dispose()
