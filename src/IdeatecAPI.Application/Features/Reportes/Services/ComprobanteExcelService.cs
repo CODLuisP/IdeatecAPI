@@ -302,6 +302,19 @@ public Task<byte[]> ExportarListadoReportesAsync(
             .Fill.SetBackgroundColor(XLColor.FromHtml("#BDD7EE"))
             .NumberFormat.SetFormat("#,##0.00")
             .Border.SetOutsideBorder(XLBorderStyleValues.Medium);
+            
+        // ── Nota informativa ──────────────────────────────────────────────────────────
+        var filaNota = lista.Count + 7;
+        ws.Cell(filaNota, 1).Value = "Nota: Los PENDIENTES, ANULADOS y RECHAZADOS no afectan este reporte.";        
+        ws.Range(filaNota, 1, filaNota, 4).Merge();
+        ws.Cell(filaNota, 1).Style
+            .Font.SetItalic(true)
+            .Font.SetFontSize(8)
+            .Font.SetFontColor(XLColor.FromHtml("#7F6000"))
+            .Fill.SetBackgroundColor(XLColor.FromHtml("#FFF2CC"))
+            .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Left)
+            .Alignment.SetWrapText(true);
+        ws.Row(filaNota).Height = 25;
 
         // ── Ancho columnas ────────────────────────────────────────────────────────
         ws.Column(1).Width = 25;
