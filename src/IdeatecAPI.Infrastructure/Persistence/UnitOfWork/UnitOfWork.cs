@@ -3,7 +3,6 @@ using MySqlConnector;
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Infrastructure.Persistence.Repositories;
 using IdeatecAPI.Infrastructure.Persistence.Repositories.Comprobantes;
-using IdeatecAPI.Domain.Entities;
 using IdeatecAPI.Infrastructure.Persistence.Repositories.CuentasPorCobrar;
 
 namespace IdeatecAPI.Infrastructure.Persistence.UnitOfWork;
@@ -38,6 +37,7 @@ public class UnitOfWork : IUnitOfWork
     private IDashboardRepository? _dashboard;
     private IReportesRepository? _reportes;
     private ICuentasPorCobrarRepository? _cuentasPorCobrar;
+    private ITrabajadorRepository? _trabajadores;
 
     public UnitOfWork(string connectionString)
     {
@@ -226,6 +226,15 @@ public class UnitOfWork : IUnitOfWork
         }
     }
 
+    public ITrabajadorRepository Trabajadores
+{
+    get
+    {
+        _trabajadores ??= new TrabajadorRepository(Connection, _transaction);
+        return _trabajadores;
+    }
+}
+
     public void BeginTransaction()
     {
         _transaction = Connection.BeginTransaction();
@@ -284,6 +293,7 @@ public class UnitOfWork : IUnitOfWork
         _dashboard = null;
         _reportes = null;
         _cuentasPorCobrar = null;
+        _trabajadores = null;
     }
 
     public IRepository<T> Repository<T>() where T : class

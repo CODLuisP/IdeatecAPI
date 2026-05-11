@@ -22,6 +22,7 @@ using IdeatecAPI.Application.Features.Dashboard.Services;
 using IdeatecAPI.Application.Features.Reportes.Services;
 using IdeatecAPI.Application.Features.CuentasPorCobrar.Services;
 using IdeatecAPI.Application.Common.Interfaces;
+using IdeatecAPI.Application.Features.Trabajadores.Services;
 
 namespace IdeatecAPI.Infrastructure;
 
@@ -98,6 +99,9 @@ public static class DependencyInjection
 
         //Cuentas por cobrar
         services.AddScoped<ICuentasPorCobrarService, CuentasPorCobrarService>();
+
+        //Trabajadores
+        services.AddScoped<ITrabajadorService, TrabajadorService>();
 
         //Notificaciones WebSocket
         services.AddHttpClient<IWebSocketNotifier, WebSocketNotifier>();

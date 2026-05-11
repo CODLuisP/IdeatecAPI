@@ -377,6 +377,7 @@ public class ComprobanteService : IComprobanteService
                 EmpresaRazonSocial = dto.Company.RazonSocial,
                 EmpresaNombreComercial = dto.Company.NombreComercial,
                 EmpresaEstablecimientoAnexo = dto.Company.EstablecimientoAnexo,
+                TrabajadorID = dto.TrabajadorID,
                 EmpresaDireccion = dto.Company.DireccionLineal,
                 EmpresaProvincia = dto.Company.Provincia,
                 EmpresaDepartamento = dto.Company.Departamento,
@@ -690,7 +691,7 @@ public class ComprobanteService : IComprobanteService
             Console.WriteLine($"[STORAGE ❌] Error subiendo ZIP: {ex.Message}");
             // No bloquea el flujo — SUNAT continúa igual
         }
-        
+
         // 6. Enviar a SUNAT
         SunatResponse sunatResponse;
         try
@@ -914,6 +915,7 @@ public class ComprobanteService : IComprobanteService
             FechaVencimiento = comprobante.FechaVencimiento,
             TipoMoneda = comprobante.TipoMoneda ?? "PEN",
             TipoPago = comprobante.TipoPago,
+            TrabajadorID = comprobante.TrabajadorID,
 
             Cliente = new ClienteDTO
             {
@@ -1067,6 +1069,7 @@ public class ComprobanteService : IComprobanteService
         FechaVencimiento = c.FechaVencimiento,
         TipoMoneda = c.TipoMoneda ?? "PEN",
         TipoPago = c.TipoPago,
+        TrabajadorID = c.TrabajadorID,
 
         Cliente = new ClienteDTO
         {
