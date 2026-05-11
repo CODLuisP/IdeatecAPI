@@ -57,12 +57,12 @@ builder.Services.AddSwaggerGen(options =>
 // Agregar Infrastructure (incluye JWT, Repositorios, Servicios)
 builder.Services.AddInfrastructure(builder.Configuration);
 
-// CORS para frontend
+// CORS para cualquier origen (Frontend)
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:3000")
+        policy.SetIsOriginAllowed(origin => true) // Permite cualquier origen dinámicamente
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();

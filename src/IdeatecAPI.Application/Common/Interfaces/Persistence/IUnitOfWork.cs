@@ -21,9 +21,9 @@ public interface IUnitOfWork : IDisposable
     IDashboardRepository Dashboard { get; }
     IReportesRepository Reportes { get; }
     ICuentasPorCobrarRepository CuentasPorCobrar { get; }
-    
-    // Transacciones
+    ITrabajadorRepository Trabajadores { get; }
 
+    // Transacciones
     void BeginTransaction();
     void Commit();
     void Rollback();

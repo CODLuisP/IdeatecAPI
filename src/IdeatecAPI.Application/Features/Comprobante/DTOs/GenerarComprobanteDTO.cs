@@ -37,6 +37,7 @@ public class GenerarComprobanteDTO
     public decimal SubTotal { get; set; }                 
     public decimal ImporteTotal { get; set; }
     public decimal MontoCredito { get; set; }
+    public int? TrabajadorID { get; set; }
 
     //Usuario creacion y si el doc se envio en resumen
     public int? UsuarioCreacion { get; set; }

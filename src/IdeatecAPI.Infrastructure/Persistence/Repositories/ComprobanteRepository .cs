@@ -20,7 +20,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
                 tipoPago, tipoCambio,
                 empresaID, empresaRuc, empresaRazonSocial, empresaNombreComercial,
                 empresaDireccion, empresaProvincia, empresaDepartamento,
-                empresaDistrito, empresaUbigeo, establecimientoAnexo,
+                empresaDistrito, empresaUbigeo, establecimientoAnexo, trabajadorID,
                 clienteID, clienteTipoDoc, clienteNumDoc, clienteRznSocial,
                 clienteDireccion, clienteProvincia, clienteDepartamento,
                 clienteDistrito, clienteUbigeo, clienteCorreo, enviadoPorCorreo, clienteWhatsApp, enviadoPorWhatsApp,
@@ -34,7 +34,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
                 @TipoPago, @TipoCambio,
                 @EmpresaId, @EmpresaRuc, @EmpresaRazonSocial, @EmpresaNombreComercial,
                 @EmpresaDireccion, @EmpresaProvincia, @EmpresaDepartamento,
-                @EmpresaDistrito, @EmpresaUbigeo, @EmpresaEstablecimientoAnexo,
+                @EmpresaDistrito, @EmpresaUbigeo, @EmpresaEstablecimientoAnexo, @TrabajadorID,
                 @ClienteId, @ClienteTipoDoc, @ClienteNumDoc, @ClienteRazonSocial,
                 @ClienteDireccion, @ClienteProvincia, @ClienteDepartamento,
                 @ClienteDistrito, @ClienteUbigeo, @ClienteCorreo, @EnviadoPorCorreo, @ClienteWhatsApp, @EnviadoPorWhatsApp,
@@ -67,6 +67,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
             comprobante.EmpresaDistrito,
             comprobante.EmpresaUbigeo,
             comprobante.EmpresaEstablecimientoAnexo,
+            comprobante.TrabajadorID,
             comprobante.ClienteId,
             comprobante.ClienteTipoDoc,
             comprobante.ClienteNumDoc,
@@ -260,10 +261,10 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
     public async Task<IEnumerable<Comprobante>> GetByRucAndFechasAsync(string ruc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null)
     {
         var sql = BaseSelect + @"
-    WHERE empresaRuc = @Ruc
-    AND (@FechaDesde IS NULL OR fechaEmision >= @FechaDesde)
-    AND (@FechaHasta IS NULL OR fechaEmision <= @FechaHasta)
-    ORDER BY fechaEmision DESC"
+            WHERE empresaRuc = @Ruc
+            AND (@FechaDesde IS NULL OR fechaEmision >= @FechaDesde)
+            AND (@FechaHasta IS NULL OR fechaEmision <= @FechaHasta)
+            ORDER BY fechaEmision DESC"
         + (limit.HasValue ? " LIMIT @Limit" : "")
         + (limit.HasValue && offset.HasValue ? " OFFSET @Offset" : "");
 
@@ -656,6 +657,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         empresaRazonSocial      AS EmpresaRazonSocial,
         empresaNombreComercial  AS EmpresaNombreComercial,
         establecimientoAnexo    AS EmpresaEstablecimientoAnexo,
+        trabajadorID            AS TrabajadorID,
         empresaDireccion        AS EmpresaDireccion,
         empresaProvincia        AS EmpresaProvincia,
         empresaDepartamento     AS EmpresaDepartamento,
