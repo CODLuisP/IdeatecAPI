@@ -9,7 +9,6 @@ public class Comprobante
     public string? EmpresaRazonSocial { get; set; }
     public string? EmpresaNombreComercial { get; set; }
     public string? EmpresaEstablecimientoAnexo { get; set; }
-    public int? TrabajadorID { get; set; }
     public string? EmpresaDireccion { get; set; }
     public string? EmpresaProvincia { get; set; }
     public string? EmpresaDepartamento { get; set; }

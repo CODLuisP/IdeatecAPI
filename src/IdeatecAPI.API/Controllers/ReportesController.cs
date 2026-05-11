@@ -325,6 +325,36 @@ public class ReportesController : ControllerBase
         }
     }
 
+    [HttpGet("control-caja/{ruc}/excel")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> ExportarControlCajaExcel(
+        string ruc,
+        [FromQuery] string titulo = "Control de Caja",
+        [FromQuery] string? codEstablecimiento = null,
+        [FromQuery] DateTime? fechaDesde = null,
+        [FromQuery] DateTime? fechaHasta = null,
+        [FromQuery] int? usuarioCreacion = null,
+        [FromQuery] string? clienteNumDoc = null,
+        [FromQuery] int? limit = null)
+    {
+        try
+        {
+            var bytes = await _reportesService.ExportarControlCajaExcelAsync(
+                titulo, ruc, codEstablecimiento, fechaDesde, fechaHasta,
+                usuarioCreacion, clienteNumDoc, limit);
+
+            return File(bytes,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"control-caja-{ruc}-{DateTime.Now:yyyyMMdd}.xlsx");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al exportar Excel control de caja RUC {Ruc}", ruc);
+            return StatusCode(500, new { mensaje = "Error al generar Excel.", detalle = ex.Message });
+        }
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // HELPER
     // ─────────────────────────────────────────────────────────────────────────

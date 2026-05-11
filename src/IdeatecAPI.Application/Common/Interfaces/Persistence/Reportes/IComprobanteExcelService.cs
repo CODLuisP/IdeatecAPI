@@ -34,4 +34,14 @@ public interface IComprobanteExcelService
         DateTime? fechaHasta = null,
         int? usuarioCreacion = null,
         string? clienteNumDoc = null);
+    
+    Task<byte[]> ExportarControlCajaAsync(
+        string titulo,
+        IEnumerable<ListarComprobanteDTO> datos,
+        string ruc,
+        string? codEstablecimiento = null,
+        DateTime? fechaDesde = null,
+        DateTime? fechaHasta = null,
+        int? usuarioCreacion = null,
+        string? clienteNumDoc = null);
 }

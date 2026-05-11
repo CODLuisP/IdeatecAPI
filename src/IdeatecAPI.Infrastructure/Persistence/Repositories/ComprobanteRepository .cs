@@ -20,7 +20,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
                 tipoPago, tipoCambio,
                 empresaID, empresaRuc, empresaRazonSocial, empresaNombreComercial,
                 empresaDireccion, empresaProvincia, empresaDepartamento,
-                empresaDistrito, empresaUbigeo, establecimientoAnexo, trabajadorID,
+                empresaDistrito, empresaUbigeo, establecimientoAnexo,
                 clienteID, clienteTipoDoc, clienteNumDoc, clienteRznSocial,
                 clienteDireccion, clienteProvincia, clienteDepartamento,
                 clienteDistrito, clienteUbigeo, clienteCorreo, enviadoPorCorreo, clienteWhatsApp, enviadoPorWhatsApp,
@@ -34,7 +34,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
                 @TipoPago, @TipoCambio,
                 @EmpresaId, @EmpresaRuc, @EmpresaRazonSocial, @EmpresaNombreComercial,
                 @EmpresaDireccion, @EmpresaProvincia, @EmpresaDepartamento,
-                @EmpresaDistrito, @EmpresaUbigeo, @EmpresaEstablecimientoAnexo, @TrabajadorID,
+                @EmpresaDistrito, @EmpresaUbigeo, @EmpresaEstablecimientoAnexo,
                 @ClienteId, @ClienteTipoDoc, @ClienteNumDoc, @ClienteRazonSocial,
                 @ClienteDireccion, @ClienteProvincia, @ClienteDepartamento,
                 @ClienteDistrito, @ClienteUbigeo, @ClienteCorreo, @EnviadoPorCorreo, @ClienteWhatsApp, @EnviadoPorWhatsApp,
@@ -67,7 +67,6 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
             comprobante.EmpresaDistrito,
             comprobante.EmpresaUbigeo,
             comprobante.EmpresaEstablecimientoAnexo,
-            comprobante.TrabajadorID,
             comprobante.ClienteId,
             comprobante.ClienteTipoDoc,
             comprobante.ClienteNumDoc,
@@ -151,12 +150,12 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
     {
         var sql = @"
             INSERT INTO comprobantedetalle (
-                comprobanteId, item, productoId, codigo, descripcion, cantidad,
+                comprobanteId, trabajadorID, item, productoId, codigo, descripcion, cantidad,
                 unidadMedida, precioUnitario, tipoAfectacionIGV, porcentajeIGV,
                 montoIGV, baseIgv, codigoTipoDescuento, descuentoUnitario, descuentoTotal,
                 valorVenta, precioVenta, totalVentaItem, icbper, factorIcbper
             ) VALUES (
-                @ComprobanteId, @Item, @ProductoId, @Codigo, @Descripcion, @Cantidad,
+                @ComprobanteId, @TrabajadorID, @Item, @ProductoId, @Codigo, @Descripcion, @Cantidad,
                 @UnidadMedida, @PrecioUnitario, @TipoAfectacionIGV, @PorcentajeIGV,
                 @MontoIGV, @BaseIgv, @codigoTipoDescuento, @DescuentoUnitario, @DescuentoTotal,
                 @ValorVenta, @PrecioVenta, @TotalVentaItem, @Icbper, @FactorIcbper
@@ -387,7 +386,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
     {
         var sql = @"
             SELECT 
-                comprobanteId, item, productoId, codigo, descripcion, cantidad,
+                comprobanteId, trabajadorID, item, productoId, codigo, descripcion, cantidad,
                 unidadMedida, precioUnitario, tipoAfectacionIGV, porcentajeIGV,
                 montoIGV, baseIgv, codigoTipoDescuento, descuentoUnitario, descuentoTotal,
                 valorVenta, precioVenta, totalVentaItem, icbper, factorIcbper
@@ -488,7 +487,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
     )> GetDatosCompletosByComprobanteIdAsync(int comprobanteId)
     {
         var sql = @"
-            SELECT comprobanteId, item, productoId, codigo, descripcion, cantidad,
+            SELECT comprobanteId, trabajadorID, item, productoId, codigo, descripcion, cantidad,
                    unidadMedida, precioUnitario, tipoAfectacionIGV, porcentajeIGV,
                    montoIGV, baseIgv, codigoTipoDescuento, descuentoUnitario, descuentoTotal,
                    valorVenta, precioVenta, totalVentaItem, icbper, factorIcbper
@@ -657,7 +656,6 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         empresaRazonSocial      AS EmpresaRazonSocial,
         empresaNombreComercial  AS EmpresaNombreComercial,
         establecimientoAnexo    AS EmpresaEstablecimientoAnexo,
-        trabajadorID            AS TrabajadorID,
         empresaDireccion        AS EmpresaDireccion,
         empresaProvincia        AS EmpresaProvincia,
         empresaDepartamento     AS EmpresaDepartamento,

@@ -403,6 +403,193 @@ public Task<byte[]> ExportarListadoReportesAsync(
         return Task.FromResult(ToBytes(wb));
     }
 
+    public Task<byte[]> ExportarControlCajaAsync(
+        string titulo,
+        IEnumerable<ListarComprobanteDTO> datos,
+        string ruc,
+        string? codEstablecimiento = null,
+        DateTime? fechaDesde = null,
+        DateTime? fechaHasta = null,
+        int? usuarioCreacion = null,
+        string? clienteNumDoc = null)
+    {
+        var lista = datos.ToList();
+
+        using var wb = new XLWorkbook();
+        var ws = wb.Worksheets.Add("Control de Caja");
+
+        // ── Título ────────────────────────────────────────────────────────────────
+        ws.Cell(1, 1).Value = titulo;
+        ws.Range(1, 1, 1, 13).Merge();
+        ws.Cell(1, 1).Style
+            .Font.SetBold(true)
+            .Font.SetFontSize(14)
+            .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center)
+            .Fill.SetBackgroundColor(XLColor.FromHtml("#1F7A4D"))
+            .Font.SetFontColor(XLColor.White);
+        ws.Row(1).Height = 25;
+
+        // ── Subtítulo filtros ─────────────────────────────────────────────────────
+        ws.Cell(2, 1).Value = BuildFiltros(ruc, codEstablecimiento, fechaDesde, fechaHasta, usuarioCreacion, clienteNumDoc);
+        ws.Range(2, 1, 2, 13).Merge();
+        ws.Cell(2, 1).Style
+            .Font.SetItalic(true)
+            .Font.SetFontSize(9)
+            .Font.SetFontColor(XLColor.Gray)
+            .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+
+        var headers = new[]
+        {
+            "N° Comprobante", "Tipo", "F. Emisión", "Cliente", "Doc. Cliente",
+            "Val. Venta", "IGV", "Importe Total", "Moneda", "Estado SUNAT",
+            "Doc. Afectado", "Tipo Pago", "Monto Crédito"
+        };
+
+        int filaActual = 4;
+
+        // ═════════════════════════════════════════════════════════════════════════
+        // SECCIÓN — Movimientos del período
+        // ═════════════════════════════════════════════════════════════════════════
+        ws.Cell(filaActual, 1).Value = "MOVIMIENTOS DEL PERÍODO";
+        ws.Range(filaActual, 1, filaActual, 13).Merge();
+        ws.Cell(filaActual, 1).Style
+            .Font.SetBold(true)
+            .Font.SetFontSize(10)
+            .Font.SetFontColor(XLColor.White)
+            .Fill.SetBackgroundColor(XLColor.FromHtml("#1F7A4D"))
+            .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Left);
+        filaActual++;
+
+        SetHeaders(ws, filaActual, headers);
+        filaActual++;
+
+        int primeraFila = filaActual;
+
+        foreach (var item in lista)
+        {
+            EscribirFilaControlCaja(ws, filaActual, item, lista.IndexOf(item));
+            filaActual++;
+        }
+
+        int ultimaFila = filaActual - 1;
+
+        // ── Total ─────────────────────────────────────────────────────────────────
+        ws.Cell(filaActual, 1).Value = "TOTAL";
+        ws.Cell(filaActual, 6).FormulaA1 = $"=SUM(F{primeraFila}:F{ultimaFila})";
+        ws.Cell(filaActual, 7).FormulaA1 = $"=SUM(G{primeraFila}:G{ultimaFila})";
+        ws.Cell(filaActual, 8).FormulaA1 = $"=SUM(H{primeraFila}:H{ultimaFila})";
+        ws.Range(filaActual, 1, filaActual, 13).Style
+            .Font.SetBold(true)
+            .Fill.SetBackgroundColor(XLColor.FromHtml("#C6EFCE"))
+            .NumberFormat.SetFormat("#,##0.00")
+            .Border.SetOutsideBorder(XLBorderStyleValues.Medium);
+
+        // ── Aviso saldo negativo ──────────────────────────────────────────────────
+        var totalImporte = lista
+            .Where(x => x.TipoComprobante != "07")
+            .Sum(x => x.ImporteTotal)
+            - lista
+            .Where(x => x.TipoComprobante == "07")
+            .Sum(x => x.ImporteTotal);
+
+        if (totalImporte < 0)
+        {
+            filaActual += 2;
+            ws.Cell(filaActual, 1).Value = "⚠ SALDO NEGATIVO — Revisar notas de crédito de períodos anteriores";
+            ws.Range(filaActual, 1, filaActual, 13).Merge();
+            ws.Cell(filaActual, 1).Style
+                .Font.SetBold(true)
+                .Font.SetFontSize(10)
+                .Font.SetFontColor(XLColor.White)
+                .Fill.SetBackgroundColor(XLColor.Red)
+                .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+        }
+
+        // ── Ancho columnas ────────────────────────────────────────────────────────
+        ws.Column(1).Width = 20; ws.Column(2).Width = 12;
+        ws.Column(3).Width = 14; ws.Column(4).Width = 35;
+        ws.Column(5).Width = 16; ws.Column(6).Width = 14;
+        ws.Column(7).Width = 14; ws.Column(8).Width = 14;
+        ws.Column(9).Width = 10; ws.Column(10).Width = 20;
+        ws.Column(11).Width = 20; ws.Column(12).Width = 12;
+        ws.Column(13).Width = 14;
+
+        return Task.FromResult(ToBytes(wb));
+    }
+
+    private static void EscribirFilaControlCaja(IXLWorksheet ws, int fila, ListarComprobanteDTO item, int index)
+    {
+        var bgColor = item.TipoComprobante switch
+        {
+            "07" => XLColor.FromHtml("#FFF2CC"),
+            "08" => XLColor.FromHtml("#E2EFDA"),
+            _    => index % 2 == 0 ? XLColor.White : XLColor.FromHtml("#EBF3FB")
+        };
+
+        // Estados con color especial
+        if (item.EstadoSunat == "ANULADO")
+            bgColor = XLColor.FromHtml("#D9D9D9");
+        else if (item.EstadoSunat == "PENDIENTE")
+            bgColor = XLColor.FromHtml("#FFF9C4");
+
+        var valorVenta = item.TipoComprobante == "07" ? -item.ValorVenta   : item.ValorVenta;
+        var igv        = item.TipoComprobante == "07" ? -item.TotalIGV     : item.TotalIGV;
+        var importe    = item.TipoComprobante == "07" ? -item.ImporteTotal : item.ImporteTotal;
+
+        ws.Cell(fila, 1).Value  = item.NumeroCompleto;
+        ws.Cell(fila, 2).Value  = item.TipoComprobante switch
+        {
+            "01" => "Factura",
+            "03" => "Boleta",
+            "07" => "N. Credito",
+            "08" => "N. Debito",
+            _    => item.TipoComprobante
+        };
+        ws.Cell(fila, 3).Value  = item.FechaEmision.ToString("dd/MM/yyyy");
+        ws.Cell(fila, 4).Value  = item.Cliente?.RazonSocial;
+        ws.Cell(fila, 5).Value  = item.Cliente?.NumeroDocumento;
+        ws.Cell(fila, 6).Value  = valorVenta;
+        ws.Cell(fila, 7).Value  = igv;
+        ws.Cell(fila, 8).Value  = importe;
+        ws.Cell(fila, 9).Value  = item.TipoMoneda;
+        ws.Cell(fila, 10).Value = item.EstadoSunat;
+        ws.Cell(fila, 11).Value = !string.IsNullOrEmpty(item.NumDocAfectado) ? item.NumDocAfectado : "-";
+        ws.Cell(fila, 12).Value = item.TipoPago switch
+        {
+            "Contado"           => "Contado",
+            "Credito"           => "Crédito",
+            "Credito con Inicial" => "Créd. con Inicial",
+            null or ""          => "-",
+            _                   => item.TipoPago
+        };
+        if (item.MontoCredito > 0)
+        {
+            ws.Cell(fila, 13).Value = item.MontoCredito;
+            ws.Cell(fila, 13).Style.NumberFormat.Format = "#,##0.00";
+        }
+        else
+        {
+            ws.Cell(fila, 13).Value = "-";
+        }
+
+        ws.Cell(fila, 6).Style.NumberFormat.Format = "#,##0.00";
+        ws.Cell(fila, 7).Style.NumberFormat.Format = "#,##0.00";
+        ws.Cell(fila, 8).Style.NumberFormat.Format = "#,##0.00";
+        ws.Cell(fila, 13).Style.NumberFormat.Format = "#,##0.00";
+
+        if (item.TipoComprobante == "07")
+        {
+            ws.Cell(fila, 6).Style.Font.SetFontColor(XLColor.Red);
+            ws.Cell(fila, 7).Style.Font.SetFontColor(XLColor.Red);
+            ws.Cell(fila, 8).Style.Font.SetFontColor(XLColor.Red);
+        }
+
+        ws.Range(fila, 1, fila, 13).Style
+            .Fill.SetBackgroundColor(bgColor)
+            .Border.SetOutsideBorder(XLBorderStyleValues.Thin)
+            .Border.SetInsideBorder(XLBorderStyleValues.Hair);
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
     private static void SetHeaders(IXLWorksheet ws, int fila, string[] headers)
     {

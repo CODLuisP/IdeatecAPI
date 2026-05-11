@@ -12,7 +12,6 @@ public class ObtenerComprobanteDTO
     public string Serie { get; set; } = string.Empty;
     public string Correlativo { get; set; } = string.Empty;
     public string NumeroCompleto { get; set; } = string.Empty;
-    public int? TrabajadorID { get; set; }
     public decimal TipoCambio { get; set; }
     public DateTime FechaEmision { get; set; }
     public DateTime HoraEmision { get; set; }

@@ -84,7 +84,17 @@ public interface IReportesService
         int? usuarioCreacion = null,
         string? clienteNumDoc = null,
         int? limit = null);
-    }
+
+    Task<byte[]> ExportarControlCajaExcelAsync(
+        string titulo,
+        string ruc,
+        string? codEstablecimiento = null,
+        DateTime? fechaDesde = null,
+        DateTime? fechaHasta = null,
+        int? usuarioCreacion = null,
+        string? clienteNumDoc = null,
+        int? limit = null);
+}
 
 public class ReportesService : IReportesService
 {
@@ -253,6 +263,34 @@ public class ReportesService : IReportesService
 
         return await _unitOfWork.Reportes.GetMediosPagoTopAsync(
             ruc, codEstablecimiento, desde, hasta, usuarioCreacion, clienteNumDoc, limit);
+    }
+
+    public async Task<byte[]> ExportarControlCajaExcelAsync(
+        string titulo,
+        string ruc,
+        string? codEstablecimiento = null,
+        DateTime? fechaDesde = null,
+        DateTime? fechaHasta = null,
+        int? usuarioCreacion = null,
+        string? clienteNumDoc = null,
+        int? limit = null)
+    {
+        DateTime? desde = fechaDesde?.Date;
+        DateTime? hasta = fechaDesde.HasValue
+            ? (fechaHasta.HasValue
+                ? fechaHasta.Value.Date.AddDays(1).AddSeconds(-1)
+                : fechaDesde.Value.Date.AddDays(1).AddSeconds(-1))
+            : null;
+
+        var datos = await _unitOfWork.Reportes.GetListadoControlCajaAsync(
+            ruc, codEstablecimiento, desde, hasta,
+            usuarioCreacion, clienteNumDoc, limit);
+
+        var dtos = datos.Select(MapToListarDto);
+
+        return await _excelService.ExportarControlCajaAsync(
+            titulo, dtos, ruc, codEstablecimiento,
+            fechaDesde, fechaHasta, usuarioCreacion, clienteNumDoc);
     }
 
     // ── Mapper ────────────────────────────────────────────────────────────────
