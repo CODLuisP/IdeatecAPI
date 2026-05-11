@@ -263,7 +263,7 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
     public async Task<SucursalProducto> RegistrarSucursalProductoAsync(SucursalProducto sucursalProducto)
     {
         var sql = @"
-            INSERT INTO sucursalProducto (
+            INSERT INTO sucursalproducto (
                 productoID, sucursalID, precioUnitario, stock, estado, fechaCreacion
             ) VALUES (
                 @ProductoId, @SucursalId, @PrecioUnitario, @Stock, @Estado, @FechaCreacion
@@ -296,7 +296,7 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
     public async Task<bool> EditarSucursalProductoAsync(SucursalProducto sucursalProducto)
     {
         var sql = @"
-            UPDATE sucursalProducto SET
+            UPDATE sucursalproducto SET
                 precioUnitario = @PrecioUnitario,
                 stock          = @Stock
             WHERE sucursalProductoID = @SucursalProductoId AND estado = 1";
@@ -307,7 +307,7 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
 
     public async Task<bool> ActualizarStockAsync(int sucursalProductoId, int cantidad)
     {
-        var sql = @"UPDATE sucursalProducto 
+        var sql = @"UPDATE sucursalproducto 
                     SET stock = stock - @Cantidad
                     WHERE sucursalProductoID = @SucursalProductoId 
                     AND estado = 1
@@ -320,7 +320,7 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
     public async Task<bool> DevolverStockAsync(int productoId, int sucursalId, int cantidad)
     {
         var sql = @"
-            UPDATE sucursalProducto
+            UPDATE sucursalproducto
             SET stock = stock + @Cantidad
             WHERE productoID  = @ProductoId
             AND sucursalID  = @SucursalId
@@ -332,7 +332,7 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
     
     public async Task<bool> EliminarSucursalProductoAsync(int sucursalProductoId)
     {
-        var sql = @"UPDATE sucursalProducto SET estado = 0 
+        var sql = @"UPDATE sucursalproducto SET estado = 0 
                     WHERE sucursalProductoID = @SucursalProductoId AND estado = 1";
 
         var filas = await _connection.ExecuteAsync(sql, new { SucursalProductoId = sucursalProductoId }, _transaction);
@@ -347,7 +347,7 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
 
     public async Task<bool> ExisteEnSucursalAsync(int productoId, int sucursalId)
     {
-        var sql = @"SELECT COUNT(1) FROM sucursalProducto 
+        var sql = @"SELECT COUNT(1) FROM sucursalproducto 
                     WHERE productoID = @ProductoId 
                     AND sucursalID = @SucursalId 
                     AND estado = 1";
@@ -384,7 +384,7 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
                 SELECT empresaRuc FROM sucursal WHERE sucursalID = @SucursalId AND estado = 1
             )
             AND p.productoID NOT IN (
-                SELECT productoID FROM sucursalProducto 
+                SELECT productoID FROM sucursalproducto 
                 WHERE sucursalID = @SucursalId 
                 AND estado = 1
             )
@@ -434,7 +434,7 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
                 SELECT empresaRuc FROM sucursal WHERE sucursalID = @SucursalId AND estado = 1
             )
             AND p.productoID NOT IN (
-                SELECT productoID FROM sucursalProducto 
+                SELECT productoID FROM sucursalproducto 
                 WHERE sucursalID = @SucursalId AND estado = 1
             )
             AND (p.nomProducto LIKE @Palabra OR p.codigo LIKE @Palabra)

@@ -36,7 +36,7 @@ public class NoteDetailRepository : DapperRepository<NoteDetail>, INoteDetailRep
             totalVentaItem      AS TotalVentaItem,
             icbper              AS Icbper,
             factorIcbper        AS FactorIcbper
-        FROM comprobanteDetalle 
+        FROM comprobantedetalle 
         WHERE comprobanteID = @ComprobanteId 
         ORDER BY item";
 
@@ -47,7 +47,7 @@ public class NoteDetailRepository : DapperRepository<NoteDetail>, INoteDetailRep
     public async Task<int> CreateDetailAsync(NoteDetail detail)
     {
         var sql = @"
-            INSERT INTO comprobanteDetalle (
+            INSERT INTO comprobantedetalle (
                 comprobanteID, item, productoID, codigo, descripcion,
                 cantidad, unidadMedida, precioUnitario,
                 tipoAfectacionIGV, porcentajeIGV, montoIGV,
@@ -67,7 +67,7 @@ public class NoteDetailRepository : DapperRepository<NoteDetail>, INoteDetailRep
 
     public async Task DeleteByComprobanteIdAsync(int comprobanteId)
     {
-        var sql = "DELETE FROM comprobanteDetalle WHERE comprobanteID = @ComprobanteId";
+        var sql = "DELETE FROM comprobantedetalle WHERE comprobanteID = @ComprobanteId";
         await _connection.ExecuteAsync(sql, new { ComprobanteId = comprobanteId }, _transaction);
     }
 }

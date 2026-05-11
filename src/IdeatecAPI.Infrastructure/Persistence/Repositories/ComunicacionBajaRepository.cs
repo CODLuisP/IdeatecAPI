@@ -40,7 +40,7 @@ public class ComunicacionBajaRepository : IComunicacionBajaRepository
                         cdrBase64               AS CdrBase64,
                         fechaCreacion           AS FechaCreacion,
                         fechaEnvioSunat         AS FechaEnvioSunat
-                    FROM comunicacionBaja
+                    FROM comunicacionbaja
                     WHERE empresaId = @EmpresaId
                     ORDER BY fechaCreacion DESC";
         return await _connection.QueryAsync<ComunicacionBaja>(sql, new { EmpresaId = empresaId }, _transaction);
@@ -70,14 +70,14 @@ public class ComunicacionBajaRepository : IComunicacionBajaRepository
                         cdrBase64               AS CdrBase64,
                         fechaCreacion           AS FechaCreacion,
                         fechaEnvioSunat         AS FechaEnvioSunat
-                    FROM comunicacionBaja
+                    FROM comunicacionbaja
                     WHERE bajaId = @BajaId";
         return await _connection.QueryFirstOrDefaultAsync<ComunicacionBaja>(sql, new { BajaId = bajaId }, _transaction);
     }
 
     public async Task<int> CreateAsync(ComunicacionBaja baja)
     {
-        var sql = @"INSERT INTO comunicacionBaja (
+        var sql = @"INSERT INTO comunicacionbaja (
                         empresaId, correlativo, fecGeneracion, fecComunicacion,
                         empresaRuc, empresaRazonSocial, empresaNombreComercial,
                         empresaDireccion, empresaProvincia, empresaDepartamento,
@@ -96,7 +96,7 @@ public class ComunicacionBajaRepository : IComunicacionBajaRepository
 
     public async Task UpdateEstadoAsync(int bajaId, string estado, string? codigo, string? mensaje, string? ticket, string? xml, string? cdr)
     {
-        var sql = @"UPDATE comunicacionBaja SET
+        var sql = @"UPDATE comunicacionbaja SET
                         estadoSunat           = @Estado,
                         codigoRespuestaSunat  = @Codigo,
                         mensajeRespuestaSunat = @Mensaje,
