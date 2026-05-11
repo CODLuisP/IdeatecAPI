@@ -1,0 +1,34 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ideatec-api
+    ports:
+      - "5004:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=server=63.251.107.133;port=3306;database=ideafactu;uid=velsatuser;password=velsatAPI23;Charset=utf8mb4;Pooling=true;Allow User Variables=True;
+      - JwtSettings__Secret=0c6e838cbd906bab6c80bfeff56fb3e7c6f2c64ba7739054934953acce297c95
+      - JwtSettings__Issuer=IdeatecAPI
+      - JwtSettings__Audience=IdeatecClient
+      - JwtSettings__AccessTokenExpirationMinutes=30
+      - JwtSettings__RefreshTokenExpirationDays=7
+      - Storage__RutaXml=/app/storage
+      - Storage__MicroservicioUrl=https://do.velsat.pe:8443/storagefactunet
+      - WebSocket__NotifyUrl=https://do.velsat.pe:8443/notify/notify
+      - Smtp__Host=smtp.mailersend.net
+      - Smtp__Port=587
+      - Smtp__Username=MS_82TXn4@ideatec.com.pe
+      - Smtp__Password=mssp.jlcsV1V.jy7zpl9knyp45vx6.2DmUQvj
+      - Smtp__FromEmail=factunet@ideatec.com.pe
+      - Smtp__FromName=Factunet
+      - App__FrontendUrl=http://localhost:3000
+    volumes:
+      - facturacion_storage:/app/storage
+    restart: unless-stopped
+
+volumes:
+  facturacion_storage:
+    driver: local
