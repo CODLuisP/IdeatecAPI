@@ -1,4 +1,5 @@
 using IdeatecAPI.Domain.Entities;
+using IdeatecAPI.Application.Features.Trabajadores.DTOs;
 
 namespace IdeatecAPI.Application.Common.Interfaces.Persistence;
 
@@ -11,4 +12,7 @@ public interface ITrabajadorRepository : IRepository<Trabajador>
     Task<bool> EditarAsync(Trabajador trabajador);
     Task<bool> EliminarAsync(int id);
     Task<IEnumerable<Trabajador>> SearchBySucursalAsync(int sucursalId, string palabra);
+    Task<IEnumerable<ReporteServicioRawDTO>> GetServiciosByTrabajadorAsync(int trabajadorId, DateTime? fechaDesde, DateTime? fechaHasta);
+    Task<IEnumerable<RankingTrabajadorDTO>> GetRankingBySucursalAsync(int sucursalId, DateTime? fechaDesde, DateTime? fechaHasta);
+    Task<IEnumerable<ServicioTopDTO>> GetServiciosTopBySucursalAsync(int sucursalId, DateTime? fechaDesde, DateTime? fechaHasta);
 }

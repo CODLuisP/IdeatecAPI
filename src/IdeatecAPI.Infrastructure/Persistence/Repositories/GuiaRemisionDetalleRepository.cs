@@ -25,7 +25,7 @@ public class GuiaRemisionDetalleRepository : IGuiaRemisionDetalleRepository
                         unidad      AS Unidad,
                         descripcion AS Descripcion,
                         codigo      AS Codigo
-                    FROM guiaRemisionDetalle
+                    FROM guiaremisionDetalle
                     WHERE guiaId = @GuiaId";
 
         return await _connection.QueryAsync<GuiaRemisionDetalle>(sql, new { GuiaId = guiaId }, _transaction);
@@ -33,7 +33,7 @@ public class GuiaRemisionDetalleRepository : IGuiaRemisionDetalleRepository
 
     public async Task CreateBulkAsync(IEnumerable<GuiaRemisionDetalle> detalles)
     {
-        var sql = @"INSERT INTO guiaRemisionDetalle (
+        var sql = @"INSERT INTO guiaremisiondetalle (
                         guiaId, cantidad, unidad, descripcion, codigo
                     ) VALUES (
                         @GuiaId, @Cantidad, @Unidad, @Descripcion, @Codigo

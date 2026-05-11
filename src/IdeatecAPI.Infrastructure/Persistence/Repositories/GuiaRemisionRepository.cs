@@ -108,7 +108,7 @@ public class GuiaRemisionRepository : IGuiaRemisionRepository
                         clienteWhatsapp          AS ClienteWhatsapp,
                         enviadoPorWhatsapp       AS EnviadoPorWhatsapp,
                         usuarioCreacion          AS UsuarioCreacion
-                    FROM guiaRemision
+                    FROM guiaremision
                     WHERE empresaId = @EmpresaId
                     ORDER BY fechaCreacion DESC";
 
@@ -140,7 +140,7 @@ public class GuiaRemisionRepository : IGuiaRemisionRepository
                         mensajeRespuestaSunat  AS MensajeRespuestaSunat,
                         xmlGenerado            AS XmlGenerado,
                         xmlRespuestaSunat      AS XmlRespuestaSunat
-                    FROM guiaRemision
+                    FROM guiaremision
                     WHERE empresaRuc = @EmpresaRuc
                       AND tipoDoc    = @TipoDoc
                       AND (@SucursalId IS NULL OR sucursalId = @SucursalId)
@@ -179,7 +179,7 @@ public class GuiaRemisionRepository : IGuiaRemisionRepository
                         mensajeRespuestaSunat  AS MensajeRespuestaSunat,
                         xmlGenerado            AS XmlGenerado,
                         xmlRespuestaSunat      AS XmlRespuestaSunat
-                    FROM guiaRemision
+                    FROM guiaremision
                     WHERE empresaRuc = @EmpresaRuc
                       AND tipoDoc    = @TipoDoc
                       AND (@SucursalId IS NULL OR sucursalId = @SucursalId)
@@ -288,7 +288,7 @@ public class GuiaRemisionRepository : IGuiaRemisionRepository
                         clienteWhatsapp          AS ClienteWhatsapp,
                         enviadoPorWhatsapp       AS EnviadoPorWhatsapp,
                         usuarioCreacion          AS UsuarioCreacion
-                    FROM guiaRemision
+                    FROM guiaremision
                     WHERE guiaId = @GuiaId";
 
         return await _connection.QueryFirstOrDefaultAsync<GuiaRemision>(
@@ -307,7 +307,7 @@ public class GuiaRemisionRepository : IGuiaRemisionRepository
                         numeroCompleto AS NumeroCompleto,
                         empresaRuc     AS EmpresaRuc,
                         estadoSunat    AS EstadoSunat
-                    FROM guiaRemision
+                    FROM guiaremision
                     WHERE empresaRuc  = @EmpresaRuc
                       AND serie       = @Serie
                       AND correlativo = @Correlativo
@@ -328,7 +328,7 @@ public class GuiaRemisionRepository : IGuiaRemisionRepository
     {
         guia.NumeroCompleto = $"{guia.Serie}-{guia.Correlativo:D8}";
 
-        var sql = @"INSERT INTO guiaRemision (
+        var sql = @"INSERT INTO guiaremision (
                         empresaId, sucursalId, version, tipoDoc, serie, correlativo, numeroCompleto, fechaEmision,
                         empresaRuc, empresaRazonSocial, empresaNombreComercial,
                         empresaDireccion, empresaProvincia, empresaDepartamento,
@@ -387,7 +387,7 @@ public class GuiaRemisionRepository : IGuiaRemisionRepository
         int guiaId, string estado, string? codigo, string? mensaje,
         string? ticket, DateTime? fechaEnvio, string? rutaXml, string? rutaCdr)
     {
-        var sql = @"UPDATE guiaRemision SET
+        var sql = @"UPDATE guiaremision SET
                         estadoSunat           = @Estado,
                         codigoRespuestaSunat  = @Codigo,
                         mensajeRespuestaSunat = @Mensaje,
@@ -416,7 +416,7 @@ public class GuiaRemisionRepository : IGuiaRemisionRepository
         int guiaId, string estado, string? codigo, string? mensaje,
         string? ticket, string? cdr, DateTime? fechaEnvio)
     {
-        var sql = @"UPDATE guiaRemision SET
+        var sql = @"UPDATE guiaremision SET
                         estadoSunat           = @Estado,
                         codigoRespuestaSunat  = @Codigo,
                         mensajeRespuestaSunat = @Mensaje,
@@ -439,7 +439,7 @@ public class GuiaRemisionRepository : IGuiaRemisionRepository
     public async Task<bool> ExisteAsync(
         int empresaId, string tipoDoc, string serie, int correlativo)
     {
-        var sql = @"SELECT COUNT(1) FROM guiaRemision
+        var sql = @"SELECT COUNT(1) sion
                     WHERE empresaId   = @EmpresaId
                       AND tipoDoc     = @TipoDoc
                       AND serie       = @Serie
