@@ -189,13 +189,6 @@ public static class EmailTemplateBuilder
                 </tr>
 
                 <tr>
-                  <td style="background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:10px 36px;">
-                    <span style="background:{badge.Bg};color:{badge.Color};font-size:11px;font-weight:700;
-                                 padding:3px 10px;border-radius:99px;display:inline-block;">{badge.Label}</span>
-                  </td>
-                </tr>
-
-                <tr>
                   <td style="padding:32px 36px;">
                     <h2 style="margin:0 0 6px;color:#0f172a;font-size:18px;">{Escape(subject)}</h2>
                     <p style="margin:0 0 20px;color:#64748b;font-size:13px;">

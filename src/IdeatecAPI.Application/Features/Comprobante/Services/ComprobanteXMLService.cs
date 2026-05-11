@@ -255,6 +255,7 @@ public class ComprobanteService : IComprobanteService
             {
                 DetalleId = d.DetalleId,
                 ComprobanteId = d.ComprobanteId,
+                TrabajadorID = d.TrabajadorID,
                 Item = d.Item,
                 ProductoId = d.ProductoId,
                 Codigo = d.Codigo,
@@ -377,7 +378,6 @@ public class ComprobanteService : IComprobanteService
                 EmpresaRazonSocial = dto.Company.RazonSocial,
                 EmpresaNombreComercial = dto.Company.NombreComercial,
                 EmpresaEstablecimientoAnexo = dto.Company.EstablecimientoAnexo,
-                TrabajadorID = dto.TrabajadorID,
                 EmpresaDireccion = dto.Company.DireccionLineal,
                 EmpresaProvincia = dto.Company.Provincia,
                 EmpresaDepartamento = dto.Company.Departamento,
@@ -422,6 +422,7 @@ public class ComprobanteService : IComprobanteService
                 {
                     Item = d.Item,
                     ProductoId = d.ProductoId,
+                    TrabajadorID = d.TrabajadorID,
                     Codigo = d.Codigo,
                     Descripcion = d.Descripcion,
                     Cantidad = d.Cantidad,
@@ -599,6 +600,7 @@ public class ComprobanteService : IComprobanteService
             {
                 Item = d.Item,
                 ProductoId = d.ProductoId ?? 0,
+                TrabajadorID = d.TrabajadorID ?? 0,
                 Codigo = d.Codigo,
                 Descripcion = d.Descripcion,
                 Cantidad = d.Cantidad,
@@ -915,7 +917,6 @@ public class ComprobanteService : IComprobanteService
             FechaVencimiento = comprobante.FechaVencimiento,
             TipoMoneda = comprobante.TipoMoneda ?? "PEN",
             TipoPago = comprobante.TipoPago,
-            TrabajadorID = comprobante.TrabajadorID,
 
             Cliente = new ClienteDTO
             {
@@ -975,6 +976,7 @@ public class ComprobanteService : IComprobanteService
             {
                 DetalleId = d.DetalleId,
                 ComprobanteId = d.ComprobanteId,
+                TrabajadorID = d.TrabajadorID,
                 Item = d.Item,
                 ProductoId = d.ProductoId,
                 Codigo = d.Codigo,
@@ -1069,7 +1071,6 @@ public class ComprobanteService : IComprobanteService
         FechaVencimiento = c.FechaVencimiento,
         TipoMoneda = c.TipoMoneda ?? "PEN",
         TipoPago = c.TipoPago,
-        TrabajadorID = c.TrabajadorID,
 
         Cliente = new ClienteDTO
         {

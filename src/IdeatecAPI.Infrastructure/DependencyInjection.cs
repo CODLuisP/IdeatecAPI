@@ -88,6 +88,7 @@ public static class DependencyInjection
         services.AddScoped<IGuiaPdfService, GuiaPdfService>();
 
         // ── Servicios de Email ──
+        services.AddHttpClient("mailersend");
         services.AddScoped<IEmailService, EmailService>();
 
         //Dashboard
