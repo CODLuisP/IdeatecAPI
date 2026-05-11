@@ -5,5 +5,5 @@ namespace IdeatecAPI.Application.Common.Interfaces.Persistence;
 public interface IGuiaRemisionDetalleRepository
 {
     Task<IEnumerable<GuiaRemisionDetalle>> GetByGuiaIdAsync(int guiaId);
-    Task CreateAsync(GuiaRemisionDetalle detalle);
+    Task CreateBulkAsync(IEnumerable<GuiaRemisionDetalle> detalles);
 }

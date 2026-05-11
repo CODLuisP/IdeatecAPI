@@ -31,7 +31,7 @@ public class GuiaRemisionDetalleRepository : IGuiaRemisionDetalleRepository
         return await _connection.QueryAsync<GuiaRemisionDetalle>(sql, new { GuiaId = guiaId }, _transaction);
     }
 
-    public async Task CreateAsync(GuiaRemisionDetalle detalle)
+    public async Task CreateBulkAsync(IEnumerable<GuiaRemisionDetalle> detalles)
     {
         var sql = @"INSERT INTO guiaRemisionDetalle (
                         guiaId, cantidad, unidad, descripcion, codigo
@@ -39,6 +39,6 @@ public class GuiaRemisionDetalleRepository : IGuiaRemisionDetalleRepository
                         @GuiaId, @Cantidad, @Unidad, @Descripcion, @Codigo
                     )";
 
-        await _connection.ExecuteAsync(sql, detalle, _transaction);
+            await _connection.ExecuteAsync(sql, detalles, _transaction);
     }
 }

@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Xml.Linq;
+using Microsoft.Extensions.Logging;
 
 namespace IdeatecAPI.Application.Features.GuiaRemision.Services;
 
@@ -32,20 +33,26 @@ public interface ISunatGuiaService
 public class SunatGuiaService : ISunatGuiaService
 {
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly ILogger<SunatGuiaService> _logger;
 
     // ── URLs Beta (nubefact) ──────────────────────────────────────────────
-    private const string UrlTokenBeta = "https://gre-test.nubefact.com/v1/clientessol/{0}/oauth2/token";
-    private const string UrlEnvioBeta = "https://gre-test.nubefact.com/v1/contribuyente/gem/comprobantes/{0}";
+    private const string UrlTokenBeta   = "https://gre-test.nubefact.com/v1/clientessol/{0}/oauth2/token";
+    private const string UrlEnvioBeta   = "https://gre-test.nubefact.com/v1/contribuyente/gem/comprobantes/{0}";
     private const string UrlConsultaBeta = "https://gre-test.nubefact.com/v1/contribuyente/gem/comprobantes/envios/{0}";
 
     // ── URLs Producción (SUNAT) ───────────────────────────────────────────
-    private const string UrlTokenProd = "https://api-seguridad.sunat.gob.pe/v1/clientessol/{0}/oauth2/token";
-    private const string UrlEnvioProd = "https://api-cpe.sunat.gob.pe/v1/contribuyente/gem/comprobantes/{0}";
+    private const string UrlTokenProd   = "https://api-seguridad.sunat.gob.pe/v1/clientessol/{0}/oauth2/token";
+    private const string UrlEnvioProd   = "https://api-cpe.sunat.gob.pe/v1/contribuyente/gem/comprobantes/{0}";
     private const string UrlConsultaProd = "https://api-cpe.sunat.gob.pe/v1/contribuyente/gem/comprobantes/envios/{0}";
 
-    public SunatGuiaService(IHttpClientFactory httpClientFactory)
+    // ── Tiempos de espera entre reintentos (ms) ───────────────────────────
+    // Intento:        1      2      3      4      5
+    private static readonly int[] RetryDelays = { 1000, 2000, 3000, 4000, 5000 };
+
+    public SunatGuiaService(IHttpClientFactory httpClientFactory, ILogger<SunatGuiaService> logger)
     {
         _httpClientFactory = httpClientFactory;
+        _logger            = logger;
     }
 
     public async Task<SunatGuiaResponse> SendGuiaAsync(
@@ -62,66 +69,90 @@ public class SunatGuiaService : ISunatGuiaService
 
         // ── 1. Obtener token OAuth2 ───────────────────────────────────────
         var urlToken = string.Format(esBeta ? UrlTokenBeta : UrlTokenProd, clienteId);
-        var token = await ObtenerTokenAsync(urlToken, clienteId, clientSecret, ruc, solUsuario, solClave);
+        var token    = await ObtenerTokenAsync(urlToken, clienteId, clientSecret, ruc, solUsuario, solClave);
 
         if (string.IsNullOrEmpty(token))
-        {
-            return new SunatGuiaResponse
-            {
-                Success = false,
-                CodigoRespuesta = "ERROR_TOKEN",
-                Descripcion = "No se pudo obtener el token de autenticación"
-            };
-        }
+            return Error("ERROR_TOKEN", "No se pudo obtener el token de autenticación");
 
         // ── 2. Comprimir en ZIP ───────────────────────────────────────────
-        var zipBytes = ComprimirXml(xmlFirmadoBytes, nombreArchivo + ".xml");
+        var zipBytes  = ComprimirXml(xmlFirmadoBytes, nombreArchivo + ".xml");
         var zipBase64 = Convert.ToBase64String(zipBytes);
-        var hashZip = CalcularHashSha256(zipBytes);
+        var hashZip   = CalcularHashSha256(zipBytes);
 
-        // ── 3. Enviar guía ────────────────────────────────────────────────
+        // ── 3. Enviar a SUNAT → recibe ticket ─────────────────────────────
         var urlEnvio = string.Format(esBeta ? UrlEnvioBeta : UrlEnvioProd, nombreArchivo);
-        var ticket = await EnviarGuiaAsync(urlEnvio, token, nombreArchivo + ".zip", zipBase64, hashZip);
+        var ticket   = await EnviarGuiaAsync(urlEnvio, token, nombreArchivo + ".zip", zipBase64, hashZip);
 
         if (ticket.StartsWith("ERROR"))
-        {
-            return new SunatGuiaResponse
-            {
-                Success = false,
-                CodigoRespuesta = "ERROR_ENVIO",
-                Descripcion = ticket
-            };
-        }
+            return Error("ERROR_ENVIO", ticket);
 
-        // ── 4. Consultar ticket ───────────────────────────────────────────
-        await Task.Delay(3000);
+        // ── 4. Consultar ticket con reintentos y backoff ───────────────────
+        // SUNAT procesa de forma asíncrona: el POST solo registra el comprobante
+        // y devuelve un ticket. Hay que hacer GET hasta que deje de responder
+        // codRespuesta="98" (EN_PROCESO). Con backoff evitamos esperar de más
+        // cuando SUNAT es rápido y seguimos reintentando cuando tarda.
         var urlConsulta = string.Format(esBeta ? UrlConsultaBeta : UrlConsultaProd, ticket);
-        return await ConsultarTicketAsync(urlConsulta, token, ticket);
+        return await ConsultarConReintentosAsync(urlConsulta, token, ticket);
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────
+    // ── Consulta con backoff progresivo ───────────────────────────────────────
+
+    private async Task<SunatGuiaResponse> ConsultarConReintentosAsync(
+        string url, string token, string ticket)
+    {
+        for (int intento = 0; intento < RetryDelays.Length; intento++)
+        {
+            // Esperar antes de consultar (la primera vez también,
+            // porque SUNAT casi nunca está listo en menos de 1 segundo)
+            await Task.Delay(RetryDelays[intento]);
+
+            _logger.LogInformation(
+                "[SUNAT] Consultando ticket {Ticket} — intento {Intento}/{Max}",
+                ticket, intento + 1, RetryDelays.Length);
+
+            var resultado = await ConsultarTicketAsync(url, token, ticket);
+
+            if (resultado.CodigoRespuesta != "EN_PROCESO")
+                return resultado; // ACEPTADO o RECHAZADO → salimos
+
+            _logger.LogInformation(
+                "[SUNAT] Ticket {Ticket} aún EN_PROCESO, reintentando en {Delay}ms...",
+                ticket, intento + 1 < RetryDelays.Length ? RetryDelays[intento + 1] : 0);
+        }
+
+        // Agotamos los reintentos — devolvemos EN_PROCESO para que el
+        // cliente pueda consultarlo más tarde con el ticket guardado en BD
+        return new SunatGuiaResponse
+        {
+            Success         = false,
+            Ticket          = ticket,
+            CodigoRespuesta = "EN_PROCESO",
+            Descripcion     = "SUNAT aún está procesando. Consulta el ticket más tarde."
+        };
+    }
+
+    // ── Helpers HTTP ──────────────────────────────────────────────────────────
 
     private async Task<string?> ObtenerTokenAsync(
-    string url, string clienteId, string clientSecret,
-    string ruc, string solUsuario, string solClave)
+        string url, string clienteId, string clientSecret,
+        string ruc, string solUsuario, string solClave)
     {
         try
         {
             var client = _httpClientFactory.CreateClient();
             var payload = new Dictionary<string, string>
-        {
-            { "grant_type",    "password" },
-            { "scope",         "https://api-cpe.sunat.gob.pe" },
-            { "client_id",     clienteId },
-            { "client_secret", clientSecret },
-            { "username",      ruc + solUsuario },
-            { "password",      solClave }
-        };
+            {
+                { "grant_type",    "password" },
+                { "scope",         "https://api-cpe.sunat.gob.pe" },
+                { "client_id",     clienteId },
+                { "client_secret", clientSecret },
+                { "username",      ruc + solUsuario },
+                { "password",      solClave }
+            };
 
             var response = await client.PostAsync(url, new FormUrlEncodedContent(payload));
-            var content = await response.Content.ReadAsStringAsync();
-
-            var json = JsonDocument.Parse(content);
+            var content  = await response.Content.ReadAsStringAsync();
+            var json     = JsonDocument.Parse(content);
 
             return json.RootElement.TryGetProperty("access_token", out var tokenProp)
                 ? tokenProp.GetString()
@@ -129,7 +160,7 @@ public class SunatGuiaService : ISunatGuiaService
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"TOKEN ERROR: {ex.Message}");
+            _logger.LogError(ex, "[SUNAT] Error obteniendo token");
             return null;
         }
     }
@@ -140,7 +171,7 @@ public class SunatGuiaService : ISunatGuiaService
     {
         try
         {
-            var client = _httpClientFactory.CreateClient();
+            var client  = _httpClientFactory.CreateClient();
             var request = new HttpRequestMessage(HttpMethod.Post, url);
             request.Headers.Add("Authorization", $"Bearer {token}");
             request.Headers.Add("Accept", "*/*");
@@ -150,16 +181,16 @@ public class SunatGuiaService : ISunatGuiaService
                 archivo = new
                 {
                     nomArchivo = nombreZip,
-                    arcGreZip = zipBase64,
-                    hashZip = hashZip
+                    arcGreZip  = zipBase64,
+                    hashZip    = hashZip
                 }
             });
 
             request.Content = new StringContent(body, Encoding.UTF8, "application/json");
 
             var response = await client.SendAsync(request);
-            var content = await response.Content.ReadAsStringAsync();
-            var json = JsonDocument.Parse(content);
+            var content  = await response.Content.ReadAsStringAsync();
+            var json     = JsonDocument.Parse(content);
 
             if (json.RootElement.TryGetProperty("numTicket", out var ticketProp))
                 return ticketProp.GetString() ?? "ERROR: ticket vacío";
@@ -176,20 +207,20 @@ public class SunatGuiaService : ISunatGuiaService
     }
 
     private async Task<SunatGuiaResponse> ConsultarTicketAsync(
-    string url, string token, string ticket)
+        string url, string token, string ticket)
     {
         try
         {
-            var client = _httpClientFactory.CreateClient();
+            var client  = _httpClientFactory.CreateClient();
             var request = new HttpRequestMessage(HttpMethod.Get, url);
             request.Headers.Add("Authorization", $"Bearer {token}");
             request.Headers.Add("Accept", "*/*");
 
             var response = await client.SendAsync(request);
-            var content = await response.Content.ReadAsStringAsync();
-            var json = JsonDocument.Parse(content);
+            var content  = await response.Content.ReadAsStringAsync();
+            var json     = JsonDocument.Parse(content);
 
-            // ── Verificar codRespuesta (nuevo formato) ────────────────────
+            // ── Formato nuevo con codRespuesta ────────────────────────────
             if (json.RootElement.TryGetProperty("codRespuesta", out var codRespuesta))
             {
                 var cod = codRespuesta.GetString();
@@ -197,24 +228,21 @@ public class SunatGuiaService : ISunatGuiaService
                 if (cod == "98")
                     return new SunatGuiaResponse
                     {
-                        Success = false,
-                        Ticket = ticket,
+                        Success         = false,
+                        Ticket          = ticket,
                         CodigoRespuesta = "EN_PROCESO",
-                        Descripcion = "SUNAT aún está procesando la guía"
+                        Descripcion     = "SUNAT aún está procesando la guía"
                     };
 
                 if (cod == "99")
                 {
-                    var numError = json.RootElement
-                        .TryGetProperty("error", out var err)
+                    var numError = json.RootElement.TryGetProperty("error", out var err)
                         ? err.GetProperty("numError").GetString()
                         : "ERROR";
-                    var desError = json.RootElement
-                        .TryGetProperty("error", out var err2)
+                    var desError = json.RootElement.TryGetProperty("error", out var err2)
                         ? err2.GetProperty("desError").GetString()
                         : "Error desconocido";
 
-                    // ── CDR generado aunque sea con error ─────────────────
                     string? cdrBase64 = null;
                     if (json.RootElement.TryGetProperty("indCdrGenerado", out var indCdr)
                         && indCdr.GetString() == "1"
@@ -223,18 +251,17 @@ public class SunatGuiaService : ISunatGuiaService
 
                     return new SunatGuiaResponse
                     {
-                        Success = false,
-                        Ticket = ticket,
+                        Success         = false,
+                        Ticket          = ticket,
                         CodigoRespuesta = numError,
-                        Descripcion = desError,
-                        CdrBase64 = cdrBase64
+                        Descripcion     = desError,
+                        CdrBase64       = cdrBase64
                     };
                 }
 
                 if (cod == "0")
                 {
-                    var cdrBase64 = json.RootElement
-                        .TryGetProperty("arcCdr", out var arcCdr)
+                    var cdrBase64 = json.RootElement.TryGetProperty("arcCdr", out var arcCdr)
                         ? arcCdr.GetString() ?? string.Empty
                         : string.Empty;
 
@@ -242,11 +269,11 @@ public class SunatGuiaService : ISunatGuiaService
 
                     return new SunatGuiaResponse
                     {
-                        Success = true,
-                        Ticket = ticket,
+                        Success         = true,
+                        Ticket          = ticket,
                         CodigoRespuesta = codigo,
-                        Descripcion = descripcion,
-                        CdrBase64 = cdrBase64
+                        Descripcion     = descripcion,
+                        CdrBase64       = cdrBase64
                     };
                 }
             }
@@ -262,33 +289,26 @@ public class SunatGuiaService : ISunatGuiaService
 
                 return new SunatGuiaResponse
                 {
-                    Success = codigo == "0",
-                    Ticket = ticket,
+                    Success         = codigo == "0",
+                    Ticket          = ticket,
                     CodigoRespuesta = codigo,
-                    Descripcion = descripcion,
-                    CdrBase64 = cdrBase64
+                    Descripcion     = descripcion,
+                    CdrBase64       = cdrBase64
                 };
             }
 
-            return new SunatGuiaResponse
-            {
-                Success = false,
-                Ticket = ticket,
-                CodigoRespuesta = "SIN_CDR",
-                Descripcion = $"Respuesta inesperada: {content}"
-            };
+            return Error("SIN_CDR", $"Respuesta inesperada: {content}", ticket);
         }
         catch (Exception ex)
         {
-            return new SunatGuiaResponse
-            {
-                Success = false,
-                Ticket = ticket,
-                CodigoRespuesta = "ERROR_CONSULTA",
-                Descripcion = $"Error al consultar ticket: {ex.Message}"
-            };
+            return Error("ERROR_CONSULTA", $"Error al consultar ticket: {ex.Message}", ticket);
         }
     }
+
+    // ── Helpers estáticos ─────────────────────────────────────────────────────
+
+    private static SunatGuiaResponse Error(string codigo, string descripcion, string? ticket = null) =>
+        new() { Success = false, Ticket = ticket, CodigoRespuesta = codigo, Descripcion = descripcion };
 
     private static byte[] ComprimirXml(byte[] xmlBytes, string nombreArchivo)
     {
@@ -305,8 +325,7 @@ public class SunatGuiaService : ISunatGuiaService
     private static string CalcularHashSha256(byte[] bytes)
     {
         using var sha256 = SHA256.Create();
-        var hash = sha256.ComputeHash(bytes);
-        return Convert.ToHexString(hash).ToLower();
+        return Convert.ToHexString(sha256.ComputeHash(bytes)).ToLower();
     }
 
     private static (string codigo, string descripcion) ExtraerCodigoCdr(string cdrBase64)
@@ -315,7 +334,7 @@ public class SunatGuiaService : ISunatGuiaService
         {
             var zipBytes = Convert.FromBase64String(cdrBase64);
             using var zipStream = new MemoryStream(zipBytes);
-            using var zip = new ZipArchive(zipStream, ZipArchiveMode.Read);
+            using var zip       = new ZipArchive(zipStream, ZipArchiveMode.Read);
 
             var entry = zip.Entries.FirstOrDefault(e => e.Name.EndsWith(".xml"))
                 ?? throw new InvalidOperationException("CDR zip sin XML");
@@ -328,10 +347,10 @@ public class SunatGuiaService : ISunatGuiaService
             XNamespace cbc = "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2";
             XNamespace cac = "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2";
 
-            var docResponse = xCdr.Descendants(cac + "DocumentResponse").FirstOrDefault();
+            var docResponse  = xCdr.Descendants(cac + "DocumentResponse").FirstOrDefault();
             var responseCode = docResponse?.Element(cac + "Response")
                                           ?.Element(cbc + "ResponseCode")?.Value ?? "???";
-            var description = docResponse?.Element(cac + "Response")
+            var description  = docResponse?.Element(cac + "Response")
                                           ?.Element(cbc + "Description")?.Value ?? "Sin descripción";
 
             return (responseCode, description);

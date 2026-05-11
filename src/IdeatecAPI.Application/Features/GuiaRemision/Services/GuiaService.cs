@@ -1,10 +1,12 @@
+using System.IO.Compression;
+using IdeatecAPI.Application.Common.Interfaces;
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Application.Features.GuiaRemision.DTOs;
-using IdeatecAPI.Application.Features.Notas.Services;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using GuiaEntity = IdeatecAPI.Domain.Entities.GuiaRemision;
 using GuiaDetalleEntity = IdeatecAPI.Domain.Entities.GuiaRemisionDetalle;
-using IdeatecAPI.Application.Common.Interfaces;
+using IdeatecAPI.Application.Features.Notas.Services;
 
 namespace IdeatecAPI.Application.Features.GuiaRemision.Services;
 
@@ -28,6 +30,10 @@ public class GuiaService : IGuiaService
     private readonly ISunatGuiaService _sunatGuia;
     private readonly IStorageService _storageService;
     private readonly IWebSocketNotifier _wsNotifier;
+    private readonly ILogger<GuiaService> _logger;
+
+    private static readonly TimeZoneInfo TzLima =
+        TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
 
     public GuiaService(
         IUnitOfWork unitOfWork,
@@ -36,6 +42,7 @@ public class GuiaService : IGuiaService
         ISunatGuiaService sunatGuia,
         IWebSocketNotifier wsNotifier,
         IStorageService storageService,
+        ILogger<GuiaService> logger,
         IConfiguration configuration)
     {
         _unitOfWork = unitOfWork;
@@ -44,73 +51,34 @@ public class GuiaService : IGuiaService
         _sunatGuia = sunatGuia;
         _storageService = storageService;
         _wsNotifier = wsNotifier;
+        _logger = logger;
     }
 
-    // ── Método original (sin cambios) ─────────────────────────────────────────
+    // ── GetAll ────────────────────────────────────────────────────────────────
+
     public async Task<IEnumerable<GuiaDto>> GetAllAsync(int empresaId)
     {
         var guias = await _unitOfWork.Guias.GetAllAsync(empresaId);
         return await MapListAsync(guias);
     }
 
-    public async Task<IEnumerable<GuiaListadoDto>> GetAllByRucAsync(string empresaRuc, string tipoDoc, int? sucursalId)
+    public async Task<IEnumerable<GuiaListadoDto>> GetAllByRucAsync(
+        string empresaRuc, string tipoDoc, int? sucursalId)
     {
         var guias = await _unitOfWork.Guias.GetAllByRucAsync(empresaRuc, tipoDoc, sucursalId);
-        return guias.Select(g => new GuiaListadoDto
-        {
-            GuiaId = g.GuiaId,
-            SucursalId = g.SucursalId,
-            TipoDoc = g.TipoDoc,
-            NumeroCompleto = g.NumeroCompleto,
-            FechaEmision = g.FechaEmision,
-            FechaCreacion = g.FechaCreacion,
-            DestinatarioNumDoc = g.DestinatarioNumDoc,
-            DestinatarioRznSocial = g.DestinatarioRznSocial,
-            PartidaDireccion = g.PartidaDireccion,
-            LlegadaDireccion = g.LlegadaDireccion,
-            TransportistaRznSocial = g.TransportistaRznSocial,
-            TransportistaPlaca = g.TransportistaPlaca,
-            ClienteCorreo = g.ClienteCorreo,
-            EnviadoPorCorreo = g.EnviadoPorCorreo,
-            ClienteWhatsapp = g.ClienteWhatsapp,
-            EnviadoPorWhatsapp = g.EnviadoPorWhatsapp,
-            EstadoSunat = g.EstadoSunat,
-            CodigoRespuestaSunat = g.CodigoRespuestaSunat,
-            MensajeRespuestaSunat = g.MensajeRespuestaSunat,
-            XmlGenerado = g.XmlGenerado,
-            XmlRespuestaSunat = g.XmlRespuestaSunat
-        });
+        return guias.Select(MapToListadoDto);
     }
 
-    public async Task<IEnumerable<GuiaListadoDto>> GetAllByRucFechasAsync(string empresaRuc, string tipoDoc, int? sucursalId, DateOnly? fechaDesde, DateOnly? fechaHasta)
+    public async Task<IEnumerable<GuiaListadoDto>> GetAllByRucFechasAsync(
+        string empresaRuc, string tipoDoc, int? sucursalId,
+        DateOnly? fechaDesde, DateOnly? fechaHasta)
     {
         var guias = await _unitOfWork.Guias.GetAllByRucFechasAsync(
             empresaRuc, tipoDoc, sucursalId, fechaDesde, fechaHasta);
-        return guias.Select(g => new GuiaListadoDto
-        {
-            GuiaId = g.GuiaId,
-            SucursalId = g.SucursalId,
-            TipoDoc = g.TipoDoc,
-            NumeroCompleto = g.NumeroCompleto,
-            FechaEmision = g.FechaEmision,
-            FechaCreacion = g.FechaCreacion,
-            DestinatarioNumDoc = g.DestinatarioNumDoc,
-            DestinatarioRznSocial = g.DestinatarioRznSocial,
-            PartidaDireccion = g.PartidaDireccion,
-            LlegadaDireccion = g.LlegadaDireccion,
-            TransportistaRznSocial = g.TransportistaRznSocial,
-            TransportistaPlaca = g.TransportistaPlaca,
-            ClienteCorreo = g.ClienteCorreo,
-            EnviadoPorCorreo = g.EnviadoPorCorreo,
-            ClienteWhatsapp = g.ClienteWhatsapp,
-            EnviadoPorWhatsapp = g.EnviadoPorWhatsapp,
-            EstadoSunat = g.EstadoSunat,
-            CodigoRespuestaSunat = g.CodigoRespuestaSunat,
-            MensajeRespuestaSunat = g.MensajeRespuestaSunat,
-            XmlGenerado = g.XmlGenerado,
-            XmlRespuestaSunat = g.XmlRespuestaSunat
-        });
+        return guias.Select(MapToListadoDto);
     }
+
+    // ── GetById ───────────────────────────────────────────────────────────────
 
     public async Task<GuiaDto?> GetByIdAsync(int guiaId)
     {
@@ -135,6 +103,8 @@ public class GuiaService : IGuiaService
 
         return dto;
     }
+
+    // ── Create ────────────────────────────────────────────────────────────────
 
     public async Task<GuiaDto> CreateAsync(CreateGuiaDto dto)
     {
@@ -235,10 +205,7 @@ public class GuiaService : IGuiaService
                 ChoferApellidos = dto.Envio.Transportista?.ChoferApellidos,
                 ChoferLicencia = dto.Envio.Transportista?.ChoferLicencia,
                 EstadoSunat = "PENDIENTE",
-                FechaCreacion = TimeZoneInfo.ConvertTimeFromUtc(
-                    DateTime.UtcNow,
-                    TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time")
-                ),
+                FechaCreacion = AhoraLima(),
                 ClienteCorreo = dto.ClienteCorreo,
                 ClienteWhatsapp = dto.ClienteWhatsapp,
                 UsuarioCreacion = dto.UsuarioCreacion,
@@ -248,17 +215,17 @@ public class GuiaService : IGuiaService
 
             var newId = await _unitOfWork.Guias.CreateAsync(guia);
 
-            foreach (var d in dto.Details)
-            {
-                await _unitOfWork.GuiaDetalles.CreateAsync(new GuiaDetalleEntity
+            // ── Bulk insert: un solo round-trip para todos los detalles ───────
+            await _unitOfWork.GuiaDetalles.CreateBulkAsync(
+                dto.Details.Select(d => new GuiaDetalleEntity
                 {
                     GuiaId = newId,
                     Cantidad = d.Cantidad,
                     Unidad = d.Unidad,
                     Descripcion = d.Descripcion,
                     Codigo = d.Codigo
-                });
-            }
+                })
+            );
 
             _unitOfWork.Commit();
 
@@ -272,16 +239,22 @@ public class GuiaService : IGuiaService
         }
     }
 
+    // ── SendToSunat ───────────────────────────────────────────────────────────
+
     public async Task<GuiaDto> SendToSunatAsync(int guiaId)
     {
+        // ── 1. Validar guía ───────────────────────────────────────────────
         var guia = await _unitOfWork.Guias.GetByIdAsync(guiaId)
             ?? throw new KeyNotFoundException($"Guía {guiaId} no encontrada");
 
         if (guia.EstadoSunat == "ACEPTADO")
             throw new InvalidOperationException("La guía ya fue aceptada por SUNAT");
 
+        // Secuencial — sin cambiar nada más del método
         var empresa = await _unitOfWork.Empresas.GetEmpresaByIdAsync(guia.EmpresaId)
             ?? throw new KeyNotFoundException($"Empresa {guia.EmpresaId} no encontrada");
+
+        var details = (await _unitOfWork.GuiaDetalles.GetByGuiaIdAsync(guiaId)).ToList();
 
         if (string.IsNullOrEmpty(empresa.CertificadoPem))
             throw new InvalidOperationException("La empresa no tiene certificado digital configurado");
@@ -292,9 +265,7 @@ public class GuiaService : IGuiaService
         if (string.IsNullOrEmpty(empresa.ClientId) || string.IsNullOrEmpty(empresa.ClientSecret))
             throw new InvalidOperationException("La empresa no tiene client_id y client_secret configurados para GRE");
 
-        var details = (await _unitOfWork.GuiaDetalles.GetByGuiaIdAsync(guiaId)).ToList();
-
-        // 1. Generar y firmar XML
+        // ── 3. Generar XML y firmar ───────────────────────────────────────
         var xmlSinFirmar = guia.TipoDoc == "31"
             ? _xmlBuilder.BuildXmlTransportista(guia, details)
             : _xmlBuilder.BuildXml(guia, details);
@@ -307,99 +278,65 @@ public class GuiaService : IGuiaService
 
         var nombreArchivo = $"{empresa.Ruc}-{guia.TipoDoc}-{guia.Serie}-{guia.Correlativo:D8}";
 
-        // 2. Subir ZIP al microservicio (hilo principal)
-        using var memStream = new MemoryStream();
-        using (var zip = new System.IO.Compression.ZipArchive(memStream, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
+        // ── 4. Comprimir ZIP una sola vez ─────────────────────────────────
+        byte[] zipBytes;
+        using (var memStream = new MemoryStream())
         {
-            var entry = zip.CreateEntry($"{nombreArchivo}.xml");
-            using var entryStream = entry.Open();
-            await entryStream.WriteAsync(xmlFirmadoBytes);
-        }
-        try
-        {
-            var rutaXml = await _storageService.SubirZipAsync(
-                empresa.Ruc,
-                "09",
-                nombreArchivo,
-                memStream.ToArray()
-            );
-            await _unitOfWork.Guias.UpdateXmlGeneradoAsync(guiaId, rutaXml);
-            Console.WriteLine($"[STORAGE ✅] xmlGenerado guía guardado: {rutaXml}");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[STORAGE ❌] Error subiendo ZIP guía: {ex.Message}");
+            using (var zip = new ZipArchive(memStream, ZipArchiveMode.Create, leaveOpen: true))
+            {
+                var entry = zip.CreateEntry($"{nombreArchivo}.xml");
+                using var entryStream = entry.Open();
+                await entryStream.WriteAsync(xmlFirmadoBytes);
+            }
+            zipBytes = memStream.ToArray();
         }
 
-        // 3. Enviar a SUNAT
-
-        // 3. Enviar a SUNAT
-        var sunatResponse = await _sunatGuia.SendGuiaAsync(
-            xmlFirmadoBytes,
-            nombreArchivo,
-            empresa.Ruc,
-            empresa.SolUsuario!,
-            empresa.SolClave!,
-            empresa.ClientId!,
-            empresa.ClientSecret!,
+        // ── 5. Subir ZIP a storage y enviar a SUNAT en paralelo ───────────
+        var subirZipTask = SubirZipSeguroAsync(empresa.Ruc, nombreArchivo, zipBytes);
+        var sunatTask = _sunatGuia.SendGuiaAsync(
+            xmlFirmadoBytes, nombreArchivo,
+            empresa.Ruc, empresa.SolUsuario!, empresa.SolClave!,
+            empresa.ClientId!, empresa.ClientSecret!,
             empresa.Environment
         );
 
-        // 4. Subir CDR en segundo plano
-        if (!string.IsNullOrEmpty(sunatResponse.CdrBase64))
-        {
-            var cdrBase64Capture = sunatResponse.CdrBase64;
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    var rutaCdr = await _storageService.SubirCdrAsync(
-                        empresa.Ruc,
-                        "09",
-                        nombreArchivo,
-                        cdrBase64Capture
-                    );
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[STORAGE ❌] Error subiendo CDR guía: {ex.Message}");
-                }
-            });
-        }
+        await Task.WhenAll(subirZipTask, sunatTask);
 
-        // 5. Actualizar estado en BD
+        var sunatResponse = await sunatTask;
+        var rutaXml = await subirZipTask; // null si el storage falló
+
+        // ── 6. Determinar nuevo estado ────────────────────────────────────
         string nuevoEstado = sunatResponse.CodigoRespuesta == "EN_PROCESO"
             ? "EN_PROCESO"
             : sunatResponse.Success ? "ACEPTADO" : "RECHAZADO";
 
-        await _unitOfWork.Guias.UpdateEstadoAsync(
+        string? rutaCdr = sunatResponse.CdrBase64 is not null
+            ? $"/{empresa.Ruc}/guias-remision/R-{nombreArchivo}.zip"
+            : null;
+
+        // ── 7. Un solo UPDATE con todo ────────────────────────────────────
+        await _unitOfWork.Guias.UpdateEnvioSunatAsync(
             guiaId,
-            nuevoEstado,
-            sunatResponse.CodigoRespuesta,
-            sunatResponse.Descripcion,
-            sunatResponse.Ticket,
-            null,
-            sunatResponse.Success ? AhoraLima() : null
+            estado: nuevoEstado,
+            codigo: sunatResponse.CodigoRespuesta,
+            mensaje: sunatResponse.Descripcion,
+            ticket: sunatResponse.Ticket,
+            fechaEnvio: sunatResponse.Success ? AhoraLima() : null,
+            rutaXml: rutaXml,
+            rutaCdr: rutaCdr
         );
 
-        // 6. Guardar ruta CDR en BD (hilo principal)
-        if (!string.IsNullOrEmpty(sunatResponse.CdrBase64))
-        {
-            var rutaCdr = $"/{empresa.Ruc}/guias-remision/R-{nombreArchivo}.zip";
-            await _unitOfWork.Guias.UpdateXmlRespuestaSunatAsync(guiaId, rutaCdr);
-        }
-
-        // 7. Notificar WebSocket
-        _ = Task.Run(() => _wsNotifier.NotifyAsync(guia.SucursalId, guia.EmpresaRuc, "status"));
+        // ── 8. CDR + WebSocket en segundo plano (no bloquean la respuesta) ─
+        _ = Task.WhenAll(
+            SubirCdrSeguroAsync(empresa.Ruc, nombreArchivo, sunatResponse.CdrBase64),
+            _wsNotifier.NotifyAsync(guia.SucursalId, guia.EmpresaRuc, "status")
+        );
 
         return await GetByIdAsync(guiaId)
             ?? throw new InvalidOperationException("Error al recuperar la guía actualizada");
     }
 
-    private static DateTime AhoraLima() => TimeZoneInfo.ConvertTimeFromUtc(
-        DateTime.UtcNow,
-        TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time")
-    );
+    // ── Delete ────────────────────────────────────────────────────────────────
 
     public async Task DeleteAsync(int guiaId)
     {
@@ -413,9 +350,42 @@ public class GuiaService : IGuiaService
             guiaId, "ANULADO", null, "Anulado por el usuario", null, null, null);
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // ── Helpers de storage (aíslan el try/catch del flujo principal) ──────────
 
-    /// <summary>Mapea una colección de entidades a DTOs cargando sus detalles.</summary>
+    private async Task<string?> SubirZipSeguroAsync(string ruc, string nombreArchivo, byte[] zipBytes)
+    {
+        try
+        {
+            var ruta = await _storageService.SubirZipAsync(ruc, "09", nombreArchivo, zipBytes);
+            _logger.LogInformation("[STORAGE] ZIP subido correctamente: {Ruta}", ruta);
+            return ruta;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[STORAGE] Error subiendo ZIP de guía {Archivo}", nombreArchivo);
+            return null;
+        }
+    }
+
+    private async Task SubirCdrSeguroAsync(string ruc, string nombreArchivo, string? cdrBase64)
+    {
+        if (string.IsNullOrEmpty(cdrBase64)) return;
+        try
+        {
+            await _storageService.SubirCdrAsync(ruc, "09", nombreArchivo, cdrBase64);
+            _logger.LogInformation("[STORAGE] CDR subido correctamente: {Archivo}", nombreArchivo);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[STORAGE] Error subiendo CDR de guía {Archivo}", nombreArchivo);
+        }
+    }
+
+    // ── Helpers generales ─────────────────────────────────────────────────────
+
+    private static DateTime AhoraLima() =>
+        TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TzLima);
+
     private async Task<IEnumerable<GuiaDto>> MapListAsync(IEnumerable<GuiaEntity> guias)
     {
         var result = new List<GuiaDto>();
@@ -430,6 +400,31 @@ public class GuiaService : IGuiaService
     }
 
     // ── Mappers ───────────────────────────────────────────────────────────────
+
+    private static GuiaListadoDto MapToListadoDto(GuiaEntity g) => new()
+    {
+        GuiaId = g.GuiaId,
+        SucursalId = g.SucursalId,
+        TipoDoc = g.TipoDoc,
+        NumeroCompleto = g.NumeroCompleto,
+        FechaEmision = g.FechaEmision,
+        FechaCreacion = g.FechaCreacion,
+        DestinatarioNumDoc = g.DestinatarioNumDoc,
+        DestinatarioRznSocial = g.DestinatarioRznSocial,
+        PartidaDireccion = g.PartidaDireccion,
+        LlegadaDireccion = g.LlegadaDireccion,
+        TransportistaRznSocial = g.TransportistaRznSocial,
+        TransportistaPlaca = g.TransportistaPlaca,
+        ClienteCorreo = g.ClienteCorreo,
+        EnviadoPorCorreo = g.EnviadoPorCorreo,
+        ClienteWhatsapp = g.ClienteWhatsapp,
+        EnviadoPorWhatsapp = g.EnviadoPorWhatsapp,
+        EstadoSunat = g.EstadoSunat,
+        CodigoRespuestaSunat = g.CodigoRespuestaSunat,
+        MensajeRespuestaSunat = g.MensajeRespuestaSunat,
+        XmlGenerado = g.XmlGenerado,
+        XmlRespuestaSunat = g.XmlRespuestaSunat
+    };
 
     private static GuiaDto MapToDto(GuiaEntity g) => new()
     {

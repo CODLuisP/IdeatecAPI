@@ -12,100 +12,102 @@ public class GuiaRemisionRepository : IGuiaRemisionRepository
 
     public GuiaRemisionRepository(IDbConnection connection, IDbTransaction? transaction = null)
     {
-        _connection = connection;
+        _connection  = connection;
         _transaction = transaction;
     }
+
+    // ── Queries ───────────────────────────────────────────────────────────────
 
     public async Task<IEnumerable<GuiaRemision>> GetAllAsync(int empresaId)
     {
         var sql = @"SELECT
-                        guiaId                  AS GuiaId,
-                        empresaId               AS EmpresaId,
-                        version                 AS Version,
-                        tipoDoc                 AS TipoDoc,
-                        serie                   AS Serie,
-                        correlativo             AS Correlativo,
-                        numeroCompleto          AS NumeroCompleto,
-                        fechaEmision            AS FechaEmision,
-                        empresaRuc              AS EmpresaRuc,
-                        empresaRazonSocial      AS EmpresaRazonSocial,
-                        empresaNombreComercial  AS EmpresaNombreComercial,
-                        empresaDireccion        AS EmpresaDireccion,
-                        empresaProvincia        AS EmpresaProvincia,
-                        empresaDepartamento     AS EmpresaDepartamento,
-                        empresaDistrito         AS EmpresaDistrito,
-                        empresaUbigeo           AS EmpresaUbigeo,
-                        destinatarioTipoDoc     AS DestinatarioTipoDoc,
-                        destinatarioNumDoc      AS DestinatarioNumDoc,
-                        destinatarioRznSocial   AS DestinatarioRznSocial,
-                        terceroTipoDoc          AS TerceroTipoDoc,
-                        terceroNumDoc           AS TerceroNumDoc,
-                        terceroRznSocial        AS TerceroRznSocial,
-                        observacion             AS Observacion,
-                        docBajaTipoDoc          AS DocBajaTipoDoc,
-                        docBajaNroDoc           AS DocBajaNroDoc,
-                        relDocTipoDoc           AS RelDocTipoDoc,
-                        relDocNroDoc            AS RelDocNroDoc,
-                        codTraslado             AS CodTraslado,
-                        desTraslado             AS DesTraslado,
-                        modTraslado             AS ModTraslado,
-                        fecTraslado             AS FecTraslado,
-                        codPuerto               AS CodPuerto,
-                        indTransbordo           AS IndTransbordo,
-                        pesoTotal               AS PesoTotal,
-                        undPesoTotal            AS UndPesoTotal,
-                        numContenedor           AS NumContenedor,
-                        matPeligrosoClase       AS MatPeligrosoClase,
-                        matPeligrosoNroONU      AS MatPeligrosoNroONU,
-                        llegadaUbigeo           AS LlegadaUbigeo,
-                        llegadaDireccion        AS LlegadaDireccion,
-                        llegadaDepartamento     AS LlegadaDepartamento,
-                        llegadaProvincia        AS LlegadaProvincia,
-                        llegadaDistrito         AS LlegadaDistrito, 
-                        partidaUbigeo           AS PartidaUbigeo,
-                        partidaDireccion        AS PartidaDireccion,
-                        partidaDepartamento     AS PartidaDepartamento,
-                        partidaProvincia        AS PartidaProvincia,
-                        partidaDistrito         AS PartidaDistrito,  
-                        transportistaTipoDoc    AS TransportistaTipoDoc,
-                        transportistaNumDoc     AS TransportistaNumDoc,
-                        transportistaRznSocial  AS TransportistaRznSocial,
+                        guiaId                   AS GuiaId,
+                        empresaId                AS EmpresaId,
+                        version                  AS Version,
+                        tipoDoc                  AS TipoDoc,
+                        serie                    AS Serie,
+                        correlativo              AS Correlativo,
+                        numeroCompleto           AS NumeroCompleto,
+                        fechaEmision             AS FechaEmision,
+                        empresaRuc               AS EmpresaRuc,
+                        empresaRazonSocial       AS EmpresaRazonSocial,
+                        empresaNombreComercial   AS EmpresaNombreComercial,
+                        empresaDireccion         AS EmpresaDireccion,
+                        empresaProvincia         AS EmpresaProvincia,
+                        empresaDepartamento      AS EmpresaDepartamento,
+                        empresaDistrito          AS EmpresaDistrito,
+                        empresaUbigeo            AS EmpresaUbigeo,
+                        destinatarioTipoDoc      AS DestinatarioTipoDoc,
+                        destinatarioNumDoc       AS DestinatarioNumDoc,
+                        destinatarioRznSocial    AS DestinatarioRznSocial,
+                        terceroTipoDoc           AS TerceroTipoDoc,
+                        terceroNumDoc            AS TerceroNumDoc,
+                        terceroRznSocial         AS TerceroRznSocial,
+                        observacion              AS Observacion,
+                        docBajaTipoDoc           AS DocBajaTipoDoc,
+                        docBajaNroDoc            AS DocBajaNroDoc,
+                        relDocTipoDoc            AS RelDocTipoDoc,
+                        relDocNroDoc             AS RelDocNroDoc,
+                        codTraslado              AS CodTraslado,
+                        desTraslado              AS DesTraslado,
+                        modTraslado              AS ModTraslado,
+                        fecTraslado              AS FecTraslado,
+                        codPuerto                AS CodPuerto,
+                        indTransbordo            AS IndTransbordo,
+                        pesoTotal                AS PesoTotal,
+                        undPesoTotal             AS UndPesoTotal,
+                        numContenedor            AS NumContenedor,
+                        matPeligrosoClase        AS MatPeligrosoClase,
+                        matPeligrosoNroONU       AS MatPeligrosoNroONU,
+                        llegadaUbigeo            AS LlegadaUbigeo,
+                        llegadaDireccion         AS LlegadaDireccion,
+                        llegadaDepartamento      AS LlegadaDepartamento,
+                        llegadaProvincia         AS LlegadaProvincia,
+                        llegadaDistrito          AS LlegadaDistrito,
+                        partidaUbigeo            AS PartidaUbigeo,
+                        partidaDireccion         AS PartidaDireccion,
+                        partidaDepartamento      AS PartidaDepartamento,
+                        partidaProvincia         AS PartidaProvincia,
+                        partidaDistrito          AS PartidaDistrito,
+                        transportistaTipoDoc     AS TransportistaTipoDoc,
+                        transportistaNumDoc      AS TransportistaNumDoc,
+                        transportistaRznSocial   AS TransportistaRznSocial,
                         transportistaRegistroMTC AS TransportistaRegistroMTC,
-                        indVehiculoM1L          AS IndVehiculoM1L,
-                        transportistaPlaca      AS TransportistaPlaca,
+                        indVehiculoM1L           AS IndVehiculoM1L,
+                        transportistaPlaca       AS TransportistaPlaca,
                         autorizacionVehiculoEntidad AS AutorizacionVehiculoEntidad,
                         autorizacionVehiculoNumero  AS AutorizacionVehiculoNumero,
-                        placaSecundaria1          AS PlacaSecundaria1,
-                        placaSecundaria2          AS PlacaSecundaria2,
-                        placaSecundaria3          AS PlacaSecundaria3,
-                        choferSecundarioTipoDoc   AS ChoferSecundarioTipoDoc,
-                        choferSecundarioDoc       AS ChoferSecundarioDoc,
-                        choferSecundarioNombres   AS ChoferSecundarioNombres,
+                        placaSecundaria1         AS PlacaSecundaria1,
+                        placaSecundaria2         AS PlacaSecundaria2,
+                        placaSecundaria3         AS PlacaSecundaria3,
+                        choferSecundarioTipoDoc  AS ChoferSecundarioTipoDoc,
+                        choferSecundarioDoc      AS ChoferSecundarioDoc,
+                        choferSecundarioNombres  AS ChoferSecundarioNombres,
                         choferSecundarioApellidos AS ChoferSecundarioApellidos,
-                        choferSecundarioLicencia  AS ChoferSecundarioLicencia,
-                        choferSecundario2TipoDoc   AS ChoferSecundario2TipoDoc,
-                        choferSecundario2Doc       AS ChoferSecundario2Doc,
-                        choferSecundario2Nombres   AS ChoferSecundario2Nombres,
+                        choferSecundarioLicencia AS ChoferSecundarioLicencia,
+                        choferSecundario2TipoDoc  AS ChoferSecundario2TipoDoc,
+                        choferSecundario2Doc      AS ChoferSecundario2Doc,
+                        choferSecundario2Nombres  AS ChoferSecundario2Nombres,
                         choferSecundario2Apellidos AS ChoferSecundario2Apellidos,
                         choferSecundario2Licencia  AS ChoferSecundario2Licencia,
-                        choferTipoDoc           AS ChoferTipoDoc,
-                        choferDoc               AS ChoferDoc,
-                        choferNombres           AS ChoferNombres,
-                        choferApellidos         AS ChoferApellidos,
-                        choferLicencia          AS ChoferLicencia,
-                        estadoSunat             AS EstadoSunat,
-                        codigoRespuestaSunat    AS CodigoRespuestaSunat,
-                        mensajeRespuestaSunat   AS MensajeRespuestaSunat,
-                        ticketSunat             AS TicketSunat,
-                        cdrBase64               AS CdrBase64,
-                        fechaEnvioSunat         AS FechaEnvioSunat,
-                        fechaCreacion           AS FechaCreacion,
-                        fechaModificacion       AS FechaModificacion,
-                        clienteCorreo           AS ClienteCorreo,
-                        enviadoPorCorreo        AS EnviadoPorCorreo,
-                        clienteWhatsapp         AS ClienteWhatsapp,
-                        enviadoPorWhatsapp      AS EnviadoPorWhatsapp,
-                        usuarioCreacion         AS UsuarioCreacion
+                        choferTipoDoc            AS ChoferTipoDoc,
+                        choferDoc                AS ChoferDoc,
+                        choferNombres            AS ChoferNombres,
+                        choferApellidos          AS ChoferApellidos,
+                        choferLicencia           AS ChoferLicencia,
+                        estadoSunat              AS EstadoSunat,
+                        codigoRespuestaSunat     AS CodigoRespuestaSunat,
+                        mensajeRespuestaSunat    AS MensajeRespuestaSunat,
+                        ticketSunat              AS TicketSunat,
+                        cdrBase64                AS CdrBase64,
+                        fechaEnvioSunat          AS FechaEnvioSunat,
+                        fechaCreacion            AS FechaCreacion,
+                        fechaModificacion        AS FechaModificacion,
+                        clienteCorreo            AS ClienteCorreo,
+                        enviadoPorCorreo         AS EnviadoPorCorreo,
+                        clienteWhatsapp          AS ClienteWhatsapp,
+                        enviadoPorWhatsapp       AS EnviadoPorWhatsapp,
+                        usuarioCreacion          AS UsuarioCreacion
                     FROM guiaRemision
                     WHERE empresaId = @EmpresaId
                     ORDER BY fechaCreacion DESC";
@@ -113,209 +115,217 @@ public class GuiaRemisionRepository : IGuiaRemisionRepository
         return await _connection.QueryAsync<GuiaRemision>(sql, new { EmpresaId = empresaId }, _transaction);
     }
 
-    public async Task<IEnumerable<GuiaRemision>> GetAllByRucAsync(string empresaRuc, string tipoDoc, int? sucursalId)
+    public async Task<IEnumerable<GuiaRemision>> GetAllByRucAsync(
+        string empresaRuc, string tipoDoc, int? sucursalId)
     {
         var sql = @"SELECT
-                    guiaId                 AS GuiaId,
-                    sucursalId             AS SucursalId,
-                    tipoDoc                AS TipoDoc,
-                    numeroCompleto         AS NumeroCompleto,
-                    fechaEmision           AS FechaEmision,
-                    fechaCreacion          AS FechaCreacion,
-                    destinatarioNumDoc     AS DestinatarioNumDoc,
-                    destinatarioRznSocial  AS DestinatarioRznSocial,
-                    partidaDireccion       AS PartidaDireccion,
-                    llegadaDireccion       AS LlegadaDireccion,
-                    transportistaRznSocial AS TransportistaRznSocial,
-                    transportistaPlaca     AS TransportistaPlaca,
-                    clienteCorreo          AS ClienteCorreo,
-                    enviadoPorCorreo       AS EnviadoPorCorreo,
-                    clienteWhatsapp        AS ClienteWhatsapp,
-                    enviadoPorWhatsapp     AS EnviadoPorWhatsapp,
-                    estadoSunat            AS EstadoSunat,
-                    codigoRespuestaSunat   AS CodigoRespuestaSunat,
-                    mensajeRespuestaSunat  AS MensajeRespuestaSunat,
-                    xmlGenerado            AS XmlGenerado,
-                    xmlRespuestaSunat      AS XmlRespuestaSunat
-                FROM guiaRemision
-                WHERE empresaRuc = @EmpresaRuc
-                  AND tipoDoc    = @TipoDoc
-                  AND (@SucursalId IS NULL OR sucursalId = @SucursalId)
-                ORDER BY fechaCreacion DESC LIMIT 100";
+                        guiaId                 AS GuiaId,
+                        sucursalId             AS SucursalId,
+                        tipoDoc                AS TipoDoc,
+                        numeroCompleto         AS NumeroCompleto,
+                        fechaEmision           AS FechaEmision,
+                        fechaCreacion          AS FechaCreacion,
+                        destinatarioNumDoc     AS DestinatarioNumDoc,
+                        destinatarioRznSocial  AS DestinatarioRznSocial,
+                        partidaDireccion       AS PartidaDireccion,
+                        llegadaDireccion       AS LlegadaDireccion,
+                        transportistaRznSocial AS TransportistaRznSocial,
+                        transportistaPlaca     AS TransportistaPlaca,
+                        clienteCorreo          AS ClienteCorreo,
+                        enviadoPorCorreo       AS EnviadoPorCorreo,
+                        clienteWhatsapp        AS ClienteWhatsapp,
+                        enviadoPorWhatsapp     AS EnviadoPorWhatsapp,
+                        estadoSunat            AS EstadoSunat,
+                        codigoRespuestaSunat   AS CodigoRespuestaSunat,
+                        mensajeRespuestaSunat  AS MensajeRespuestaSunat,
+                        xmlGenerado            AS XmlGenerado,
+                        xmlRespuestaSunat      AS XmlRespuestaSunat
+                    FROM guiaRemision
+                    WHERE empresaRuc = @EmpresaRuc
+                      AND tipoDoc    = @TipoDoc
+                      AND (@SucursalId IS NULL OR sucursalId = @SucursalId)
+                    ORDER BY fechaCreacion DESC
+                    LIMIT 100";
 
-        return await _connection.QueryAsync<GuiaRemision>(sql, new { EmpresaRuc = empresaRuc, TipoDoc = tipoDoc, SucursalId = sucursalId }, _transaction);
+        return await _connection.QueryAsync<GuiaRemision>(
+            sql,
+            new { EmpresaRuc = empresaRuc, TipoDoc = tipoDoc, SucursalId = sucursalId },
+            _transaction);
     }
 
     public async Task<IEnumerable<GuiaRemision>> GetAllByRucFechasAsync(
-    string empresaRuc, string tipoDoc, int? sucursalId,
-    DateOnly? fechaDesde, DateOnly? fechaHasta)
+        string empresaRuc, string tipoDoc, int? sucursalId,
+        DateOnly? fechaDesde, DateOnly? fechaHasta)
     {
         var sql = @"SELECT
-                    guiaId                 AS GuiaId,
-                    sucursalId             AS SucursalId,
-                    tipoDoc                AS TipoDoc,
-                    numeroCompleto         AS NumeroCompleto,
-                    fechaEmision           AS FechaEmision,
-                    fechaCreacion          AS FechaCreacion,
-                    destinatarioNumDoc     AS DestinatarioNumDoc,
-                    destinatarioRznSocial  AS DestinatarioRznSocial,
-                    partidaDireccion       AS PartidaDireccion,
-                    llegadaDireccion       AS LlegadaDireccion,
-                    transportistaRznSocial AS TransportistaRznSocial,
-                    transportistaPlaca     AS TransportistaPlaca,
-                    clienteCorreo          AS ClienteCorreo,
-                    enviadoPorCorreo       AS EnviadoPorCorreo,
-                    clienteWhatsapp        AS ClienteWhatsapp,
-                    enviadoPorWhatsapp     AS EnviadoPorWhatsapp,
-                    estadoSunat            AS EstadoSunat,
-                    codigoRespuestaSunat   AS CodigoRespuestaSunat,
-                    mensajeRespuestaSunat  AS MensajeRespuestaSunat,
-                    xmlGenerado            AS XmlGenerado,
-                    xmlRespuestaSunat      AS XmlRespuestaSunat
-                FROM guiaRemision
-                WHERE empresaRuc = @EmpresaRuc
-                  AND tipoDoc    = @TipoDoc
-                  AND (@SucursalId IS NULL OR sucursalId = @SucursalId)
-                  AND (@FechaDesde IS NULL OR fechaEmision >= @FechaDesde)
-                  AND (@FechaHasta IS NULL OR fechaEmision <= @FechaHasta)
-                ORDER BY fechaCreacion DESC
-                LIMIT 100";
+                        guiaId                 AS GuiaId,
+                        sucursalId             AS SucursalId,
+                        tipoDoc                AS TipoDoc,
+                        numeroCompleto         AS NumeroCompleto,
+                        fechaEmision           AS FechaEmision,
+                        fechaCreacion          AS FechaCreacion,
+                        destinatarioNumDoc     AS DestinatarioNumDoc,
+                        destinatarioRznSocial  AS DestinatarioRznSocial,
+                        partidaDireccion       AS PartidaDireccion,
+                        llegadaDireccion       AS LlegadaDireccion,
+                        transportistaRznSocial AS TransportistaRznSocial,
+                        transportistaPlaca     AS TransportistaPlaca,
+                        clienteCorreo          AS ClienteCorreo,
+                        enviadoPorCorreo       AS EnviadoPorCorreo,
+                        clienteWhatsapp        AS ClienteWhatsapp,
+                        enviadoPorWhatsapp     AS EnviadoPorWhatsapp,
+                        estadoSunat            AS EstadoSunat,
+                        codigoRespuestaSunat   AS CodigoRespuestaSunat,
+                        mensajeRespuestaSunat  AS MensajeRespuestaSunat,
+                        xmlGenerado            AS XmlGenerado,
+                        xmlRespuestaSunat      AS XmlRespuestaSunat
+                    FROM guiaRemision
+                    WHERE empresaRuc = @EmpresaRuc
+                      AND tipoDoc    = @TipoDoc
+                      AND (@SucursalId IS NULL OR sucursalId = @SucursalId)
+                      AND (@FechaDesde IS NULL OR fechaEmision >= @FechaDesde)
+                      AND (@FechaHasta IS NULL OR fechaEmision <= @FechaHasta)
+                    ORDER BY fechaCreacion DESC
+                    LIMIT 100";
 
         return await _connection.QueryAsync<GuiaRemision>(sql, new
         {
             EmpresaRuc = empresaRuc,
-            TipoDoc = tipoDoc,
+            TipoDoc    = tipoDoc,
             SucursalId = sucursalId,
             FechaDesde = fechaDesde?.ToString("yyyy-MM-dd"),
-            FechaHasta = fechaHasta?.ToString("yyyy-MM-dd"),
+            FechaHasta = fechaHasta?.ToString("yyyy-MM-dd")
         }, _transaction);
     }
 
     public async Task<GuiaRemision?> GetByIdAsync(int guiaId)
     {
         var sql = @"SELECT
-                        guiaId                  AS GuiaId,
-                        empresaId               AS EmpresaId,
-                        version                 AS Version,
-                        tipoDoc                 AS TipoDoc,
-                        serie                   AS Serie,
-                        correlativo             AS Correlativo,
-                        numeroCompleto          AS NumeroCompleto,
-                        fechaEmision            AS FechaEmision,
-                        empresaRuc              AS EmpresaRuc,
-                        empresaRazonSocial      AS EmpresaRazonSocial,
-                        empresaNombreComercial  AS EmpresaNombreComercial,
-                        empresaDireccion        AS EmpresaDireccion,
-                        empresaProvincia        AS EmpresaProvincia,
-                        empresaDepartamento     AS EmpresaDepartamento,
-                        empresaDistrito         AS EmpresaDistrito,
-                        empresaUbigeo           AS EmpresaUbigeo,
-                        destinatarioTipoDoc     AS DestinatarioTipoDoc,
-                        destinatarioNumDoc      AS DestinatarioNumDoc,
-                        destinatarioRznSocial   AS DestinatarioRznSocial,
-                        terceroTipoDoc          AS TerceroTipoDoc,
-                        terceroNumDoc           AS TerceroNumDoc,
-                        terceroRznSocial        AS TerceroRznSocial,
-                        observacion             AS Observacion,
-                        docBajaTipoDoc          AS DocBajaTipoDoc,
-                        docBajaNroDoc           AS DocBajaNroDoc,
-                        relDocTipoDoc           AS RelDocTipoDoc,
-                        relDocNroDoc            AS RelDocNroDoc,
-                        codTraslado             AS CodTraslado,
-                        desTraslado             AS DesTraslado,
-                        modTraslado             AS ModTraslado,
-                        fecTraslado             AS FecTraslado,
-                        codPuerto               AS CodPuerto,
-                        indTransbordo           AS IndTransbordo,
-                        pesoTotal               AS PesoTotal,
-                        undPesoTotal            AS UndPesoTotal,
-                        numContenedor           AS NumContenedor,
-                        matPeligrosoClase       AS MatPeligrosoClase,
-                        matPeligrosoNroONU      AS MatPeligrosoNroONU,
-                        llegadaUbigeo           AS LlegadaUbigeo,
-                        llegadaDireccion        AS LlegadaDireccion,
-                        llegadaDepartamento     AS LlegadaDepartamento,
-                        llegadaProvincia        AS LlegadaProvincia,
-                        llegadaDistrito         AS LlegadaDistrito, 
-                        partidaUbigeo           AS PartidaUbigeo,
-                        partidaDireccion        AS PartidaDireccion,
-                        partidaDepartamento     AS PartidaDepartamento,
-                        partidaProvincia        AS PartidaProvincia,
-                        partidaDistrito         AS PartidaDistrito,  
-                        transportistaTipoDoc    AS TransportistaTipoDoc,
-                        transportistaNumDoc     AS TransportistaNumDoc,
-                        transportistaRznSocial  AS TransportistaRznSocial,
+                        guiaId                   AS GuiaId,
+                        empresaId                AS EmpresaId,
+                        version                  AS Version,
+                        tipoDoc                  AS TipoDoc,
+                        serie                    AS Serie,
+                        correlativo              AS Correlativo,
+                        numeroCompleto           AS NumeroCompleto,
+                        fechaEmision             AS FechaEmision,
+                        empresaRuc               AS EmpresaRuc,
+                        empresaRazonSocial       AS EmpresaRazonSocial,
+                        empresaNombreComercial   AS EmpresaNombreComercial,
+                        empresaDireccion         AS EmpresaDireccion,
+                        empresaProvincia         AS EmpresaProvincia,
+                        empresaDepartamento      AS EmpresaDepartamento,
+                        empresaDistrito          AS EmpresaDistrito,
+                        empresaUbigeo            AS EmpresaUbigeo,
+                        destinatarioTipoDoc      AS DestinatarioTipoDoc,
+                        destinatarioNumDoc       AS DestinatarioNumDoc,
+                        destinatarioRznSocial    AS DestinatarioRznSocial,
+                        terceroTipoDoc           AS TerceroTipoDoc,
+                        terceroNumDoc            AS TerceroNumDoc,
+                        terceroRznSocial         AS TerceroRznSocial,
+                        observacion              AS Observacion,
+                        docBajaTipoDoc           AS DocBajaTipoDoc,
+                        docBajaNroDoc            AS DocBajaNroDoc,
+                        relDocTipoDoc            AS RelDocTipoDoc,
+                        relDocNroDoc             AS RelDocNroDoc,
+                        codTraslado              AS CodTraslado,
+                        desTraslado              AS DesTraslado,
+                        modTraslado              AS ModTraslado,
+                        fecTraslado              AS FecTraslado,
+                        codPuerto                AS CodPuerto,
+                        indTransbordo            AS IndTransbordo,
+                        pesoTotal                AS PesoTotal,
+                        undPesoTotal             AS UndPesoTotal,
+                        numContenedor            AS NumContenedor,
+                        matPeligrosoClase        AS MatPeligrosoClase,
+                        matPeligrosoNroONU       AS MatPeligrosoNroONU,
+                        llegadaUbigeo            AS LlegadaUbigeo,
+                        llegadaDireccion         AS LlegadaDireccion,
+                        llegadaDepartamento      AS LlegadaDepartamento,
+                        llegadaProvincia         AS LlegadaProvincia,
+                        llegadaDistrito          AS LlegadaDistrito,
+                        partidaUbigeo            AS PartidaUbigeo,
+                        partidaDireccion         AS PartidaDireccion,
+                        partidaDepartamento      AS PartidaDepartamento,
+                        partidaProvincia         AS PartidaProvincia,
+                        partidaDistrito          AS PartidaDistrito,
+                        transportistaTipoDoc     AS TransportistaTipoDoc,
+                        transportistaNumDoc      AS TransportistaNumDoc,
+                        transportistaRznSocial   AS TransportistaRznSocial,
                         transportistaRegistroMTC AS TransportistaRegistroMTC,
-                        indVehiculoM1L          AS IndVehiculoM1L,
-                        transportistaPlaca      AS TransportistaPlaca,
+                        indVehiculoM1L           AS IndVehiculoM1L,
+                        transportistaPlaca       AS TransportistaPlaca,
                         autorizacionVehiculoEntidad AS AutorizacionVehiculoEntidad,
                         autorizacionVehiculoNumero  AS AutorizacionVehiculoNumero,
-                        placaSecundaria1          AS PlacaSecundaria1,
-                        placaSecundaria2          AS PlacaSecundaria2,
-                        placaSecundaria3          AS PlacaSecundaria3,
-                        choferSecundarioTipoDoc   AS ChoferSecundarioTipoDoc,
-                        choferSecundarioDoc       AS ChoferSecundarioDoc,
-                        choferSecundarioNombres   AS ChoferSecundarioNombres,
+                        placaSecundaria1         AS PlacaSecundaria1,
+                        placaSecundaria2         AS PlacaSecundaria2,
+                        placaSecundaria3         AS PlacaSecundaria3,
+                        choferSecundarioTipoDoc  AS ChoferSecundarioTipoDoc,
+                        choferSecundarioDoc      AS ChoferSecundarioDoc,
+                        choferSecundarioNombres  AS ChoferSecundarioNombres,
                         choferSecundarioApellidos AS ChoferSecundarioApellidos,
-                        choferSecundarioLicencia  AS ChoferSecundarioLicencia,
-                        choferSecundario2TipoDoc   AS ChoferSecundario2TipoDoc,
-                        choferSecundario2Doc       AS ChoferSecundario2Doc,
-                        choferSecundario2Nombres   AS ChoferSecundario2Nombres,
+                        choferSecundarioLicencia AS ChoferSecundarioLicencia,
+                        choferSecundario2TipoDoc  AS ChoferSecundario2TipoDoc,
+                        choferSecundario2Doc      AS ChoferSecundario2Doc,
+                        choferSecundario2Nombres  AS ChoferSecundario2Nombres,
                         choferSecundario2Apellidos AS ChoferSecundario2Apellidos,
                         choferSecundario2Licencia  AS ChoferSecundario2Licencia,
-                        choferTipoDoc           AS ChoferTipoDoc,
-                        choferDoc               AS ChoferDoc,
-                        choferNombres           AS ChoferNombres,
-                        choferApellidos         AS ChoferApellidos,
-                        choferLicencia          AS ChoferLicencia,
-                        estadoSunat             AS EstadoSunat,
-                        codigoRespuestaSunat    AS CodigoRespuestaSunat,
-                        mensajeRespuestaSunat   AS MensajeRespuestaSunat,
-                        ticketSunat             AS TicketSunat,
-                        cdrBase64               AS CdrBase64,
-                        fechaEnvioSunat         AS FechaEnvioSunat,
-                        fechaCreacion           AS FechaCreacion,
-                        fechaModificacion       AS FechaModificacion,
-                        clienteCorreo           AS ClienteCorreo,
-                        enviadoPorCorreo        AS EnviadoPorCorreo,
-                        clienteWhatsapp         AS ClienteWhatsapp,
-                        enviadoPorWhatsapp      AS EnviadoPorWhatsapp,
-                        usuarioCreacion         AS UsuarioCreacion
+                        choferTipoDoc            AS ChoferTipoDoc,
+                        choferDoc                AS ChoferDoc,
+                        choferNombres            AS ChoferNombres,
+                        choferApellidos          AS ChoferApellidos,
+                        choferLicencia           AS ChoferLicencia,
+                        estadoSunat              AS EstadoSunat,
+                        codigoRespuestaSunat     AS CodigoRespuestaSunat,
+                        mensajeRespuestaSunat    AS MensajeRespuestaSunat,
+                        ticketSunat              AS TicketSunat,
+                        cdrBase64                AS CdrBase64,
+                        fechaEnvioSunat          AS FechaEnvioSunat,
+                        fechaCreacion            AS FechaCreacion,
+                        fechaModificacion        AS FechaModificacion,
+                        clienteCorreo            AS ClienteCorreo,
+                        enviadoPorCorreo         AS EnviadoPorCorreo,
+                        clienteWhatsapp          AS ClienteWhatsapp,
+                        enviadoPorWhatsapp       AS EnviadoPorWhatsapp,
+                        usuarioCreacion          AS UsuarioCreacion
                     FROM guiaRemision
                     WHERE guiaId = @GuiaId";
 
-        return await _connection.QueryFirstOrDefaultAsync<GuiaRemision>(sql, new { GuiaId = guiaId }, _transaction);
+        return await _connection.QueryFirstOrDefaultAsync<GuiaRemision>(
+            sql, new { GuiaId = guiaId }, _transaction);
     }
 
-    public async Task<GuiaRemision?> GetBySerieCorrelativoAsync(string empresaRuc, string serie, int correlativo)
+    public async Task<GuiaRemision?> GetBySerieCorrelativoAsync(
+        string empresaRuc, string serie, int correlativo)
     {
         var sql = @"SELECT
-                    guiaId          AS GuiaId,
-                    empresaId       AS EmpresaId,
-                    tipoDoc         AS TipoDoc,
-                    serie           AS Serie,
-                    correlativo     AS Correlativo,
-                    numeroCompleto  AS NumeroCompleto,
-                    empresaRuc      AS EmpresaRuc,
-                    estadoSunat     AS EstadoSunat
-                FROM guiaRemision
-                WHERE empresaRuc  = @EmpresaRuc
-                  AND serie       = @Serie
-                  AND correlativo = @Correlativo
-                  AND estadoSunat = 'ACEPTADO'
-                LIMIT 1";
+                        guiaId         AS GuiaId,
+                        empresaId      AS EmpresaId,
+                        tipoDoc        AS TipoDoc,
+                        serie          AS Serie,
+                        correlativo    AS Correlativo,
+                        numeroCompleto AS NumeroCompleto,
+                        empresaRuc     AS EmpresaRuc,
+                        estadoSunat    AS EstadoSunat
+                    FROM guiaRemision
+                    WHERE empresaRuc  = @EmpresaRuc
+                      AND serie       = @Serie
+                      AND correlativo = @Correlativo
+                      AND estadoSunat = 'ACEPTADO'
+                    LIMIT 1";
 
         return await _connection.QueryFirstOrDefaultAsync<GuiaRemision>(sql, new
         {
-            EmpresaRuc = empresaRuc,
-            Serie = serie,
+            EmpresaRuc  = empresaRuc,
+            Serie       = serie,
             Correlativo = correlativo
         }, _transaction);
     }
 
+    // ── Commands ──────────────────────────────────────────────────────────────
+
     public async Task<int> CreateAsync(GuiaRemision guia)
     {
-        // ← Calcular numeroCompleto antes del INSERT
         guia.NumeroCompleto = $"{guia.Serie}-{guia.Correlativo:D8}";
 
         var sql = @"INSERT INTO guiaRemision (
@@ -327,17 +337,20 @@ public class GuiaRemisionRepository : IGuiaRemisionRepository
                         terceroTipoDoc, terceroNumDoc, terceroRznSocial,
                         observacion, docBajaTipoDoc, docBajaNroDoc, relDocTipoDoc, relDocNroDoc,
                         codTraslado, desTraslado, modTraslado, fecTraslado,
-                        codPuerto, indTransbordo, pesoTotal, undPesoTotal, numContenedor, matPeligrosoClase, matPeligrosoNroONU,
-                        llegadaUbigeo, llegadaDireccion, partidaUbigeo, partidaDireccion,
+                        codPuerto, indTransbordo, pesoTotal, undPesoTotal, numContenedor,
+                        matPeligrosoClase, matPeligrosoNroONU,
+                        llegadaUbigeo, llegadaDireccion, llegadaDepartamento, llegadaProvincia, llegadaDistrito,
+                        partidaUbigeo, partidaDireccion, partidaDepartamento, partidaProvincia, partidaDistrito,
                         transportistaTipoDoc, transportistaNumDoc, transportistaRznSocial, transportistaRegistroMTC,
                         transportistaPlaca, placaSecundaria1, placaSecundaria2, placaSecundaria3,
                         choferSecundarioTipoDoc, choferSecundarioDoc, choferSecundarioNombres,
-                        choferSecundarioApellidos, choferSecundarioLicencia, choferSecundario2TipoDoc, 
-                        choferSecundario2Doc, choferSecundario2Nombres, choferSecundario2Apellidos, 
-                        choferSecundario2Licencia, choferTipoDoc, choferDoc, 
-                        choferNombres, choferApellidos, choferLicencia, estadoSunat, fechaCreacion, indVehiculoM1L, autorizacionVehiculoEntidad, 
-                        autorizacionVehiculoNumero, partidaDepartamento, partidaProvincia, partidaDistrito,
-                        llegadaDepartamento, llegadaProvincia, llegadaDistrito, clienteCorreo, enviadoPorCorreo, clienteWhatsapp, enviadoPorWhatsapp, usuarioCreacion
+                        choferSecundarioApellidos, choferSecundarioLicencia,
+                        choferSecundario2TipoDoc, choferSecundario2Doc, choferSecundario2Nombres,
+                        choferSecundario2Apellidos, choferSecundario2Licencia,
+                        choferTipoDoc, choferDoc, choferNombres, choferApellidos, choferLicencia,
+                        indVehiculoM1L, autorizacionVehiculoEntidad, autorizacionVehiculoNumero,
+                        estadoSunat, fechaCreacion,
+                        clienteCorreo, enviadoPorCorreo, clienteWhatsapp, enviadoPorWhatsapp, usuarioCreacion
                     ) VALUES (
                         @EmpresaId, @SucursalId, @Version, @TipoDoc, @Serie, @Correlativo, @NumeroCompleto, @FechaEmision,
                         @EmpresaRuc, @EmpresaRazonSocial, @EmpresaNombreComercial,
@@ -347,84 +360,118 @@ public class GuiaRemisionRepository : IGuiaRemisionRepository
                         @TerceroTipoDoc, @TerceroNumDoc, @TerceroRznSocial,
                         @Observacion, @DocBajaTipoDoc, @DocBajaNroDoc, @RelDocTipoDoc, @RelDocNroDoc,
                         @CodTraslado, @DesTraslado, @ModTraslado, @FecTraslado,
-                        @CodPuerto, @IndTransbordo, @PesoTotal, @UndPesoTotal, @NumContenedor, @MatPeligrosoClase, @MatPeligrosoNroONU,
-                        @LlegadaUbigeo, @LlegadaDireccion, @PartidaUbigeo, @PartidaDireccion,
+                        @CodPuerto, @IndTransbordo, @PesoTotal, @UndPesoTotal, @NumContenedor,
+                        @MatPeligrosoClase, @MatPeligrosoNroONU,
+                        @LlegadaUbigeo, @LlegadaDireccion, @LlegadaDepartamento, @LlegadaProvincia, @LlegadaDistrito,
+                        @PartidaUbigeo, @PartidaDireccion, @PartidaDepartamento, @PartidaProvincia, @PartidaDistrito,
                         @TransportistaTipoDoc, @TransportistaNumDoc, @TransportistaRznSocial, @TransportistaRegistroMTC,
                         @TransportistaPlaca, @PlacaSecundaria1, @PlacaSecundaria2, @PlacaSecundaria3,
                         @ChoferSecundarioTipoDoc, @ChoferSecundarioDoc, @ChoferSecundarioNombres,
-                        @ChoferSecundarioApellidos, @ChoferSecundarioLicencia, @ChoferSecundario2TipoDoc, @ChoferSecundario2Doc, 
-                        @ChoferSecundario2Nombres, @ChoferSecundario2Apellidos, @ChoferSecundario2Licencia, @ChoferTipoDoc, @ChoferDoc, 
-                        @ChoferNombres, @ChoferApellidos, @ChoferLicencia, @EstadoSunat, @FechaCreacion, @IndVehiculoM1L, @AutorizacionVehiculoEntidad, 
-                        @AutorizacionVehiculoNumero, @PartidaDepartamento, @PartidaProvincia, @PartidaDistrito,
-                        @LlegadaDepartamento, @LlegadaProvincia, @LlegadaDistrito, @ClienteCorreo, @EnviadoPorCorreo, @ClienteWhatsapp, @EnviadoPorWhatsapp, @UsuarioCreacion
+                        @ChoferSecundarioApellidos, @ChoferSecundarioLicencia,
+                        @ChoferSecundario2TipoDoc, @ChoferSecundario2Doc, @ChoferSecundario2Nombres,
+                        @ChoferSecundario2Apellidos, @ChoferSecundario2Licencia,
+                        @ChoferTipoDoc, @ChoferDoc, @ChoferNombres, @ChoferApellidos, @ChoferLicencia,
+                        @IndVehiculoM1L, @AutorizacionVehiculoEntidad, @AutorizacionVehiculoNumero,
+                        @EstadoSunat, @FechaCreacion,
+                        @ClienteCorreo, @EnviadoPorCorreo, @ClienteWhatsapp, @EnviadoPorWhatsapp, @UsuarioCreacion
                     );
                     SELECT LAST_INSERT_ID();";
 
         var newId = await _connection.ExecuteScalarAsync<int>(sql, guia, _transaction);
-
-        // ← Actualizar serie y correlativo
         await ActualizarSerieCorrelativoAsync(guia);
-
         return newId;
     }
 
-    public async Task UpdateEstadoAsync(int guiaId, string estado, string? codigo, string? mensaje, string? ticket, string? cdr, DateTime? fechaEnvio)
+    // ── Reemplaza UpdateXmlGeneradoAsync + UpdateEstadoAsync + UpdateXmlRespuestaSunatAsync ──
+    public async Task UpdateEnvioSunatAsync(
+        int guiaId, string estado, string? codigo, string? mensaje,
+        string? ticket, DateTime? fechaEnvio, string? rutaXml, string? rutaCdr)
     {
         var sql = @"UPDATE guiaRemision SET
-                    estadoSunat           = @Estado,
-                    codigoRespuestaSunat  = @Codigo,
-                    mensajeRespuestaSunat = @Mensaje,
-                    ticketSunat           = @Ticket,
-                    fechaEnvioSunat       = @FechaEnvio,
-                    fechaModificacion     = NOW()
-                WHERE guiaId = @GuiaId";
+                        estadoSunat           = @Estado,
+                        codigoRespuestaSunat  = @Codigo,
+                        mensajeRespuestaSunat = @Mensaje,
+                        ticketSunat           = @Ticket,
+                        fechaEnvioSunat       = @FechaEnvio,
+                        xmlGenerado           = COALESCE(@RutaXml, xmlGenerado),
+                        xmlRespuestaSunat     = COALESCE(@RutaCdr, xmlRespuestaSunat),
+                        fechaModificacion     = NOW()
+                    WHERE guiaId = @GuiaId";
 
         await _connection.ExecuteAsync(sql, new
         {
-            GuiaId = guiaId,
-            Estado = estado,
-            Codigo = codigo,
-            Mensaje = mensaje,
-            Ticket = ticket,
+            GuiaId     = guiaId,
+            Estado     = estado,
+            Codigo     = codigo,
+            Mensaje    = mensaje,
+            Ticket     = ticket,
+            FechaEnvio = fechaEnvio,
+            RutaXml    = rutaXml,
+            RutaCdr    = rutaCdr
+        }, _transaction);
+    }
+
+    // ── Lo sigue usando DeleteAsync en GuiaService ────────────────────────────
+    public async Task UpdateEstadoAsync(
+        int guiaId, string estado, string? codigo, string? mensaje,
+        string? ticket, string? cdr, DateTime? fechaEnvio)
+    {
+        var sql = @"UPDATE guiaRemision SET
+                        estadoSunat           = @Estado,
+                        codigoRespuestaSunat  = @Codigo,
+                        mensajeRespuestaSunat = @Mensaje,
+                        ticketSunat           = @Ticket,
+                        fechaEnvioSunat       = @FechaEnvio,
+                        fechaModificacion     = NOW()
+                    WHERE guiaId = @GuiaId";
+
+        await _connection.ExecuteAsync(sql, new
+        {
+            GuiaId     = guiaId,
+            Estado     = estado,
+            Codigo     = codigo,
+            Mensaje    = mensaje,
+            Ticket     = ticket,
             FechaEnvio = fechaEnvio
         }, _transaction);
     }
 
-    public async Task<bool> ExisteAsync(int empresaId, string tipoDoc, string serie, int correlativo)
+    public async Task<bool> ExisteAsync(
+        int empresaId, string tipoDoc, string serie, int correlativo)
     {
-        var sql = @"SELECT COUNT(1) FROM guiaRemision 
-                WHERE empresaId      = @EmpresaId
-                  AND tipoDoc        = @TipoDoc
-                  AND serie          = @Serie
-                  AND correlativo    = @Correlativo
-                  AND estadoSunat   != 'ANULADO'";
+        var sql = @"SELECT COUNT(1) FROM guiaRemision
+                    WHERE empresaId   = @EmpresaId
+                      AND tipoDoc     = @TipoDoc
+                      AND serie       = @Serie
+                      AND correlativo = @Correlativo
+                      AND estadoSunat != 'ANULADO'";
 
         var count = await _connection.ExecuteScalarAsync<int>(sql, new
         {
-            EmpresaId = empresaId,
-            TipoDoc = tipoDoc,
-            Serie = serie,
+            EmpresaId   = empresaId,
+            TipoDoc     = tipoDoc,
+            Serie       = serie,
             Correlativo = correlativo
         }, _transaction);
 
         return count > 0;
     }
 
+    // ── Privados ──────────────────────────────────────────────────────────────
+
     private async Task ActualizarSerieCorrelativoAsync(GuiaRemision guia)
     {
-        string sql = guia.TipoDoc switch
+        var sql = guia.TipoDoc switch
         {
-            "09" => @"UPDATE sucursal SET 
-                    serieGuiaRemision       = @Serie,
-                    correlativoGuiaRemision = correlativoGuiaRemision + 1
-                  WHERE sucursalId          = @SucursalId
-                  AND estado                = 1",
+            "09" => @"UPDATE sucursal SET
+                          serieGuiaRemision       = @Serie,
+                          correlativoGuiaRemision = correlativoGuiaRemision + 1
+                      WHERE sucursalId = @SucursalId AND estado = 1",
 
-            "31" => @"UPDATE sucursal SET 
-                    serieGuiaTransportista        = @Serie,
-                    correlativoGuiaTransportista  = correlativoGuiaTransportista + 1
-                  WHERE sucursalId                = @SucursalId
-                  AND estado                      = 1",
+            "31" => @"UPDATE sucursal SET
+                          serieGuiaTransportista       = @Serie,
+                          correlativoGuiaTransportista = correlativoGuiaTransportista + 1
+                      WHERE sucursalId = @SucursalId AND estado = 1",
 
             _ => throw new InvalidOperationException($"Tipo de guía '{guia.TipoDoc}' no soportado.")
         };
@@ -432,19 +479,7 @@ public class GuiaRemisionRepository : IGuiaRemisionRepository
         await _connection.ExecuteAsync(sql, new
         {
             guia.Serie,
-            guia.SucursalId   // ← reemplaza EmpresaRuc
+            guia.SucursalId
         }, _transaction);
-    }
-
-    public async Task UpdateXmlGeneradoAsync(int guiaId, string rutaZip)
-    {
-        var sql = @"UPDATE guiaRemision SET xmlGenerado = @RutaZip WHERE guiaId = @GuiaId";
-        await _connection.ExecuteAsync(sql, new { GuiaId = guiaId, RutaZip = rutaZip }, _transaction);
-    }
-
-    public async Task UpdateXmlRespuestaSunatAsync(int guiaId, string rutaCdr)
-    {
-        var sql = @"UPDATE guiaRemision SET xmlRespuestaSunat = @RutaCdr WHERE guiaId = @GuiaId";
-        await _connection.ExecuteAsync(sql, new { GuiaId = guiaId, RutaCdr = rutaCdr }, _transaction);
     }
 }
