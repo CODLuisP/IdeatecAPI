@@ -486,10 +486,17 @@ public class ReportesRepository : IReportesRepository
             AND (@UsuarioCreacion IS NULL OR c.usuarioCreacion = @UsuarioCreacion)
             AND (@ClienteNumDoc IS NULL OR c.clienteNumDoc = @ClienteNumDoc)
             AND (
+                -- Facturas y boletas: filtrar por su propia fecha
                 (c.tipoComprobante NOT IN ('07','08')
                     AND (@FechaDesde IS NULL OR c.fechaEmision >= @FechaDesde)
                     AND (@FechaHasta IS NULL OR c.fechaEmision <= @FechaHasta))
                 OR
+                -- Notas: emitidas en el rango
+                (c.tipoComprobante IN ('07','08')
+                    AND (@FechaDesde IS NULL OR c.fechaEmision >= @FechaDesde)
+                    AND (@FechaHasta IS NULL OR c.fechaEmision <= @FechaHasta))
+                OR
+                -- Notas: cuyo doc afectado está en el rango (aunque la nota sea de otro día)
                 (c.tipoComprobante IN ('07','08')
                     AND c.comprobanteAfectadoID IS NOT NULL
                     AND EXISTS (
@@ -543,7 +550,7 @@ public class ReportesRepository : IReportesRepository
             FROM comprobantedetalle cd
             INNER JOIN comprobante c ON c.comprobanteID = cd.comprobanteId
             WHERE c.empresaRuc = @Ruc
-            AND c.estadoSunat IN ('ACEPTADO', 'ACEPTADO_CON_OBSERVACIONES')
+            AND c.estadoSunat IN ('ACEPTADO', 'ACEPTADO_CON_OBSERVACIONES', 'PENDIENTE')
             AND (@CodEstablecimiento IS NULL OR c.establecimientoAnexo = @CodEstablecimiento)
             AND (@FechaDesde IS NULL OR c.fechaEmision >= @FechaDesde)
             AND (@FechaHasta IS NULL OR c.fechaEmision <= @FechaHasta)
@@ -586,6 +593,7 @@ public class ReportesRepository : IReportesRepository
                 INNER JOIN comprobante c ON c.comprobanteID = p.comprobanteID
                 WHERE c.empresaRuc = @Ruc
                 AND c.estadoSunat IN ('ACEPTADO', 'ACEPTADO_CON_OBSERVACIONES')
+                AND p.medioPago IS NOT NULL AND p.medioPago != ''
                 AND (@CodEstablecimiento IS NULL OR c.establecimientoAnexo = @CodEstablecimiento)
                 AND (@FechaDesde IS NULL OR c.fechaEmision >= @FechaDesde)
                 AND (@FechaHasta IS NULL OR c.fechaEmision <= @FechaHasta)
@@ -604,6 +612,7 @@ public class ReportesRepository : IReportesRepository
                 WHERE cu.estado = 'PAGADO'
                 AND c2.empresaRuc = @Ruc
                 AND c2.estadoSunat IN ('ACEPTADO', 'ACEPTADO_CON_OBSERVACIONES')
+                AND c2.tipoPago IS NOT NULL AND c2.tipoPago != ''
                 AND (@CodEstablecimiento IS NULL OR c2.establecimientoAnexo = @CodEstablecimiento)
                 AND (@FechaDesde IS NULL OR c2.fechaEmision >= @FechaDesde)
                 AND (@FechaHasta IS NULL OR c2.fechaEmision <= @FechaHasta)

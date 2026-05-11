@@ -138,7 +138,7 @@ public class UsuarioRepository : DapperRepository<Usuario>, IUsuarioRepository
             sql += " AND u.ruc = @Ruc";
 
         if (!string.IsNullOrEmpty(sucursalID))
-            sql += " AND u.sucursalID = @SucursalID AND u.rol != 'superadmin'";
+            sql += " AND (u.sucursalID = @SucursalID OR (u.rol = 'superadmin' AND u.ruc = @Ruc))";
 
         if (usuarioId.HasValue)
             sql += " AND u.usuarioID = @UsuarioId";
