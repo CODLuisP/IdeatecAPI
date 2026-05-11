@@ -35,7 +35,7 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
         FROM producto p
         INNER JOIN categoria c
             ON c.categoriaID = p.categoriaID
-        INNER JOIN sucursalProducto sp
+        INNER JOIN sucursalproducto sp
             ON sp.productoID = p.productoID
         WHERE p.estado = 1
         AND sp.estado = 1";
@@ -80,7 +80,7 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
                 c.categoriaNombre   AS CategoriaNombre
             FROM producto p
             INNER JOIN categoria c ON c.categoriaID = p.categoriaID
-            INNER JOIN sucursalProducto sp ON sp.productoID = p.productoID
+            INNER JOIN sucursalproducto sp ON sp.productoID = p.productoID
             INNER JOIN sucursal s ON s.sucursalID = sp.sucursalID
             WHERE p.estado = 1
             AND sp.estado = 1
@@ -127,7 +127,7 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
                 s.nombre              AS NomSucursal
             FROM producto p
             INNER JOIN categoria c ON c.categoriaID = p.categoriaID
-            INNER JOIN sucursalProducto sp ON sp.productoID = p.productoID
+            INNER JOIN sucursalproducto sp ON sp.productoID = p.productoID
             INNER JOIN sucursal s ON s.sucursalID = sp.sucursalID
             WHERE p.estado = 1
             AND sp.estado = 1
@@ -198,7 +198,7 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
             sp.stock              AS Stock
         FROM producto p
         INNER JOIN categoria c ON c.categoriaID = p.categoriaID
-        INNER JOIN sucursalProducto sp ON sp.productoID = p.productoID
+        INNER JOIN sucursalproducto sp ON sp.productoID = p.productoID
         INNER JOIN sucursal s ON s.sucursalID = sp.sucursalID
         WHERE p.estado = 1
           AND sp.estado = 1
@@ -375,7 +375,7 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
                 c.categoriaNombre   AS CategoriaNombre
             FROM producto p
             INNER JOIN categoria c ON c.categoriaID = p.categoriaID
-            INNER JOIN sucursalProducto sp ON sp.productoID = p.productoID
+            INNER JOIN sucursalproducto sp ON sp.productoID = p.productoID
             INNER JOIN sucursal s ON s.sucursalID = sp.sucursalID
             WHERE p.estado = 1
             AND sp.estado = 1
@@ -425,7 +425,7 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
                 c.categoriaNombre   AS CategoriaNombre
             FROM producto p
             INNER JOIN categoria c ON c.categoriaID = p.categoriaID
-            INNER JOIN sucursalProducto sp ON sp.productoID = p.productoID
+            INNER JOIN sucursalproducto sp ON sp.productoID = p.productoID
             INNER JOIN sucursal s ON s.sucursalID = sp.sucursalID
             WHERE p.estado = 1
             AND sp.estado = 1
@@ -482,7 +482,7 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
                 s.nombre            AS NomSucursal
             FROM producto p
             INNER JOIN categoria c ON c.categoriaID = p.categoriaID
-            INNER JOIN sucursalProducto sp ON sp.productoID = p.productoID
+            INNER JOIN sucursalproducto sp ON sp.productoID = p.productoID
             INNER JOIN sucursal s ON s.sucursalID = sp.sucursalID
             WHERE p.estado = 1
             AND sp.estado = 1
