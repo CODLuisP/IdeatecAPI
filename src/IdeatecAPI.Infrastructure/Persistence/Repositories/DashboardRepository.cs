@@ -75,87 +75,83 @@ public class DashboardRepository : IDashboardRepository
                 -- Ventas brutas: solo facturas y boletas
                 COALESCE(SUM(
                     CASE WHEN c.tipoComprobante IN ('01','03')
-                              AND c.estadoSunat NOT IN ('PENDIENTE','RECHAZADO')
-                         THEN CASE WHEN c.tipoMoneda = 'USD'
-                                   THEN c.importeTotal * c.tipoCambio
-                                   ELSE c.importeTotal END
-                         ELSE 0 END
+                            AND c.estadoSunat NOT IN ('RECHAZADO')
+                        THEN CASE WHEN c.tipoMoneda = 'USD'
+                                THEN c.importeTotal * c.tipoCambio
+                                ELSE c.importeTotal END
+                        ELSE 0 END
                 ), 0) AS VentasDelDia,
 
-                -- Conteos (excluyen solo PENDIENTE)
-                SUM(CASE WHEN c.tipoComprobante = '01'
-                          AND c.estadoSunat != 'PENDIENTE' THEN 1 ELSE 0 END) AS FacturasEmitidas,
-                SUM(CASE WHEN c.tipoComprobante = '03'
-                          AND c.estadoSunat != 'PENDIENTE' THEN 1 ELSE 0 END) AS BoletasEmitidas,
-                SUM(CASE WHEN c.tipoComprobante = '07'
-                          AND c.estadoSunat != 'PENDIENTE' THEN 1 ELSE 0 END) AS NotasCreditoEmitidas,
-                SUM(CASE WHEN c.tipoComprobante = '08'
-                          AND c.estadoSunat != 'PENDIENTE' THEN 1 ELSE 0 END) AS NotasDebitoEmitidas,
+                -- Conteos (todos los estados)
+                SUM(CASE WHEN c.tipoComprobante = '01' THEN 1 ELSE 0 END) AS FacturasEmitidas,
+                SUM(CASE WHEN c.tipoComprobante = '03' THEN 1 ELSE 0 END) AS BoletasEmitidas,
+                SUM(CASE WHEN c.tipoComprobante = '07' THEN 1 ELSE 0 END) AS NotasCreditoEmitidas,
+                SUM(CASE WHEN c.tipoComprobante = '08' THEN 1 ELSE 0 END) AS NotasDebitoEmitidas,
 
                 -- Notas de Crédito separadas por fecha del doc afectado
                 COALESCE(SUM(
                     CASE WHEN c.tipoComprobante = '07'
-                              AND c.estadoSunat NOT IN ('PENDIENTE','RECHAZADO')
-                              AND (origen.fechaEmision = @Hoy OR origen.fechaEmision IS NULL)
-                         THEN CASE WHEN c.tipoMoneda = 'USD'
-                                   THEN c.importeTotal * c.tipoCambio
-                                   ELSE c.importeTotal END
-                         ELSE 0 END
+                            AND c.estadoSunat NOT IN ('RECHAZADO')
+                            AND (origen.fechaEmision = @Hoy OR origen.fechaEmision IS NULL)
+                        THEN CASE WHEN c.tipoMoneda = 'USD'
+                                THEN c.importeTotal * c.tipoCambio
+                                ELSE c.importeTotal END
+                        ELSE 0 END
                 ), 0) AS TotalNotasCreditoDelDia,
 
                 COALESCE(SUM(
                     CASE WHEN c.tipoComprobante = '07'
-                              AND c.estadoSunat NOT IN ('PENDIENTE','RECHAZADO')
-                              AND origen.fechaEmision < @Hoy
-                         THEN CASE WHEN c.tipoMoneda = 'USD'
-                                   THEN c.importeTotal * c.tipoCambio
-                                   ELSE c.importeTotal END
-                         ELSE 0 END
+                            AND c.estadoSunat NOT IN ('RECHAZADO')
+                            AND origen.fechaEmision < @Hoy
+                        THEN CASE WHEN c.tipoMoneda = 'USD'
+                                THEN c.importeTotal * c.tipoCambio
+                                ELSE c.importeTotal END
+                        ELSE 0 END
                 ), 0) AS TotalNotasCreditoOtrasFechas,
 
                 -- Notas de Débito separadas por fecha del doc afectado
                 COALESCE(SUM(
                     CASE WHEN c.tipoComprobante = '08'
-                              AND c.estadoSunat NOT IN ('PENDIENTE','RECHAZADO')
-                              AND (origen.fechaEmision = @Hoy OR origen.fechaEmision IS NULL)
-                         THEN CASE WHEN c.tipoMoneda = 'USD'
-                                   THEN c.importeTotal * c.tipoCambio
-                                   ELSE c.importeTotal END
-                         ELSE 0 END
+                            AND c.estadoSunat NOT IN ('RECHAZADO')
+                            AND (origen.fechaEmision = @Hoy OR origen.fechaEmision IS NULL)
+                        THEN CASE WHEN c.tipoMoneda = 'USD'
+                                THEN c.importeTotal * c.tipoCambio
+                                ELSE c.importeTotal END
+                        ELSE 0 END
                 ), 0) AS TotalNotasDebitoDelDia,
 
                 COALESCE(SUM(
                     CASE WHEN c.tipoComprobante = '08'
-                              AND c.estadoSunat NOT IN ('PENDIENTE','RECHAZADO')
-                              AND origen.fechaEmision < @Hoy
-                         THEN CASE WHEN c.tipoMoneda = 'USD'
-                                   THEN c.importeTotal * c.tipoCambio
-                                   ELSE c.importeTotal END
-                         ELSE 0 END
+                            AND c.estadoSunat NOT IN ('RECHAZADO')
+                            AND origen.fechaEmision < @Hoy
+                        THEN CASE WHEN c.tipoMoneda = 'USD'
+                                THEN c.importeTotal * c.tipoCambio
+                                ELSE c.importeTotal END
+                        ELSE 0 END
                 ), 0) AS TotalNotasDebitoOtrasFechas
 
             FROM comprobante c
             LEFT JOIN comprobante origen ON origen.comprobanteID = c.comprobanteAfectadoID
             WHERE {whereBase}
-              AND c.fechaEmision = @Hoy;
+            AND c.fechaEmision = @Hoy;
 
             -- ── Rendimiento últimos 7 días ────────────────────────────────────
             SELECT
                 c.fechaEmision AS Fecha,
                 COALESCE(SUM(
                     CASE WHEN c.tipoComprobante IN ('01','03')
-                              AND c.estadoSunat NOT IN ('PENDIENTE','RECHAZADO')
-                         THEN CASE WHEN c.tipoMoneda = 'USD'
-                                   THEN c.importeTotal * c.tipoCambio
-                                   ELSE c.importeTotal END
-                         ELSE 0 END
+                            AND c.estadoSunat NOT IN ('RECHAZADO')
+                        THEN CASE WHEN c.tipoMoneda = 'USD'
+                                THEN c.importeTotal * c.tipoCambio
+                                ELSE c.importeTotal END
+                        ELSE 0 END
                 ), 0) AS TotalVentas
             FROM comprobante c
             WHERE {whereBase}
-              AND c.tipoComprobante IN ('01','03')
-              AND c.estadoSunat NOT IN ('PENDIENTE','RECHAZADO')
-              AND c.fechaEmision >= @Hace7Dias
-              AND c.fechaEmision <= @Hoy
+            AND c.tipoComprobante IN ('01','03')
+            AND c.estadoSunat NOT IN ('RECHAZADO')
+            AND c.fechaEmision >= @Hace7Dias
+            AND c.fechaEmision <= @Hoy
             GROUP BY c.fechaEmision
             ORDER BY c.fechaEmision ASC;
 
@@ -167,13 +163,12 @@ public class DashboardRepository : IDashboardRepository
                 c.clienteRznSocial AS ClienteRznSocial,
                 c.fechaEmision     AS FechaEmision,
                 CASE WHEN c.tipoMoneda = 'USD'
-                     THEN c.importeTotal * c.tipoCambio
-                     ELSE c.importeTotal END AS ImporteTotal,
+                    THEN c.importeTotal * c.tipoCambio
+                    ELSE c.importeTotal END AS ImporteTotal,
                 c.estadoSunat      AS EstadoSunat
             FROM comprobante c
             WHERE {whereBase}
-              AND c.estadoSunat != 'PENDIENTE'
-              AND c.fechaEmision <= @Hoy
+            AND c.fechaEmision <= @Hoy
             ORDER BY c.fechaEmision DESC, c.horaEmision DESC
             LIMIT @Limite;";
 

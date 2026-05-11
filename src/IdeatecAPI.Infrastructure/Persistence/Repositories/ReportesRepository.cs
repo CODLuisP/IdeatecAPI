@@ -113,20 +113,34 @@ public class ReportesRepository : IReportesRepository
             SELECT
                 COALESCE(SUM(
                     CASE WHEN c.tipoMoneda = 'USD' THEN c.importeTotal * c.tipoCambio
-                         ELSE c.importeTotal END
+                        ELSE c.importeTotal END
                 ), 0) AS TotalVentas,
                 COALESCE(SUM(
                     CASE WHEN c.tipoMoneda = 'USD' THEN c.totalIGV * c.tipoCambio
-                         ELSE c.totalIGV END
-                ), 0) AS TotalIGV,
-                COUNT(*) AS TotalDocumentos
+                        ELSE c.totalIGV END
+                ), 0) AS TotalIGV
             FROM comprobante c
             WHERE {whereBase}
-              AND {whereEstados}
-              AND c.tipoComprobante IN ('01','03')
-              AND c.fechaEmision >= @Desde
-              AND c.fechaEmision <= @Hasta
-              {whereUsuario};";
+            AND c.estadoSunat NOT IN ('RECHAZADO')
+            AND c.tipoComprobante IN ('01','03')
+            AND c.fechaEmision >= @Desde
+            AND c.fechaEmision <= @Hasta
+            {whereUsuario};";
+        
+        var sqlTotalDocs = $@"
+            SELECT COUNT(*) 
+            FROM comprobante c
+            WHERE {whereBase}
+            AND c.estadoSunat NOT IN ('RECHAZADO')
+            AND c.fechaEmision >= @Desde
+            AND c.fechaEmision <= @Hasta
+            {whereUsuario};";
+
+        var totalDocs = await _connection.QueryFirstOrDefaultAsync<int>(
+            sqlTotalDocs, dpActual, _transaction);
+        
+        var totalDocsAnterior = await _connection.QueryFirstOrDefaultAsync<int>(
+            sqlTotalDocs, dpAnterior, _transaction);
 
         var kpiActual = await _connection.QueryFirstOrDefaultAsync<KpiRawDto>(
             sqlKpiActual, dpActual, _transaction) ?? new KpiRawDto();
@@ -151,7 +165,7 @@ public class ReportesRepository : IReportesRepository
                 SUM(CASE WHEN c.tipoComprobante = '08' THEN 1 ELSE 0 END) AS NotasDebito
             FROM comprobante c
             WHERE {whereBase}
-              AND {whereEstados}
+              AND c.estadoSunat NOT IN ('RECHAZADO')
               AND c.fechaEmision >= @Desde
               AND c.fechaEmision <= @Hasta
               {whereUsuario};";
@@ -188,7 +202,7 @@ public class ReportesRepository : IReportesRepository
                 ), 0) AS Total
             FROM comprobante c
             WHERE {whereBase}
-              AND {whereEstados}
+              AND c.estadoSunat NOT IN ('RECHAZADO')
               AND c.tipoComprobante IN ('01','03')
               AND c.fechaEmision >= @Desde
               AND c.fechaEmision <= @Hasta
@@ -215,10 +229,10 @@ public class ReportesRepository : IReportesRepository
             {
                 TotalVentas            = kpiActual.TotalVentas,
                 TotalIGV               = kpiActual.TotalIGV,
-                TotalDocumentos        = kpiActual.TotalDocumentos,
+                TotalDocumentos        = totalDocs,
                 TotalVentasAnterior    = kpiAnterior.TotalVentas,
                 TotalIGVAnterior       = kpiAnterior.TotalIGV,
-                TotalDocumentosAnterior = kpiAnterior.TotalDocumentos,
+                TotalDocumentosAnterior = totalDocsAnterior,
             },
             Grafico      = grafico,
             Distribucion = distribucion,
@@ -498,7 +512,7 @@ public class ReportesRepository : IReportesRepository
             ClienteNumDoc = clienteNumDoc,
             Limit = limit
         }, _transaction);
-        }
+    }
 
     public async Task<IEnumerable<ProductoTopDTO>> GetProductosTopAsync(
         string ruc,
@@ -561,46 +575,47 @@ public class ReportesRepository : IReportesRepository
         int? limit = null)
     {
         var sql = @"
-            SELECT 
-                medioPago               AS MedioPago,
-                COUNT(*)                AS VecesUsado,
-                SUM(p.monto)            AS MontoTotal,
-                AVG(p.monto)            AS PromedioMonto
-            FROM pago p
-            INNER JOIN comprobante c ON c.comprobanteID = p.comprobanteID
-            WHERE c.empresaRuc = @Ruc
-            AND c.estadoSunat IN ('ACEPTADO', 'ACEPTADO_CON_OBSERVACIONES')
-            AND (@CodEstablecimiento IS NULL OR c.establecimientoAnexo = @CodEstablecimiento)
-            AND (@FechaDesde IS NULL OR c.fechaEmision >= @FechaDesde)
-            AND (@FechaHasta IS NULL OR c.fechaEmision <= @FechaHasta)
-            AND (@UsuarioCreacion IS NULL OR c.usuarioCreacion = @UsuarioCreacion)
-            AND (@ClienteNumDoc IS NULL OR c.clienteNumDoc = @ClienteNumDoc)
+            SELECT MedioPago, SUM(VecesUsado) AS VecesUsado, SUM(MontoTotal) AS MontoTotal, AVG(PromedioMonto) AS PromedioMonto
+            FROM (
+                SELECT 
+                    medioPago               AS MedioPago,
+                    COUNT(*)                AS VecesUsado,
+                    SUM(p.monto)            AS MontoTotal,
+                    AVG(p.monto)            AS PromedioMonto
+                FROM pago p
+                INNER JOIN comprobante c ON c.comprobanteID = p.comprobanteID
+                WHERE c.empresaRuc = @Ruc
+                AND c.estadoSunat IN ('ACEPTADO', 'ACEPTADO_CON_OBSERVACIONES')
+                AND (@CodEstablecimiento IS NULL OR c.establecimientoAnexo = @CodEstablecimiento)
+                AND (@FechaDesde IS NULL OR c.fechaEmision >= @FechaDesde)
+                AND (@FechaHasta IS NULL OR c.fechaEmision <= @FechaHasta)
+                AND (@UsuarioCreacion IS NULL OR c.usuarioCreacion = @UsuarioCreacion)
+                AND (@ClienteNumDoc IS NULL OR c.clienteNumDoc = @ClienteNumDoc)
 
-            UNION ALL
+                UNION ALL
 
-            SELECT
-                c2.tipoPago             AS MedioPago,
-                COUNT(*)                AS VecesUsado,
-                SUM(cu.monto)           AS MontoTotal,
-                AVG(cu.monto)           AS PromedioMonto
-            FROM cuota cu
-            INNER JOIN comprobante c2 ON c2.comprobanteID = cu.comprobanteID
-            WHERE cu.estado = 'PAGADO'
-            AND c2.empresaRuc = @Ruc
-            AND c2.estadoSunat IN ('ACEPTADO', 'ACEPTADO_CON_OBSERVACIONES')
-            AND (@CodEstablecimiento IS NULL OR c2.establecimientoAnexo = @CodEstablecimiento)
-            AND (@FechaDesde IS NULL OR c2.fechaEmision >= @FechaDesde)
-            AND (@FechaHasta IS NULL OR c2.fechaEmision <= @FechaHasta)
-            AND (@UsuarioCreacion IS NULL OR c2.usuarioCreacion = @UsuarioCreacion)
-            AND (@ClienteNumDoc IS NULL OR c2.clienteNumDoc = @ClienteNumDoc)
-
-            -- Agrupar ambos resultados juntos
+                SELECT
+                    c2.tipoPago             AS MedioPago,
+                    COUNT(*)                AS VecesUsado,
+                    SUM(cu.monto)           AS MontoTotal,
+                    AVG(cu.monto)           AS PromedioMonto
+                FROM cuota cu
+                INNER JOIN comprobante c2 ON c2.comprobanteID = cu.comprobanteID
+                WHERE cu.estado = 'PAGADO'
+                AND c2.empresaRuc = @Ruc
+                AND c2.estadoSunat IN ('ACEPTADO', 'ACEPTADO_CON_OBSERVACIONES')
+                AND (@CodEstablecimiento IS NULL OR c2.establecimientoAnexo = @CodEstablecimiento)
+                AND (@FechaDesde IS NULL OR c2.fechaEmision >= @FechaDesde)
+                AND (@FechaHasta IS NULL OR c2.fechaEmision <= @FechaHasta)
+                AND (@UsuarioCreacion IS NULL OR c2.usuarioCreacion = @UsuarioCreacion)
+                AND (@ClienteNumDoc IS NULL OR c2.clienteNumDoc = @ClienteNumDoc)
+            ) AS union_medios
             GROUP BY MedioPago
             ORDER BY VecesUsado DESC"
             + (limit.HasValue ? " LIMIT @Limit" : "");
 
-        // Agrupar en memoria los resultados del UNION
-        var raw = await _connection.QueryAsync<MedioPagoTopDTO>(sql, new
+        // El SQL ya agrupa y ordena, retornamos directo
+        return await _connection.QueryAsync<MedioPagoTopDTO>(sql, new
         {
             Ruc = ruc,
             CodEstablecimiento = codEstablecimiento,
@@ -610,20 +625,6 @@ public class ReportesRepository : IReportesRepository
             ClienteNumDoc = clienteNumDoc,
             Limit = limit
         }, _transaction);
-
-        // Consolidar por MedioPago por si viene duplicado del UNION
-        var consolidado = raw
-            .GroupBy(x => x.MedioPago?.ToUpper() ?? "SIN MEDIO")
-            .Select(g => new MedioPagoTopDTO
-            {
-                MedioPago     = g.Key,
-                VecesUsado    = g.Sum(x => x.VecesUsado),
-                MontoTotal    = g.Sum(x => x.MontoTotal),
-                PromedioMonto = g.Average(x => x.PromedioMonto)
-            })
-            .OrderByDescending(x => x.VecesUsado);
-
-        return limit.HasValue ? consolidado.Take(limit.Value) : consolidado;
     }
 
     private const string BaseSelectReportes = @"
@@ -689,5 +690,4 @@ internal class KpiRawDto
 {
     public decimal TotalVentas { get; set; }
     public decimal TotalIGV { get; set; }
-    public int TotalDocumentos { get; set; }
 }
