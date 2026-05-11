@@ -62,4 +62,13 @@ public interface IReportesRepository
         int? usuarioCreacion = null,
         string? clienteNumDoc = null,
         int? limit = null);
+    
+    Task<IEnumerable<Comprobante>> GetListadoControlCajaAsync(
+        string ruc,
+        string? codEstablecimiento = null,
+        DateTime? fechaDesde = null,
+        DateTime? fechaHasta = null,
+        int? usuarioCreacion = null,
+        string? clienteNumDoc = null,
+        int? limit = null);
 }

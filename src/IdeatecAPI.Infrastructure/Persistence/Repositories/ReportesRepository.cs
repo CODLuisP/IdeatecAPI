@@ -627,6 +627,38 @@ public class ReportesRepository : IReportesRepository
         }, _transaction);
     }
 
+    public async Task<IEnumerable<Comprobante>> GetListadoControlCajaAsync(
+        string ruc,
+        string? codEstablecimiento = null,
+        DateTime? fechaDesde = null,
+        DateTime? fechaHasta = null,
+        int? usuarioCreacion = null,
+        string? clienteNumDoc = null,
+        int? limit = null)
+    {
+        var sql = BaseSelectReportes + @"
+            WHERE c.empresaRuc = @Ruc
+            AND c.estadoSunat NOT IN ('RECHAZADO')
+            AND (@CodEstablecimiento IS NULL OR c.establecimientoAnexo = @CodEstablecimiento)
+            AND (@FechaDesde IS NULL OR c.fechaEmision >= @FechaDesde)
+            AND (@FechaHasta IS NULL OR c.fechaEmision <= @FechaHasta)
+            AND (@UsuarioCreacion IS NULL OR c.usuarioCreacion = @UsuarioCreacion)
+            AND (@ClienteNumDoc IS NULL OR c.clienteNumDoc = @ClienteNumDoc)
+            ORDER BY c.fechaEmision DESC"
+            + (limit.HasValue ? " LIMIT @Limit" : "");
+
+        return await _connection.QueryAsync<Comprobante>(sql, new
+        {
+            Ruc = ruc,
+            CodEstablecimiento = codEstablecimiento,
+            FechaDesde = fechaDesde,
+            FechaHasta = fechaHasta,
+            UsuarioCreacion = usuarioCreacion,
+            ClienteNumDoc = clienteNumDoc,
+            Limit = limit
+        }, _transaction);
+    }
+
     private const string BaseSelectReportes = @"
         SELECT 
             c.comprobanteID           AS ComprobanteId,
