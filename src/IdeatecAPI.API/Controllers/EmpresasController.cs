@@ -38,9 +38,7 @@ public class CompaniesController : ControllerBase
     /// Retorna el logoBase64 de la empresa. No requiere autenticación.
     /// </summary>
     [HttpGet("logo")]
-    [AllowAnonymous]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetLogo([FromQuery] string ruc)
     {
         if (string.IsNullOrWhiteSpace(ruc))
@@ -49,7 +47,7 @@ public class CompaniesController : ControllerBase
         var logo = await _unitOfWork.Empresas.GetLogoByRucAsync(ruc);
 
         if (logo == null)
-            return NotFound(new { success = false, message = $"No se encontró logo para el RUC {ruc}" });
+            return Ok(new { success = false, message = $"No se encontró logo para el RUC {ruc}" });
 
         return Ok(new { success = true, logoBase64 = logo });
     }
