@@ -361,6 +361,36 @@ public class ComprobantesController : ControllerBase
         }
     }
 
+    [HttpPost("GenerarYEnviar")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GenerarYEnviar([FromBody] GenerarComprobanteDTO dto)
+    {
+        try
+        {
+            // 1. Generar y Guardar en DB
+            var resultadoGenerar = await _comprobanteService.GenerarComprobanteAsync(dto);
+            if (!resultadoGenerar.Exitoso)
+                return BadRequest(resultadoGenerar);
+
+            // 2. Enviar a SUNAT inmediatamente
+            var resultadoEnvio = await _comprobanteService.SendToSunatAsync(resultadoGenerar.ComprobanteId!.Value);
+            
+            // Retornamos el resultado del envío (que contiene el CDR si fue exitoso)
+            return resultadoEnvio.Exitoso ? Ok(resultadoEnvio) : BadRequest(resultadoEnvio);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error en emisión directa de comprobante {Serie}-{Correlativo}", dto.Serie, dto.Correlativo);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error en la emisión directa.",
+                detalle = ex.Message
+            });
+        }
+    }
+
     [HttpPost("GenerarXml")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]

@@ -58,7 +58,10 @@ public class SunatSenderService : ISunatSenderService
 
         var client = _httpClientFactory.CreateClient();
         var request = new HttpRequestMessage(HttpMethod.Post, url);
-        request.Headers.Add("SOAPAction", "");
+        
+        // SUNAT a veces requiere el SOAPAction específico para evitar errores 500/HTML
+        request.Headers.Add("SOAPAction", "urn:sendBill"); 
+        
         request.Content = new StringContent(soapEnvelope, Encoding.UTF8, "text/xml");
 
         HttpResponseMessage response;
@@ -77,6 +80,18 @@ public class SunatSenderService : ISunatSenderService
         }
 
         var responseContent = await response.Content.ReadAsStringAsync();
+
+        // Si la respuesta es HTML, es un error del servidor/WAF de SUNAT
+        if (responseContent.TrimStart().StartsWith("<!DOCTYPE html", StringComparison.OrdinalIgnoreCase))
+        {
+            return new SunatResponse
+            {
+                Success = false,
+                CodigoRespuesta = "SUNAT_ERROR_HTML",
+                Descripcion = "SUNAT devolvió una página de error (HTML). Esto suele deberse a que el servidor BETA está caído o ha bloqueado la petición temporalmente. Intente nuevamente en unos minutos."
+            };
+        }
+
         return ParseSoapResponse(responseContent);
     }
 
