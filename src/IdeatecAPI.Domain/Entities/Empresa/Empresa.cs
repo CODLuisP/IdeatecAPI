@@ -20,6 +20,7 @@ public class Empresa
     public DateTime CreadoEn { get; set; }
     public string? Telefono { get; set; }
     public string? Email { get; set; }
+    
     public string? LogoBase64 { get; set; }
     public string? CertificadoPem { get; set; }
     public string? CertificadoPassword { get; set; }
