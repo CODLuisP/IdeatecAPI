@@ -1,3 +1,4 @@
+using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Application.Features.Empresas.DTOs;
 using IdeatecAPI.Application.Features.Empresas.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -16,10 +17,12 @@ public class FileUploadRequest
 public class CompaniesController : ControllerBase
 {
     private readonly IEmpresaService _empresaService;
+    private readonly IUnitOfWork _unitOfWork;
 
-    public CompaniesController(IEmpresaService empresaService)
+    public CompaniesController(IEmpresaService empresaService, IUnitOfWork unitOfWork)
     {
         _empresaService = empresaService;
+        _unitOfWork = unitOfWork;
     }
 
     [HttpGet]
@@ -28,6 +31,27 @@ public class CompaniesController : ControllerBase
     {
         var empresas = await _empresaService.GetAllEmpresasAsync();
         return Ok(empresas);
+    }
+
+    /// <summary>
+    /// GET api/companies/logo?ruc=20123456789
+    /// Retorna el logoBase64 de la empresa. No requiere autenticación.
+    /// </summary>
+    [HttpGet("logo")]
+    [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetLogo([FromQuery] string ruc)
+    {
+        if (string.IsNullOrWhiteSpace(ruc))
+            return BadRequest(new { success = false, message = "El RUC es requerido" });
+
+        var logo = await _unitOfWork.Empresas.GetLogoByRucAsync(ruc);
+
+        if (logo == null)
+            return NotFound(new { success = false, message = $"No se encontró logo para el RUC {ruc}" });
+
+        return Ok(new { success = true, logoBase64 = logo });
     }
 
     [HttpGet("{ruc}")]

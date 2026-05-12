@@ -135,7 +135,7 @@ public class UsuarioController : ControllerBase
             usuarioExistente.Rol = dto.Rol;
 
         if (!string.IsNullOrEmpty(dto.NuevaContrasena))
-            usuarioExistente.Password = BCrypt.Net.BCrypt.HashPassword(dto.NuevaContrasena);
+            usuarioExistente.Password = dto.NuevaContrasena;
 
         var actualizado = await _unitOfWork.Usuarios.UpdateAsync(usuarioExistente);
         if (!actualizado)
