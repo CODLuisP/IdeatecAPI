@@ -10,6 +10,7 @@ namespace IdeatecAPI.API.Controllers;
 //[Authorize]
 public class NotesController : ControllerBase
 {
+    
     private readonly INoteService _noteService;
 
     public NotesController(

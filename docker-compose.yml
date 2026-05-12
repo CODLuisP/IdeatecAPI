@@ -7,9 +7,10 @@ services:
     ports:
       - "5004:8080"
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:8080
-      - ConnectionStrings__DefaultConnection=server=db-static-web-app-do-user-29042775-0.e.db.ondigitalocean.com;port=25060;database=ideafactu;uid=factuadmin;password=AVNS_yjLC46it_1VXv0zcI9C;Charset=utf8mb4;Pooling=true;Allow User Variables=True;SslMode=Required;
+      - ConnectionStrings__ProductionConnection=server=db-static-web-app-do-user-29042775-0.e.db.ondigitalocean.com;port=25060;database=ideafactu;uid=factuadmin;password=AVNS_yjLC46it_1VXv0zcI9C;Charset=utf8mb4;Pooling=true;MinimumPoolSize=3;MaximumPoolSize=50;ConnectionTimeout=5;Allow User Variables=True;SslMode=Required;
+      - ConnectionStrings__BetaConnection=server=63.251.107.133;port=3306;database=ideafactu;uid=velsatuser;password=velsatAPI23;Charset=utf8mb4;Pooling=true;MinimumPoolSize=2;MaximumPoolSize=30;ConnectionTimeout=5;Allow User Variables=True;SslMode=None;
       - JwtSettings__Secret=0c6e838cbd906bab6c80bfeff56fb3e7c6f2c64ba7739054934953acce297c95
       - JwtSettings__Issuer=IdeatecAPI
       - JwtSettings__Audience=IdeatecClient
@@ -22,9 +23,10 @@ services:
       - Smtp__Port=587
       - Smtp__Username=MS_82TXn4@ideatec.com.pe
       - Smtp__Password=mssp.jlcsV1V.jy7zpl9knyp45vx6.2DmUQvj
+      - Smtp__ApiKey=mlsn.703ae2fd8dc61cdc70947b80c28ff29e2ffb9a4e50bd0b1cc73ca6ea6d09ecd7
       - Smtp__FromEmail=factunet@ideatec.com.pe
       - Smtp__FromName=Factunet
-      - App__FrontendUrl=http://localhost:3000
+      - App__FrontendUrl=https://factunet.ideatec.com.pe
     volumes:
       - facturacion_storage:/app/storage
     restart: unless-stopped
