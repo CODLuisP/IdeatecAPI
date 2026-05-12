@@ -1,6 +1,7 @@
 using System.Data;
 using Dapper;
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
+using IdeatecAPI.Application.Features.Productos.DTO;
 using IdeatecAPI.Domain.Entities;
 
 namespace IdeatecAPI.Infrastructure.Persistence.Repositories;
@@ -504,6 +505,84 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
         );
 
         return productos;
+    }
+
+    public async Task<IEnumerable<ReporteProductoItemDTO>> GetReporteProductosAsync(ReporteProductoFiltroDTO filtro)
+    {
+        var sql = new System.Text.StringBuilder(@"
+            SELECT
+                p.codigo                AS Codigo,
+                p.nomProducto           AS NomProducto,
+                c.categoriaNombre       AS CategoriaNombre,
+                p.tipoProducto          AS TipoProducto,
+                p.unidadMedida          AS UnidadMedida,
+                p.tipoAfectacionIGV     AS TipoAfectacionIGV,
+                p.incluirIGV            AS IncluirIGV,
+                s.nombre                AS NomSucursal,
+                sp.precioUnitario       AS PrecioUnitario,
+                sp.stock                AS Stock
+            FROM producto p
+            INNER JOIN categoria c   ON c.categoriaID  = p.categoriaID
+            INNER JOIN sucursalproducto sp ON sp.productoID = p.productoID
+            INNER JOIN sucursal s    ON s.sucursalID   = sp.sucursalID
+            WHERE p.estado  = 1
+            AND sp.estado = 1
+            AND s.estado  = 1
+            AND s.empresaRuc = @EmpresaRuc");
+    
+        var parameters = new DynamicParameters();
+        parameters.Add("EmpresaRuc", filtro.EmpresaRuc);
+    
+        // Filtro sucursal
+        if (filtro.SucursalId.HasValue)
+        {
+            sql.Append(" AND sp.sucursalID = @SucursalId");
+            parameters.Add("SucursalId", filtro.SucursalId.Value);
+        }
+    
+        // Filtro categoría
+        if (filtro.CategoriaId.HasValue)
+        {
+            sql.Append(" AND p.categoriaID = @CategoriaId");
+            parameters.Add("CategoriaId", filtro.CategoriaId.Value);
+        }
+    
+        // Filtro tipo afectación IGV (10=Gravado, 20=Exonerado, 30=Inafecto)
+        if (!string.IsNullOrWhiteSpace(filtro.IgvTipo))
+        {
+            sql.Append(" AND p.tipoAfectacionIGV = @IgvTipo");
+            parameters.Add("IgvTipo", filtro.IgvTipo);
+        }
+    
+        // Filtro tipo producto (Bien / Servicio)
+        if (!string.IsNullOrWhiteSpace(filtro.TipoProducto))
+        {
+            sql.Append(" AND p.tipoProducto = @TipoProducto");
+            parameters.Add("TipoProducto", filtro.TipoProducto);
+        }
+    
+        // Filtro stock
+        switch (filtro.StockFiltro?.ToLower())
+        {
+            case "sin_stock":
+                sql.Append(" AND sp.stock = 0");
+                break;
+            case "con_stock":
+                sql.Append(" AND sp.stock > 0");
+                break;
+            case "menor_a" when filtro.StockValor.HasValue:
+                sql.Append(" AND sp.stock < @StockValor");
+                parameters.Add("StockValor", filtro.StockValor.Value);
+                break;
+        }
+    
+        sql.Append(" ORDER BY s.nombre, p.nomProducto");
+    
+        return await _connection.QueryAsync<ReporteProductoItemDTO>(
+            sql.ToString(),
+            parameters,
+            transaction: _transaction
+        );
     }
 
 }

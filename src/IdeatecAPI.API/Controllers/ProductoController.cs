@@ -392,4 +392,70 @@ public class ProductoController : ControllerBase
             });
         }
     }
+
+    [HttpGet("reporte-excel")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GenerarReporteExcelAsync(
+        [FromQuery] string empresaRuc,
+        [FromQuery] int? sucursalId       = null,
+        [FromQuery] int? categoriaId      = null,
+        [FromQuery] string? igvTipo       = null,
+        [FromQuery] string? tipoProducto  = null,
+        [FromQuery] string? stockFiltro   = null,
+        [FromQuery] int? stockValor       = null,
+        [FromQuery] string? tituloReporte = null)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(empresaRuc))
+                return BadRequest(new { mensaje = "El parámetro 'empresaRuc' es obligatorio." });
+    
+            // Validar stockFiltro
+            var stockFiltrosValidos = new[] { "todos", "con_stock", "sin_stock", "menor_a" };
+            if (!string.IsNullOrWhiteSpace(stockFiltro) &&
+                !stockFiltrosValidos.Contains(stockFiltro.ToLower()))
+                return BadRequest(new { mensaje = $"Valor de 'stockFiltro' inválido. Valores permitidos: {string.Join(", ", stockFiltrosValidos)}." });
+    
+            if (stockFiltro?.ToLower() == "menor_a" && !stockValor.HasValue)
+                return BadRequest(new { mensaje = "Se requiere 'stockValor' cuando 'stockFiltro' es 'menor_a'." });
+    
+            var filtro = new ReporteProductoFiltroDTO
+            {
+                EmpresaRuc    = empresaRuc,
+                SucursalId    = sucursalId,
+                CategoriaId   = categoriaId,
+                IgvTipo       = igvTipo,
+                TipoProducto  = tipoProducto,
+                StockFiltro   = stockFiltro,
+                StockValor    = stockValor,
+                TituloReporte = tituloReporte
+            };
+    
+            var excelBytes = await _productoService.GenerarReporteExcelAsync(filtro);
+    
+            var nombreArchivo = $"reporte-productos_{empresaRuc}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+    
+            return File(
+                excelBytes,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                nombreArchivo
+            );
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning("Parámetro inválido en reporte de productos: {Mensaje}", ex.Message);
+            return BadRequest(new { mensaje = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al generar reporte de productos para RUC {EmpresaRuc}", empresaRuc);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al generar el reporte.",
+                detalle = ex.Message
+            });
+        }
+    }
 }

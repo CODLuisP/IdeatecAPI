@@ -80,6 +80,7 @@ public static class DependencyInjection
         services.AddScoped<IUsuarioService, UsuarioService>();
         services.AddScoped<IProductoService, ProductoService>();
         services.AddScoped<ISucursalService, SucursalService>();
+        services.AddScoped<IProductoExcelService, ProductoExcelService>();
 
         // Guía de Remisión
         services.AddScoped<IGuiaService, GuiaService>();
