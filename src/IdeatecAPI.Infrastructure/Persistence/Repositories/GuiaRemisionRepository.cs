@@ -439,12 +439,13 @@ public class GuiaRemisionRepository : IGuiaRemisionRepository
     public async Task<bool> ExisteAsync(
         int empresaId, string tipoDoc, string serie, int correlativo)
     {
-        var sql = @"SELECT COUNT(1) sion
-                    WHERE empresaId   = @EmpresaId
-                      AND tipoDoc     = @TipoDoc
-                      AND serie       = @Serie
-                      AND correlativo = @Correlativo
-                      AND estadoSunat != 'ANULADO'";
+        var sql = @"SELECT COUNT(1)
+            FROM guiaremision
+            WHERE empresaId   = @EmpresaId
+              AND tipoDoc     = @TipoDoc
+              AND serie       = @Serie
+              AND correlativo = @Correlativo
+              AND estadoSunat != 'ANULADO'";
 
         var count = await _connection.ExecuteScalarAsync<int>(sql, new
         {
