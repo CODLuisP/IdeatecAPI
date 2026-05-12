@@ -1,3 +1,4 @@
+using IdeatecAPI.Application.Features.Productos.DTO;
 using IdeatecAPI.Domain.Entities;
 
 namespace IdeatecAPI.Application.Common.Interfaces.Persistence;
@@ -11,6 +12,7 @@ public interface IProductoRepository : IRepository<Producto>
     Task<IEnumerable<Producto>> SearchProductosRucDisponiblesAsync(int sucursalId, string palabra);
     Task<IEnumerable<Producto>> SearchBySucursalAsync(int sucursalId, string palabra);
     Task<IEnumerable<Producto>> SearchByRucAsync(string empresaRuc, string palabra);
+    Task<IEnumerable<ReporteProductoItemDTO>> GetReporteProductosAsync(ReporteProductoFiltroDTO filtro);
     Task<Producto?> GetProductoByIdAsync(int productoId, int sucursalId);
     Task<bool> ExisteProductoAsync(string codigo);
     Task<Producto> RegistrarProductoAsync(Producto producto);

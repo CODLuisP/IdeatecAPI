@@ -1,6 +1,7 @@
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Application.Features.Productos.DTO;
 using IdeatecAPI.Domain.Entities;
+using ClosedXML.Excel;
 
 namespace IdeatecAPI.Application.Features.Productos.Services;
 
@@ -19,15 +20,18 @@ public interface IProductoService
     Task<bool> ActualizarStockAsync(IEnumerable<ActualizarStockDTO> dtos);
     Task<bool> DevolverStockAsync(IEnumerable<DevolverStockDTO> dtos);
     Task<bool> EliminarSucursalProductoAsync(int sucursalProductoId);
+    Task<byte[]> GenerarReporteExcelAsync(ReporteProductoFiltroDTO filtro);
 }
 
 public class ProductoService : IProductoService
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IProductoExcelService _excelService;
 
-    public ProductoService(IUnitOfWork unitOfWork)
+    public ProductoService(IUnitOfWork unitOfWork, IProductoExcelService excelService)
     {
         _unitOfWork = unitOfWork;
+        _excelService = excelService;
     }
 
     public async Task<IEnumerable<ObtenerProductoDTO>> GetAllProductosAsync(int sucursalId)
@@ -303,4 +307,14 @@ public class ProductoService : IProductoService
             CategoriaNombre = p.Categoria.CategoriaNombre,
         }
     };
+
+    public async Task<byte[]> GenerarReporteExcelAsync(ReporteProductoFiltroDTO filtro)
+    {
+        if (string.IsNullOrWhiteSpace(filtro.EmpresaRuc))
+            throw new ArgumentException("El RUC de la empresa es obligatorio.");
+
+        var items = await _unitOfWork.Productos.GetReporteProductosAsync(filtro);
+        return _excelService.GenerarReporteProductos(items, filtro);
+    }
+
 }
