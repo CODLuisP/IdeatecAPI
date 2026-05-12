@@ -40,26 +40,24 @@ public class SunatSenderService : ISunatSenderService
     }
 
     public async Task<SunatResponse> SendNoteAsync(
-        byte[] xmlFirmadoBytes,   // ← recibe bytes directamente
+        byte[] xmlFirmadoBytes,
         string nombreArchivo,
         string ruc,
         string solUsuario,
         string solClave,
         string environment)
     {
-        // ── 1. Empaquetar bytes en ZIP ────────────────────────────────────
         var zipBase64 = ComprimirXml(xmlFirmadoBytes, nombreArchivo + ".xml");
-
-        // ── 2. Construir el SOAP envelope ─────────────────────────────────
-        var soapEnvelope = BuildSoapEnvelope(nombreArchivo, zipBase64);
-
-        // ── 3. Enviar a SUNAT ─────────────────────────────────────────────
         var url = environment.ToLower() == "beta" ? UrlBeta : UrlProduccion;
-        var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{ruc}{solUsuario}:{solClave}"));
+        
+        // SUNAT espera RUC + Usuario
+        var usuarioSol = ruc + solUsuario;
+
+        // ── 2. Construir el SOAP envelope con Seguridad ───────────────────
+        var soapEnvelope = BuildSoapEnvelope(nombreArchivo, zipBase64, usuarioSol, solClave);
 
         var client = _httpClientFactory.CreateClient();
         var request = new HttpRequestMessage(HttpMethod.Post, url);
-        request.Headers.Authorization = new AuthenticationHeaderValue("Basic", credentials);
         request.Headers.Add("SOAPAction", "");
         request.Content = new StringContent(soapEnvelope, Encoding.UTF8, "text/xml");
 
@@ -79,8 +77,6 @@ public class SunatSenderService : ISunatSenderService
         }
 
         var responseContent = await response.Content.ReadAsStringAsync();
-
-        // ── 4. Parsear respuesta SOAP ─────────────────────────────────────
         return ParseSoapResponse(responseContent);
     }
 
@@ -93,18 +89,24 @@ public class SunatSenderService : ISunatSenderService
         {
             var entry = zip.CreateEntry(nombreArchivo, CompressionLevel.Optimal);
             using var entryStream = entry.Open();
-            entryStream.Write(xmlBytes, 0, xmlBytes.Length); // ← sin re-encodear
+            entryStream.Write(xmlBytes, 0, xmlBytes.Length);
         }
         return Convert.ToBase64String(memStream.ToArray());
     }
 
-    private static string BuildSoapEnvelope(string nombreArchivo, string zipBase64) => $@"
-        <soapenv:Envelope
-            xmlns:soapenv=""http://schemas.xmlsoap.org/soap/envelope/""
-            xmlns:ser=""http://service.sunat.gob.pe""
-            xmlns:xsd=""http://www.w3.org/2001/XMLSchema""
-            xmlns:xsi=""http://www.w3.org/2001/XMLSchema-instance"">
-            <soapenv:Header/>
+    private static string BuildSoapEnvelope(string nombreArchivo, string zipBase64, string usuario, string clave) => $@"
+        <soapenv:Envelope 
+            xmlns:soapenv=""http://schemas.xmlsoap.org/soap/envelope/"" 
+            xmlns:ser=""http://service.sunat.gob.pe"" 
+            xmlns:wsse=""http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd"">
+            <soapenv:Header>
+                <wsse:Security>
+                    <wsse:UsernameToken>
+                        <wsse:Username>{usuario}</wsse:Username>
+                        <wsse:Password>{clave}</wsse:Password>
+                    </wsse:UsernameToken>
+                </wsse:Security>
+            </soapenv:Header>
             <soapenv:Body>
                 <ser:sendBill>
                     <fileName>{nombreArchivo}.zip</fileName>
@@ -139,7 +141,7 @@ public class SunatSenderService : ISunatSenderService
                 {
                     Success = false,
                     CodigoRespuesta = "SIN_RESPUESTA",
-                    Descripcion = "SUNAT no devolvió CDR"
+                    Descripcion = $"SUNAT no devolvió CDR. Respuesta raw: {(soapResponse.Length > 150 ? soapResponse.Substring(0, 150) : soapResponse)}"
                 };
             }
 
