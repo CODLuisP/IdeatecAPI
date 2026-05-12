@@ -25,14 +25,14 @@ public class ComunicacionBajaDetalleRepository : IComunicacionBajaDetalleReposit
                         serie         AS Serie,
                         correlativo   AS Correlativo,
                         desMotivoBaja AS DesMotivoBaja
-                    FROM comunicacionBajaDetalle
+                    FROM comunicacionbajadetalle
                     WHERE bajaId = @BajaId";
         return await _connection.QueryAsync<ComunicacionBajaDetalle>(sql, new { BajaId = bajaId }, _transaction);
     }
 
     public async Task CreateAsync(ComunicacionBajaDetalle detalle)
     {
-        var sql = @"INSERT INTO comunicacionBajaDetalle (
+        var sql = @"INSERT INTO comunicacionbajadetalle (
                         bajaId, tipoDoc, serie, correlativo, desMotivoBaja
                     ) VALUES (
                         @BajaId, @TipoDoc, @Serie, @Correlativo, @DesMotivoBaja

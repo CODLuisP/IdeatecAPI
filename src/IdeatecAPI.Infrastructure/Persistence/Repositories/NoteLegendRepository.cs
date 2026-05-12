@@ -15,7 +15,7 @@ public class NoteLegendRepository : DapperRepository<NoteLegend>, INoteLegendRep
     public async Task<IEnumerable<NoteLegend>> GetByComprobanteIdAsync(int comprobanteId)
     {
         var sql = @"
-            SELECT * FROM noteLegend 
+            SELECT * FROM notelegend 
             WHERE comprobanteID = @ComprobanteId";
 
         return await _connection.QueryAsync<NoteLegend>(sql, new { ComprobanteId = comprobanteId }, _transaction);
@@ -24,7 +24,7 @@ public class NoteLegendRepository : DapperRepository<NoteLegend>, INoteLegendRep
     public async Task<int> CreateLegendAsync(NoteLegend legend)
     {
         var sql = @"
-            INSERT INTO noteLegend (comprobanteID, code, value)
+            INSERT INTO notelegend (comprobanteID, code, value)
             VALUES (@ComprobanteId, @Code, @Value);
             SELECT LAST_INSERT_ID();";
 
@@ -33,7 +33,7 @@ public class NoteLegendRepository : DapperRepository<NoteLegend>, INoteLegendRep
 
     public async Task DeleteByComprobanteIdAsync(int comprobanteId)
     {
-        var sql = "DELETE FROM noteLegend WHERE comprobanteID = @ComprobanteId";
+        var sql = "DELETE FROM notelegend WHERE comprobanteID = @ComprobanteId";
         await _connection.ExecuteAsync(sql, new { ComprobanteId = comprobanteId }, _transaction);
     }
 }

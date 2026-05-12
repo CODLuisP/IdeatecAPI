@@ -12,6 +12,16 @@ public interface ITrabajadorService
     Task<bool> EditarAsync(EditarTrabajadorDTO dto);
     Task<bool> EliminarAsync(int id);
     Task<IEnumerable<ObtenerTrabajadorDTO>> SearchAsync(int sucursalId, string palabra);
+    Task<ReporteTrabajadorDTO?> GetReporteByTrabajadorAsync(int trabajadorId, DateTime? fechaDesde, DateTime? fechaHasta);
+    Task<IEnumerable<RankingTrabajadorDTO>> GetRankingBySucursalAsync(
+    int sucursalId,
+    DateTime? fechaDesde,
+    DateTime? fechaHasta);
+
+    Task<IEnumerable<ServicioTopDTO>> GetServiciosTopBySucursalAsync(
+        int sucursalId,
+        DateTime? fechaDesde,
+        DateTime? fechaHasta);
 }
 
 public class TrabajadorService : ITrabajadorService
@@ -143,4 +153,79 @@ public class TrabajadorService : ITrabajadorService
         CreatedAt = t.CreatedAt,
         UpdatedAt = t.UpdatedAt
     };
+
+    public async Task<ReporteTrabajadorDTO?> GetReporteByTrabajadorAsync(
+    int trabajadorId,
+    DateTime? fechaDesde,
+    DateTime? fechaHasta)
+    {
+        if (trabajadorId <= 0)
+            throw new ArgumentException("Id inválido.");
+
+        var filas = await _unitOfWork.Trabajadores.GetServiciosByTrabajadorAsync(
+            trabajadorId, fechaDesde, fechaHasta);
+
+        if (!filas.Any())
+            return null;
+
+        var primera = filas.First();
+
+        var reporte = new ReporteTrabajadorDTO
+        {
+            TrabajadorId = primera.TrabajadorId,
+            Nombres = primera.Nombres,
+            Apellidos = primera.Apellidos,
+            Dni = primera.Dni,
+
+            Servicios = filas.Select(f => new ServicioTrabajadorDTO
+            {
+                ComprobanteId = f.ComprobanteId,
+                NumeroCompleto = f.NumeroCompleto,
+                TipoComprobante = f.TipoComprobante,
+                FechaEmision = f.FechaEmision,
+                TipoMoneda = f.TipoMoneda,
+                EstadoSunat = f.EstadoSunat,
+                ClienteNumDoc = f.ClienteNumDoc,
+                ClienteRazonSocial = f.ClienteRazonSocial,
+                DetalleId = f.DetalleId,
+                Codigo = f.Codigo,
+                Descripcion = f.Descripcion,
+                Cantidad = f.Cantidad,
+                UnidadMedida = f.UnidadMedida,
+                PrecioUnitario = f.PrecioUnitario,
+                TotalVentaItem = f.TotalVentaItem
+            }).ToList()
+        };
+
+        // Totales calculados en memoria
+        reporte.TotalServicios = reporte.Servicios.Count;
+        reporte.TotalComprobantes = reporte.Servicios.Select(s => s.ComprobanteId).Distinct().Count();
+        reporte.TotalMonto = reporte.Servicios.Sum(s => s.TotalVentaItem);
+
+        return reporte;
+    }
+
+    public async Task<IEnumerable<RankingTrabajadorDTO>> GetRankingBySucursalAsync(
+    int sucursalId,
+    DateTime? fechaDesde,
+    DateTime? fechaHasta)
+    {
+        if (sucursalId <= 0)
+            throw new ArgumentException("SucursalId inválido.");
+
+        return await _unitOfWork.Trabajadores.GetRankingBySucursalAsync(
+            sucursalId, fechaDesde, fechaHasta);
+    }
+
+    public async Task<IEnumerable<ServicioTopDTO>> GetServiciosTopBySucursalAsync(
+        int sucursalId,
+        DateTime? fechaDesde,
+        DateTime? fechaHasta)
+    {
+        if (sucursalId <= 0)
+            throw new ArgumentException("SucursalId inválido.");
+
+        return await _unitOfWork.Trabajadores.GetServiciosTopBySucursalAsync(
+            sucursalId, fechaDesde, fechaHasta);
+    }
 }

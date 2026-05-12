@@ -198,4 +198,97 @@ public class TrabajadorController : ControllerBase
             });
         }
     }
+
+    [HttpGet("{id:int}/reporte")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetReporteAsync(
+    int id,
+    [FromQuery] DateTime? fechaDesde,
+    [FromQuery] DateTime? fechaHasta)
+    {
+        try
+        {
+            var reporte = await _trabajadorService.GetReporteByTrabajadorAsync(id, fechaDesde, fechaHasta);
+
+            if (reporte == null)
+                return NotFound(new { mensaje = $"No se encontraron servicios para el trabajador ID {id} en el rango indicado." });
+
+            return Ok(reporte);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { mensaje = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al generar reporte del trabajador ID {Id}", id);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al generar el reporte.",
+                detalle = ex.Message
+            });
+        }
+    }
+
+    // GET api/trabajador/ranking/{sucursalId}?fechaDesde=...&fechaHasta=...
+    [HttpGet("ranking/{sucursalId:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetRankingAsync(
+        int sucursalId,
+        [FromQuery] DateTime? fechaDesde,
+        [FromQuery] DateTime? fechaHasta)
+    {
+        try
+        {
+            var ranking = await _trabajadorService.GetRankingBySucursalAsync(
+                sucursalId, fechaDesde, fechaHasta);
+            return Ok(ranking);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { mensaje = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener ranking de trabajadores sucursal {SucursalId}", sucursalId);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al obtener el ranking.",
+                detalle = ex.Message
+            });
+        }
+    }
+
+    // GET api/trabajador/servicios-top/{sucursalId}?fechaDesde=...&fechaHasta=...&limit=10
+    [HttpGet("servicios-top/{sucursalId:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetServiciosTopAsync(
+        int sucursalId,
+        [FromQuery] DateTime? fechaDesde,
+        [FromQuery] DateTime? fechaHasta)
+    {
+        try
+        {
+            var servicios = await _trabajadorService.GetServiciosTopBySucursalAsync(
+                sucursalId, fechaDesde, fechaHasta);
+            return Ok(servicios);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { mensaje = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener servicios top sucursal {SucursalId}", sucursalId);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al obtener los servicios top.",
+                detalle = ex.Message
+            });
+        }
+    }
 }

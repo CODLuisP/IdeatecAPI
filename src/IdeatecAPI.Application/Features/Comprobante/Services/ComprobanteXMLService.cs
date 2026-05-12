@@ -487,6 +487,16 @@ public class ComprobanteService : IComprobanteService
 
             int newComprobanteId;
 
+            // ── NUEVO FLUJO: Generar XML -> Incrementar -> Guardar ──
+            
+            // 1. (Consultar correlativo ya fue hecho por el cliente o se valida en la entidad)
+            // 2. Generar XML (Se genera antes de persistir para asegurar consistencia)
+            var xmlResultado = _xmlService.GenerarXml(dto);
+            if (!xmlResultado.Exitoso)
+                throw new InvalidOperationException($"Error al generar XML base: {xmlResultado.Error}");
+
+            // 3 e 4. Incrementar correlativo y Guardar Comprobante en la DB del entorno
+            // (La Repo ejecuta el UPDATE y el INSERT dentro de esta misma transacción)
             newComprobanteId = await _unitOfWork.Comprobantes
                 .GenerarComprobanteAsync(comprobante);
 
