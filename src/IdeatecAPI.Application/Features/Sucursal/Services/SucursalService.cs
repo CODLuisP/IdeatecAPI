@@ -124,7 +124,7 @@ public class SucursalService : ISucursalService
 
             var sucursalCreada = await _unitOfWork.Sucursal.RegistrarSucursalAsync(sucursal);
 
-            var passwordHash = BCrypt.Net.BCrypt.HashPassword("12345678");
+            var passwordHash = "12345678";
 
             var adminSucursal = new Domain.Entities.Usuario
             {

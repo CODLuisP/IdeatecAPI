@@ -1,6 +1,5 @@
 using MediatR;
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
-using BC = BCrypt.Net.BCrypt;
 
 namespace IdeatecAPI.Application.Features.Auth.ResetPassword;
 
@@ -31,12 +30,9 @@ public class ResetPasswordCommandHandler : IRequestHandler<ResetPasswordCommand,
         if (string.IsNullOrWhiteSpace(request.NewPassword) || request.NewPassword.Length < 8)
             return new ResetPasswordResult(false, "La contraseña debe tener al menos 8 caracteres.");
 
-        // 4. Hashear con BCrypt
-        var hashedPassword = BC.HashPassword(request.NewPassword, workFactor: 12);
-
-        // 5. Actualizar contraseña y limpiar token
-        await _unitOfWork.Usuarios.UpdatePasswordAsync(usuario.UsuarioID, hashedPassword);
+        // 4. Guardar contraseña en texto plano
+        await _unitOfWork.Usuarios.UpdatePasswordAsync(usuario.UsuarioID, request.NewPassword);
 
         return new ResetPasswordResult(true, "Contraseña actualizada correctamente.");
     }
-}
+}

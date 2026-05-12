@@ -1,7 +1,7 @@
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Application.Features.Auth.DTOs;
-using BCrypt.Net;
 using IdeatecAPI.Domain.Entities;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace IdeatecAPI.Infrastructure.Services;
 
@@ -9,98 +9,85 @@ public class AuthService : IAuthService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ITokenService _tokenService;
+    private readonly IServiceScopeFactory _scopeFactory;
 
-    public AuthService(IUnitOfWork unitOfWork, ITokenService tokenService)
+    public AuthService(IUnitOfWork unitOfWork, ITokenService tokenService, IServiceScopeFactory scopeFactory)
     {
         _unitOfWork = unitOfWork;
         _tokenService = tokenService;
+        _scopeFactory = scopeFactory;
     }
 
     public async Task<LoginResponseDto> LoginAsync(LoginRequestDto request)
     {
         try
         {
-            // ── NUEVO: Establecer el entorno antes de autenticar ──
+            // ── Establecer el entorno antes de autenticar ──
             var env = request.Environment?.ToLower() ?? "production";
             _unitOfWork.SetEnvironment(env);
 
-            // 1. Buscar usuario por email, username o RUC (Ahora en la DB del entorno solicitado)
+            // 1. Buscar usuario (1 roundtrip DB con JOIN sucursal + empresa)
             var usuario = await _unitOfWork.Usuarios.GetByIdentifierAsync(request.Identifier);
 
             if (usuario == null)
-            {
-                return new LoginResponseDto
-                {
-                    Success = false,
-                    Message = "Credenciales incorrectas"
-                };
-            }
+                return new LoginResponseDto { Success = false, Message = "Credenciales incorrectas" };
 
-            // Asegurar que el entorno sea el solicitado para el token
+            // 2. Verificar cuenta activa
+            if (!usuario.Estado)
+                return new LoginResponseDto { Success = false, Message = "La cuenta está desactivada. Contacte al administrador." };
+
+            // 3. Verificar contraseña
+            if (request.Password != usuario.Password)
+                return new LoginResponseDto { Success = false, Message = "Credenciales incorrectas" };
+
             usuario.Environment = env;
 
-            // 2. Verificar si la cuenta está activa
-            if (!usuario.Estado)
-            {
-                return new LoginResponseDto
-                {
-                    Success = false,
-                    Message = "La cuenta está desactivada. Contacte al administrador."
-                };
-            }
-
-            // 3. Verificar la contraseña
-            bool passwordValida = BCrypt.Net.BCrypt.Verify(request.Password, usuario.Password);
-
-            if (!passwordValida)
-            {
-                return new LoginResponseDto
-                {
-                    Success = false,
-                    Message = "Credenciales incorrectas"
-                };
-            }
-
-            // 4. Generar tokens
-            var accessToken = _tokenService.GenerateAccessToken(usuario);
+            // 4. Generar tokens (in-memory, <1ms)
+            var accessToken  = _tokenService.GenerateAccessToken(usuario);
             var refreshToken = _tokenService.GenerateRefreshToken();
+            var expiresAt    = DateTime.UtcNow.AddMinutes(30);
 
-            // 5. Guardar refresh token en BD
-            await _unitOfWork.Usuarios.UpdateRefreshTokenAsync(usuario.UsuarioID, refreshToken);
+            // 5. ⚡ Fire & forget: guardar refreshToken + fecha en background
+            //    El cliente NO espera este roundtrip — ahorra ~150ms
+            var usuarioId = usuario.UsuarioID;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    using var scope = _scopeFactory.CreateScope();
+                    var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+                    uow.SetEnvironment(env);
+                    await uow.Usuarios.UpdateRefreshTokenAndLastAccessAsync(usuarioId, refreshToken);
+                }
+                catch { /* no bloquear el login si falla el update */ }
+            });
 
-            // 6. Actualizar última fecha de acceso
-            await _unitOfWork.Usuarios.UpdateLastAccessAsync(usuario.UsuarioID);
-
-            // 7. Calcular expiración del token
-            var expiresAt = DateTime.UtcNow.AddMinutes(30); // Debe coincidir con appsettings
-
-            // 8. Retornar respuesta exitosa
+            // 6. Respuesta inmediata sin esperar el UPDATE
             return new LoginResponseDto
             {
                 Success = true,
                 Message = "Login exitoso",
-                AccessToken = accessToken,
+                AccessToken  = accessToken,
                 RefreshToken = refreshToken,
-                ExpiresAt = expiresAt,
+                ExpiresAt    = expiresAt,
                 User = new UsuarioDto
                 {
-                    UsuarioID = usuario.UsuarioID,
-                    Username = usuario.Username,
-                    Email = usuario.Email,
-                    Rol = usuario.Rol,
-                    Ruc = usuario.Ruc,
-                    SucursalID = usuario.SucursalID,
+                    UsuarioID      = usuario.UsuarioID,
+                    Username       = usuario.Username,
+                    Email          = usuario.Email,
+                    Rol            = usuario.Rol,
+                    Ruc            = usuario.Ruc,
+                    SucursalID     = usuario.SucursalID,
                     NombreSucursal = usuario.NombreSucursal,
-                    Igv = usuario.Igv,
-                    TipoEmision = usuario.TipoEmision,
-                    NombreEmpresa = usuario.NombreEmpresa,
-                    Environment = usuario.Environment
-            }
+                    Igv            = usuario.Igv,
+                    TipoEmision    = usuario.TipoEmision,
+                    NombreEmpresa  = usuario.NombreEmpresa,
+                    Environment    = usuario.Environment
+                }
             };
         }
         catch (Exception)
         {
-            // Log del error aquí si tienes un logger
             return new LoginResponseDto
             {
                 Success = false,
@@ -113,9 +100,6 @@ public class AuthService : IAuthService
     {
         try
         {
-            // Buscar usuario por refresh token
-            // Por simplicidad, podrías agregar un método en el repository
-            // Por ahora retornamos error
             return new LoginResponseDto
             {
                 Success = false,
@@ -136,7 +120,6 @@ public class AuthService : IAuthService
     {
         try
         {
-            // Invalidar el refresh token
             await _unitOfWork.Usuarios.UpdateRefreshTokenAsync(usuarioId, string.Empty);
             return true;
         }
@@ -145,6 +128,4 @@ public class AuthService : IAuthService
             return false;
         }
     }
-
-
-}
+}
