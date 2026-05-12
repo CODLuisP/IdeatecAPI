@@ -1,7 +1,6 @@
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Application.Features.Auth.DTOs;
 using IdeatecAPI.Domain.Entities;
-using BCrypt.Net;
 
 namespace IdeatecAPI.Infrastructure.Services;
 
@@ -29,7 +28,7 @@ public class UsuarioService : IUsuarioService
                 return new RegisterResponseDto { Success = false, Message = "El email ya está registrado con otro RUC" };
 
             // 3. Hashear la contraseña automáticamente
-            var passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
+            var passwordHash = request.Password;
 
             // 4. Crear el nuevo usuario
             var nuevoUsuario = new Usuario
@@ -95,7 +94,7 @@ public class UsuarioService : IUsuarioService
             }
 
             // Verificar contraseña actual
-            bool passwordValida = BCrypt.Net.BCrypt.Verify(currentPassword, usuario.Password);
+            bool passwordValida = currentPassword == usuario.Password;
 
             if (!passwordValida)
             {
@@ -103,7 +102,7 @@ public class UsuarioService : IUsuarioService
             }
 
             // Hashear nueva contraseña
-            usuario.Password = BCrypt.Net.BCrypt.HashPassword(newPassword);
+            usuario.Password = newPassword;
             usuario.FechaActualizacion = DateTime.UtcNow;
 
             // Invalidar tokens anteriores
@@ -176,7 +175,7 @@ public class UsuarioService : IUsuarioService
             {
                 Username = dto.Username,
                 Email = dto.Email,
-                Password = BCrypt.Net.BCrypt.HashPassword(dto.Password),
+                Password = dto.Password,
                 SucursalID = sucursal.SucursalId.ToString(),
                 Rol = "admin",
                 Estado = true,

@@ -7,6 +7,7 @@ public interface IUsuarioRepository
     Task<Usuario?> GetByIdentifierAsync(string identifier);
     Task<bool> UpdateLastAccessAsync(int usuarioId);
     Task<bool> UpdateRefreshTokenAsync(int usuarioId, string refreshToken);
+    Task<bool> UpdateRefreshTokenAndLastAccessAsync(int usuarioId, string refreshToken);
 
     Task<int> CreateAsync(Usuario usuario);
     Task<Usuario?> GetByIdAsync(int id);

@@ -1,5 +1,6 @@
 using IdeatecAPI.Infrastructure;
 using Microsoft.OpenApi.Models; // ← AGREGAR
+using MySqlConnector;
 using QuestPDF.Infrastructure;
 
 QuestPDF.Settings.License = LicenseType.Community;
@@ -71,6 +72,28 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// ⚡ Warm-up del pool de conexiones: abre conexiones TCP en background al arrancar
+// Esto elimina el costo del TCP handshake en el primer login (~150-300ms)
+_ = Task.Run(async () =>
+{
+    await Task.Delay(500); // Esperar que la app termine de inicializar
+    var connStrings = new[]
+    {
+        builder.Configuration.GetConnectionString("ProductionConnection"),
+        builder.Configuration.GetConnectionString("BetaConnection")
+    };
+    foreach (var cs in connStrings)
+    {
+        if (string.IsNullOrEmpty(cs)) continue;
+        try
+        {
+            await using var conn = new MySqlConnection(cs);
+            await conn.OpenAsync();
+            await conn.CloseAsync();
+        }
+        catch { /* Si la DB no está disponible al arrancar, no bloquear */ }
+    }
+});
 
     app.UseSwagger();
     app.UseSwaggerUI();
@@ -81,4 +104,4 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-app.Run();
+app.Run();

@@ -87,6 +87,17 @@ public class UnitOfWork : IUnitOfWork
         }
     }
 
+    private async Task<IDbConnection> GetConnectionAsync()
+    {
+        if (_connection == null)
+        {
+            var conn = new MySqlConnection(_connectionString);
+            await conn.OpenAsync();
+            _connection = conn;
+        }
+        return _connection;
+    }
+
     // ── Repositorios (Todos dinámicos según el entorno activo) ──
 
     public IUsuarioRepository Usuarios

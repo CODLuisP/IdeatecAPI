@@ -93,4 +93,10 @@ public class EmpresaRepository : DapperRepository<Empresa>, IEmpresaRepository
         var sql = "DELETE FROM empresa WHERE ruc = @Ruc";
         await _connection.ExecuteAsync(sql, new { Ruc = ruc }, _transaction);
     }
-}
+
+    public async Task<string?> GetLogoByRucAsync(string ruc)
+    {
+        var sql = "SELECT logoBase64 FROM empresa WHERE ruc = @Ruc AND activo = 1 LIMIT 1";
+        return await _connection.ExecuteScalarAsync<string?>(sql, new { Ruc = ruc }, _transaction);
+    }
+}

@@ -69,6 +69,23 @@ public class UsuarioRepository : DapperRepository<Usuario>, IUsuarioRepository
         return rowsAffected > 0;
     }
 
+    /// <summary>
+    /// Actualiza refreshToken y fechaUltimoAcceso en un solo roundtrip a la DB (optimización login).
+    /// </summary>
+    public async Task<bool> UpdateRefreshTokenAndLastAccessAsync(int usuarioId, string refreshToken)
+    {
+        var sql = @"
+            UPDATE usuario 
+            SET refreshToken      = @RefreshToken,
+                fechaUltimoAcceso = @Now
+            WHERE usuarioID = @UsuarioId";
+
+        var rowsAffected = await _connection.ExecuteAsync(
+            sql, new { UsuarioId = usuarioId, RefreshToken = refreshToken, Now = DateTime.UtcNow }, _transaction);
+
+        return rowsAffected > 0;
+    }
+
     public async Task<int> CreateAsync(Usuario usuario)
     {
         var sql = @"
