@@ -770,9 +770,21 @@ public class ComprobanteService : IComprobanteService
         }
 
         // 8. Actualizar estado BD
-        var nuevoEstado = sunatResponse.Success
-            ? (sunatResponse.TieneObservaciones ? "ACEPTADO_CON_OBSERVACIONES" : "ACEPTADO")
-            : "RECHAZADO";
+        string nuevoEstado;
+        if (sunatResponse.Success)
+        {
+            nuevoEstado = sunatResponse.TieneObservaciones ? "ACEPTADO_CON_OBSERVACIONES" : "ACEPTADO";
+        }
+        else if (sunatResponse.CodigoRespuesta == "SUNAT_ERROR_HTML" || sunatResponse.CodigoRespuesta == "ERROR_RED")
+        {
+            // Si es un error de servidor o red, lo dejamos en PENDIENTE para reintento
+            nuevoEstado = "PENDIENTE";
+        }
+        else
+        {
+            // Si es un error de validación de SUNAT, es RECHAZADO
+            nuevoEstado = "RECHAZADO";
+        }
 
         await _unitOfWork.Comprobantes.UpdateEstadoSunatAsync(
             comprobanteId,
