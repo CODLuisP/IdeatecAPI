@@ -94,9 +94,8 @@ public class AuthService : IAuthService
                     Igv = usuario.Igv,
                     TipoEmision = usuario.TipoEmision,
                     NombreEmpresa = usuario.NombreEmpresa,
-                    Environment = usuario.Environment,
-                    LogoBase64 = usuario.LogoBase64
-                }
+                    Environment = usuario.Environment
+            }
             };
         }
         catch (Exception)

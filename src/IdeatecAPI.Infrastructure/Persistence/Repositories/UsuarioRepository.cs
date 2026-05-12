@@ -29,7 +29,6 @@ public class UsuarioRepository : DapperRepository<Usuario>, IUsuarioRepository
             e.igv                 AS Igv,
             e.tipoEmision         AS TipoEmision,
             e.environment         AS Environment,
-            e.logoBase64          AS LogoBase64,
             u.tokenVersion        AS TokenVersion,
             u.fechaCreacion       AS FechaCreacion,
             u.fechaUltimoAcceso   AS FechaUltimoAcceso
