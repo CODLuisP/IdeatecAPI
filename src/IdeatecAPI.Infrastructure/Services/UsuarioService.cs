@@ -155,7 +155,7 @@ public class UsuarioService : IUsuarioService
                 Telefono = dto.Telefono,
                 Email = dto.Email,
                 Plan = "free",
-                Environment = "beta",
+                Environment = "production",
                 Activo = true,
                 CreadoEn = DateTime.UtcNow
             };
