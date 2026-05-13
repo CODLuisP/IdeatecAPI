@@ -182,7 +182,7 @@ public static class EmailTemplateBuilder
                 <tr>
                   <td style="background:#0f2e64;padding:28px 36px;text-align:center;">
                     <h1 style="margin:0;color:#fff;font-size:22px;font-weight:800;letter-spacing:-0.5px;">
-                      FACTU<span style="color:#ef4444;">NET</span>
+                      FACTU<span style="color:#ef4444;">FLY</span>
                     </h1>
                     <span style="color:#93c5fd;font-size:12px;">Facturación Electrónica</span>
                   </td>
