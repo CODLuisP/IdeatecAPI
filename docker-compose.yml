@@ -19,14 +19,10 @@ services:
       - Storage__RutaXml=/app/storage
       - Storage__MicroservicioUrl=https://do.velsat.pe:8443/storagefactunet
       - WebSocket__NotifyUrl=https://do.velsat.pe:8443/notify/notify
-      - Smtp__Host=smtp.mailersend.net
-      - Smtp__Port=587
-      - Smtp__Username=MS_82TXn4@ideatec.com.pe
-      - Smtp__Password=mssp.jlcsV1V.jy7zpl9knyp45vx6.2DmUQvj
       - Smtp__ApiKey=mlsn.703ae2fd8dc61cdc70947b80c28ff29e2ffb9a4e50bd0b1cc73ca6ea6d09ecd7
-      - Smtp__FromEmail=factunet@ideatec.com.pe
-      - Smtp__FromName=Factunet
-      - App__FrontendUrl=https://factunet.ideatec.com.pe
+      - Smtp__FromEmail=factufly@ideatec.com.pe
+      - Smtp__FromName=Factufly
+      - App__FrontendUrl=https://factufly.ideatec.com.pe
     volumes:
       - facturacion_storage:/app/storage
     restart: unless-stopped

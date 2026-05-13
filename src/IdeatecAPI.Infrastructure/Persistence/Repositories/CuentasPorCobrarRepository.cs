@@ -78,25 +78,16 @@ public class CuentasPorCobrarRepository : ICuentasPorCobrarRepository
     public async Task<IEnumerable<CuotaDto>> GetCuotasByComprobanteIdAsync(int comprobanteId)
     {
         var sql = @"
-            SELECT cuotaID              AS CuotaId,
-                comprobanteID        AS ComprobanteId,
-                numeroCuota          AS NumeroCuota,
-                monto                AS Monto,
-                fechaVencimiento     AS FechaVencimiento,
-                montoPagado          AS MontoPagado,
-                fechaPago            AS FechaPago,
-                estado               AS Estado,
-                montoDescuento       AS MontoDescuento,
-                motivoDescuento      AS MotivoDescuento,
-                montoFinal           AS MontoFinal,
-                tasaDescuentoDiaria  AS TasaDescuentoDiaria,
-                diasAnticipacion     AS DiasAnticipacion,
-                porcentajeDescuento  AS PorcentajeDescuento,
-                medioPago            AS MedioPago,
-                entidadFinanciera    AS EntidadFinanciera,
-                numeroOperacion      AS NumeroOperacion,
-                observaciones        AS Observaciones,
-                usuarioRegistroPago  AS UsuarioRegistroPago
+            SELECT 
+                cuotaID             AS CuotaId,
+                comprobanteID       AS ComprobanteId,
+                numeroCuota         AS NumeroCuota,
+                monto               AS Monto,
+                fechaVencimiento    AS FechaVencimiento,
+                montoPagado         AS MontoPagado,
+                fechaPago           AS FechaPago,
+                estado              AS Estado,
+                usuarioRegistroPago AS UsuarioRegistroPago
             FROM cuota
             WHERE comprobanteID = @ComprobanteId
             ORDER BY numeroCuota ASC";
@@ -117,66 +108,92 @@ public class CuentasPorCobrarRepository : ICuentasPorCobrarRepository
                 montoPagado         AS MontoPagado,
                 fechaPago           AS FechaPago,
                 estado              AS Estado,
-                montoDescuento      AS MontoDescuento,
-                motivoDescuento     AS MotivoDescuento,
-                montoFinal          AS MontoFinal,
-                tasaDescuentoDiaria AS TasaDescuentoDiaria,
-                diasAnticipacion    AS DiasAnticipacion,
-                porcentajeDescuento AS PorcentajeDescuento,
-                medioPago           AS MedioPago,
-                entidadFinanciera   AS EntidadFinanciera,
-                numeroOperacion     AS NumeroOperacion,
-                observaciones       AS Observaciones,
                 usuarioRegistroPago AS UsuarioRegistroPago
             FROM cuota
             WHERE cuotaID = @CuotaId";
 
         return await _connection.QueryFirstOrDefaultAsync<Cuota>(
-            sql,
-            new { CuotaId = cuotaId },
-            _transaction
-        );
+            sql, new { CuotaId = cuotaId }, _transaction);
     }
 
-    public async Task<bool> PagarCuotaAsync(PagarCuotaDto dto, string nuevoEstado)
+    public async Task<bool> PagarCuotaAsync(PagarCuotaDto dto, string nuevoEstado, decimal nuevoMontoPagado)
     {
-        var sql = @"
+        // 1. Actualizar cuota
+        var sqlUpdateCuota = @"
             UPDATE cuota SET
                 montoPagado         = @MontoPagado,
                 fechaPago           = @FechaPago,
                 estado              = @Estado,
-                montoDescuento      = @MontoDescuento,
-                motivoDescuento     = @MotivoDescuento,
-                montoFinal          = @MontoFinal,
-                tasaDescuentoDiaria = @TasaDescuentoDiaria,
-                diasAnticipacion    = @DiasAnticipacion,
-                porcentajeDescuento = @PorcentajeDescuento,
-                medioPago           = @MedioPago,
-                entidadFinanciera   = @EntidadFinanciera,
-                numeroOperacion     = @NumeroOperacion,
-                observaciones       = @Observaciones,
                 usuarioRegistroPago = @UsuarioRegistroPago
             WHERE cuotaID = @CuotaId";
 
-        var result = await _connection.ExecuteAsync(sql, new
+        await _connection.ExecuteAsync(sqlUpdateCuota, new
         {
-            dto.MontoPagado,
+            MontoPagado = nuevoMontoPagado,
             dto.FechaPago,
             Estado = nuevoEstado,
-            dto.MontoDescuento,
-            dto.MotivoDescuento,
-            dto.MontoFinal,
-            dto.TasaDescuentoDiaria,
-            dto.DiasAnticipacion,
-            dto.PorcentajeDescuento,
-            dto.MedioPago,
-            dto.EntidadFinanciera,
-            dto.NumeroOperacion,
-            dto.Observaciones,
             dto.UsuarioRegistroPago,
             dto.CuotaId
         }, _transaction);
 
+        // 2. Insertar en cuotapago
+        var sqlInsertCuotaPago = @"
+            INSERT INTO cuotapago (
+                cuotaID,
+                montoPagado,
+                fechaPago,
+                medioPago,
+                entidadFinanciera,
+                numeroOperacion,
+                observaciones,
+                usuarioRegistroPago,
+                fechaRegistro
+            ) VALUES (
+                @CuotaId,
+                @MontoPagado,
+                @FechaPago,
+                @MedioPago,
+                @EntidadFinanciera,
+                @NumeroOperacion,
+                @Observaciones,
+                @UsuarioRegistroPago,
+                NOW()
+            )";
+
+        var result = await _connection.ExecuteAsync(sqlInsertCuotaPago, new
+        {
+            dto.CuotaId,
+            dto.MontoPagado,
+            dto.FechaPago,
+            dto.MedioPago,
+            dto.EntidadFinanciera,
+            dto.NumeroOperacion,
+            dto.Observaciones,
+            dto.UsuarioRegistroPago
+        }, _transaction);
+
         return result > 0;
+    }
+
+    public async Task<IEnumerable<CuotaPagoDto>> GetHistorialPagosByCuotaIdAsync(int cuotaId)
+    {
+        var sql = @"
+            SELECT
+                cuotaPagoID         AS CuotaPagoId,
+                cuotaID             AS CuotaId,
+                montoPagado         AS MontoPagado,
+                fechaPago           AS FechaPago,
+                medioPago           AS MedioPago,
+                entidadFinanciera   AS EntidadFinanciera,
+                numeroOperacion     AS NumeroOperacion,
+                observaciones       AS Observaciones,
+                usuarioRegistroPago AS UsuarioRegistroPago,
+                fechaRegistro       AS FechaRegistro
+            FROM cuotapago
+            WHERE cuotaID = @CuotaId
+            ORDER BY fechaRegistro ASC";
+
+        return await _connection.QueryAsync<CuotaPagoDto>(
+            sql, new { CuotaId = cuotaId }, _transaction);
     }
 }

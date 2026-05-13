@@ -1,8 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-
 namespace IdeatecAPI.Domain.Entities;
 
 public class Cuota
@@ -12,20 +7,8 @@ public class Cuota
     public string? NumeroCuota { get; set; }
     public decimal? Monto { get; set; }
     public DateTime FechaVencimiento { get; set; }
-    public string? MontoPagado { get; set; }
-    public DateTime? FechaPago { get; set; } 
+    public decimal? MontoPagado { get; set; }
+    public DateTime? FechaPago { get; set; }
     public string? Estado { get; set; }
-
-    // Campos nuevos para manejar cuentas por cobrar
-    public decimal? MontoDescuento { get; set; }
-    public string? MotivoDescuento { get; set; }
-    public decimal? MontoFinal { get; set; }
-    public decimal? TasaDescuentoDiaria { get; set; }
-    public int? DiasAnticipacion { get; set; }
-    public decimal? PorcentajeDescuento { get; set; }
-    public string? MedioPago { get; set; }
-    public string? EntidadFinanciera { get; set; }
-    public string? NumeroOperacion { get; set; }
-    public string? Observaciones { get; set; }
     public int? UsuarioRegistroPago { get; set; }
 }

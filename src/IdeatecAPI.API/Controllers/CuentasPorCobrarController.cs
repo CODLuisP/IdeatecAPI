@@ -88,4 +88,25 @@ public class CuentasPorCobrarController : ControllerBase
             return BadRequest(new { message = ex.Message });
         }
     }
+
+    [HttpGet("cuotas/{cuotaId}/historial")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetHistorialPagos(int cuotaId)
+    {
+        try
+        {
+            var historial = await _cuentasPorCobrarService.GetHistorialPagosByCuotaIdAsync(cuotaId);
+
+            if (!historial.Any())
+                return NotFound(new { message = $"No se encontró historial de pagos para la cuota {cuotaId}" });
+
+            return Ok(historial);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
 }
