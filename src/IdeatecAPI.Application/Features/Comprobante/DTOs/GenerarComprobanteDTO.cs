@@ -66,7 +66,7 @@ public class DetalleCuotasDTO
     public string? NumeroCuota { get; set; }
     public decimal? Monto { get; set; }
     public DateTime FechaVencimiento { get; set; }
-    public string? MontoPagado { get; set; }
+    public decimal? MontoPagado { get; set; }
     public DateTime? FechaPago { get; set; } 
     public string? Estado { get; set; } = "PENDIENTE";
 }

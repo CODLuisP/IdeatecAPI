@@ -16,5 +16,7 @@ public interface ICuentasPorCobrarRepository
 
     Task<Cuota?> GetCuotaByIdAsync(int cuotaId);
 
-    Task<bool> PagarCuotaAsync(PagarCuotaDto dto, string nuevoEstado);
+    Task<bool> PagarCuotaAsync(PagarCuotaDto dto, string nuevoEstado, decimal nuevoMontoPagado);
+
+    Task<IEnumerable<CuotaPagoDto>> GetHistorialPagosByCuotaIdAsync(int cuotaId);
 }

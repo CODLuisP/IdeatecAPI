@@ -15,6 +15,8 @@ public interface ICuentasPorCobrarService
     Task<IEnumerable<CuotaDto>> GetCuotasByComprobanteIdAsync(int comprobanteId);
 
     Task<bool> PagarCuotaAsync(PagarCuotaDto dto);
+
+    Task<IEnumerable<CuotaPagoDto>> GetHistorialPagosByCuotaIdAsync(int cuotaId);
 }
 
 public class CuentasPorCobrarService : ICuentasPorCobrarService
@@ -69,23 +71,25 @@ public class CuentasPorCobrarService : ICuentasPorCobrarService
             if (cuota.Estado == "PAGADO")
                 throw new InvalidOperationException("La cuota ya está pagada");
 
-            var montoFinal = dto.MontoFinal ?? cuota.Monto;
-
-            var montoPagadoAnterior = decimal.TryParse(cuota.MontoPagado, out var mp) ? mp : 0;
+            // Calcular nuevo monto pagado acumulado
+            var montoPagadoAnterior = cuota.MontoPagado ?? 0;
             var nuevoMontoPagado = montoPagadoAnterior + dto.MontoPagado;
 
+            // Validar que no exceda el monto de la cuota
+            if (nuevoMontoPagado > cuota.Monto)
+                throw new InvalidOperationException(
+                    $"El monto a pagar excede el saldo pendiente. Saldo: {cuota.Monto - montoPagadoAnterior}");
+
+            // Determinar nuevo estado
             string nuevoEstado;
-            if (nuevoMontoPagado >= montoFinal)
+            if (nuevoMontoPagado >= cuota.Monto)
                 nuevoEstado = "PAGADO";
             else if (nuevoMontoPagado > 0)
                 nuevoEstado = "PARCIAL";
             else
                 nuevoEstado = "PENDIENTE";
 
-            dto.MontoPagado = nuevoMontoPagado;
-            dto.MontoFinal = montoFinal;
-
-            var result = await _unitOfWork.CuentasPorCobrar.PagarCuotaAsync(dto, nuevoEstado);
+            var result = await _unitOfWork.CuentasPorCobrar.PagarCuotaAsync(dto, nuevoEstado, nuevoMontoPagado);
 
             _unitOfWork.Commit();
             return result;
@@ -95,5 +99,13 @@ public class CuentasPorCobrarService : ICuentasPorCobrarService
             _unitOfWork.Rollback();
             throw;
         }
+    }
+
+    public async Task<IEnumerable<CuotaPagoDto>> GetHistorialPagosByCuotaIdAsync(int cuotaId)
+    {
+        if (cuotaId <= 0)
+            throw new ArgumentException("CuotaId inválido");
+
+        return await _unitOfWork.CuentasPorCobrar.GetHistorialPagosByCuotaIdAsync(cuotaId);
     }
 }
