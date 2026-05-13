@@ -21,6 +21,7 @@ public interface IUnitOfWork : IDisposable
     IDashboardRepository Dashboard { get; }
     IReportesRepository Reportes { get; }
     ICuentasPorCobrarRepository CuentasPorCobrar { get; }
+    IDeudaContadoRepository DeudaContado { get; }
     ITrabajadorRepository Trabajadores { get; }
     
     void SetEnvironment(string env);

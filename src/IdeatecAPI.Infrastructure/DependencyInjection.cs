@@ -23,6 +23,7 @@ using IdeatecAPI.Application.Features.Reportes.Services;
 using IdeatecAPI.Application.Features.CuentasPorCobrar.Services;
 using IdeatecAPI.Application.Common.Interfaces;
 using IdeatecAPI.Application.Features.Trabajadores.Services;
+using IdeatecAPI.Application.Features.DeudaContado.Services;
 
 namespace IdeatecAPI.Infrastructure;
 
@@ -101,6 +102,9 @@ public static class DependencyInjection
 
         //Cuentas por cobrar
         services.AddScoped<ICuentasPorCobrarService, CuentasPorCobrarService>();
+
+        //Deuda contado
+        services.AddScoped<IDeudaContadoService, DeudaContadoService>();
 
         //Trabajadores
         services.AddScoped<ITrabajadorService, TrabajadorService>();
