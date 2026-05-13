@@ -2,22 +2,22 @@ namespace IdeatecAPI.Application.Features.Email.SendEmail;
 
 public static class EmailTemplateBuilder
 {
-    // ── Tipo 0: Solo texto ─────────────────────────────────────────────
-    public static string BuildTextEmail(string toName, string subject, string body) =>
-        BuildBase(toName, subject, GetBadge(TipoComprobante.Texto),
-            $"""
+  // ── Tipo 0: Solo texto ─────────────────────────────────────────────
+  public static string BuildTextEmail(string toName, string subject, string body) =>
+      BuildBase(toName, subject, GetBadge(TipoComprobante.Texto),
+          $"""
             <div style="background:#f8fafc;border-left:3px solid #0f2e64;padding:16px 20px;margin-bottom:24px;">
               <p style="margin:0;color:#475569;font-size:14px;line-height:1.7;">{Escape(body)}</p>
             </div>
             """);
 
-    // ── Tipo 1 y 3: Factura / Boleta ───────────────────────────────────
-    public static string BuildComprobanteEmail(
-        string toName, string subject, string body,
-        TipoComprobante tipo, DatosComprobante datos)
-    {
-        var titulo = tipo == TipoComprobante.Factura ? "FACTURA ELECTRÓNICA" : "BOLETA ELECTRÓNICA";
-        var filas  = string.Join("", datos.Items.Select(i => $"""
+  // ── Tipo 1 y 3: Factura / Boleta ───────────────────────────────────
+  public static string BuildComprobanteEmail(
+      string toName, string subject, string body,
+      TipoComprobante tipo, DatosComprobante datos)
+  {
+    var titulo = tipo == TipoComprobante.Factura ? "FACTURA ELECTRÓNICA" : "BOLETA ELECTRÓNICA";
+    var filas = string.Join("", datos.Items.Select(i => $"""
             <tr style="border-bottom:0.5px solid #f1f5f9;">
               <td style="padding:6px 0;color:#0f172a;">{Escape(i.Descripcion)}</td>
               <td style="padding:6px 0;color:#0f172a;text-align:center;">{i.Cantidad}</td>
@@ -25,11 +25,11 @@ public static class EmailTemplateBuilder
             </tr>
             """));
 
-        var content = $"""
+    var content = $"""
             <div style="background:#f8fafc;border-left:3px solid #0f2e64;padding:14px 18px;margin-bottom:18px;">
               <p style="margin:0;color:#475569;font-size:14px;line-height:1.7;">{Escape(body)}</p>
             </div>
-            <div style="border:0.5px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-bottom:18px;">
+            <div style="border:0.5px solid #e2e8f0;overflow:hidden;margin-bottom:18px;">
               <div style="background:#0f2e64;padding:10px 16px;">
                 <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
                   <tr>
@@ -70,14 +70,14 @@ public static class EmailTemplateBuilder
             </div>
             """;
 
-        return BuildBase(toName, subject, GetBadge(tipo), content);
-    }
+    return BuildBase(toName, subject, GetBadge(tipo), content);
+  }
 
-    // ── Tipo 9: Guía de remisión ───────────────────────────────────────
-    public static string BuildGuiaEmail(
-        string toName, string subject, string body, DatosGuiaRemision datos)
-    {
-        var bienes = string.Join("", datos.Bienes.Select(b => $"""
+  // ── Tipo 9: Guía de remisión ───────────────────────────────────────
+  public static string BuildGuiaEmail(
+      string toName, string subject, string body, DatosGuiaRemision datos)
+  {
+    var bienes = string.Join("", datos.Bienes.Select(b => $"""
             <tr style="border-bottom:0.5px solid #f1f5f9;">
               <td style="padding:5px 0;color:#0f172a;">{Escape(b.Descripcion)}</td>
               <td style="padding:5px 0;color:#0f172a;text-align:center;">{b.Cantidad}</td>
@@ -85,11 +85,11 @@ public static class EmailTemplateBuilder
             </tr>
             """));
 
-        var content = $"""
+    var content = $"""
             <div style="background:#f8fafc;border-left:3px solid #0f2e64;padding:14px 18px;margin-bottom:18px;">
               <p style="margin:0;color:#475569;font-size:14px;line-height:1.7;">{Escape(body)}</p>
             </div>
-            <div style="border:0.5px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-bottom:18px;">
+            <div style="border:0.5px solid #e2e8f0;overflow:hidden;margin-bottom:18px;">
               <div style="background:#0f2e64;padding:10px 16px;">
                 <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
                   <tr>
@@ -150,26 +150,26 @@ public static class EmailTemplateBuilder
             </div>
             """;
 
-        return BuildBase(toName, subject, GetBadge(TipoComprobante.GuiaRemision), content);
-    }
+    return BuildBase(toName, subject, GetBadge(TipoComprobante.GuiaRemision), content);
+  }
 
-    // ── Helpers ────────────────────────────────────────────────────────
-    private static (string Label, string Bg, string Color) GetBadge(TipoComprobante tipo) => tipo switch
-    {
-        TipoComprobante.Factura      => ("FACTURA",          "#dbeafe", "#1e40af"),
-        TipoComprobante.Boleta       => ("BOLETA",           "#fce7f3", "#be185d"),
-        TipoComprobante.GuiaRemision => ("GUÍA DE REMISIÓN", "#fef9c3", "#854d0e"),
-        _                            => ("MENSAJE",          "#e0e7ff", "#3730a3"),
-    };
+  // ── Helpers ────────────────────────────────────────────────────────
+  private static (string Label, string Bg, string Color) GetBadge(TipoComprobante tipo) => tipo switch
+  {
+    TipoComprobante.Factura => ("FACTURA", "#dbeafe", "#1e40af"),
+    TipoComprobante.Boleta => ("BOLETA", "#fce7f3", "#be185d"),
+    TipoComprobante.GuiaRemision => ("GUÍA DE REMISIÓN", "#fef9c3", "#854d0e"),
+    _ => ("MENSAJE", "#e0e7ff", "#3730a3"),
+  };
 
-    private static string Escape(string s) =>
-        System.Web.HttpUtility.HtmlEncode(s).Replace("\n", "<br/>");
+  private static string Escape(string s) =>
+      System.Web.HttpUtility.HtmlEncode(s).Replace("\n", "<br/>");
 
-    // ── Base compartida ────────────────────────────────────────────────
-    private static string BuildBase(
-        string toName, string subject,
-        (string Label, string Bg, string Color) badge,
-        string content) => $"""
+  // ── Base compartida ────────────────────────────────────────────────
+  private static string BuildBase(
+      string toName, string subject,
+      (string Label, string Bg, string Color) badge,
+      string content) => $"""
         <!DOCTYPE html>
         <html lang="es">
         <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width"></head>
@@ -180,7 +180,7 @@ public static class EmailTemplateBuilder
                      style="background:#fff;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
 
                 <tr>
-                  <td style="background:#0f2e64;padding:28px 36px;text-align:center;">
+                  <td style="background:#0f2e64;padding:18px;text-align:center;">
                     <h1 style="margin:0;color:#fff;font-size:22px;font-weight:800;letter-spacing:-0.5px;">
                       FACTU<span style="color:#ef4444;">FLY</span>
                     </h1>
@@ -189,13 +189,13 @@ public static class EmailTemplateBuilder
                 </tr>
 
                 <tr>
-                  <td style="padding:32px 36px;">
+                  <td style="padding:15px;">
                     <h2 style="margin:0 0 6px;color:#0f172a;font-size:18px;">{Escape(subject)}</h2>
                     <p style="margin:0 0 20px;color:#64748b;font-size:13px;">
                       Estimado/a <strong style="color:#0f2e64;">{Escape(toName)}</strong>
                     </p>
                     {content}
-                    <div style="background:#fef3c7;border:0.5px solid #fde68a;border-radius:8px;padding:12px 14px;margin-top:20px;">
+                    <div style="padding:0px;">
                       <p style="margin:0;color:#92400e;font-size:12px;">
                         Para consultas escríbenos a <strong>info@ideatec.com.pe</strong>
                       </p>
@@ -209,6 +209,16 @@ public static class EmailTemplateBuilder
                       © {DateTime.Now.Year} IDEATEC S.A.C. – Facturación Electrónica Perú<br>
                       <a href="https://www.ideatec.com.pe/" style="color:#0f2e64;text-decoration:none;">ideatec.com.pe</a>
                     </p>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td style="padding:16px 36px;text-align:center;">
+                    <a href="https://ibb.co/C5ptq1x5">
+                      <img src="https://i.ibb.co/Y74W6Rv7/Whats-App-Image-2026-05-13-at-1-29-27-AM.jpg"
+                           alt="firma" border="0"
+                           style="max-width:90%;height:auto;display:block;margin:0 auto;">
+                    </a>
                   </td>
                 </tr>
 
