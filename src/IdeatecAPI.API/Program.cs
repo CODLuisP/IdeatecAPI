@@ -72,8 +72,7 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// ⚡ Warm-up del pool de conexiones: abre conexiones TCP en background al arrancar
-// Esto elimina el costo del TCP handshake en el primer login (~150-300ms)
+
 _ = Task.Run(async () =>
 {
     await Task.Delay(500); // Esperar que la app termine de inicializar
@@ -104,4 +103,4 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-app.Run();
+app.Run();
