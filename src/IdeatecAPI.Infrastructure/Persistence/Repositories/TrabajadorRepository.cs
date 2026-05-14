@@ -268,11 +268,118 @@ public class TrabajadorRepository : DapperRepository<Trabajador>, ITrabajadorRep
           AND (@FechaDesde IS NULL OR c.fechaEmision >= @FechaDesde)
           AND (@FechaHasta IS NULL OR c.fechaEmision <= @FechaHasta)
         GROUP BY cd.descripcion, cd.codigo
-        ORDER BY TotalVeces DESC;"; 
+        ORDER BY TotalVeces DESC;";
 
         return await _connection.QueryAsync<ServicioTopDTO>(
             sql,
-            new { SucursalId = sucursalId, FechaDesde = fechaDesde, FechaHasta = fechaHasta},
+            new { SucursalId = sucursalId, FechaDesde = fechaDesde, FechaHasta = fechaHasta },
+            _transaction
+        );
+    }
+
+    public async Task<IEnumerable<ReporteServicioRawDTO>> GetServiciosByClienteAsync(
+    int sucursalId,
+    string palabra,
+    DateTime? fechaDesde,
+    DateTime? fechaHasta)
+    {
+        var sql = @"
+        SELECT
+            t.id                AS TrabajadorId,
+            t.nombres           AS Nombres,
+            t.apellidos         AS Apellidos,
+            t.dni               AS Dni,
+
+            c.comprobanteID     AS ComprobanteId,
+            c.numeroCompleto    AS NumeroCompleto,
+            c.tipoComprobante   AS TipoComprobante,
+            c.fechaEmision      AS FechaEmision,
+            c.tipoMoneda        AS TipoMoneda,
+            c.estadoSunat       AS EstadoSunat,
+
+            c.clienteNumDoc     AS ClienteNumDoc,
+            c.clienteRznSocial  AS ClienteRazonSocial,
+
+            cd.detalleID        AS DetalleId,
+            cd.codigo           AS Codigo,
+            cd.descripcion      AS Descripcion,
+            cd.cantidad         AS Cantidad,
+            cd.unidadMedida     AS UnidadMedida,
+            cd.precioUnitario   AS PrecioUnitario,
+            cd.totalVentaItem   AS TotalVentaItem
+
+        FROM trabajador t
+        INNER JOIN comprobantedetalle cd ON cd.trabajadorID = t.id
+        INNER JOIN comprobante c ON c.comprobanteID = cd.comprobanteID
+        WHERE t.sucursal = @SucursalId
+          AND t.estado = 1
+          AND (@FechaDesde IS NULL OR c.fechaEmision >= @FechaDesde)
+          AND (@FechaHasta IS NULL OR c.fechaEmision <= @FechaHasta)
+          AND (
+            c.clienteNumDoc LIKE @Palabra
+            OR c.clienteRznSocial LIKE @Palabra
+          )
+        ORDER BY c.fechaEmision DESC, t.apellidos ASC, cd.item ASC;";
+
+        return await _connection.QueryAsync<ReporteServicioRawDTO>(
+            sql,
+            new
+            {
+                SucursalId = sucursalId,
+                Palabra = $"%{palabra}%",
+                FechaDesde = fechaDesde,
+                FechaHasta = fechaHasta
+            },
+            _transaction
+        );
+    }
+
+    public async Task<IEnumerable<ReporteServicioRawDTO>> GetDetalleByServicioAsync(
+    int sucursalId,
+    string descripcion,
+    DateTime? fechaDesde,
+    DateTime? fechaHasta)
+    {
+        var sql = @"
+        SELECT
+            t.id                AS TrabajadorId,
+            t.nombres           AS Nombres,
+            t.apellidos         AS Apellidos,
+            t.dni               AS Dni,
+            c.comprobanteID     AS ComprobanteId,
+            c.numeroCompleto    AS NumeroCompleto,
+            c.tipoComprobante   AS TipoComprobante,
+            c.fechaEmision      AS FechaEmision,
+            c.tipoMoneda        AS TipoMoneda,
+            c.estadoSunat       AS EstadoSunat,
+            c.clienteNumDoc     AS ClienteNumDoc,
+            c.clienteRznSocial  AS ClienteRazonSocial,
+            cd.detalleID        AS DetalleId,
+            cd.codigo           AS Codigo,
+            cd.descripcion      AS Descripcion,
+            cd.cantidad         AS Cantidad,
+            cd.unidadMedida     AS UnidadMedida,
+            cd.precioUnitario   AS PrecioUnitario,
+            cd.totalVentaItem   AS TotalVentaItem
+        FROM trabajador t
+        INNER JOIN comprobantedetalle cd ON cd.trabajadorID = t.id
+        INNER JOIN comprobante c ON c.comprobanteID = cd.comprobanteID
+        WHERE t.sucursal = @SucursalId
+          AND t.estado = 1
+          AND cd.descripcion = @Descripcion
+          AND (@FechaDesde IS NULL OR c.fechaEmision >= @FechaDesde)
+          AND (@FechaHasta IS NULL OR c.fechaEmision <= @FechaHasta)
+        ORDER BY c.fechaEmision DESC, t.apellidos ASC;";
+
+        return await _connection.QueryAsync<ReporteServicioRawDTO>(
+            sql,
+            new
+            {
+                SucursalId = sucursalId,
+                Descripcion = descripcion,
+                FechaDesde = fechaDesde,
+                FechaHasta = fechaHasta
+            },
             _transaction
         );
     }

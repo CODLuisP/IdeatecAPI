@@ -291,4 +291,69 @@ public class TrabajadorController : ControllerBase
             });
         }
     }
+
+    // GET api/trabajador/reporte-cliente/{sucursalId}?q=juan&fechaDesde=...&fechaHasta=...
+    [HttpGet("reporte-cliente/{sucursalId:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetReporteByClienteAsync(
+        int sucursalId,
+        [FromQuery] string q,
+        [FromQuery] DateTime? fechaDesde,
+        [FromQuery] DateTime? fechaHasta)
+    {
+        if (string.IsNullOrWhiteSpace(q))
+            return BadRequest(new { mensaje = "Debes ingresar al menos una letra para buscar." });
+
+        try
+        {
+            var reporte = await _trabajadorService.GetReporteByClienteAsync(
+                sucursalId, q, fechaDesde, fechaHasta);
+            return Ok(reporte);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { mensaje = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al generar reporte por cliente sucursal {SucursalId}", sucursalId);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al generar el reporte.",
+                detalle = ex.Message
+            });
+        }
+    }
+
+    // GET api/trabajador/detalle-servicio/{sucursalId}?descripcion=Pintado de uñas&fechaDesde=...
+    [HttpGet("detalle-servicio/{sucursalId:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetDetalleByServicioAsync(
+        int sucursalId,
+        [FromQuery] string descripcion,
+        [FromQuery] DateTime? fechaDesde,
+        [FromQuery] DateTime? fechaHasta)
+    {
+        if (string.IsNullOrWhiteSpace(descripcion))
+            return BadRequest(new { mensaje = "Descripción requerida." });
+
+        try
+        {
+            var detalle = await _trabajadorService.GetDetalleByServicioAsync(
+                sucursalId, descripcion, fechaDesde, fechaHasta);
+            return Ok(detalle);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener detalle servicio {Descripcion}", descripcion);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error.",
+                detalle = ex.Message
+            });
+        }
+    }
 }

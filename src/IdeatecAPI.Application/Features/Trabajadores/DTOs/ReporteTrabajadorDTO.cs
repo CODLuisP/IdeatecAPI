@@ -87,3 +87,13 @@ public class ReporteServicioRawDTO
     public decimal PrecioUnitario { get; set; }
     public decimal TotalVentaItem { get; set; }
 }
+
+public class ReporteClienteDTO
+{
+    public string? ClienteNumDoc { get; set; }
+    public string? ClienteRazonSocial { get; set; }
+    public int TotalServicios { get; set; }
+    public int TotalComprobantes { get; set; }
+    public decimal TotalMonto { get; set; }
+    public List<ReporteTrabajadorDTO> Trabajadores { get; set; } = [];
+}

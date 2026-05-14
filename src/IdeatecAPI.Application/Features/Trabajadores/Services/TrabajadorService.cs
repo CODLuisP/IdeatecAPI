@@ -22,6 +22,18 @@ public interface ITrabajadorService
         int sucursalId,
         DateTime? fechaDesde,
         DateTime? fechaHasta);
+
+    Task<IEnumerable<ReporteClienteDTO>> GetReporteByClienteAsync(
+    int sucursalId,
+    string palabra,
+    DateTime? fechaDesde,
+    DateTime? fechaHasta);
+
+    Task<IEnumerable<ReporteServicioRawDTO>> GetDetalleByServicioAsync(
+    int sucursalId,
+    string descripcion,
+    DateTime? fechaDesde,
+    DateTime? fechaHasta);
 }
 
 public class TrabajadorService : ITrabajadorService
@@ -227,5 +239,86 @@ public class TrabajadorService : ITrabajadorService
 
         return await _unitOfWork.Trabajadores.GetServiciosTopBySucursalAsync(
             sucursalId, fechaDesde, fechaHasta);
+    }
+
+    public async Task<IEnumerable<ReporteClienteDTO>> GetReporteByClienteAsync(
+    int sucursalId,
+    string palabra,
+    DateTime? fechaDesde,
+    DateTime? fechaHasta)
+    {
+        if (string.IsNullOrWhiteSpace(palabra))
+            throw new ArgumentException("Debe ingresar una palabra de búsqueda.");
+
+        var filas = await _unitOfWork.Trabajadores.GetServiciosByClienteAsync(
+            sucursalId, palabra, fechaDesde, fechaHasta);
+
+        if (!filas.Any()) return [];
+
+        // Agrupar por cliente
+        return filas
+            .GroupBy(f => f.ClienteNumDoc)
+            .Select(gCliente =>
+            {
+                var filasCliente = gCliente.ToList();
+                var primera = filasCliente.First();
+
+                return new ReporteClienteDTO
+                {
+                    ClienteNumDoc = primera.ClienteNumDoc,
+                    ClienteRazonSocial = primera.ClienteRazonSocial,
+                    TotalServicios = filasCliente.Count,
+                    TotalComprobantes = filasCliente.Select(f => f.ComprobanteId).Distinct().Count(),
+                    TotalMonto = filasCliente.Sum(f => f.TotalVentaItem),
+
+                    // Agrupar por trabajador dentro del cliente
+                    Trabajadores = filasCliente
+                        .GroupBy(f => f.TrabajadorId)
+                        .Select(gTrabajador =>
+                        {
+                            var filasT = gTrabajador.ToList();
+                            var primeraT = filasT.First();
+
+                            return new ReporteTrabajadorDTO
+                            {
+                                TrabajadorId = primeraT.TrabajadorId,
+                                Nombres = primeraT.Nombres,
+                                Apellidos = primeraT.Apellidos,
+                                Dni = primeraT.Dni,
+                                TotalServicios = filasT.Count,
+                                TotalComprobantes = filasT.Select(f => f.ComprobanteId).Distinct().Count(),
+                                TotalMonto = filasT.Sum(f => f.TotalVentaItem),
+                                Servicios = filasT.Select(f => new ServicioTrabajadorDTO
+                                {
+                                    ComprobanteId = f.ComprobanteId,
+                                    NumeroCompleto = f.NumeroCompleto,
+                                    TipoComprobante = f.TipoComprobante,
+                                    FechaEmision = f.FechaEmision,
+                                    TipoMoneda = f.TipoMoneda,
+                                    EstadoSunat = f.EstadoSunat,
+                                    ClienteNumDoc = f.ClienteNumDoc,
+                                    ClienteRazonSocial = f.ClienteRazonSocial,
+                                    DetalleId = f.DetalleId,
+                                    Codigo = f.Codigo,
+                                    Descripcion = f.Descripcion,
+                                    Cantidad = f.Cantidad,
+                                    UnidadMedida = f.UnidadMedida,
+                                    PrecioUnitario = f.PrecioUnitario,
+                                    TotalVentaItem = f.TotalVentaItem
+                                }).ToList()
+                            };
+                        }).ToList()
+                };
+            }).ToList();
+    }
+
+    public async Task<IEnumerable<ReporteServicioRawDTO>> GetDetalleByServicioAsync(
+        int sucursalId,
+        string descripcion,
+        DateTime? fechaDesde,
+        DateTime? fechaHasta)
+    {
+        return await _unitOfWork.Trabajadores.GetDetalleByServicioAsync(
+            sucursalId, descripcion, fechaDesde, fechaHasta);
     }
 }
