@@ -19,4 +19,5 @@ public interface ICuentasPorCobrarRepository
     Task<bool> PagarCuotaAsync(PagarCuotaDto dto, string nuevoEstado, decimal nuevoMontoPagado);
 
     Task<IEnumerable<CuotaPagoDto>> GetHistorialPagosByCuotaIdAsync(int cuotaId);
+    Task<IEnumerable<ReporteCuentasPorCobrarItemDto>> GetReporteCuentasPorCobrarAsync(ReporteCuentasPorCobrarFiltroDto filtro);
 }

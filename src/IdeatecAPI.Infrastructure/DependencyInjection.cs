@@ -102,9 +102,11 @@ public static class DependencyInjection
 
         //Cuentas por cobrar
         services.AddScoped<ICuentasPorCobrarService, CuentasPorCobrarService>();
+        services.AddScoped<ICuentasPorCobrarExcelService, CuentasPorCobrarExcelService>();
 
         //Deuda contado
         services.AddScoped<IDeudaContadoService, DeudaContadoService>();
+        services.AddScoped<IDeudaContadoExcelService, DeudaContadoExcelService>();
 
         //Trabajadores
         services.AddScoped<ITrabajadorService, TrabajadorService>();
