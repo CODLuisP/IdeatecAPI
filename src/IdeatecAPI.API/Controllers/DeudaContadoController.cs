@@ -88,4 +88,44 @@ public class DeudaContadoController : ControllerBase
             return BadRequest(new { message = ex.Message });
         }
     }
+
+    [HttpGet("excel")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> DescargarExcel(
+        [FromQuery] string empresaRuc,
+        [FromQuery] string? establecimientoAnexo,
+        [FromQuery] string? clienteNumDoc,
+        [FromQuery] DateTime? fechaInicio,
+        [FromQuery] DateTime? fechaFin,
+        [FromQuery] string? tituloReporte)
+    {
+        if (string.IsNullOrEmpty(empresaRuc))
+            return BadRequest(new { message = "El RUC de la empresa es obligatorio" });
+
+        try
+        {
+            var filtro = new ReporteDeudaContadoFiltroDto
+            {
+                EmpresaRuc           = empresaRuc,
+                EstablecimientoAnexo = establecimientoAnexo,
+                ClienteNumDoc        = clienteNumDoc,
+                FechaInicio          = fechaInicio,
+                FechaFin             = fechaFin,
+                TituloReporte = tituloReporte
+            };
+
+            var bytes = await _deudaContadoService.GenerarExcelAsync(filtro);
+            var nombreArchivo = $"Deudas_Contado_{empresaRuc}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+
+            return File(
+                bytes,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                nombreArchivo);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
 }

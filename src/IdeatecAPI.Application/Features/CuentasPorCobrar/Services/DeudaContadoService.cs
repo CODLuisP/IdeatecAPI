@@ -1,3 +1,4 @@
+using ClosedXML.Excel;
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Application.Features.DeudaContado.DTOs;
 
@@ -15,15 +16,19 @@ public interface IDeudaContadoService
     Task<IEnumerable<PagoDeudaContadoDto>> GetHistorialPagosByPagoIdAsync(int pagoId);
 
     Task<bool> RegistrarPagoAsync(RegistrarPagoDeudaContadoDto dto);
+
+    Task<byte[]> GenerarExcelAsync(ReporteDeudaContadoFiltroDto filtro);
 }
 
 public class DeudaContadoService : IDeudaContadoService
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IDeudaContadoExcelService _excelService;
 
-    public DeudaContadoService(IUnitOfWork unitOfWork)
+    public DeudaContadoService(IUnitOfWork unitOfWork, IDeudaContadoExcelService excelService)
     {
-        _unitOfWork = unitOfWork;
+        _unitOfWork   = unitOfWork;
+        _excelService = excelService;
     }
 
     public async Task<IEnumerable<ListaDeudaContadoDto>> GetDeudaContadoAsync(
@@ -86,5 +91,18 @@ public class DeudaContadoService : IDeudaContadoService
             _unitOfWork.Rollback();
             throw;
         }
+    }
+
+    public async Task<byte[]> GenerarExcelAsync(ReporteDeudaContadoFiltroDto filtro)
+    {
+        if (string.IsNullOrWhiteSpace(filtro.EmpresaRuc))
+            throw new ArgumentException("El RUC de la empresa es obligatorio");
+
+        // Si solo viene fechaInicio, fechaFin = fechaInicio
+        if (filtro.FechaInicio.HasValue && !filtro.FechaFin.HasValue)
+            filtro.FechaFin = filtro.FechaInicio;
+
+        var items = await _unitOfWork.DeudaContado.GetReporteDeudaContadoAsync(filtro);
+        return _excelService.GenerarReporteDeudaContado(items, filtro);
     }
 }

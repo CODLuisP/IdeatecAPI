@@ -17,15 +17,19 @@ public interface ICuentasPorCobrarService
     Task<bool> PagarCuotaAsync(PagarCuotaDto dto);
 
     Task<IEnumerable<CuotaPagoDto>> GetHistorialPagosByCuotaIdAsync(int cuotaId);
+
+    Task<byte[]> GenerarExcelAsync(ReporteCuentasPorCobrarFiltroDto filtro);
 }
 
 public class CuentasPorCobrarService : ICuentasPorCobrarService
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ICuentasPorCobrarExcelService _excelService;
 
-    public CuentasPorCobrarService(IUnitOfWork unitOfWork)
+    public CuentasPorCobrarService(IUnitOfWork unitOfWork, ICuentasPorCobrarExcelService excelService)
     {
-        _unitOfWork = unitOfWork;
+        _unitOfWork   = unitOfWork;
+        _excelService = excelService;
     }
 
     public async Task<IEnumerable<ListaCuentasPorCobrarDto>> GetCuentasPorCobrarAsync(
@@ -71,16 +75,13 @@ public class CuentasPorCobrarService : ICuentasPorCobrarService
             if (cuota.Estado == "PAGADO")
                 throw new InvalidOperationException("La cuota ya está pagada");
 
-            // Calcular nuevo monto pagado acumulado
             var montoPagadoAnterior = cuota.MontoPagado ?? 0;
-            var nuevoMontoPagado = montoPagadoAnterior + dto.MontoPagado;
+            var nuevoMontoPagado    = montoPagadoAnterior + dto.MontoPagado;
 
-            // Validar que no exceda el monto de la cuota
             if (nuevoMontoPagado > cuota.Monto)
                 throw new InvalidOperationException(
                     $"El monto a pagar excede el saldo pendiente. Saldo: {cuota.Monto - montoPagadoAnterior}");
 
-            // Determinar nuevo estado
             string nuevoEstado;
             if (nuevoMontoPagado >= cuota.Monto)
                 nuevoEstado = "PAGADO";
@@ -107,5 +108,17 @@ public class CuentasPorCobrarService : ICuentasPorCobrarService
             throw new ArgumentException("CuotaId inválido");
 
         return await _unitOfWork.CuentasPorCobrar.GetHistorialPagosByCuotaIdAsync(cuotaId);
+    }
+
+    public async Task<byte[]> GenerarExcelAsync(ReporteCuentasPorCobrarFiltroDto filtro)
+    {
+        if (string.IsNullOrWhiteSpace(filtro.EmpresaRuc))
+            throw new ArgumentException("El RUC de la empresa es obligatorio");
+
+        if (filtro.FechaInicio.HasValue && !filtro.FechaFin.HasValue)
+            filtro.FechaFin = filtro.FechaInicio;
+
+        var items = await _unitOfWork.CuentasPorCobrar.GetReporteCuentasPorCobrarAsync(filtro);
+        return _excelService.GenerarReporteCuentasPorCobrar(items, filtro);
     }
 }

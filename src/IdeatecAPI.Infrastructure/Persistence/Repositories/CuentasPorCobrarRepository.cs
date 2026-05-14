@@ -196,4 +196,106 @@ public class CuentasPorCobrarRepository : ICuentasPorCobrarRepository
         return await _connection.QueryAsync<CuotaPagoDto>(
             sql, new { CuotaId = cuotaId }, _transaction);
     }
+
+    public async Task<IEnumerable<ReporteCuentasPorCobrarItemDto>> GetReporteCuentasPorCobrarAsync(ReporteCuentasPorCobrarFiltroDto filtro)
+    {
+        var fechaFin = filtro.FechaFin ?? filtro.FechaInicio;
+
+        var sql = @"
+            SELECT
+                c.comprobanteID     AS ComprobanteId,
+                c.numeroCompleto    AS NumeroCompleto,
+                c.tipoComprobante   AS TipoComprobante,
+                c.fechaEmision      AS FechaEmision,
+                c.tipoMoneda        AS TipoMoneda,
+                c.clienteNumDoc     AS ClienteNumDoc,
+                c.clienteRznSocial  AS ClienteRznSocial,
+                c.importeTotal      AS ImporteTotal,
+                c.montoCredito      AS MontoCredito,
+                CASE
+                    WHEN COUNT(cu.cuotaID) = SUM(CASE WHEN cu.estado = 'PAGADO' THEN 1 ELSE 0 END)
+                        THEN 'PAGADO'
+                    ELSE 'PENDIENTE'
+                END AS Estado
+            FROM comprobante c
+            INNER JOIN cuota cu ON cu.comprobanteID = c.comprobanteID
+            WHERE c.empresaRuc = @EmpresaRuc
+            AND c.tipoPago = 'CREDITO'
+            AND c.estadoSunat = 'ACEPTADO'
+            AND c.tipoComprobante IN ('01', '03')
+            AND (@EstablecimientoAnexo IS NULL OR c.establecimientoAnexo = @EstablecimientoAnexo)
+            AND (@FechaInicio IS NULL OR c.fechaEmision >= @FechaInicio)
+            AND (@FechaFin    IS NULL OR c.fechaEmision <= @FechaFin)
+            AND (@ClienteNumDoc IS NULL OR c.clienteNumDoc = @ClienteNumDoc)
+            GROUP BY
+                c.comprobanteID, c.numeroCompleto, c.tipoComprobante,
+                c.fechaEmision, c.tipoMoneda, c.clienteNumDoc,
+                c.clienteRznSocial, c.importeTotal, c.montoCredito
+            HAVING
+                (@Estado IS NULL) OR
+                (@Estado = 'PAGADO' AND COUNT(cu.cuotaID) = SUM(CASE WHEN cu.estado = 'PAGADO' THEN 1 ELSE 0 END)) OR
+                (@Estado = 'PENDIENTE' AND COUNT(cu.cuotaID) != SUM(CASE WHEN cu.estado = 'PAGADO' THEN 1 ELSE 0 END))
+            ORDER BY c.clienteRznSocial ASC, c.fechaEmision DESC";
+
+        var comprobantes = await _connection.QueryAsync<ReporteCuentasPorCobrarItemDto>(sql, new
+        {
+            EmpresaRuc           = filtro.EmpresaRuc,
+            EstablecimientoAnexo = filtro.EstablecimientoAnexo,
+            FechaInicio          = filtro.FechaInicio,
+            FechaFin             = fechaFin,
+            ClienteNumDoc        = filtro.ClienteNumDoc,
+            Estado               = filtro.Estado
+        }, _transaction);
+
+        var listaComprobantes = comprobantes.ToList();
+
+        if (!listaComprobantes.Any())
+            return listaComprobantes;
+
+        // Traer cuotas de todos los comprobantes en una sola query
+        var comprobanteIds = listaComprobantes.Select(x => x.ComprobanteId).ToList();
+
+        var sqlCuotas = @"
+            SELECT
+                cu.comprobanteID    AS ComprobanteId,
+                cu.numeroCuota      AS NumeroCuota,
+                cu.monto            AS Monto,
+                cu.fechaVencimiento AS FechaVencimiento,
+                cu.montoPagado      AS MontoPagado,
+                cu.monto - COALESCE(cu.montoPagado, 0) AS Saldo,
+                cu.fechaPago        AS FechaPago,
+                cu.estado           AS Estado
+            FROM cuota cu
+            WHERE cu.comprobanteID IN @ComprobanteIds
+            ORDER BY cu.numeroCuota ASC";
+
+        var cuotas = await _connection.QueryAsync<(
+            int ComprobanteId,
+            string? NumeroCuota,
+            decimal? Monto,
+            DateTime FechaVencimiento,
+            decimal? MontoPagado,
+            decimal? Saldo,
+            DateTime? FechaPago,
+            string? Estado)>(
+            sqlCuotas, new { ComprobanteIds = comprobanteIds }, _transaction);
+
+        var cuotasPorComprobante = cuotas
+            .GroupBy(c => c.ComprobanteId)
+            .ToDictionary(g => g.Key, g => g.Select(c => new ReporteCuotaItemDto
+            {
+                NumeroCuota     = c.NumeroCuota,
+                Monto           = c.Monto,
+                FechaVencimiento = c.FechaVencimiento,
+                MontoPagado     = c.MontoPagado,
+                Saldo           = c.Saldo,
+                FechaPago       = c.FechaPago,
+                Estado          = c.Estado
+            }).ToList());
+
+        foreach (var comp in listaComprobantes)
+            comp.Cuotas = cuotasPorComprobante.TryGetValue(comp.ComprobanteId, out var c) ? c : new();
+
+        return listaComprobantes;
+    }
 }
