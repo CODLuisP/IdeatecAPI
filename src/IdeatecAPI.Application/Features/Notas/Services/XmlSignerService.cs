@@ -27,11 +27,13 @@ public class XmlSignerService : IXmlSignerService
 
         try
         {
-            // Intentar cargar como PFX (PKCS#12)
-            certificate = new X509Certificate2(certBytes, certificadoPassword, 
+            // Intentar cargar como PFX (PKCS#12) — reemplaza constructor obsoleto
+            certificate = X509CertificateLoader.LoadPkcs12(
+                certBytes,
+                certificadoPassword,
                 X509KeyStorageFlags.EphemeralKeySet | X509KeyStorageFlags.Exportable);
 
-            // Si se cargó pero no tiene llave privada (pasa con PEMs en este constructor), 
+            // Si se cargó pero no tiene llave privada (pasa con PEMs en este método),
             // forzamos la entrada al catch para procesarlo como PEM.
             if (!certificate.HasPrivateKey)
             {
@@ -42,23 +44,25 @@ public class XmlSignerService : IXmlSignerService
         {
             // Fallback a PEM: Método ultra-robusto para BouncyCastle PEMs
             var pemText = Encoding.UTF8.GetString(certBytes);
-            
-            try 
+
+            try
             {
                 // 1. Cargar el certificado público (toma el primer bloque BEGIN CERTIFICATE)
                 var publicCert = X509Certificate2.CreateFromPem(pemText);
-                
+
                 // 2. Cargar la llave privada RSA (toma el bloque BEGIN RSA PRIVATE KEY)
                 using var rsaKey = System.Security.Cryptography.RSA.Create();
-                rsaKey.ImportFromPem(pemText); 
-                
+                rsaKey.ImportFromPem(pemText);
+
                 // 3. Vincular llave privada con certificado público
                 using var certWithKey = publicCert.CopyWithPrivateKey(rsaKey);
-                
-                // 4. Exportar y re-importar como PFX con clave temporal
+
+                // 4. Exportar como PFX y re-importar con X509CertificateLoader
                 // Este paso es VITAL en Windows/IIS para que SignedXml reconozca la clave privada
                 var pfxData = certWithKey.Export(X509ContentType.Pfx, "1234");
-                certificate = new X509Certificate2(pfxData, "1234", 
+                certificate = X509CertificateLoader.LoadPkcs12(
+                    pfxData,
+                    "1234",
                     X509KeyStorageFlags.UserKeySet | X509KeyStorageFlags.Exportable);
             }
             catch (Exception ex)
