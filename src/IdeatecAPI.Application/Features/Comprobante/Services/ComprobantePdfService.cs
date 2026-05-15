@@ -1001,6 +1001,12 @@ public class ComprobantePdfService : IComprobantePdfService
         using var qrGenerator = new QRCodeGenerator();
         using var qrCodeData = qrGenerator.CreateQrCode(text, QRCodeGenerator.ECCLevel.Q);
         using var qrCode = new PngByteQRCode(qrCodeData);
-        return qrCode.GetGraphic(20);
+        
+        // Color Azul Marino: #1A2B4A -> R:26, G:43, B:74, A:255
+        byte[] darkColor = new byte[] { 26, 43, 74, 255 };
+        // Fondo Blanco -> R:255, G:255, B:255, A:255
+        byte[] lightColor = new byte[] { 255, 255, 255, 255 };
+
+        return qrCode.GetGraphic(20, darkColor, lightColor);
     }
 }
