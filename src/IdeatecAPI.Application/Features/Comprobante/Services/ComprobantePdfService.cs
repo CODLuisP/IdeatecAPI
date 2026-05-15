@@ -18,10 +18,10 @@ public class ComprobantePdfService : IComprobantePdfService
     private readonly IUnitOfWork _unitOfWork;
 
     private static readonly string ColorAzulMarino = "#1A2B4A";
-    private static readonly string ColorBlanco     = "#FFFFFF";
-    private static readonly string ColorGrisClaro  = "#F5F7FA";
-    private static readonly string ColorGrisBorde  = "#D0D7E3";
-    private static readonly string ColorTexto      = "#1A1A1A";
+    private static readonly string ColorBlanco = "#FFFFFF";
+    private static readonly string ColorGrisClaro = "#F5F7FA";
+    private static readonly string ColorGrisBorde = "#D0D7E3";
+    private static readonly string ColorTexto = "#1A1A1A";
     private static readonly string ColorTextoSuave = "#4A5568";
 
     public ComprobantePdfService(IUnitOfWork unitOfWork)
@@ -40,27 +40,27 @@ public class ComprobantePdfService : IComprobantePdfService
             ?? throw new KeyNotFoundException($"Empresa con RUC '{comprobante.EmpresaRuc}' no encontrada.");
 
         var datos = await _unitOfWork.Comprobantes.GetDatosCompletosByComprobanteIdAsync(comprobanteId);
-        
+
         swPdfInterno.Stop();
 
         var swRender = System.Diagnostics.Stopwatch.StartNew();
 
         var empresa = new EmpresaDto
         {
-            Ruc             = empresaEntidad.Ruc,
-            RazonSocial     = empresaEntidad.RazonSocial,
+            Ruc = empresaEntidad.Ruc,
+            RazonSocial = empresaEntidad.RazonSocial,
             NombreComercial = empresaEntidad.NombreComercial,
-            Direccion       = empresaEntidad.Direccion,
-            Telefono        = empresaEntidad.Telefono,
-            Email           = empresaEntidad.Email,
-            LogoBase64      = empresaEntidad.LogoBase64,
+            Direccion = empresaEntidad.Direccion,
+            Telefono = empresaEntidad.Telefono,
+            Email = empresaEntidad.Email,
+            LogoBase64 = empresaEntidad.LogoBase64,
         };
-        
-        var detalles     = datos.Detalles.ToList();
-        var pagos        = datos.Pagos.ToList();
-        var cuotas       = datos.Cuotas.ToList();
-        var leyendas     = datos.Leyendas.ToList();
-        var guias        = datos.Guias.ToList();
+
+        var detalles = datos.Detalles.ToList();
+        var pagos = datos.Pagos.ToList();
+        var cuotas = datos.Cuotas.ToList();
+        var leyendas = datos.Leyendas.ToList();
+        var guias = datos.Guias.ToList();
         var detracciones = datos.Detracciones.ToList();
 
         bool esTicket = tamano == TamanoPdf.Ticket80mm || tamano == TamanoPdf.Ticket58mm;
@@ -96,7 +96,6 @@ public class ComprobantePdfService : IComprobantePdfService
                     page.Content().Element(c =>
                         BuildContent(c, comprobante, empresa, detalles, pagos, cuotas,
                                      leyendas, guias, detracciones));
-                    page.Footer().Element(c => BuildFooter(c, comprobante, empresa));
                 }
             });
         });
@@ -133,16 +132,16 @@ public class ComprobantePdfService : IComprobantePdfService
                     var (pw, ph) = LeerDimensionesImagen(logoBytes);
                     float ratio = (float)pw / ph;
 
-                    const float maxAlto  = 28f;
+                    const float maxAlto = 28f;
                     const float maxAncho = 55f;
 
-                    float alto  = maxAlto;
+                    float alto = maxAlto;
                     float ancho = alto * ratio;
 
                     if (ancho > maxAncho)
                     {
                         ancho = maxAncho;
-                        alto  = ancho / ratio;
+                        alto = ancho / ratio;
                     }
 
                     col.Item().AlignCenter()
@@ -206,7 +205,7 @@ public class ComprobantePdfService : IComprobantePdfService
 
             //documento que modifca
             col.Item().Height(6);
-            if (c.TipoComprobante is "07" or "08" 
+            if (c.TipoComprobante is "07" or "08"
             && !string.IsNullOrEmpty(c.TipDocAfectado)
             && !string.IsNullOrEmpty(c.NumDocAfectado))
             {
@@ -253,7 +252,7 @@ public class ComprobantePdfService : IComprobantePdfService
                     {
                         var el = tc.Background(bg).Padding(2);
                         if (right) el.AlignRight().Text(txt).FontSize(6);
-                        else       el.Text(txt).FontSize(6);
+                        else el.Text(txt).FontSize(6);
                     }
 
                     table.Cell().Element(tc => TD(tc, d.Codigo ?? "-"));
@@ -275,9 +274,9 @@ public class ComprobantePdfService : IComprobantePdfService
             // 6. TOTALES
             col.Item().PaddingTop(3).Column(tot =>
             {
-                TicketFilaTotal(tot, "Op. Gravadas",   FormatearMoneda(c.TotalOperacionesGravadas   ?? 0, moneda));
+                TicketFilaTotal(tot, "Op. Gravadas", FormatearMoneda(c.TotalOperacionesGravadas ?? 0, moneda));
                 TicketFilaTotal(tot, "Op. Exoneradas", FormatearMoneda(c.TotalOperacionesExoneradas ?? 0, moneda));
-                TicketFilaTotal(tot, "Op. Inafectas",  FormatearMoneda(c.TotalOperacionesInafectas  ?? 0, moneda));
+                TicketFilaTotal(tot, "Op. Inafectas", FormatearMoneda(c.TotalOperacionesInafectas ?? 0, moneda));
                 TicketFilaTotal(tot, $"I.G.V. ({detalles.FirstOrDefault(d => (d.PorcentajeIGV ?? 0) > 0)?.PorcentajeIGV ?? 18:G29}%)", FormatearMoneda(c.TotalIGV ?? 0, moneda));
 
                 if ((c.TotalIcbper ?? 0) > 0)
@@ -409,7 +408,8 @@ public class ComprobantePdfService : IComprobantePdfService
     // ════════════════════════════════════════════════════════════════════════
     // LAYOUT A4 / CARTA / MEDIA CARTA
     // ════════════════════════════════════════════════════════════════════════
-    private static void BuildHeader(IContainer container, Domain.Entities.Comprobante c, EmpresaDto empresa){
+    private static void BuildHeader(IContainer container, Domain.Entities.Comprobante c, EmpresaDto empresa)
+    {
         container.Column(col =>
         {
             col.Item().Row(row =>
@@ -428,7 +428,7 @@ public class ComprobantePdfService : IComprobantePdfService
                         float ratio = (float)pw / ph;
 
                         // Límites para A4
-                        const float maxAlto  = 70f;
+                        const float maxAlto = 70f;
                         const float maxAncho = 110f;
 
                         float alto, ancho;
@@ -437,18 +437,18 @@ public class ComprobantePdfService : IComprobantePdfService
                         {
                             // Rectangular horizontal (800x400) → escala desde ancho máximo
                             ancho = maxAncho;
-                            alto  = ancho / ratio; // ~55pt
+                            alto = ancho / ratio; // ~55pt
                         }
                         else if (ratio < 0.75f)
                         {
                             // Vertical (400x600) → escala desde alto máximo
-                            alto  = maxAlto;
+                            alto = maxAlto;
                             ancho = alto * ratio; // ~46pt
                         }
                         else
                         {
                             // Cuadrado (400x400) → escala desde alto máximo
-                            alto  = maxAlto;
+                            alto = maxAlto;
                             ancho = alto * ratio; // ~70pt
                         }
 
@@ -477,9 +477,6 @@ public class ComprobantePdfService : IComprobantePdfService
                     if (!string.IsNullOrEmpty(empresa.Email))
                         emp.Item().Text($"Email: {empresa.Email}")
                             .FontSize(8).FontColor(ColorTextoSuave);
-
-                    emp.Item().Text("Web: www.ideatec.pe")
-                        .FontSize(8).FontColor(ColorTextoSuave);
                 });
 
                 // RECUADRO COMPROBANTE
@@ -502,7 +499,7 @@ public class ComprobantePdfService : IComprobantePdfService
 
     // Datos cliente — solo primera página, va al inicio del Content
     private static void BuildDatosCliente(IContainer container,
-        Domain.Entities.Comprobante c)
+    Domain.Entities.Comprobante c)
     {
         var tipoDocLabel = c.TipoComprobante == "01"
             ? "RUC"
@@ -512,40 +509,41 @@ public class ComprobantePdfService : IComprobantePdfService
         .Padding(6)
         .Row(row =>
         {
-            // Cliente (lado izquierdo)
+            // ── Izquierda: Cliente, Documento, Dirección ──
             row.RelativeItem(6).Column(rec =>
-            {
-                BuildFilaDato(rec, "Cliente", c.ClienteRazonSocial ?? "-");
-                BuildFilaDato(rec, tipoDocLabel, c.ClienteNumDoc ?? "-");
+    {
+        BuildFilaDatoSpaced(rec, "Cliente", c.ClienteRazonSocial ?? "-");
+        BuildFilaDatoSpaced(rec, tipoDocLabel, c.ClienteNumDoc ?? "-");
 
-                if (!string.IsNullOrEmpty(c.ClienteDireccion))
-                    BuildFilaDato(rec, "Dirección",
-                        $"{c.ClienteDireccion}, {c.ClienteDistrito} {c.ClienteProvincia} {c.ClienteDepartamento}".Trim());
+        if (!string.IsNullOrEmpty(c.ClienteDireccion))
+            BuildFilaDatoSpaced(rec, "Dirección",
+                $"{c.ClienteDireccion}, {c.ClienteDistrito} {c.ClienteProvincia} {c.ClienteDepartamento}".Trim());
+    });
 
-                BuildFilaDato(rec, "Fecha Emisión", $"{c.FechaEmision:dd/MM/yyyy} {c.HoraEmision:HH:mm:ss}");
-                if ((c.TipoPago?.ToLower() ?? "") is "credito" or "crédito")
-                    BuildFilaDato(rec, "Fecha Vencimiento", $"{c.FechaVencimiento:dd/MM/yyyy}");
+            // ── Derecha: Fecha Emisión, Tipo Pago, Fecha Vencimiento ──
+            row.RelativeItem(4).PaddingLeft(40).Column(right =>
+    {
+        BuildFilaDatoSpaced(right, "Fecha Emisión", c.FechaEmision.ToString("dd/MM/yyyy"));
+        BuildFilaDatoSpaced(right, "Tipo Pago", c.TipoPago ?? "-");
+        BuildFilaDatoSpaced(right, "Fecha Vencimiento", c.FechaVencimiento.ToString("dd/MM/yyyy"));
 
-                if (c.TipoMoneda != "PEN" && c.TipoCambio.HasValue)
-                    BuildFilaDato(rec, "Moneda", $"{c.TipoMoneda} (T.C. S/ {c.TipoCambio:F3})");
-            });
+        if (c.TipoMoneda != "PEN" && c.TipoCambio.HasValue)
+            BuildFilaDatoSpaced(right, "Moneda", $"{c.TipoMoneda} (T.C. S/ {c.TipoCambio:F3})");
 
-            // Documento que modifica (lado derecho)
-            if (c.TipoComprobante is "07" or "08"
-                && !string.IsNullOrEmpty(c.TipDocAfectado)
-                && !string.IsNullOrEmpty(c.NumDocAfectado))
-            {
-                row.RelativeItem(4)
-                    .PaddingLeft(10)
-                    .Element(ct => BuildDocumentoModifica(ct, c));
-            }
+        if (c.TipoComprobante is "07" or "08"
+            && !string.IsNullOrEmpty(c.TipDocAfectado)
+            && !string.IsNullOrEmpty(c.NumDocAfectado))
+        {
+            right.Item().PaddingTop(4)
+                .Element(ct => BuildDocumentoModifica(ct, c));
+        }
+    });
         });
-            
     }
 
     //documento que modifica
     private static void BuildDocumentoModifica(
-        IContainer container, 
+        IContainer container,
         Domain.Entities.Comprobante c,
         bool esTicket = false)
     {
@@ -556,7 +554,7 @@ public class ComprobantePdfService : IComprobantePdfService
         {
             "01" => "FACTURA",
             "03" => "BOLETA",
-            _    => "COMPROBANTE"
+            _ => "COMPROBANTE"
         };
 
         if (esTicket)
@@ -599,7 +597,7 @@ public class ComprobantePdfService : IComprobantePdfService
         {
             "07" => "NOTA DE CRÉDITO",
             "08" => "NOTA DE DÉBITO",
-            _    => "NOTA"
+            _ => "NOTA"
         };
 
         container.PaddingTop(4).Column(col =>
@@ -618,7 +616,7 @@ public class ComprobantePdfService : IComprobantePdfService
     }
 
     private static void BuildContent(IContainer container,
-        Domain.Entities.Comprobante c, 
+        Domain.Entities.Comprobante c,
         EmpresaDto empresa,
         List<Domain.Entities.ComprobanteDetalle> detalles,
         List<Domain.Entities.Pago> pagos,
@@ -654,8 +652,8 @@ public class ComprobantePdfService : IComprobantePdfService
             col.Item().Height(6);
             col.Item().Element(tc => BuildTablaDetalles(tc, detalles, moneda));
 
-            // Espacio de ~3 líneas después de los ítems
-            col.Item().PaddingTop(36);
+            // Espacio después de los ítems
+            col.Item().PaddingTop(5);
 
             // Leyendas
             if (leyendas.Any())
@@ -680,8 +678,6 @@ public class ComprobantePdfService : IComprobantePdfService
                 // Izquierda
                 row.RelativeItem(5).Column(left =>
                 {
-                    left.Item().Element(lc => BuildSeccionPagos(lc, c, pagos, cuotas, moneda));
-
                     if (detracciones.Any())
                         left.Item().PaddingTop(6)
                             .Element(lc => BuildSeccionDetraccion(lc, detracciones, moneda, c.TipoComprobante));
@@ -696,7 +692,21 @@ public class ComprobantePdfService : IComprobantePdfService
                 row.ConstantItem(10);
 
                 // Derecha: Totales
-                row.RelativeItem(4).Element(rc => BuildSeccionTotales(rc, c,detalles, moneda));
+                row.RelativeItem(4).Element(rc => BuildSeccionTotales(rc, c, detalles, moneda));
+            });
+
+            // Pie de página pegado al contenido
+            col.Item().PaddingTop(8).LineHorizontal(1).LineColor(ColorAzulMarino);
+            col.Item().PaddingTop(3).Row(row =>
+            {
+                row.RelativeItem()
+                    .Text($"Representación Impresa de {ObtenerNombreTipoComprobante(c.TipoComprobante)} - Autorizado por SUNAT")
+                    .FontSize(7).FontColor(ColorTextoSuave);
+                row.AutoItem().AlignRight().Text(txt =>
+                {
+                    txt.Span("Pág. ").FontSize(7).FontColor(ColorTextoSuave);
+                    txt.CurrentPageNumber().FontSize(7).FontColor(ColorTextoSuave);
+                });
             });
         });
     }
@@ -743,7 +753,7 @@ public class ComprobantePdfService : IComprobantePdfService
                 {
                     var el = c.Background(bg).Padding(3);
                     if (right) el.AlignRight().Text(txt).FontSize(8);
-                    else       el.Text(txt).FontSize(8);
+                    else el.Text(txt).FontSize(8);
                 }
 
                 table.Cell().Element(c => TD(c, d.Codigo ?? "-"));
@@ -759,54 +769,6 @@ public class ComprobantePdfService : IComprobantePdfService
                 table.Cell().Element(c => TD(c, FormatearMoneda(d.PrecioVenta ?? 0, moneda)));
                 table.Cell().Element(c => TD(c, FormatearMoneda(esGratuito ? 0 : d.TotalVentaItem ?? 0, moneda)));
             }
-        });
-    }
-
-    private static void BuildSeccionPagos(IContainer container,
-        Domain.Entities.Comprobante c,
-        List<Domain.Entities.Pago> pagos,
-        List<Domain.Entities.Cuota> cuotas,
-        string moneda)
-    {
-        container.Column(col =>
-        {
-            col.Item().Text("Condición de Pago").Bold().FontSize(9).FontColor(ColorAzulMarino);
-            col.Item().PaddingTop(2)
-                .Background(ColorGrisClaro).Border(1).BorderColor(ColorGrisBorde)
-                .Padding(5).Column(p =>
-                {
-                    bool tieneInicialYCuotas = pagos.Any() && cuotas.Any();
-                    bool esCredito = (c.TipoPago?.ToLower() ?? "") is "credito" or "crédito";
-
-                    if (!esCredito)
-                    {
-                        p.Item().Text("Tipo: Contado").Bold().FontSize(8);
-                        foreach (var pago in pagos)
-                            FilaPago(p, pago.MedioPago ?? "Efectivo", FormatearMoneda(pago.Monto ?? 0, moneda));
-                    }
-                    else if (tieneInicialYCuotas)
-                    {
-                        p.Item().Text("Tipo: Crédito con inicial").Bold().FontSize(8);
-                        foreach (var pago in pagos)
-                            FilaPago(p, $"Inicial ({pago.MedioPago ?? "Efectivo"})", FormatearMoneda(pago.Monto ?? 0, moneda));
-
-                        p.Item().PaddingTop(3).Text("Cuotas:").Bold().FontSize(8);
-                        foreach (var cu in cuotas)
-                            FilaPago(p, $"{cu.NumeroCuota} - Vcto: {cu.FechaVencimiento:dd/MM/yyyy}", FormatearMoneda(cu.Monto ?? 0, moneda));
-                    }
-                    else
-                    {
-                        p.Item().Text("Tipo: Crédito").Bold().FontSize(8);
-                        FilaPago(p, "Monto Crédito", FormatearMoneda(c.MontoCredito ?? 0, moneda));
-
-                        if (cuotas.Any())
-                        {
-                            p.Item().PaddingTop(3).Text("Cuotas:").Bold().FontSize(8);
-                            foreach (var cu in cuotas)
-                                FilaPago(p, $"{cu.NumeroCuota} - Vcto: {cu.FechaVencimiento:dd/MM/yyyy}", FormatearMoneda(cu.Monto ?? 0, moneda));
-                        }
-                    }
-                });
         });
     }
 
@@ -845,9 +807,9 @@ public class ComprobantePdfService : IComprobantePdfService
             col.Item().Text("Resumen").Bold().FontSize(9).FontColor(ColorAzulMarino);
             col.Item().PaddingTop(2).Border(1).BorderColor(ColorAzulMarino).Column(t =>
             {
-                FilaTotal(t, "Op. Gravadas",   FormatearMoneda(c.TotalOperacionesGravadas   ?? 0, moneda));
+                FilaTotal(t, "Op. Gravadas", FormatearMoneda(c.TotalOperacionesGravadas ?? 0, moneda));
                 FilaTotal(t, "Op. Exoneradas", FormatearMoneda(c.TotalOperacionesExoneradas ?? 0, moneda));
-                FilaTotal(t, "Op. Inafectas",  FormatearMoneda(c.TotalOperacionesInafectas  ?? 0, moneda));
+                FilaTotal(t, "Op. Inafectas", FormatearMoneda(c.TotalOperacionesInafectas ?? 0, moneda));
                 FilaTotal(t, $"I.G.V. ({d.FirstOrDefault(d => (d.PorcentajeIGV ?? 0) > 0)?.PorcentajeIGV ?? 18:G29}%)", FormatearMoneda(c.TotalIGV ?? 0, moneda));
 
                 if ((c.TotalOperacionesGratuitas ?? 0) > 0)
@@ -867,26 +829,6 @@ public class ComprobantePdfService : IComprobantePdfService
                     r.ConstantItem(80).AlignRight()
                         .Text(FormatearMoneda(c.ImporteTotal ?? 0, moneda))
                         .Bold().FontSize(9).FontColor(ColorBlanco);
-                });
-            });
-        });
-    }
-
-    private static void BuildFooter(IContainer container,
-        Domain.Entities.Comprobante c, EmpresaDto empresa)
-    {
-        container.Column(col =>
-        {
-            col.Item().LineHorizontal(1).LineColor(ColorAzulMarino);
-            col.Item().PaddingTop(3).Row(row =>
-            {
-                row.RelativeItem()
-                    .Text($"Representación Impresa de {ObtenerNombreTipoComprobante(c.TipoComprobante)} - Autorizado por SUNAT")
-                    .FontSize(7).FontColor(ColorTextoSuave);
-                row.AutoItem().AlignRight().Text(txt =>
-                {
-                    txt.Span("Pág. ").FontSize(7).FontColor(ColorTextoSuave);
-                    txt.CurrentPageNumber().FontSize(7).FontColor(ColorTextoSuave);
                 });
             });
         });
@@ -952,7 +894,7 @@ public class ComprobantePdfService : IComprobantePdfService
             "03" => "BOLETA ELECTRÓNICA",
             "07" => "NOTA DE CRÉDITO",
             "08" => "NOTA DE DÉBITO",
-            _    => "COMPROBANTE ELECTRÓNICO"
+            _ => "COMPROBANTE ELECTRÓNICO"
         };
 
     private static string ObtenerLabelTipoDoc(string? tipoDoc) =>
@@ -964,28 +906,28 @@ public class ComprobantePdfService : IComprobantePdfService
             "6" => "RUC",
             "7" => "Pasaporte",
             "A" => "C.S. Diplomatico",
-            _   => "Documento"
-    };
+            _ => "Documento"
+        };
 
     private static string ObtenerNombreGuia(string? tipoGuia) =>
         tipoGuia switch
         {
             "09" => "Guía Remisión Remitente",
             "31" => "Guía Remisión Transportista",
-            _    => tipoGuia ?? "-"
+            _ => tipoGuia ?? "-"
         };
 
     private static PageSize ResolverTamano(TamanoPdf tamano) =>
         tamano switch
         {
-            TamanoPdf.A4         => PageSizes.A4,
-            TamanoPdf.Carta      => PageSizes.Letter,
+            TamanoPdf.A4 => PageSizes.A4,
+            TamanoPdf.Carta => PageSizes.Letter,
             TamanoPdf.MediaCarta => new PageSize(595, 396),
             TamanoPdf.Ticket80mm => new PageSize(227, float.MaxValue),
             TamanoPdf.Ticket58mm => new PageSize(165, float.MaxValue),
-            _                    => PageSizes.A4
+            _ => PageSizes.A4
         };
-    
+
     private static float ResolverAnchoTicket(TamanoPdf tamano) =>
     tamano == TamanoPdf.Ticket58mm ? 165f : 227f;
 
@@ -1017,13 +959,22 @@ public class ComprobantePdfService : IComprobantePdfService
     private static (float w, float h) ResolverTamanoLogo(byte[] logoBytes)
     {
         var (pw, ph) = LeerDimensionesImagen(logoBytes);
-        float ratio  = (float)pw / ph;
+        float ratio = (float)pw / ph;
 
         return ratio switch
         {
-            > 1.5f  => (110f, 55f),  // Rectangular horizontal (ej. 800x400)
-            < 0.75f => (45f,  80f),  // Vertical               (ej. 400x600)
-            _       => (60f,  60f)   // Cuadrado               (ej. 400x400)
+            > 1.5f => (110f, 55f),  // Rectangular horizontal (ej. 800x400)
+            < 0.75f => (45f, 80f),  // Vertical               (ej. 400x600)
+            _ => (60f, 60f)   // Cuadrado               (ej. 400x400)
         };
+    }
+
+    private static void BuildFilaDatoSpaced(ColumnDescriptor col, string label, string valor, float spacing = 4f)
+    {
+        col.Item().PaddingBottom(spacing).Row(r =>
+        {
+            r.ConstantItem(85).Text(label + ":").Bold().FontSize(8).FontColor(ColorAzulMarino);
+            r.RelativeItem().Text(valor).FontSize(8);
+        });
     }
 }
