@@ -42,6 +42,7 @@ public class NoteRepository : DapperRepository<Note>, INoteRepository
             mensajeRespuestaSunat   AS MensajeRespuestaSunat,
             xmlGenerado             AS XmlGenerado,
             cdrSunat                AS CdrSunat,
+            codigoHashCPE           AS CodigoHashCPE,
             pdfGenerado             AS PdfGenerado,
             enviadoEnResumen        AS EnviadoEnResumen,
             fechaEnvioSunat         AS FechaEnvioSunat,
@@ -126,7 +127,7 @@ public class NoteRepository : DapperRepository<Note>, INoteRepository
             totalIcbper, valorVenta, subTotal, totalDescuentos, totalOtrosCargos, importeTotal,
             comprobanteAfectadoID, tipDocAfectado, numDocAfectado,
             tipoNotaCreditoDebito, motivoNota,
-            estadoSunat, usuarioCreacion, fechaCreacion
+            estadoSunat, usuarioCreacion, fechaCreacion, codigoHashCPE
         ) VALUES (
             @EmpresaId, @EmpresaRuc, @EmpresaRazonSocial, @EmpresaNombreComercial,
             @EmpresaDireccion, @EmpresaProvincia, @EmpresaDepartamento, @EmpresaDistrito, @EmpresaUbigeo,
@@ -138,7 +139,7 @@ public class NoteRepository : DapperRepository<Note>, INoteRepository
             @TotalIcbper, @ValorVenta, @SubTotal, @TotalDescuentos, @TotalOtrosCargos, @MtoImpVenta,
             @ComprobanteAfectadoId, @TipDocAfectado, @NumDocAfectado,
             @TipoNotaCreditoDebito, @MotivoNota,
-            @EstadoSunat, @UsuarioCreacion, @FechaCreacion
+            @EstadoSunat, @UsuarioCreacion, @FechaCreacion, @CodigoHashCPE
         );
         SELECT LAST_INSERT_ID();";
 
@@ -190,7 +191,8 @@ public class NoteRepository : DapperRepository<Note>, INoteRepository
             note.MotivoNota,
             note.EstadoSunat,
             note.UsuarioCreacion,
-            FechaCreacion = AhoraLima()
+            FechaCreacion = AhoraLima(),
+            note.CodigoHashCPE
         }, _transaction);
 
         await ActualizarSerieCorrelativoAsync(note);
@@ -271,13 +273,14 @@ public class NoteRepository : DapperRepository<Note>, INoteRepository
     }
 
     public async Task UpdateEstadoSunatAsync(int comprobanteId, string estado, string? codigo,
-    string? mensaje, string? xml, string? cdr)
+    string? mensaje, string? xml, string? cdr, string? hash = null)
     {
         var sql = @"
         UPDATE comprobante SET
             estadoSunat           = @Estado,
             codigoRespuestaSunat  = @Codigo,
             mensajeRespuestaSunat = @Mensaje,
+            codigoHashCPE         = COALESCE(@Hash, codigoHashCPE),
             fechaEnvioSunat       = @FechaEnvio,
             fechaModificacion     = NOW()
         WHERE comprobanteID = @ComprobanteId";
@@ -288,6 +291,7 @@ public class NoteRepository : DapperRepository<Note>, INoteRepository
             Estado = estado,
             Codigo = codigo,
             Mensaje = mensaje,
+            Hash = hash,
             FechaEnvio = AhoraLima()
         }, _transaction);
     }

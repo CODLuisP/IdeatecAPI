@@ -487,16 +487,32 @@ public class ComprobanteService : IComprobanteService
 
             int newComprobanteId;
 
-            // ── NUEVO FLUJO: Generar XML -> Incrementar -> Guardar ──
+            // ── NUEVO FLUJO: Generar XML -> Firmar (para obtener Hash) -> Incrementar -> Guardar ──
             
-            // 1. (Consultar correlativo ya fue hecho por el cliente o se valida en la entidad)
-            // 2. Generar XML (Se genera antes de persistir para asegurar consistencia)
+            // 1. Generar XML base
             var xmlResultado = _xmlService.GenerarXml(dto);
             if (!xmlResultado.Exitoso)
                 throw new InvalidOperationException($"Error al generar XML base: {xmlResultado.Error}");
 
-            // 3 e 4. Incrementar correlativo y Guardar Comprobante en la DB del entorno
-            // (La Repo ejecuta el UPDATE y el INSERT dentro de esta misma transacción)
+            // 2. Firmar XML (para obtener el Hash inmediatamente para el PDF/QR)
+            if (!string.IsNullOrEmpty(empresa.CertificadoPem))
+            {
+                try
+                {
+                    var firmaRes = _xmlSigner.SignXmlFull(
+                        xmlResultado.XmlString!,
+                        empresa.CertificadoPem,
+                        empresa.CertificadoPassword ?? ""
+                    );
+                    comprobante.CodigoHashCPE = firmaRes.DigestValue;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[AVISO] No se pudo firmar en la creación: {ex.Message}");
+                }
+            }
+
+            // 3 e 4. Incrementar correlativo y Guardar Comprobante en la DB
             newComprobanteId = await _unitOfWork.Comprobantes
                 .GenerarComprobanteAsync(comprobante);
 
@@ -671,11 +687,12 @@ public class ComprobanteService : IComprobanteService
         string xmlSinFirmar = xmlResultado.XmlString!;
 
         // 4. Firmar XML
-        var xmlFirmadoBytes = _xmlSigner.SignXmlToBytes(
+        var firmaResultado = _xmlSigner.SignXmlFull(
             xmlSinFirmar,
             empresa.CertificadoPem!,
             empresa.CertificadoPassword ?? ""
         );
+        var xmlFirmadoBytes = firmaResultado.SignedXmlBytes;
         var xmlFirmadoString = Encoding.UTF8.GetString(xmlFirmadoBytes);
         var nombreArchivo = $"{empresa.Ruc}-{comprobante.TipoComprobante}-{comprobante.Serie}-{comprobante.Correlativo:D8}";
 
@@ -725,7 +742,8 @@ public class ComprobanteService : IComprobanteService
                 null,
                 $"Error de conexión con SUNAT: {ex.Message}",
                 null,
-                null
+                null,
+                firmaResultado.DigestValue
             );
 
             var sucursalIdNotify = await _unitOfWork.Comprobantes.GetSucursalIdByRucAndAnexoAsync(
@@ -792,7 +810,8 @@ public class ComprobanteService : IComprobanteService
             sunatResponse.CodigoRespuesta,
             sunatResponse.Descripcion,
             null,
-            null
+            null,
+            firmaResultado.DigestValue
         );
 
         // 9. Guardar ruta CDR en BD (hilo principal, conexión libre)

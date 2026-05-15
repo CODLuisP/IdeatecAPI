@@ -337,7 +337,8 @@ public class ComprobantePdfService : IComprobantePdfService
             // 10. QR
             if (!string.IsNullOrEmpty(empresa.Ruc))
             {
-                var qrBytes = GenerateQrCode(empresa.Ruc);
+                var qrContent = BuildQrContent(c);
+                var qrBytes = GenerateQrCode(qrContent);
                 if (qrBytes.Length > 0)
                 {
                     col.Item().PaddingTop(6).AlignLeft()
@@ -691,7 +692,8 @@ public class ComprobantePdfService : IComprobantePdfService
                     // QR
                     if (!string.IsNullOrEmpty(empresa.Ruc))
                     {
-                        var qrBytes = GenerateQrCode(empresa.Ruc);
+                        var qrContent = BuildQrContent(c);
+                        var qrBytes = GenerateQrCode(qrContent);
                         if (qrBytes.Length > 0)
                         {
                             left.Item().PaddingTop(4).PaddingLeft(-15).Row(r =>
@@ -1008,5 +1010,22 @@ public class ComprobantePdfService : IComprobantePdfService
         byte[] lightColor = new byte[] { 255, 255, 255, 255 };
 
         return qrCode.GetGraphic(20, darkColor, lightColor);
+    }
+
+    private static string BuildQrContent(Domain.Entities.Comprobante c)
+    {
+        // Formato SUNAT: RUC | TIPO | SERIE | CORRELATIVO | IGV | TOTAL | FECHA | TIPO_DOC_REC | NUM_DOC_REC | HASH
+        return string.Join("|",
+            c.EmpresaRuc ?? "",
+            c.TipoComprobante ?? "",
+            c.Serie ?? "",
+            (c.Correlativo ?? 0).ToString("D8"),
+            (c.TotalIGV ?? 0).ToString("F2"),
+            (c.ImporteTotal ?? 0).ToString("F2"),
+            c.FechaEmision.ToString("yyyy-MM-dd"),
+            c.ClienteTipoDoc ?? "0",
+            c.ClienteNumDoc ?? "0",
+            c.CodigoHashCPE ?? ""
+        );
     }
 }

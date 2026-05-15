@@ -27,7 +27,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
                 codigoTipoDescGlobal, descuentoGlobal, totalOperacionesGravadas, totalOperacionesExoneradas, 
                 totalOperacionesInafectas, totalOperacionesGratuitas, totalIgvGratuitas, totalIGV, totalDescuentos, totalOtrosCargos,
                 totalIcbper, totalImpuestos, valorVenta, subTotal, importeTotal, montoCredito,
-                estadoSunat, enviadoEnResumen, xmlGenerado, usuarioCreacion, fechaCreacion
+                estadoSunat, enviadoEnResumen, xmlGenerado, usuarioCreacion, fechaCreacion, codigoHashCPE
             ) VALUES (
                 @TipoOperacion, @TipoComprobante, @Serie, @Correlativo,
                 @FechaEmision, @HoraEmision, @FechaVencimiento, @TipoMoneda,
@@ -41,7 +41,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
                 @codigoTipoDescGlobal,  @DescuentoGlobal, @TotalOperacionesGravadas, @TotalOperacionesExoneradas, 
                 @TotalOperacionesInafectas, @TotalOperacionesGratuitas, @TotalIgvGratuitas, @TotalIGV, @TotalDescuentos, @TotalOtrosCargos,
                 @TotalIcbper, @TotalImpuestos, @ValorVenta, @SubTotal, @ImporteTotal, @MontoCredito,
-                @EstadoSunat,  @EnviadoEnResumen, @XmlGenerado, @UsuarioCreacion, @FechaCreacion
+                @EstadoSunat,  @EnviadoEnResumen, @XmlGenerado, @UsuarioCreacion, @FechaCreacion, @CodigoHashCPE
             );
             SELECT LAST_INSERT_ID();";
 
@@ -100,7 +100,8 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
             comprobante.XmlGenerado,
             comprobante.EnviadoEnResumen,
             comprobante.UsuarioCreacion,
-            comprobante.FechaCreacion
+            comprobante.FechaCreacion,
+            comprobante.CodigoHashCPE
         };
 
         int comprobanteId = await _connection.ExecuteScalarAsync<int>(sql, parameters, _transaction);
@@ -538,6 +539,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         string? mensaje,
         string? xmlFirmado,
         string? cdrBase64,
+        string? hash = null,
         string? mensajeAdicional = null)
     {
         var sql = @"
@@ -549,6 +551,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
                     THEN CONCAT(COALESCE(mensajeRespuestaSunat, ''), '. ', @MensajeAdicional)
                     ELSE @Mensaje
                 END,
+                codigoHashCPE         = COALESCE(@Hash, codigoHashCPE),
                 fechaEnvioSunat       = @FechaEnvio
             WHERE comprobanteID = @ComprobanteId";
 
@@ -558,6 +561,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
             Estado           = estado,
             Codigo           = codigo,
             Mensaje          = mensaje,
+            Hash             = hash,
             MensajeAdicional = mensajeAdicional,
             FechaEnvio       = DateTime.Now
         }, _transaction);

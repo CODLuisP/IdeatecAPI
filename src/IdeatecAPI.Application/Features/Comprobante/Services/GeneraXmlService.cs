@@ -24,6 +24,7 @@ public class GeneraXmlService : IComprobanteXmlService
     private static readonly XNamespace Cac = "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2";
     private static readonly XNamespace Cbc = "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2";
     private static readonly XNamespace Ext = "urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2";
+    private static readonly XNamespace Xsi = "http://www.w3.org/2001/XMLSchema-instance";
 
     public XmlResultado GenerarXml(GenerarComprobanteDTO dto)
     {
@@ -54,6 +55,8 @@ public class GeneraXmlService : IComprobanteXmlService
             new XAttribute(XNamespace.Xmlns + "cac",  Cac),
             new XAttribute(XNamespace.Xmlns + "cbc",  Cbc),
             new XAttribute(XNamespace.Xmlns + "ext",  Ext),
+            new XAttribute(Xsi + "schemaLocation",
+                "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2 2.1\\maindoc\\UBL-Invoice-2.1.xsd"),
 
             // ── UBLExtensions ────────────────────────────────────────────
             new XElement(Ext + "UBLExtensions",
@@ -72,7 +75,9 @@ public class GeneraXmlService : IComprobanteXmlService
             new XElement(Cbc + "ID", $"{dto.Serie}-{correlativo}"),
             new XElement(Cbc + "IssueDate",  dto.FechaEmision.ToString("yyyy-MM-dd")),
             new XElement(Cbc + "IssueTime",  dto.HoraEmision.ToString("HH:mm:ss")),
-            new XElement(Cbc + "DueDate",    dto.FechaVencimiento.ToString("yyyy-MM-dd")),
+            dto.TipoPago?.ToLower() != "contado"
+                ? new XElement(Cbc + "DueDate", dto.FechaVencimiento.ToString("yyyy-MM-dd"))
+                : null,
             new XElement(Cbc + "InvoiceTypeCode",
                 new XAttribute("listAgencyName", "PE:SUNAT"),
                 new XAttribute("listURI", "urn:pe:gob:sunat:cpe:see:gem:catalogos:catalogo01"),
@@ -80,10 +85,7 @@ public class GeneraXmlService : IComprobanteXmlService
                 dto.TipoComprobante),
             // LEYENDAS
             dto.Legends?.Select(l =>
-                new XElement(Cbc + "Note",
-                    new XAttribute("languageLocaleID", l.Code),
-                    l.Value
-                )
+                new XElement(Cbc + "Note", l.Value)
             ),
             new XElement(Cbc + "DocumentCurrencyCode",
                 new XAttribute("listID", "ISO 4217 Alpha"),

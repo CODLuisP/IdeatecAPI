@@ -15,6 +15,7 @@ public class XmlNoteBuilderService : IXmlNoteBuilderService
     private static readonly XNamespace Cac = "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2";
     private static readonly XNamespace Cbc = "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2";
     private static readonly XNamespace Ext = "urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2";
+    private static readonly XNamespace Xsi = "http://www.w3.org/2001/XMLSchema-instance";
 
     public string BuildXml(Note note, List<NoteDetail> details, List<NoteLegend> legends)
     {
@@ -27,10 +28,15 @@ public class XmlNoteBuilderService : IXmlNoteBuilderService
 
         var doc = new XDocument(new XDeclaration("1.0", "UTF-8", null));
 
+        var schemaFile = note.TipoDoc == "07" ? "UBL-CreditNote-2.1.xsd" : "UBL-DebitNote-2.1.xsd";
+        var schemaLocation = $"{ns.NamespaceName} 2.1\\maindoc\\{schemaFile}";
+
         var root = new XElement(ns + rootName,
+            new XAttribute(XNamespace.Xmlns + "xsi", Xsi),
             new XAttribute(XNamespace.Xmlns + "cac", Cac),
             new XAttribute(XNamespace.Xmlns + "cbc", Cbc),
             new XAttribute(XNamespace.Xmlns + "ext", Ext),
+            new XAttribute(Xsi + "schemaLocation", schemaLocation),
 
             new XElement(Ext + "UBLExtensions",
                 new XElement(Ext + "UBLExtension",
@@ -45,9 +51,7 @@ public class XmlNoteBuilderService : IXmlNoteBuilderService
 
         foreach (var legend in legends)
         {
-            root.Add(new XElement(Cbc + "Note",
-                new XAttribute("languageLocaleID", legend.Code),
-                legend.Value));
+            root.Add(new XElement(Cbc + "Note", legend.Value));
         }
 
         root.Add(new XElement(Cbc + "DocumentCurrencyCode", note.TipoMoneda));

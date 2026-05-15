@@ -72,6 +72,7 @@ public class Note
     public string? CodigoRespuestaSunat { get; set; }
     public string? MensajeRespuestaSunat { get; set; }
     public string EstadoSunat { get; set; } = "PENDIENTE";
+    public string? CodigoHashCPE { get; set; }
     public DateTime? FechaEnvioSunat { get; set; }
 
     // Auditoría

@@ -39,7 +39,7 @@ public interface IComprobanteRepository : IRepository<Comprobante>
         IEnumerable<GuiaComprobante> Guias,
         IEnumerable<Detraccion> Detracciones
     )> GetDatosCompletosByComprobanteIdAsync(int comprobanteId);
-    Task UpdateEstadoSunatAsync(int comprobanteId, string estado, string? codigo, string? mensaje, string? xmlFirmado, string? cdrBase64, string? mensajeAdicional = null);
+    Task UpdateEstadoSunatAsync(int comprobanteId, string estado, string? codigo, string? mensaje, string? xmlFirmado, string? cdrBase64, string? hash = null, string? mensajeAdicional = null);
     Task<int?> GetSucursalIdByRucAndAnexoAsync(string empresaRuc, string codEstablecimiento);
     Task UpdateXmlGeneradoAsync(int comprobanteId, string rutaZip);
     Task UpdateXmlRespuestaSunatAsync(int comprobanteId, string rutaCdr);

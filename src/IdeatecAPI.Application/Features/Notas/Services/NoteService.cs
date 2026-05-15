@@ -191,6 +191,44 @@ public class NoteService : INoteService
                 FechaCreacion = DateTime.UtcNow
             };
 
+            // ── NUEVO: Firmar XML al crear para tener el Hash inmediatamente ──
+            if (!string.IsNullOrEmpty(empresa.CertificadoPem))
+            {
+                try
+                {
+                    var xmlBase = _xmlBuilder.BuildXml(note, dto.Details.Select((d, i) => new NoteDetail
+                    {
+                        Item = i + 1,
+                        ProductoId = d.ProductoId,
+                        CodProducto = d.CodProducto,
+                        Unidad = d.Unidad,
+                        Descripcion = d.Descripcion,
+                        Cantidad = d.Cantidad,
+                        MtoValorUnitario = d.MtoValorUnitario,
+                        MtoValorVenta = d.MtoValorVenta,
+                        MtoBaseIgv = d.MtoBaseIgv,
+                        PorcentajeIGV = d.PorcentajeIgv,
+                        Igv = d.Igv,
+                        TipoAfectacionIGV = d.TipAfeIgv.ToString("D2"),
+                        MtoPrecioUnitario = d.MtoPrecioUnitario,
+                        TotalVentaItem = d.TotalVentaItem,
+                        Icbper = d.Icbper,
+                        FactorIcbper = d.FactorIcbper
+                    }).ToList(), dto.Legends.Select(l => new NoteLegend { Code = l.Code, Value = l.Value }).ToList());
+
+                    var firmaRes = _xmlSigner.SignXmlFull(
+                        xmlBase,
+                        empresa.CertificadoPem,
+                        empresa.CertificadoPassword ?? ""
+                    );
+                    note.CodigoHashCPE = firmaRes.DigestValue;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[AVISO] No se pudo firmar nota en creación: {ex.Message}");
+                }
+            }
+
             var newId = await _unitOfWork.Notes.CreateNoteAsync(note);
 
             for (int i = 0; i < dto.Details.Count; i++)
@@ -262,11 +300,12 @@ public class NoteService : INoteService
 
         // 1. Generar y firmar XML
         var xmlSinFirmar = _xmlBuilder.BuildXml(note, details, legends);
-        var xmlFirmadoBytes = _xmlSigner.SignXmlToBytes(
+        var firmaResultado = _xmlSigner.SignXmlFull(
             xmlSinFirmar,
             empresa.CertificadoPem!,
             empresa.CertificadoPassword ?? "123456"
         );
+        var xmlFirmadoBytes = firmaResultado.SignedXmlBytes;
 
         var nombreArchivo = $"{empresa.Ruc}-{note.TipoDoc}-{note.Serie}-{note.Correlativo:D8}";
 
@@ -339,7 +378,8 @@ public class NoteService : INoteService
             sunatResponse.CodigoRespuesta,
             sunatResponse.Descripcion,
             null,
-            null
+            null,
+            firmaResultado.DigestValue
         );
 
         // 6. Guardar ruta CDR en BD (hilo principal)
@@ -397,6 +437,7 @@ public class NoteService : INoteService
                 null,
                 null,
                 null,
+                null, // No tenemos hash del afectado aquí
                 mensajeAfectado
             );
         }

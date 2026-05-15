@@ -10,7 +10,7 @@ public interface INoteRepository : IRepository<Note>
     Task<bool> ExisteNoteAsync(int empresaId, string tipoDoc, string serie, int correlativo);
     Task<int> CreateNoteAsync(Note note);
     Task UpdateNoteAsync(Note note);
-    Task UpdateEstadoSunatAsync(int comprobanteId, string estado, string? codigo, string? mensaje, string? xml, string? cdr);
+    Task UpdateEstadoSunatAsync(int comprobanteId, string estado, string? codigo, string? mensaje, string? xml, string? cdr, string? hash = null);
     Task UpdateXmlGeneradoAsync(int comprobanteId, string rutaZip);
     Task UpdateXmlRespuestaSunatAsync(int comprobanteId, string rutaCdr);
 }

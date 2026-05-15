@@ -5,10 +5,17 @@ using System.Xml;
 
 namespace IdeatecAPI.Application.Features.Notas.Services;
 
+public class SignatureResult
+{
+    public byte[] SignedXmlBytes { get; set; } = [];
+    public string DigestValue { get; set; } = string.Empty;
+}
+
 public interface IXmlSignerService
 {
     string SignXml(string xmlContent, string certificadoPem, string certificadoPassword);
     byte[] SignXmlToBytes(string xmlContent, string certificadoPem, string certificadoPassword);
+    SignatureResult SignXmlFull(string xmlContent, string certificadoPem, string certificadoPassword);
 }
 
 public class XmlSignerService : IXmlSignerService
@@ -20,6 +27,11 @@ public class XmlSignerService : IXmlSignerService
     }
 
     public byte[] SignXmlToBytes(string xmlContent, string certificadoPem, string certificadoPassword)
+    {
+        return SignXmlFull(xmlContent, certificadoPem, certificadoPassword).SignedXmlBytes;
+    }
+
+    public SignatureResult SignXmlFull(string xmlContent, string certificadoPem, string certificadoPassword)
     {
         // ── Intentar cargar certificado (soporta PFX/Binary o PEM/Text) ────
         var certBytes = Convert.FromBase64String(certificadoPem);
@@ -104,6 +116,14 @@ public class XmlSignerService : IXmlSignerService
         signedXml.ComputeSignature();
         var signatureElement = signedXml.GetXml();
 
+        // Obtener el DigestValue (Hash) de la primera referencia
+        string digestValue = "";
+        if (signedXml.SignedInfo.References.Count > 0)
+        {
+            var ref0 = (Reference)signedXml.SignedInfo.References[0]!;
+            digestValue = Convert.ToBase64String(ref0.DigestValue ?? []);
+        }
+
         // ── Inyectar firma en ext:ExtensionContent ────────────────────────
         var nsManager = new XmlNamespaceManager(xmlDoc.NameTable);
         nsManager.AddNamespace("ext", "urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2");
@@ -123,6 +143,11 @@ public class XmlSignerService : IXmlSignerService
         });
         xmlDoc.Save(xw);
         xw.Flush();
-        return ms.ToArray();
+        
+        return new SignatureResult
+        {
+            SignedXmlBytes = ms.ToArray(),
+            DigestValue = digestValue
+        };
     }
 }
