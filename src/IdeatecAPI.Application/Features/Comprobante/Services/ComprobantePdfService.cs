@@ -4,6 +4,7 @@ using IdeatecAPI.Application.Features.Empresas.DTOs;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
+using QRCoder;
 
 namespace IdeatecAPI.Infrastructure.Services;
 
@@ -334,11 +335,16 @@ public class ComprobantePdfService : IComprobantePdfService
             }
 
             // 10. QR
-            col.Item().PaddingTop(6).AlignCenter()
-                .Width(45).Height(45)
-                .Background(ColorGrisClaro).Border(0.5f).BorderColor(ColorGrisBorde)
-                .AlignCenter().AlignMiddle()
-                .Text("QR").FontSize(7).FontColor(ColorTextoSuave);
+            if (!string.IsNullOrEmpty(empresa.Ruc))
+            {
+                var qrBytes = GenerateQrCode(empresa.Ruc);
+                if (qrBytes.Length > 0)
+                {
+                    col.Item().PaddingTop(6).AlignLeft()
+                        .Width(60).Height(60)
+                        .Image(qrBytes).FitArea();
+                }
+            }
 
             col.Item().PaddingTop(3).AlignCenter()
                 .Text($"Representación impresa de {ObtenerNombreTipoComprobante(c.TipoComprobante)}")
@@ -683,10 +689,19 @@ public class ComprobantePdfService : IComprobantePdfService
                             .Element(lc => BuildSeccionDetraccion(lc, detracciones, moneda, c.TipoComprobante));
 
                     // QR
-                    left.Item().PaddingTop(8).Width(70).Height(70)
-                        .Background(ColorGrisClaro).Border(1).BorderColor(ColorGrisBorde)
-                        .AlignCenter().AlignMiddle()
-                        .Text("QR").FontSize(9).FontColor(ColorTextoSuave);
+                    if (!string.IsNullOrEmpty(empresa.Ruc))
+                    {
+                        var qrBytes = GenerateQrCode(empresa.Ruc);
+                        if (qrBytes.Length > 0)
+                        {
+                            left.Item().PaddingTop(4).PaddingLeft(-15).Row(r =>
+                            {
+                                r.AutoItem().Width(110).Height(110)
+                                    .Image(qrBytes).FitArea();
+                                r.RelativeItem();
+                            });
+                        }
+                    }
                 });
 
                 row.ConstantItem(10);
@@ -976,5 +991,16 @@ public class ComprobantePdfService : IComprobantePdfService
             r.ConstantItem(85).Text(label + ":").Bold().FontSize(8).FontColor(ColorAzulMarino);
             r.RelativeItem().Text(valor).FontSize(8);
         });
+    }
+
+    private static byte[] GenerateQrCode(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+            return Array.Empty<byte>();
+
+        using var qrGenerator = new QRCodeGenerator();
+        using var qrCodeData = qrGenerator.CreateQrCode(text, QRCodeGenerator.ECCLevel.Q);
+        using var qrCode = new PngByteQRCode(qrCodeData);
+        return qrCode.GetGraphic(20);
     }
 }

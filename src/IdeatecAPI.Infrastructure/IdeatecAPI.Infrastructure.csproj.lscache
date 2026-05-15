@@ -428,12 +428,15 @@ Services/
  microsoft.identitymodel.protocols.openidconnect/7.0.3/lib/net8.0/Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
  microsoft.identitymodel.protocols/7.0.3/lib/net8.0/Microsoft.IdentityModel.Protocols.dll
  microsoft.identitymodel.tokens/7.7.1/lib/net8.0/Microsoft.IdentityModel.Tokens.dll
+ microsoft.win32.systemevents/6.0.0/lib/net6.0/Microsoft.Win32.SystemEvents.dll
  mysql.data/9.1.0/lib/net8.0/MySql.Data.dll
  mysqlconnector/2.5.0/lib/net10.0/MySqlConnector.dll
+ qrcoder/1.8.0/lib/net6.0/QRCoder.dll
  questpdf/2026.2.4/lib/net10.0/QuestPDF.dll
  rbush.signed/4.0.0/lib/net8.0/RBush.dll
  sixlabors.fonts/1.0.0/lib/netcoreapp3.1/SixLabors.Fonts.dll
  system.configuration.configurationmanager/8.0.0/lib/net8.0/System.Configuration.ConfigurationManager.dll
+ system.drawing.common/6.0.0/lib/net6.0/System.Drawing.Common.dll
  system.identitymodel.tokens.jwt/7.7.1/lib/net8.0/System.IdentityModel.Tokens.Jwt.dll
  system.io.packaging/8.0.1/lib/net8.0/System.IO.Packaging.dll
  system.security.cryptography.pkcs/10.0.6/lib/net10.0/System.Security.Cryptography.Pkcs.dll
