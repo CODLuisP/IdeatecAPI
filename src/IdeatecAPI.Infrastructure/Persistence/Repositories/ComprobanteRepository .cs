@@ -1,7 +1,6 @@
 using System.Data;
 using Dapper;
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
-using IdeatecAPI.Application.Features.Comprobante.DTOs;
 using IdeatecAPI.Domain.Entities;
 
 namespace IdeatecAPI.Infrastructure.Persistence.Repositories.Comprobantes;

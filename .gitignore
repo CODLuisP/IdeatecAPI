@@ -37,6 +37,7 @@ ScaffoldingReadMe.txt
 
 # Cache files
 *.cache
+*.lscache
 AssemblyInfo.*
 *.AssemblyReference.cache
 *.CoreCompileInputs.cache

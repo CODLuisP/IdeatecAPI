@@ -48,6 +48,7 @@ public interface IComprobanteService
     Task<ObtenerComprobanteDTO?> GetComprobanteByIdAsync(int comprobanteId);
     Task<IEnumerable<ObtenerComprobanteDTO>> GetComprobanteByEstadoAsync(string estado);
     Task<ComprobanteResponse> SendToSunatAsync(int comprobanteId); // Generar XML, firmar y enviar a sunat
+    Task<CargaMasivaResponse> GenerarMasivoAsync(List<GenerarComprobanteDTO> dtos); //CARGA MASIVA BOLETAS Y FACTURAS 
 }
 
 public class ComprobanteResponse
@@ -1180,5 +1181,57 @@ public class ComprobanteService : IComprobanteService
         XmlGenerado = c.XmlGenerado,
         XmlRespuestaSunat = c.XmlRespuestaSunat
     };
+
+    //carga masiva de boletas y facturas
+    public async Task<CargaMasivaResponse> GenerarMasivoAsync(List<GenerarComprobanteDTO> dtos)
+    {
+        var response = new CargaMasivaResponse
+        {
+            Total = dtos.Count
+        };
+
+        foreach (var dto in dtos)
+        {
+            var numeroCompleto = $"{dto.Serie}-{dto.Correlativo}";
+            try
+            {
+                var resultado = await GenerarComprobanteAsync(dto);
+                if (resultado.Exitoso)
+                {
+                    response.Exitosos++;
+                    response.Resultados.Add(new CargaMasivaItemResultado
+                    {
+                        NumeroCompleto = numeroCompleto,
+                        Exitoso = true,
+                        Mensaje = "Guardado correctamente",
+                        ComprobanteId = resultado.ComprobanteId
+                    });
+                }
+                else
+                {
+                    response.Fallidos++;
+                    response.Resultados.Add(new CargaMasivaItemResultado
+                    {
+                        NumeroCompleto = numeroCompleto,
+                        Exitoso = false,
+                        Mensaje = resultado.Mensaje
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                response.Fallidos++;
+                response.Resultados.Add(new CargaMasivaItemResultado
+                {
+                    NumeroCompleto = numeroCompleto,
+                    Exitoso = false,
+                    Mensaje = ex.Message
+                });
+            }
+        }
+
+        response.Fallidos = response.Total - response.Exitosos;
+        return response;
+    }
 
 }

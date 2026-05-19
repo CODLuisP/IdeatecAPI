@@ -135,3 +135,21 @@ public class DetalleFacturaDTO
 }
 
 
+//PARA CARGAS MASIVAS DE BOLETAS Y FACTURAS
+public class CargaMasivaItemResultado
+{
+    public string? NumeroCompleto { get; set; }
+    public bool Exitoso { get; set; }
+    public string? Mensaje { get; set; }
+    public int? ComprobanteId { get; set; }
+}
+
+public class CargaMasivaResponse
+{
+    public int Total { get; set; }
+    public int Exitosos { get; set; }
+    public int Fallidos { get; set; }
+    public List<CargaMasivaItemResultado> Resultados { get; set; } = [];
+}
+
+

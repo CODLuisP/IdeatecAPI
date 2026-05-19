@@ -603,4 +603,33 @@ public class ComprobantesController : ControllerBase
             });
         }
     }
+
+    //carga masiva de boletas y facturas
+    [HttpPost("GenerarMasivo")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GenerarMasivo([FromBody] List<GenerarComprobanteDTO> dtos)
+    {
+        if (dtos == null || dtos.Count == 0)
+            return BadRequest(new { mensaje = "Debe enviar al menos un comprobante" });
+
+        if (dtos.Count > 500)
+            return BadRequest(new { mensaje = "No se pueden procesar más de 500 comprobantes por lote" });
+
+        try
+        {
+            var resultado = await _comprobanteService.GenerarMasivoAsync(dtos);
+            return Ok(resultado);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error en carga masiva de {Total} comprobantes", dtos.Count);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error en la carga masiva.",
+                detalle = ex.Message
+            });
+        }
+    }
 }
