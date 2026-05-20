@@ -222,6 +222,7 @@ public class ComprobantePdfService : IComprobantePdfService
             {
                 table.ColumnsDefinition(cols =>
                 {
+                    cols.ConstantColumn(15); // Item
                     cols.ConstantColumn(22); // Cod
                     cols.ConstantColumn(18); // Cant
                     cols.RelativeColumn();   // Desc
@@ -235,6 +236,7 @@ public class ComprobantePdfService : IComprobantePdfService
 
                 table.Header(h =>
                 {
+                    h.Cell().Element(tc => TH(tc, "Item"));
                     h.Cell().Element(tc => TH(tc, "Cod"));
                     h.Cell().Element(tc => TH(tc, "Cant"));
                     h.Cell().Element(tc => TH(tc, "Desc"));
@@ -243,6 +245,7 @@ public class ComprobantePdfService : IComprobantePdfService
                 });
 
                 bool par = false;
+                int itemIndex = 1;
                 foreach (var d in detalles)
                 {
                     var bg = par ? ColorBlanco : ColorGrisClaro;
@@ -256,6 +259,7 @@ public class ComprobantePdfService : IComprobantePdfService
                         else el.Text(txt).FontSize(6);
                     }
 
+                    table.Cell().Element(tc => TD(tc, (itemIndex++).ToString()));
                     table.Cell().Element(tc => TD(tc, d.Codigo ?? "-"));
                     table.Cell().Element(tc => TD(tc, d.Cantidad.ToString("F2")));
                     table.Cell().Element(tc =>
@@ -696,7 +700,7 @@ public class ComprobantePdfService : IComprobantePdfService
                         var qrBytes = GenerateQrCode(qrContent);
                         if (qrBytes.Length > 0)
                         {
-                            left.Item().PaddingTop(4).PaddingLeft(-15).Row(r =>
+                            left.Item().PaddingTop(4).PaddingLeft(-5).Row(r =>
                             {
                                 r.AutoItem().Width(110).Height(110)
                                     .Image(qrBytes).FitArea();
@@ -735,6 +739,7 @@ public class ComprobantePdfService : IComprobantePdfService
         {
             table.ColumnsDefinition(cols =>
             {
+                cols.ConstantColumn(25);
                 cols.ConstantColumn(45);
                 cols.ConstantColumn(38);
                 cols.ConstantColumn(32);
@@ -750,6 +755,7 @@ public class ComprobantePdfService : IComprobantePdfService
 
             table.Header(h =>
             {
+                h.Cell().Element(c => TH(c, "Item"));
                 h.Cell().Element(c => TH(c, "Código"));
                 h.Cell().Element(c => TH(c, "Cant."));
                 h.Cell().Element(c => TH(c, "Unid."));
@@ -760,6 +766,7 @@ public class ComprobantePdfService : IComprobantePdfService
             });
 
             bool par = false;
+            int itemIndex = 1;
             foreach (var d in detalles)
             {
                 var bg = par ? ColorBlanco : ColorGrisClaro;
@@ -773,6 +780,7 @@ public class ComprobantePdfService : IComprobantePdfService
                     else el.Text(txt).FontSize(8);
                 }
 
+                table.Cell().Element(c => TD(c, (itemIndex++).ToString()));
                 table.Cell().Element(c => TD(c, d.Codigo ?? "-"));
                 table.Cell().Element(c => TD(c, d.Cantidad.ToString("F2")));
                 table.Cell().Element(c => TD(c, d.UnidadMedida ?? "NIU"));
