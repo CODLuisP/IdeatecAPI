@@ -218,12 +218,14 @@ public class ComprobantePdfService : IComprobantePdfService
             col.Item().Height(6);
 
             // 5. TABLA DETALLES reducida
+            bool mostrarCodigo = detalles.Any(d => !string.IsNullOrWhiteSpace(d.Codigo));
+
             col.Item().PaddingTop(3).Table(table =>
             {
                 table.ColumnsDefinition(cols =>
                 {
                     cols.ConstantColumn(15); // Item
-                    cols.ConstantColumn(22); // Cod
+                    if (mostrarCodigo) cols.ConstantColumn(22); // Cod
                     cols.ConstantColumn(18); // Cant
                     cols.RelativeColumn();   // Desc
                     cols.ConstantColumn(28); // P.Unit
@@ -237,7 +239,7 @@ public class ComprobantePdfService : IComprobantePdfService
                 table.Header(h =>
                 {
                     h.Cell().Element(tc => TH(tc, "Item"));
-                    h.Cell().Element(tc => TH(tc, "Cod"));
+                    if (mostrarCodigo) h.Cell().Element(tc => TH(tc, "Cod"));
                     h.Cell().Element(tc => TH(tc, "Cant"));
                     h.Cell().Element(tc => TH(tc, "Desc"));
                     h.Cell().Element(tc => TH(tc, "P.Vent"));
@@ -260,7 +262,7 @@ public class ComprobantePdfService : IComprobantePdfService
                     }
 
                     table.Cell().Element(tc => TD(tc, (itemIndex++).ToString()));
-                    table.Cell().Element(tc => TD(tc, d.Codigo ?? "-"));
+                    if (mostrarCodigo) table.Cell().Element(tc => TD(tc, d.Codigo ?? "-"));
                     table.Cell().Element(tc => TD(tc, d.Cantidad.ToString("F2")));
                     table.Cell().Element(tc =>
                     {
@@ -735,12 +737,14 @@ public class ComprobantePdfService : IComprobantePdfService
     private static void BuildTablaDetalles(IContainer container,
         List<Domain.Entities.ComprobanteDetalle> detalles, string moneda)
     {
+        bool mostrarCodigo = detalles.Any(d => !string.IsNullOrWhiteSpace(d.Codigo));
+
         container.Table(table =>
         {
             table.ColumnsDefinition(cols =>
             {
                 cols.ConstantColumn(25);
-                cols.ConstantColumn(45);
+                if (mostrarCodigo) cols.ConstantColumn(45);
                 cols.ConstantColumn(38);
                 cols.ConstantColumn(32);
                 cols.RelativeColumn();
@@ -756,7 +760,7 @@ public class ComprobantePdfService : IComprobantePdfService
             table.Header(h =>
             {
                 h.Cell().Element(c => TH(c, "Item"));
-                h.Cell().Element(c => TH(c, "Código"));
+                if (mostrarCodigo) h.Cell().Element(c => TH(c, "Código"));
                 h.Cell().Element(c => TH(c, "Cant."));
                 h.Cell().Element(c => TH(c, "Unid."));
                 h.Cell().Element(c => TH(c, "Descripción"));
@@ -781,7 +785,7 @@ public class ComprobantePdfService : IComprobantePdfService
                 }
 
                 table.Cell().Element(c => TD(c, (itemIndex++).ToString()));
-                table.Cell().Element(c => TD(c, d.Codigo ?? "-"));
+                if (mostrarCodigo) table.Cell().Element(c => TD(c, d.Codigo ?? "-"));
                 table.Cell().Element(c => TD(c, d.Cantidad.ToString("F2")));
                 table.Cell().Element(c => TD(c, d.UnidadMedida ?? "NIU"));
                 table.Cell().Element(c =>
