@@ -43,16 +43,11 @@ public class DeudaContadoController : ControllerBase
     [HttpGet("{pagoId}/historial")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetHistorialPagos(int pagoId)
     {
         try
         {
             var historial = await _deudaContadoService.GetHistorialPagosByPagoIdAsync(pagoId);
-
-            if (!historial.Any())
-                return NotFound(new { message = $"No se encontró historial de pagos para el pago {pagoId}" });
-
             return Ok(historial);
         }
         catch (ArgumentException ex)
@@ -122,6 +117,63 @@ public class DeudaContadoController : ControllerBase
                 bytes,
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 nombreArchivo);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// Recalcula el estado de la deuda automáticamente (PENDIENTE / PARCIAL / PAGADO).
+    [HttpPut("{pagoId}/historial/{deudaPagoId}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> EditarPago(
+        int pagoId,
+        int deudaPagoId,
+        [FromBody] EditarPagoDeudaContadoDto dto)
+    {
+        if (pagoId != dto.PagoId)
+            return BadRequest(new { message = "El PagoId de la URL no coincide con el del cuerpo" });
+
+        if (deudaPagoId != dto.DeudaPagoId)
+            return BadRequest(new { message = "El DeudaPagoId de la URL no coincide con el del cuerpo" });
+
+        try
+        {
+            var result = await _deudaContadoService.EditarPagoAsync(dto);
+
+            if (!result)
+                return NotFound(new { message = "No se encontró el pago a editar" });
+
+            return Ok(new { message = "Pago actualizado correctamente" });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// Elimina definitivamente un registro de pago del historial.
+    [HttpDelete("{pagoId}/historial/{deudaPagoId}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> EliminarPago(int pagoId, int deudaPagoId)
+    {
+        try
+        {
+            var result = await _deudaContadoService.EliminarPagoAsync(deudaPagoId, pagoId);
+
+            if (!result)
+                return NotFound(new { message = "No se encontró el pago a eliminar" });
+
+            return Ok(new { message = "Pago eliminado correctamente" });
         }
         catch (ArgumentException ex)
         {

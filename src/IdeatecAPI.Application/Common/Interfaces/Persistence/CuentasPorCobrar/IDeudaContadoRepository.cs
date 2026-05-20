@@ -19,5 +19,7 @@ public interface IDeudaContadoRepository
     Task<bool> RegistrarPagoAsync(RegistrarPagoDeudaContadoDto dto);
 
     Task<IEnumerable<ReporteDeudaContadoItemDto>> GetReporteDeudaContadoAsync(ReporteDeudaContadoFiltroDto filtro);
+    Task<bool> EditarPagoAsync(EditarPagoDeudaContadoDto dto);
+    Task<bool> EliminarPagoAsync(int deudaPagoId, int pagoId);
 
 }

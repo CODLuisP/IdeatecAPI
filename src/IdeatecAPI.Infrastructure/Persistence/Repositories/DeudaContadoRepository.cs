@@ -265,4 +265,50 @@ public class DeudaContadoRepository : IDeudaContadoRepository
 
         return listaComprobantes;
     }
+
+    public async Task<bool> EditarPagoAsync(EditarPagoDeudaContadoDto dto)
+    {
+        var sql = @"
+            UPDATE pagodeudacontado SET
+                montoPagado       = @MontoPagado,
+                fechaPago         = @FechaPago,
+                medioPago         = @MedioPago,
+                entidadFinanciera = @EntidadFinanciera,
+                numeroOperacion   = @NumeroOperacion,
+                observaciones     = @Observaciones,
+                usuarioRegistroPago = @UsuarioRegistroPago
+            WHERE deudaPagoID = @DeudaPagoId
+            AND pagoID      = @PagoId";
+
+        var rows = await _connection.ExecuteAsync(sql, new
+        {
+            dto.MontoPagado,
+            dto.FechaPago,
+            dto.MedioPago,
+            dto.EntidadFinanciera,
+            dto.NumeroOperacion,
+            dto.Observaciones,
+            dto.UsuarioRegistroPago,
+            dto.DeudaPagoId,
+            dto.PagoId
+        }, _transaction);
+
+        return rows > 0;
+    }
+
+    public async Task<bool> EliminarPagoAsync(int deudaPagoId, int pagoId)
+    {
+        var sql = @"
+            DELETE FROM pagodeudacontado
+            WHERE deudaPagoID = @DeudaPagoId
+            AND pagoID      = @PagoId";
+
+        var rows = await _connection.ExecuteAsync(sql, new
+        {
+            DeudaPagoId = deudaPagoId,
+            PagoId      = pagoId
+        }, _transaction);
+
+        return rows > 0;
+    }
 }

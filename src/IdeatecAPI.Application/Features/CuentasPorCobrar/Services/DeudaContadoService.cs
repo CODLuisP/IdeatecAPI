@@ -18,6 +18,8 @@ public interface IDeudaContadoService
     Task<bool> RegistrarPagoAsync(RegistrarPagoDeudaContadoDto dto);
 
     Task<byte[]> GenerarExcelAsync(ReporteDeudaContadoFiltroDto filtro);
+    Task<bool> EditarPagoAsync(EditarPagoDeudaContadoDto dto);
+    Task<bool> EliminarPagoAsync(int deudaPagoId, int pagoId);
 }
 
 public class DeudaContadoService : IDeudaContadoService
@@ -104,5 +106,77 @@ public class DeudaContadoService : IDeudaContadoService
 
         var items = await _unitOfWork.DeudaContado.GetReporteDeudaContadoAsync(filtro);
         return _excelService.GenerarReporteDeudaContado(items, filtro);
+    }
+
+    public async Task<bool> EditarPagoAsync(EditarPagoDeudaContadoDto dto)
+    {
+        if (dto.DeudaPagoId <= 0)
+            throw new ArgumentException("DeudaPagoId inválido");
+    
+        if (dto.PagoId <= 0)
+            throw new ArgumentException("PagoId inválido");
+    
+        if (dto.MontoPagado <= 0)
+            throw new ArgumentException("El monto pagado debe ser mayor a 0");
+    
+        _unitOfWork.BeginTransaction();
+    
+        try
+        {
+            // Verificar que el pago padre exista
+            var pago = await _unitOfWork.DeudaContado.GetPagoByIdAsync(dto.PagoId);
+            if (pago == null)
+                throw new ArgumentException("Pago no encontrado");
+    
+            if (pago.Monto == null)
+                throw new InvalidOperationException("El pago no tiene monto registrado");
+    
+            // Sumar todos los pagos EXCEPTO el que se está editando
+            var historial = await _unitOfWork.DeudaContado.GetHistorialPagosByPagoIdAsync(dto.PagoId);
+            var montoPagadoOtros = historial
+                .Where(h => h.DeudaPagoID != dto.DeudaPagoId)
+                .Sum(h => h.MontoPagado);
+    
+            if (montoPagadoOtros + dto.MontoPagado > pago.Monto)
+                throw new InvalidOperationException(
+                    $"El monto editado excede el saldo disponible. Máximo permitido: {pago.Monto - montoPagadoOtros:F2}");
+    
+            var result = await _unitOfWork.DeudaContado.EditarPagoAsync(dto);
+    
+            _unitOfWork.Commit();
+            return result;
+        }
+        catch
+        {
+            _unitOfWork.Rollback();
+            throw;
+        }
+    }
+    
+    public async Task<bool> EliminarPagoAsync(int deudaPagoId, int pagoId)
+    {
+        if (deudaPagoId <= 0)
+            throw new ArgumentException("DeudaPagoId inválido");
+    
+        if (pagoId <= 0)
+            throw new ArgumentException("PagoId inválido");
+    
+        _unitOfWork.BeginTransaction();
+    
+        try
+        {
+            var result = await _unitOfWork.DeudaContado.EliminarPagoAsync(deudaPagoId, pagoId);
+    
+            if (!result)
+                throw new ArgumentException("No se encontró el pago a eliminar");
+    
+            _unitOfWork.Commit();
+            return result;
+        }
+        catch
+        {
+            _unitOfWork.Rollback();
+            throw;
+        }
     }
 }

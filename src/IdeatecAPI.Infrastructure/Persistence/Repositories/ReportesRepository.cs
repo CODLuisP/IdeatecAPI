@@ -437,19 +437,18 @@ public class ReportesRepository : IReportesRepository
     private static (DateTime Desde, DateTime Hasta) ObtenerRango(
         string periodo, DateTime? desde, DateTime? hasta)
     {
-        var hoy = DateTime.Today;
+        var hoy = desde?.Date ?? DateTime.Today;
         
-        // ── Calcular lunes de la semana actual ──
-        int diasDesdeElLunes = ((int)hoy.DayOfWeek + 6) % 7; // Lun=0, Mar=1... Dom=6
+        int diasDesdeElLunes = ((int)hoy.DayOfWeek + 6) % 7;
         var lunesActual = hoy.AddDays(-diasDesdeElLunes);
 
         return periodo.ToLower() switch
         {
             "hoy"           => (hoy, hoy),
-            "semana"        => (lunesActual, hoy),           // Lunes → hoy
-            "mes"           => (new DateTime(hoy.Year, hoy.Month, 1), hoy),
-            "año"           => (new DateTime(hoy.Year, 1, 1), hoy),
-            "personalizado" => (desde ?? hoy, hasta ?? hoy),
+            "semana"        => (lunesActual, hasta?.Date ?? hoy),
+            "mes"           => (new DateTime(hoy.Year, hoy.Month, 1), hasta?.Date ?? hoy),
+            "año"           => (new DateTime(hoy.Year, 1, 1), hasta?.Date ?? hoy),
+            "personalizado" => (desde?.Date ?? hoy, hasta?.Date ?? hoy),
             _               => (hoy, hoy),
         };
     }
