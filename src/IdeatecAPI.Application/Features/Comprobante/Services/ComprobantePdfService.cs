@@ -8,12 +8,7 @@ using QRCoder;
 
 namespace IdeatecAPI.Infrastructure.Services;
 
-/// <summary>
 /// Implementación de <see cref="IComprobantePdfService"/> usando QuestPDF.
-/// Registrar en DI como Scoped.
-/// dotnet add package QuestPDF
-/// QuestPDF.Settings.License = LicenseType.Community; en Program.cs
-/// </summary>
 public class ComprobantePdfService : IComprobantePdfService
 {
     private readonly IUnitOfWork _unitOfWork;
@@ -264,14 +259,47 @@ public class ComprobantePdfService : IComprobantePdfService
                     table.Cell().Element(tc => TD(tc, (itemIndex++).ToString()));
                     if (mostrarCodigo) table.Cell().Element(tc => TD(tc, d.Codigo ?? "-"));
                     table.Cell().Element(tc => TD(tc, d.Cantidad.ToString("F2")));
+
+                    // Descripción — limpia, sin descuento
                     table.Cell().Element(tc =>
                     {
                         var desc = d.Descripcion ?? "-";
                         if (esGratuito) desc += " (GR)";
                         TD(tc, desc);
                     });
-                    table.Cell().Element(tc => TD(tc, (d.PrecioVenta ?? 0).ToString("F2")));
-                    table.Cell().Element(tc => TD(tc, (esGratuito ? 0 : d.TotalVentaItem ?? 0).ToString("F2")));
+
+                    // P.Vent — precio original + descuento debajo si aplica
+                    table.Cell().Element(tc =>
+                    {
+                        var pVentOriginal = (d.DescuentoTotal ?? 0) > 0
+                            ? Math.Round((d.PrecioVenta ?? 0) + (d.DescuentoUnitario ?? 0), 2)
+                            : (d.PrecioVenta ?? 0);
+
+                        var dsctoConIgv = (d.DescuentoUnitario ?? 0) > 0
+                            ? Math.Round(d.DescuentoUnitario ?? 0, 2)
+                            : 0;
+
+                        if (dsctoConIgv > 0)
+                        {
+                            tc.Background(bg).Padding(2).Column(col =>
+                            {
+                                col.Item().AlignRight()
+                                    .Text(pVentOriginal.ToString("F2"))
+                                    .FontSize(6);
+                                col.Item().AlignRight()
+                                    .Text($"-{dsctoConIgv:F2}")
+                                    .FontSize(5).FontColor(ColorTextoSuave);
+                            });
+                        }
+                        else
+                        {
+                            TD(tc, pVentOriginal.ToString("F2"), right: true);
+                        }
+                    });
+
+                    // Total
+                    table.Cell().Element(tc => TD(tc, 
+                        (esGratuito ? 0 : d.TotalVentaItem ?? 0).ToString("F2"), right: true));
                 }
             });
 
@@ -292,7 +320,8 @@ public class ComprobantePdfService : IComprobantePdfService
                 if ((c.TotalDescuentos ?? 0) > 0)
                     TicketFilaTotal(tot, "Descuentos", $"-{FormatearMoneda(c.TotalDescuentos ?? 0, moneda)}");
 
-                TicketFilaTotal(tot, "Sub-Total", FormatearMoneda(c.SubTotal ?? 0, moneda));
+                if ((c.DescuentoGlobal ?? 0) > 0)
+                    TicketFilaTotal(tot, "Dscto. Global", $"-{FormatearMoneda(c.DescuentoGlobal ?? 0, moneda)}");
 
                 tot.Item().PaddingTop(2).Background(ColorAzulMarino).Padding(3).Row(r =>
                 {
@@ -794,8 +823,39 @@ public class ComprobantePdfService : IComprobantePdfService
                     if (esGratuito) desc += " (GRATUITO)";
                     TD(c, desc);
                 });
+                // V.Unit — sin cambio
                 table.Cell().Element(c => TD(c, FormatearMoneda(d.PrecioUnitario, moneda)));
-                table.Cell().Element(c => TD(c, FormatearMoneda(d.PrecioVenta ?? 0, moneda)));
+
+                // P.Vent — precio original + descuento debajo si aplica
+                table.Cell().Element(c =>
+                {
+                    var pVentOriginal = (d.DescuentoTotal ?? 0) > 0
+                        ? Math.Round((d.PrecioVenta ?? 0) + (d.DescuentoUnitario ?? 0), 2)
+                        : (d.PrecioVenta ?? 0);
+
+                    var dsctoConIgv = (d.DescuentoUnitario ?? 0) > 0
+                        ? Math.Round(d.DescuentoUnitario ?? 0, 2)
+                        : 0;
+
+                    if (dsctoConIgv > 0)
+                    {
+                        c.Background(bg).Padding(3).Column(col =>
+                        {
+                            col.Item().AlignRight()
+                                .Text(FormatearMoneda(pVentOriginal, moneda))
+                                .FontSize(8);
+                            col.Item().AlignRight()
+                                .Text($"-{FormatearMoneda(dsctoConIgv, moneda)}")
+                                .FontSize(7).FontColor(ColorTextoSuave);
+                        });
+                    }
+                    else
+                    {
+                        TD(c, FormatearMoneda(pVentOriginal, moneda), right: true);
+                    }
+                });
+
+                // Total
                 table.Cell().Element(c => TD(c, FormatearMoneda(esGratuito ? 0 : d.TotalVentaItem ?? 0, moneda)));
             }
         });
@@ -850,7 +910,8 @@ public class ComprobantePdfService : IComprobantePdfService
                 if ((c.TotalOtrosCargos ?? 0) > 0)
                     FilaTotal(t, "Otros Cargos", FormatearMoneda(c.TotalOtrosCargos ?? 0, moneda));
 
-                FilaTotal(t, "Sub-Total", FormatearMoneda(c.SubTotal ?? 0, moneda));
+                if ((c.DescuentoGlobal ?? 0) > 0)
+                    FilaTotal(t, "Descuento Global", $"-{FormatearMoneda(c.DescuentoGlobal ?? 0, moneda)}");
 
                 t.Item().Background(ColorAzulMarino).Padding(5).Row(r =>
                 {

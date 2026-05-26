@@ -210,6 +210,19 @@ public class GeneraXmlService : IComprobanteXmlService
             }
             if (dto.CodigoTipoDescGlobal == "02")
             {
+                var porcentajeIgv = dto.Details
+                    .Where(d => d.TipoAfectacionIGV == "10" && d.PorcentajeIGV > 0)
+                    .Select(d => d.PorcentajeIGV)
+                    .FirstOrDefault();
+
+                if (porcentajeIgv == 0) porcentajeIgv = 18;
+
+                var descGlobalSinIgv = Math.Round(
+                    dto.DescuentoGlobal / (1 + porcentajeIgv / 100), 2);
+
+                var baseAntesDescGlobal = Math.Round(
+                    dto.TotalOperacionesGravadas + descGlobalSinIgv, 2);
+
                 root.Add(
                     new XElement(Cac + "AllowanceCharge",
                         new XElement(Cbc + "ChargeIndicator", "false"),
@@ -219,10 +232,10 @@ public class GeneraXmlService : IComprobanteXmlService
                             "02"),
                         new XElement(Cbc + "Amount",
                             new XAttribute("currencyID", moneda),
-                            dto.DescuentoGlobal.ToString("F2")),
+                            descGlobalSinIgv.ToString("F2")),
                         new XElement(Cbc + "BaseAmount",
                             new XAttribute("currencyID", moneda),
-                            (dto.TotalOperacionesGravadas + dto.DescuentoGlobal).ToString("F2"))
+                            baseAntesDescGlobal.ToString("F2"))
                     )
                 );
             }
