@@ -3,9 +3,9 @@ namespace IdeatecAPI.Application.Common.Interfaces.Persistence;
 public interface IUnitOfWork : IDisposable
 {
     ICategoriaRepository Categorias { get; }
-    IUsuarioRepository Usuarios { get; } 
-    IClienteRepository Clientes {get; }
-    IDireccionRepository Direcciones {get;}
+    IUsuarioRepository Usuarios { get; }
+    IClienteRepository Clientes { get; }
+    IDireccionRepository Direcciones { get; }
     IEmpresaRepository Empresas { get; }
     INoteRepository Notes { get; }
     INoteDetailRepository NoteDetails { get; }
@@ -23,7 +23,8 @@ public interface IUnitOfWork : IDisposable
     ICuentasPorCobrarRepository CuentasPorCobrar { get; }
     IDeudaContadoRepository DeudaContado { get; }
     ITrabajadorRepository Trabajadores { get; }
-    
+    IPlantillaVelsatRepository PlantillaVelsat { get; }
+
     void SetEnvironment(string env);
 
     // Transacciones

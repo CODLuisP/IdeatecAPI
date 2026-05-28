@@ -7,7 +7,7 @@ namespace IdeatecAPI.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+//[Authorize]
 
 public class EmailController : ControllerBase
 {
@@ -72,6 +72,66 @@ public class EmailController : ControllerBase
             toEmail, toName, subject, body,
             tipoEnum, comprobante, guia,
             adjuntoBytes, nombreAdjunto
+        ));
+
+        if (!result.Success)
+            return StatusCode(500, new { success = false, message = result.Message });
+
+        return Ok(new { success = true, message = result.Message });
+    }
+
+    [HttpPost("notificar")]
+    [AllowAnonymous]
+    public async Task<IActionResult> Notificar([FromForm] string toEmail,
+                                              [FromForm] string toName,
+                                              [FromForm] string concepto,
+                                              [FromForm] string fechavencimiento,
+                                              [FromForm] int periodo,
+                                              [FromForm] string monto,
+                                              [FromForm] bool vencido)
+    {
+        if (string.IsNullOrWhiteSpace(toEmail) ||
+            string.IsNullOrWhiteSpace(toName) ||
+            string.IsNullOrWhiteSpace(concepto) ||
+            string.IsNullOrWhiteSpace(fechavencimiento) ||
+            string.IsNullOrWhiteSpace(monto) ||
+            periodo <= 0)
+        {
+            return BadRequest(new { success = false, message = "Todos los campos son requeridos." });
+        }
+
+        var periodoTexto = periodo switch
+        {
+            1 => "mensual",
+            2 => "bimestral",
+            3 => "trimestral",
+            4 => "cuatrimestral",
+            5 => "quinquenal",
+            6 => "semestral",
+            12 => "anual",
+            _ => $"cada {periodo} meses"
+        };
+
+        var subject = "Notificación de vencimiento de servicio";
+        var body = EmailTemplateBuilder.BuildNotificacionVencimientoServicio(
+            toName,
+            subject,
+            concepto,
+            fechavencimiento,
+            periodoTexto,
+            monto,
+            vencido);
+
+        var result = await _mediator.Send(new SendEmailCommand(
+            toEmail,
+            toName,
+            subject,
+            body,
+            TipoComprobante.Notificacion,
+            null,
+            null,
+            null,
+            null
         ));
 
         if (!result.Success)

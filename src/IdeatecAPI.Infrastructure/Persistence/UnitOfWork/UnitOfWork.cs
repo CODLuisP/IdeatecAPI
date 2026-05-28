@@ -39,6 +39,7 @@ public class UnitOfWork : IUnitOfWork
     private ICuentasPorCobrarRepository? _cuentasPorCobrar;
     private IDeudaContadoRepository? _deudaContado;
     private ITrabajadorRepository? _trabajadores;
+    private IPlantillaVelsatRepository? _plantillaVelsat;
 
     public UnitOfWork(IConfiguration configuration, ICurrentUserService currentUserService)
     {
@@ -187,6 +188,11 @@ public class UnitOfWork : IUnitOfWork
         get { _trabajadores ??= new TrabajadorRepository(CurrentConnection, _transaction); return _trabajadores; }
     }
 
+    public IPlantillaVelsatRepository PlantillaVelsat
+    {
+        get { _plantillaVelsat ??= new PlantillaVelsatRepository(CurrentConnection, _transaction); return _plantillaVelsat; }
+    }
+
     public void BeginTransaction()
     {
         _transaction = CurrentConnection.BeginTransaction();
@@ -236,6 +242,7 @@ public class UnitOfWork : IUnitOfWork
         _cuentasPorCobrar = null;
         _deudaContado = null;
         _trabajadores = null;
+        _plantillaVelsat = null;
     }
 
     public IRepository<T> Repository<T>() where T : class

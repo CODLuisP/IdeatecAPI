@@ -1,7 +1,7 @@
 namespace IdeatecAPI.Application.Features.Email.SendEmail;
 
 // Tipos de comprobante
-public enum TipoComprobante { Texto = 0, Factura = 1, Boleta = 3, GuiaRemision = 9 }
+public enum TipoComprobante { Texto = 0, Factura = 1, Boleta = 3, GuiaRemision = 9, Notificacion = 10 }
 
 // Línea de detalle compartida para Factura y Boleta
 public record LineaDetalle(string Descripcion, int Cantidad, decimal PrecioUnitario);

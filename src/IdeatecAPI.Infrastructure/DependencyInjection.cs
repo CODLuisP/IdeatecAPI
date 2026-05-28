@@ -24,6 +24,7 @@ using IdeatecAPI.Application.Features.CuentasPorCobrar.Services;
 using IdeatecAPI.Application.Common.Interfaces;
 using IdeatecAPI.Application.Features.Trabajadores.Services;
 using IdeatecAPI.Application.Features.DeudaContado.Services;
+using IdeatecAPI.Application.Features.PlantillaVelsat.Services;
 
 namespace IdeatecAPI.Infrastructure;
 
@@ -110,6 +111,8 @@ public static class DependencyInjection
 
         //Trabajadores
         services.AddScoped<ITrabajadorService, TrabajadorService>();
+        
+        services.AddScoped<IPlantillaVelsatService, PlantillaVelsatService>();
 
         //Notificaciones WebSocket
         services.AddHttpClient<IWebSocketNotifier, WebSocketNotifier>();
