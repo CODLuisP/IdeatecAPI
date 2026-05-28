@@ -14,6 +14,8 @@ public class ObtenerPlantillaVelsatDTO
     public DateTime Fechafin { get; set; }
     public string? Placa { get; set; }
     public byte Estado { get; set; }
+    public string? Correo { get; set; }
+    public string? Whatsapp { get; set; }
 }
 
 public class CrearPlantillaVelsatDTO
@@ -27,6 +29,8 @@ public class CrearPlantillaVelsatDTO
     public DateTime Fechaini { get; set; }
     public DateTime Fechafin { get; set; }
     public string? Placa { get; set; }
+    public string? Correo { get; set; }
+    public string? Whatsapp { get; set; }
 }
 
 public class EditarPlantillaVelsatDTO
@@ -40,4 +44,7 @@ public class EditarPlantillaVelsatDTO
     public DateTime? Fechafin { get; set; }
     public string? Placa { get; set; }
     public string? Moneda { get; set; }
+    public string? Correo { get; set; }
+    public string? Whatsapp { get; set; }
+    public byte? Estado { get; set; }
 }

@@ -51,6 +51,8 @@ public class PlantillaVelsatService : IPlantillaVelsatService
                 Fechaini = dto.Fechaini,
                 Fechafin = dto.Fechafin,
                 Placa = dto.Placa
+                , Correo = dto.Correo
+                , Whatsapp = dto.Whatsapp
             };
 
             var creado = await _unitOfWork.PlantillaVelsat.CrearAsync(entidad);
@@ -116,5 +118,7 @@ public class PlantillaVelsatService : IPlantillaVelsatService
         Fechafin = p.Fechafin,
         Placa = p.Placa,
         Estado = p.Estado
+        , Correo = p.Correo
+        , Whatsapp = p.Whatsapp
     };
 }
