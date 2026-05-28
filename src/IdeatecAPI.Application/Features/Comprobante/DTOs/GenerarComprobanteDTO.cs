@@ -1,6 +1,7 @@
 
 using IdeatecAPI.Application.Features.Detraccion.DTOs;
 using IdeatecAPI.Application.Features.Notas.DTOs;
+using System.Text.Json.Serialization;
 namespace IdeatecAPI.Application.Features.Comprobante.DTOs;
 
 public class GenerarComprobanteDTO
@@ -112,6 +113,7 @@ public class DetalleFacturaDTO
 {
     public int DetalleId { get; set; }
     public int ComprobanteId { get; set; }
+    [JsonPropertyName("trabajadorId")]
     public int? TrabajadorID { get; set; }
     public int? Item { get; set; }
     public int? ProductoId { get; set; }

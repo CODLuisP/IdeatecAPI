@@ -14,4 +14,6 @@ public class PlantillaVelsat
     public DateTime Fechafin { get; set; }
     public string? Placa { get; set; }
     public byte Estado { get; set; }
+    public string? Correo { get; set; }
+    public string? Whatsapp { get; set; }
 }
