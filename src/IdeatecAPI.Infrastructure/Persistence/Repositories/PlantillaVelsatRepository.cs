@@ -18,13 +18,13 @@ public class PlantillaVelsatRepository : IPlantillaVelsatRepository
         _transaction = transaction;
     }
 
-    public async Task<IEnumerable<PlantillaVelsat>> GetByPeriodoAsync(string periodo)
+    public async Task<IEnumerable<PlantillaVelsat>> GetAllAsync(string? periodo = null)
     {
         const string sql = @"
         SELECT id, numdoc, razonSocial, periodo, concepto, moneda,
                importe, fechaini, fechafin, placa, estado
         FROM plantillavelsat
-        WHERE periodo = @Periodo";
+        WHERE (@Periodo IS NULL OR periodo = @Periodo)";
 
         return await _connection.QueryAsync<PlantillaVelsat>(
             sql, new { Periodo = periodo }, transaction: _transaction);

@@ -23,22 +23,17 @@ public class PlantillaVelsatController : ControllerBase
     // GET api/plantillavelsat/{periodo}
     [HttpGet("{periodo}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetByPeriodoAsync(string periodo)
+    public async Task<IActionResult> GetAllAsync(string? periodo = null)
     {
         try
         {
-            var registros = await _service.GetByPeriodoAsync(periodo);
+            var registros = await _service.GetAllAsync(periodo);
             return Ok(registros ?? []);
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new { mensaje = ex.Message });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error al obtener plantillavelsat por periodo {Periodo}", periodo);
+            _logger.LogError(ex, "Error al obtener plantillavelsat {Periodo}", periodo ?? "todos");
             return StatusCode(500, new { mensaje = "Error al obtener los registros.", detalle = ex.Message });
         }
     }

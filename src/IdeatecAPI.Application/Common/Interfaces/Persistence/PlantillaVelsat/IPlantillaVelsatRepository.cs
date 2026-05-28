@@ -6,7 +6,7 @@ namespace IdeatecAPI.Application.Common.Interfaces.Persistence;
 
 public interface IPlantillaVelsatRepository
 {
-    Task<IEnumerable<PlantillaVelsat>> GetByPeriodoAsync(string periodo);
+    Task<IEnumerable<PlantillaVelsat>> GetAllAsync(string? periodo = null);
     Task<PlantillaVelsat?> GetByIdAsync(int id);
     Task<PlantillaVelsat> CrearAsync(PlantillaVelsat plantilla);
     Task<bool> EditarAsync(PlantillaVelsat plantilla, EditarPlantillaVelsatDTO dto);

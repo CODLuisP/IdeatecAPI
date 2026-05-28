@@ -1,4 +1,5 @@
 // IdeatecAPI.Application.Features.PlantillaVelsat/Services/IPlantillaVelsatService.cs + PlantillaVelsatService.cs
+using System;
 using System.Linq;
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Application.Features.PlantillaVelsat.DTOs;
@@ -8,7 +9,7 @@ namespace IdeatecAPI.Application.Features.PlantillaVelsat.Services;
 
 public interface IPlantillaVelsatService
 {
-    Task<IEnumerable<ObtenerPlantillaVelsatDTO>> GetByPeriodoAsync(string periodo); // ← cambia
+    Task<IEnumerable<ObtenerPlantillaVelsatDTO>> GetAllAsync(string? periodo = null);
     Task<ObtenerPlantillaVelsatDTO> CrearAsync(CrearPlantillaVelsatDTO dto);
     Task<bool> EditarAsync(int id, EditarPlantillaVelsatDTO dto);
     Task<bool> EliminarAsync(int id);
@@ -23,12 +24,14 @@ public class PlantillaVelsatService : IPlantillaVelsatService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<IEnumerable<ObtenerPlantillaVelsatDTO>> GetByPeriodoAsync(string periodo)
+    public async Task<IEnumerable<ObtenerPlantillaVelsatDTO>> GetAllAsync(string? periodo = null)
     {
-        if (string.IsNullOrWhiteSpace(periodo))
-            throw new ArgumentException("El periodo es obligatorio");
+        if (string.Equals(periodo, "all", StringComparison.OrdinalIgnoreCase))
+        {
+            periodo = null;
+        }
 
-        var registros = await _unitOfWork.PlantillaVelsat.GetByPeriodoAsync(periodo);
+        var registros = await _unitOfWork.PlantillaVelsat.GetAllAsync(periodo);
         return registros.Select(MapToDTO);
     }
 
