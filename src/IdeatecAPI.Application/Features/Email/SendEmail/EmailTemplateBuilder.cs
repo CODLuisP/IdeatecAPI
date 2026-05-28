@@ -11,6 +11,76 @@ public static class EmailTemplateBuilder
             </div>
             """);
 
+  public static string BuildNotificacionVencimientoServicio(
+    string toName,
+    string subject,
+    string concepto,
+    string fechavencimiento,
+    string periodoTexto,
+    string monto,
+    bool vencido)
+  {
+    var verbo = vencido ? "venció" : "vencerá";
+    var content = $"""
+        <p style="margin:0 0 20px;color:#475569;font-size:14px;line-height:1.7;">
+          Por medio de la presente les saludamos y les comunicamos que el <strong style="color:#0f172a;">{Escape(concepto)}</strong> {verbo} el <strong style="color:#0f172a;">{Escape(fechavencimiento)}</strong>.
+        </p>
+
+        <p style="margin:0 0 20px;color:#475569;font-size:14px;line-height:1.7;">
+          Para la renovación del servicio <strong style="color:#0f172a;">{Escape(periodoTexto)}</strong>, sírvanse realizar el pago de <strong style="color:#0f172a;">S/.{Escape(monto)}</strong> a cualquiera de nuestras cuentas soles a nombre de <strong style="color:#0f172a;">VESAT SAC</strong>:
+        </p>
+
+        <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:20px;">
+          <tr>
+            <td width="48%" style="vertical-align:top;padding-right:8px;">
+              <div style="border:0.5px solid #e2e8f0;padding:14px 16px;">
+                <p style="margin:0 0 4px;font-size:12px;font-weight:700;color:#1e40af;letter-spacing:0.4px;text-transform:uppercase;">BCP</p>
+                <p style="margin:0 0 6px;font-size:13px;font-weight:700;color:#0f172a;">Banco de Crédito</p>
+                <p style="margin:0;font-size:12px;color:#64748b;line-height:1.8;">
+                  Cta. Cte. <span style="color:#0f172a;">193-1806847-0-78</span><br>
+                  CCI <span style="color:#0f172a;">002-193-001806847078-12</span>
+                </p>
+              </div>
+            </td>
+            <td width="4%"></td>
+            <td width="48%" style="vertical-align:top;padding-left:8px;">
+              <div style="border:0.5px solid #e2e8f0;padding:14px 16px;">
+                <p style="margin:0 0 4px;font-size:12px;font-weight:700;color:#1e40af;letter-spacing:0.4px;text-transform:uppercase;">BBVA</p>
+                <p style="margin:0 0 6px;font-size:13px;font-weight:700;color:#0f172a;">Banco Continental</p>
+                <p style="margin:0;font-size:12px;color:#64748b;line-height:1.8;">
+                  Cta. Cte. <span style="color:#0f172a;">0011-0093-0100002830</span><br>
+                  CCI <span style="color:#0f172a;">011-093-000100002830-26</span>
+                </p>
+              </div>
+            </td>
+          </tr>
+        </table>
+
+        <div style="background:#fefce8;border:0.5px solid #fde68a;padding:12px 16px;margin-bottom:20px;display:flex;align-items:flex-start;gap:10px;">
+          <p style="margin:0;color:#713f12;font-size:13px;line-height:1.6;">
+            También puede pagar por <strong>YAPE</strong> al número <strong>989 112 969</strong>
+          </p>
+        </div>
+
+        <div style="background:#f0fdf4;border:0.5px solid #bbf7d0;padding:12px 16px;margin-bottom:24px;">
+          <p style="margin:0;color:#14532d;font-size:13px;line-height:1.6;">
+            Después de realizar su pago, envíenos el voucher por esta misma vía o por WhatsApp al <strong>952 075 881</strong>
+          </p>
+        </div>
+
+        <div style="border-top:0.5px solid #e2e8f0;padding-top:16px;margin-top:4px;margin-bottom:16px;">
+          <p style="margin:0;color:#64748b;font-size:13px;line-height:1.8;">
+            Atentamente,<br>
+            <strong style="color:#0f172a;">Carola Guevara</strong><br>
+            <span style="color:#475569;">Cobranzas Corporativas VELSAT</span><br>
+            <a href="mailto:cobranzas@velsat.com.pe" style="color:#0f2e64;text-decoration:none;">cobranzas@velsat.com.pe</a>
+          </p>
+        </div>
+        """;
+
+    return BuildBase(toName, subject, GetBadge(TipoComprobante.Texto), content);
+  }
+
   // ── Tipo 1 y 3: Factura / Boleta ───────────────────────────────────
   public static string BuildComprobanteEmail(
       string toName, string subject, string body,
@@ -209,16 +279,6 @@ public static class EmailTemplateBuilder
                       © {DateTime.Now.Year} IDEATEC S.A.C. – Facturación Electrónica Perú<br>
                       <a href="https://www.ideatec.com.pe/" style="color:#0f2e64;text-decoration:none;">ideatec.com.pe</a>
                     </p>
-                  </td>
-                </tr>
-
-                <tr>
-                  <td style="padding:16px 36px;text-align:center;">
-                    <a href="https://ibb.co/C5ptq1x5">
-                      <img src="https://i.ibb.co/Y74W6Rv7/Whats-App-Image-2026-05-13-at-1-29-27-AM.jpg"
-                           alt="firma" border="0"
-                           style="max-width:90%;height:auto;display:block;margin:0 auto;">
-                    </a>
                   </td>
                 </tr>
 

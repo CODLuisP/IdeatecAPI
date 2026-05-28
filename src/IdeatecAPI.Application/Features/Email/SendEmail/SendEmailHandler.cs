@@ -29,6 +29,8 @@ public class SendEmailHandler : IRequestHandler<SendEmailCommand, SendEmailResul
                         request.ToName, request.Subject, request.Body,
                         request.Guia!),
 
+                TipoComprobante.Notificacion => request.Body,
+
                 _ => EmailTemplateBuilder.BuildTextEmail(
                         request.ToName, request.Subject, request.Body)
             };
