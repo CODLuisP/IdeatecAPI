@@ -11,7 +11,10 @@ public interface IDeudaContadoService
         string? establecimientoAnexo,
         DateTime? fechaInicio,
         DateTime? fechaFin,
-        string? clienteNumDoc);
+        string? clienteNumDoc,
+        string? serie = null,
+        int? correlativo = null,
+        string estadoPago = "PENDIENTE");
 
     Task<IEnumerable<PagoDeudaContadoDto>> GetHistorialPagosByPagoIdAsync(int pagoId);
 
@@ -38,14 +41,27 @@ public class DeudaContadoService : IDeudaContadoService
         string? establecimientoAnexo,
         DateTime? fechaInicio,
         DateTime? fechaFin,
-        string? clienteNumDoc)
+        string? clienteNumDoc,
+        string? serie = null,
+        int? correlativo = null,
+        string estadoPago = "PENDIENTE")
     {
+        var estadoNormalizado = estadoPago.ToUpper() switch
+        {
+            "PAGADO" => "PAGADO",
+            "TODOS"  => "TODOS",
+            _        => "PENDIENTE"
+        };
+
         return await _unitOfWork.DeudaContado.GetDeudaContadoAsync(
             empresaRuc,
             establecimientoAnexo,
             fechaInicio,
             fechaFin,
-            clienteNumDoc);
+            clienteNumDoc,
+            serie,
+            correlativo,
+            estadoNormalizado);
     }
 
     public async Task<IEnumerable<PagoDeudaContadoDto>> GetHistorialPagosByPagoIdAsync(int pagoId)
