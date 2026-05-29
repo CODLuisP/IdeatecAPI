@@ -205,7 +205,6 @@ public class TrabajadorRepository : DapperRepository<Trabajador>, ITrabajadorRep
         INNER JOIN comprobantedetalle cd ON cd.trabajadorID = t.id
         INNER JOIN comprobante c ON c.comprobanteID = cd.comprobanteID
         WHERE t.id = @TrabajadorId
-          AND t.estado = 1
           AND (@FechaDesde IS NULL OR c.fechaEmision >= @FechaDesde)
           AND (@FechaHasta IS NULL OR c.fechaEmision <= @FechaHasta)
         ORDER BY c.fechaEmision DESC, c.comprobanteID, cd.item;";
@@ -235,7 +234,6 @@ public class TrabajadorRepository : DapperRepository<Trabajador>, ITrabajadorRep
         INNER JOIN comprobantedetalle cd ON cd.trabajadorID = t.id
         INNER JOIN comprobante c ON c.comprobanteID = cd.comprobanteID
         WHERE t.sucursal = @SucursalId
-          AND t.estado = 1
           AND (@FechaDesde IS NULL OR c.fechaEmision >= @FechaDesde)
           AND (@FechaHasta IS NULL OR c.fechaEmision <= @FechaHasta)
         GROUP BY t.id, t.nombres, t.apellidos, t.dni
@@ -312,7 +310,6 @@ public class TrabajadorRepository : DapperRepository<Trabajador>, ITrabajadorRep
         INNER JOIN comprobantedetalle cd ON cd.trabajadorID = t.id
         INNER JOIN comprobante c ON c.comprobanteID = cd.comprobanteID
         WHERE t.sucursal = @SucursalId
-          AND t.estado = 1
           AND (@FechaDesde IS NULL OR c.fechaEmision >= @FechaDesde)
           AND (@FechaHasta IS NULL OR c.fechaEmision <= @FechaHasta)
           AND (
@@ -365,7 +362,6 @@ public class TrabajadorRepository : DapperRepository<Trabajador>, ITrabajadorRep
         INNER JOIN comprobantedetalle cd ON cd.trabajadorID = t.id
         INNER JOIN comprobante c ON c.comprobanteID = cd.comprobanteID
         WHERE t.sucursal = @SucursalId
-          AND t.estado = 1
           AND cd.descripcion = @Descripcion
           AND (@FechaDesde IS NULL OR c.fechaEmision >= @FechaDesde)
           AND (@FechaHasta IS NULL OR c.fechaEmision <= @FechaHasta)

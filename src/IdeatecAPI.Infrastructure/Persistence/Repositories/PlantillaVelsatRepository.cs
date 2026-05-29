@@ -18,13 +18,13 @@ public class PlantillaVelsatRepository : IPlantillaVelsatRepository
         _transaction = transaction;
     }
 
-    public async Task<IEnumerable<PlantillaVelsat>> GetByPeriodoAsync(string periodo)
+    public async Task<IEnumerable<PlantillaVelsat>> GetAllAsync(string? periodo = null)
     {
-        const string sql = @"
-        SELECT id, numdoc, razonSocial, periodo, concepto, moneda,
-               importe, fechaini, fechafin, placa, estado
-        FROM plantillavelsat
-        WHERE periodo = @Periodo";
+         const string sql = @"
+         SELECT id, numdoc, razonSocial, periodo, concepto, moneda,
+             importe, fechaini, fechafin, placa, estado, correo, whatsapp
+         FROM plantillavelsat
+         WHERE (@Periodo IS NULL OR periodo = @Periodo)";
 
         return await _connection.QueryAsync<PlantillaVelsat>(
             sql, new { Periodo = periodo }, transaction: _transaction);
@@ -32,11 +32,11 @@ public class PlantillaVelsatRepository : IPlantillaVelsatRepository
 
     public async Task<PlantillaVelsat?> GetByIdAsync(int id)
     {
-        const string sql = @"
-            SELECT id, numdoc, razonSocial, periodo, concepto, moneda,
-                   importe, fechaini, fechafin, placa, estado
-            FROM plantillavelsat
-            WHERE id = @Id";
+         const string sql = @"
+             SELECT id, numdoc, razonSocial, periodo, concepto, moneda,
+                 importe, fechaini, fechafin, placa, estado, correo, whatsapp
+             FROM plantillavelsat
+             WHERE id = @Id";
 
         return await _connection.QueryFirstOrDefaultAsync<PlantillaVelsat>(
             sql, new { Id = id }, transaction: _transaction);
@@ -46,9 +46,9 @@ public class PlantillaVelsatRepository : IPlantillaVelsatRepository
     {
         const string sql = @"
             INSERT INTO plantillavelsat 
-                (numdoc, razonSocial, periodo, concepto, moneda, importe, fechaini, fechafin, placa, estado)
+                (numdoc, razonSocial, periodo, concepto, moneda, importe, fechaini, fechafin, placa, estado, correo, whatsapp)
             VALUES 
-                (@Numdoc, @RazonSocial, @Periodo, @Concepto, @Moneda, @Importe, @Fechaini, @Fechafin, @Placa, 1);
+                (@Numdoc, @RazonSocial, @Periodo, @Concepto, @Moneda, @Importe, @Fechaini, @Fechafin, @Placa, 1, @Correo, @Whatsapp);
             SELECT LAST_INSERT_ID();";
 
         var newId = await _connection.ExecuteScalarAsync<int>(sql, plantilla, transaction: _transaction);
@@ -72,6 +72,9 @@ public class PlantillaVelsatRepository : IPlantillaVelsatRepository
         if (dto.Fechafin != null) { setClauses.Add("fechafin = @Fechafin"); parameters.Add("Fechafin", dto.Fechafin); }
         if (dto.Placa != null) { setClauses.Add("placa = @Placa"); parameters.Add("Placa", dto.Placa); }
         if (dto.Moneda != null) { setClauses.Add("moneda = @Moneda"); parameters.Add("Moneda", dto.Moneda); }
+        if (dto.Correo != null) { setClauses.Add("correo = @Correo"); parameters.Add("Correo", dto.Correo); }
+        if (dto.Whatsapp != null) { setClauses.Add("whatsapp = @Whatsapp"); parameters.Add("Whatsapp", dto.Whatsapp); }
+        if (dto.Estado != null) { setClauses.Add("estado = @Estado"); parameters.Add("Estado", dto.Estado); }
 
         if (!setClauses.Any())
             throw new ArgumentException("Debes enviar al menos un campo para actualizar.");
