@@ -417,7 +417,7 @@ public class ComprobanteService : IComprobanteService
                 XmlGenerado = null,
                 EnviadoEnResumen = dto.EnviadoEnResumen,
                 UsuarioCreacion = dto.UsuarioCreacion,
-                FechaCreacion = DateTime.Now,
+                FechaCreacion = AhoraLima(),
 
                 Detalles = dto.Details.Select(d => new Domain.Entities.ComprobanteDetalle
                 {
@@ -1232,6 +1232,15 @@ public class ComprobanteService : IComprobanteService
 
         response.Fallidos = response.Total - response.Exitosos;
         return response;
+    }
+
+    // Siempre devuelve la hora actual en zona horaria Lima (UTC-5), sin importar
+    // dónde esté desplegado el servidor (DigitalOcean usa UTC por defecto).
+    private static DateTime AhoraLima()
+    {
+        var tz = TimeZoneInfo.FindSystemTimeZoneById(
+            OperatingSystem.IsWindows() ? "SA Pacific Standard Time" : "America/Lima");
+        return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
     }
 
 }
