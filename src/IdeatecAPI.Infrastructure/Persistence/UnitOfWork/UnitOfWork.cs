@@ -40,6 +40,8 @@ public class UnitOfWork : IUnitOfWork
     private IDeudaContadoRepository? _deudaContado;
     private ITrabajadorRepository? _trabajadores;
     private IPlantillaVelsatRepository? _plantillaVelsat;
+    private INotificacionEnviadaRepository? _notificacionesEnviadas;
+    private INotificacionDiasRepository? _notificacionDias;
 
     public UnitOfWork(IConfiguration configuration, ICurrentUserService currentUserService)
     {
@@ -193,6 +195,16 @@ public class UnitOfWork : IUnitOfWork
         get { _plantillaVelsat ??= new PlantillaVelsatRepository(CurrentConnection, _transaction); return _plantillaVelsat; }
     }
 
+    public INotificacionEnviadaRepository NotificacionesEnviadas
+    {
+        get { _notificacionesEnviadas ??= new NotificacionEnviadaRepository(CurrentConnection, _transaction); return _notificacionesEnviadas; }
+    }
+
+    public INotificacionDiasRepository NotificacionDias
+    {
+        get { _notificacionDias ??= new NotificacionDiasRepository(CurrentConnection, _transaction); return _notificacionDias; }
+    }
+
     public void BeginTransaction()
     {
         _transaction = CurrentConnection.BeginTransaction();
@@ -243,6 +255,8 @@ public class UnitOfWork : IUnitOfWork
         _deudaContado = null;
         _trabajadores = null;
         _plantillaVelsat = null;
+        _notificacionesEnviadas = null;
+        _notificacionDias = null;
     }
 
     public IRepository<T> Repository<T>() where T : class
