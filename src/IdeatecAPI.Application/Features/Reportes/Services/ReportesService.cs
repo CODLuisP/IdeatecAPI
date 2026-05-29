@@ -306,9 +306,10 @@ public class ReportesService : IReportesService
         ValorVenta      = c.ValorVenta ?? 0,
         TotalIGV        = c.TotalIGV ?? 0,
         ImporteTotal    = c.ImporteTotal ?? 0,
-        EstadoSunat     = c.EstadoSunat,
-        NumDocAfectado  = c.NumDocAfectado,
-        TipoPago        = c.TipoPago,   
+        EstadoSunat          = c.EstadoSunat,
+        NumDocAfectado       = c.NumDocAfectado,
+        ComprobanteAfectadoId = c.ComprobanteAfectadoId,
+        TipoPago             = c.TipoPago,
         Cliente = new ClienteDTO
         {
             RazonSocial     = c.ClienteRazonSocial,

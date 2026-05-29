@@ -562,7 +562,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
             Mensaje          = mensaje,
             Hash             = hash,
             MensajeAdicional = mensajeAdicional,
-            FechaEnvio       = DateTime.Now
+            FechaEnvio       = AhoraLima()
         }, _transaction);
     }
 
@@ -717,4 +717,13 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         xmlRespuestaSunat       AS XmlRespuestaSunat
     FROM comprobante
     ";
+
+    // Siempre devuelve la hora actual en zona horaria Lima (UTC-5), sin importar
+    // dónde esté desplegado el servidor (DigitalOcean usa UTC por defecto).
+    private static DateTime AhoraLima()
+    {
+        var tz = TimeZoneInfo.FindSystemTimeZoneById(
+            OperatingSystem.IsWindows() ? "SA Pacific Standard Time" : "America/Lima");
+        return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+    }
 }
