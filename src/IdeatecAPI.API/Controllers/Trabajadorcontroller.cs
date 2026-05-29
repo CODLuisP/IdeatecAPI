@@ -7,7 +7,7 @@ namespace IdeatecAPI.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-//[Authorize]
+[Authorize]
 public class TrabajadorController : ControllerBase
 {
     private readonly ITrabajadorService _trabajadorService;
