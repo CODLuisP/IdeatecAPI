@@ -22,11 +22,26 @@ public class DeudaContadoRepository : IDeudaContadoRepository
         string? establecimientoAnexo,
         DateTime? fechaInicio,
         DateTime? fechaFin,
-        string? clienteNumDoc)
+        string? clienteNumDoc,
+        string? serie = null,
+        int? correlativo = null,
+        string estadoPago = "PENDIENTE")
     {
-        var tieneFechas = fechaInicio.HasValue || fechaFin.HasValue;
+        // Sin ningún filtro específico se limita a 50 para no traer todo
+        var tieneFiltroEspecifico = fechaInicio.HasValue || fechaFin.HasValue
+            || !string.IsNullOrEmpty(clienteNumDoc)
+            || !string.IsNullOrEmpty(serie)
+            || correlativo.HasValue
+            || !string.Equals(estadoPago, "PENDIENTE", StringComparison.OrdinalIgnoreCase);
 
-        var sql = @"
+        var having = estadoPago.ToUpper() switch
+        {
+            "PAGADO"    => "HAVING COALESCE(SUM(pd.montoPagado), 0) >= p.monto",
+            "TODOS"     => "",
+            _           => "HAVING COALESCE(SUM(pd.montoPagado), 0) < p.monto"  // PENDIENTE (default)
+        };
+
+        var sql = $@"
             SELECT
                 c.comprobanteID         AS ComprobanteId,
                 c.tipoComprobante       AS TipoComprobante,
@@ -51,8 +66,8 @@ public class DeudaContadoRepository : IDeudaContadoRepository
                 p.monto                 AS MontoTotal,
                 COALESCE(SUM(pd.montoPagado), 0) AS MontoPagado,
                 CASE
-                    WHEN COALESCE(SUM(pd.montoPagado), 0) = 0 THEN 'PENDIENTE'
-                    WHEN COALESCE(SUM(pd.montoPagado), 0) >= p.monto THEN 'PAGADO'
+                    WHEN COALESCE(SUM(pd.montoPagado), 0) = 0          THEN 'PENDIENTE'
+                    WHEN COALESCE(SUM(pd.montoPagado), 0) >= p.monto   THEN 'PAGADO'
                     ELSE 'PARCIAL'
                 END AS Estado
             FROM comprobante c
@@ -63,9 +78,11 @@ public class DeudaContadoRepository : IDeudaContadoRepository
             AND c.estadoSunat = 'ACEPTADO'
             AND c.tipoComprobante IN ('01', '03')
             AND (@EstablecimientoAnexo IS NULL OR c.establecimientoAnexo = @EstablecimientoAnexo)
-            AND (@FechaInicio IS NULL OR c.fechaEmision >= @FechaInicio)
-            AND (@FechaFin    IS NULL OR c.fechaEmision <= @FechaFin)
-            AND (@ClienteNumDoc IS NULL OR c.clienteNumDoc = @ClienteNumDoc)
+            AND (@FechaInicio    IS NULL OR c.fechaEmision >= @FechaInicio)
+            AND (@FechaFin       IS NULL OR c.fechaEmision <= @FechaFin)
+            AND (@ClienteNumDoc  IS NULL OR c.clienteNumDoc = @ClienteNumDoc)
+            AND (@Serie          IS NULL OR c.serie = @Serie)
+            AND (@Correlativo    IS NULL OR c.correlativo = @Correlativo)
             GROUP BY
                 c.comprobanteID, c.tipoComprobante, c.serie, c.correlativo,
                 c.numeroCompleto, c.fechaEmision, c.fechaVencimiento, c.tipoMoneda,
@@ -73,20 +90,19 @@ public class DeudaContadoRepository : IDeudaContadoRepository
                 c.clienteNumDoc, c.clienteRznSocial, c.clienteCorreo, c.clienteWhatsApp,
                 c.valorVenta, c.totalIGV, c.importeTotal, c.tipoPago,
                 p.pagoID, p.monto
-            HAVING CASE
-                WHEN COALESCE(SUM(pd.montoPagado), 0) >= p.monto THEN 'PAGADO'
-                ELSE 'NO_PAGADO'
-            END != 'PAGADO'
+            {having}
             ORDER BY c.fechaEmision DESC"
-            + (tieneFechas ? "" : " LIMIT 50");
+            + (tieneFiltroEspecifico ? "" : " LIMIT 50");
 
         return await _connection.QueryAsync<ListaDeudaContadoDto>(sql, new
         {
-            EmpresaRuc = empresaRuc,
+            EmpresaRuc           = empresaRuc,
             EstablecimientoAnexo = establecimientoAnexo,
-            FechaInicio = fechaInicio,
-            FechaFin = fechaFin,
-            ClienteNumDoc = clienteNumDoc
+            FechaInicio          = fechaInicio,
+            FechaFin             = fechaFin,
+            ClienteNumDoc        = clienteNumDoc,
+            Serie                = serie,
+            Correlativo          = correlativo
         }, _transaction);
     }
 
