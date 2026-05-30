@@ -219,8 +219,8 @@ public class ComprobantePdfService : IComprobantePdfService
             {
                 table.ColumnsDefinition(cols =>
                 {
-                    cols.ConstantColumn(15); // Item
-                    if (mostrarCodigo) cols.ConstantColumn(22); // Cod
+                    cols.ConstantColumn(10); // #
+                    if (mostrarCodigo) cols.ConstantColumn(27); // Cod
                     cols.ConstantColumn(18); // Cant
                     cols.RelativeColumn();   // Desc
                     cols.ConstantColumn(28); // P.Unit
@@ -233,7 +233,7 @@ public class ComprobantePdfService : IComprobantePdfService
 
                 table.Header(h =>
                 {
-                    h.Cell().Element(tc => TH(tc, "Item"));
+                    h.Cell().Element(tc => TH(tc, "#"));
                     if (mostrarCodigo) h.Cell().Element(tc => TH(tc, "Cod"));
                     h.Cell().Element(tc => TH(tc, "Cant"));
                     h.Cell().Element(tc => TH(tc, "Desc"));
@@ -419,7 +419,12 @@ public class ComprobantePdfService : IComprobantePdfService
 
                 col.Item().PaddingTop(2).Text("Cuotas:").Bold().FontSize(6).FontColor(ColorAzulMarino);
                 foreach (var cu in cuotas)
-                    TicketFilaTotal(col, $"{cu.NumeroCuota}  {cu.FechaVencimiento:dd/MM/yy}", FormatearMoneda(cu.Monto ?? 0, moneda));
+                    col.Item().Row(r =>
+                    {
+                        r.RelativeItem().Text(cu.NumeroCuota ?? "").FontSize(6);
+                        r.RelativeItem().AlignCenter().Text(FormatearMoneda(cu.Monto ?? 0, moneda)).FontSize(6);
+                        r.RelativeItem().AlignRight().Text($"{cu.FechaVencimiento:dd/MM/yy}").FontSize(6);
+                    });
             }
             else
             {
@@ -430,7 +435,12 @@ public class ComprobantePdfService : IComprobantePdfService
                 {
                     col.Item().PaddingTop(2).Text("Cuotas:").Bold().FontSize(6).FontColor(ColorAzulMarino);
                     foreach (var cu in cuotas)
-                        TicketFilaTotal(col, $"{cu.NumeroCuota}  {cu.FechaVencimiento:dd/MM/yy}", FormatearMoneda(cu.Monto ?? 0, moneda));
+                        col.Item().Row(r =>
+                        {
+                            r.RelativeItem().Text(cu.NumeroCuota ?? "").FontSize(6);
+                            r.RelativeItem().AlignCenter().Text(FormatearMoneda(cu.Monto ?? 0, moneda)).FontSize(6);
+                            r.RelativeItem().AlignRight().Text($"{cu.FechaVencimiento:dd/MM/yy}").FontSize(6);
+                        });
                 }
             }
         });
@@ -914,7 +924,7 @@ public class ComprobantePdfService : IComprobantePdfService
             // Cajón de ancho fijo (~140pt ≈ la mitad de la columna izquierda)
             col.Item().PaddingTop(2).Row(r =>
             {
-                r.ConstantItem(140)
+                r.ConstantItem(200)
                     .Background(ColorGrisClaro).Border(1).BorderColor(ColorGrisBorde)
                     .Padding(5).Column(d =>
                     {
@@ -923,6 +933,14 @@ public class ComprobantePdfService : IComprobantePdfService
                             {
                                 r.RelativeItem().Text(label).FontSize(8);
                                 r.AutoItem().Text(valor).FontSize(8);
+                            });
+
+                        void FilaCuota(ColumnDescriptor col, Domain.Entities.Cuota cu) =>
+                            col.Item().Row(r =>
+                            {
+                                r.RelativeItem().Text(cu.NumeroCuota ?? "").FontSize(8);
+                                r.RelativeItem().AlignCenter().Text(FormatearMoneda(cu.Monto ?? 0, moneda)).FontSize(8);
+                                r.RelativeItem().AlignRight().Text($"{cu.FechaVencimiento:dd/MM/yyyy}").FontSize(8);
                             });
 
                         if (!esCredito)
@@ -940,7 +958,7 @@ public class ComprobantePdfService : IComprobantePdfService
 
                             d.Item().PaddingTop(3).Text("Cuotas:").Bold().FontSize(8).FontColor(ColorAzulMarino);
                             foreach (var cu in cuotas)
-                                FilaMedio(d, $"Cuota {cu.NumeroCuota}  {cu.FechaVencimiento:dd/MM/yyyy}", FormatearMoneda(cu.Monto ?? 0, moneda));
+                                FilaCuota(d, cu);
                         }
                         else
                         {
@@ -949,7 +967,7 @@ public class ComprobantePdfService : IComprobantePdfService
                             {
                                 d.Item().PaddingTop(3).Text("Cuotas:").Bold().FontSize(8).FontColor(ColorAzulMarino);
                                 foreach (var cu in cuotas)
-                                    FilaMedio(d, $"Cuota {cu.NumeroCuota}  {cu.FechaVencimiento:dd/MM/yyyy}", FormatearMoneda(cu.Monto ?? 0, moneda));
+                                    FilaCuota(d, cu);
                             }
                         }
                     });
