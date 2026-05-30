@@ -667,6 +667,26 @@ public class ReportesRepository : IReportesRepository
         }, _transaction);
     }
 
+    public async Task<IEnumerable<(int ComprobanteId, string? MedioPago, decimal Monto)>>
+        GetPagosByComprobanteIdsAsync(IEnumerable<int> comprobanteIds)
+    {
+        var ids = comprobanteIds.ToList();
+        if (!ids.Any())
+            return Enumerable.Empty<(int, string?, decimal)>();
+
+        var sql = @"
+            SELECT comprobanteID AS ComprobanteId,
+                   medioPago     AS MedioPago,
+                   monto         AS Monto
+            FROM pago
+            WHERE comprobanteID IN @Ids";
+
+        var rows = await _connection.QueryAsync<(int ComprobanteId, string? MedioPago, decimal Monto)>(
+            sql, new { Ids = ids }, _transaction);
+
+        return rows;
+    }
+
     private const string BaseSelectReportes = @"
         SELECT 
             c.comprobanteID           AS ComprobanteId,

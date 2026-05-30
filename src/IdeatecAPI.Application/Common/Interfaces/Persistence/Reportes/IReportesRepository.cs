@@ -71,4 +71,8 @@ public interface IReportesRepository
         int? usuarioCreacion = null,
         string? clienteNumDoc = null,
         int? limit = null);
+
+    /// Devuelve (ComprobanteId, MedioPago, Monto) para un conjunto de comprobantes.
+    Task<IEnumerable<(int ComprobanteId, string? MedioPago, decimal Monto)>>
+        GetPagosByComprobanteIdsAsync(IEnumerable<int> comprobanteIds);
 }

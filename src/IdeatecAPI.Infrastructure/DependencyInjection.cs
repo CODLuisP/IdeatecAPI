@@ -29,6 +29,7 @@ using IdeatecAPI.Application.Features.NotificacionesEnviadas.Services;
 using IdeatecAPI.Application.Features.NotificacionDias.Services;
 using IdeatecAPI.Application.Features.Vales.Services;
 using IdeatecAPI.Application.Features.Configuracion.Services;
+using IdeatecAPI.Application.Common.Interfaces.Persistence.Reportes;
 
 namespace IdeatecAPI.Infrastructure;
 
@@ -103,6 +104,8 @@ public static class DependencyInjection
 
         //Reportes
         services.AddScoped<IComprobanteExcelService, ComprobanteExcelService>();
+        services.AddScoped<IReportesPdfService, ReportesPdfService>();
+        services.AddScoped<IControlCajaTicketPdfService, ControlCajaTicketPdfService>();
         services.AddScoped<IReportesService, ReportesService>();
 
         //Cuentas por cobrar

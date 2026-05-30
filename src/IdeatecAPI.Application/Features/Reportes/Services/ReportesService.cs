@@ -1,4 +1,5 @@
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
+using IdeatecAPI.Application.Common.Interfaces.Persistence.Reportes;
 using IdeatecAPI.Application.Features.Comprobante.DTOs;
 using IdeatecAPI.Application.Features.Comprobante.Services;
 using IdeatecAPI.Application.Features.Reportes.DTOs;
@@ -94,17 +95,58 @@ public interface IReportesService
         int? usuarioCreacion = null,
         string? clienteNumDoc = null,
         int? limit = null);
+
+    // ── PDF versions ──────────────────────────────────────────────────────────
+    Task<byte[]> ExportarListadoPdfAsync(
+        string titulo, string ruc,
+        string? codEstablecimiento = null, DateTime? fechaDesde = null,
+        DateTime? fechaHasta = null, int? usuarioCreacion = null,
+        string? clienteNumDoc = null, int? limit = null);
+
+    Task<byte[]> ExportarProductosTopPdfAsync(
+        string titulo, string ruc,
+        string? codEstablecimiento = null, DateTime? fechaDesde = null,
+        DateTime? fechaHasta = null, int? usuarioCreacion = null,
+        string? clienteNumDoc = null, int? limit = null, string orderBy = "monto");
+
+    Task<byte[]> ExportarMediosPagoPdfAsync(
+        string titulo, string ruc,
+        string? codEstablecimiento = null, DateTime? fechaDesde = null,
+        DateTime? fechaHasta = null, int? usuarioCreacion = null,
+        string? clienteNumDoc = null, int? limit = null);
+
+    Task<byte[]> ExportarControlCajaPdfAsync(
+        string titulo, string ruc,
+        string? codEstablecimiento = null, DateTime? fechaDesde = null,
+        DateTime? fechaHasta = null, int? usuarioCreacion = null,
+        string? clienteNumDoc = null, int? limit = null);
+
+    // ── Ticket ────────────────────────────────────────────────────────────────
+    Task<byte[]> ExportarControlCajaTicketAsync(
+        string titulo, string ruc,
+        string nombreResponsable,
+        string? codEstablecimiento = null, DateTime? fechaDesde = null,
+        DateTime? fechaHasta = null, int? usuarioCreacion = null,
+        string? clienteNumDoc = null, int? limit = null);
 }
 
 public class ReportesService : IReportesService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IComprobanteExcelService _excelService;
+    private readonly IReportesPdfService _pdfService;
+    private readonly IControlCajaTicketPdfService _ticketService;
 
-    public ReportesService(IUnitOfWork unitOfWork, IComprobanteExcelService excelService)
+    public ReportesService(
+        IUnitOfWork unitOfWork,
+        IComprobanteExcelService excelService,
+        IReportesPdfService pdfService,
+        IControlCajaTicketPdfService ticketService)
     {
-        _unitOfWork   = unitOfWork;
-        _excelService = excelService;
+        _unitOfWork     = unitOfWork;
+        _excelService   = excelService;
+        _pdfService     = pdfService;
+        _ticketService  = ticketService;
     }
 
     public async Task<ReporteResponseDto> GetReportesPorEmpresaAsync(
@@ -291,6 +333,122 @@ public class ReportesService : IReportesService
         return await _excelService.ExportarControlCajaAsync(
             titulo, dtos, ruc, codEstablecimiento,
             fechaDesde, fechaHasta, usuarioCreacion, clienteNumDoc);
+    }
+
+    // ── PDF Listado ───────────────────────────────────────────────────────────
+    public async Task<byte[]> ExportarListadoPdfAsync(
+        string titulo, string ruc,
+        string? codEstablecimiento = null, DateTime? fechaDesde = null,
+        DateTime? fechaHasta = null, int? usuarioCreacion = null,
+        string? clienteNumDoc = null, int? limit = null)
+    {
+        var datos = await GetListadoParaReportesAsync(
+            ruc, codEstablecimiento, fechaDesde, fechaHasta, usuarioCreacion, clienteNumDoc, limit);
+        return await _pdfService.ExportarListadoPdfAsync(
+            titulo, datos, ruc, codEstablecimiento, fechaDesde, fechaHasta, usuarioCreacion, clienteNumDoc);
+    }
+
+    // ── PDF Productos Top ─────────────────────────────────────────────────────
+    public async Task<byte[]> ExportarProductosTopPdfAsync(
+        string titulo, string ruc,
+        string? codEstablecimiento = null, DateTime? fechaDesde = null,
+        DateTime? fechaHasta = null, int? usuarioCreacion = null,
+        string? clienteNumDoc = null, int? limit = null, string orderBy = "monto")
+    {
+        var datos = await GetProductosTopAsync(
+            ruc, codEstablecimiento, fechaDesde, fechaHasta, usuarioCreacion, clienteNumDoc, limit, orderBy);
+        return await _pdfService.ExportarProductosTopPdfAsync(
+            titulo, datos, ruc, codEstablecimiento, fechaDesde, fechaHasta, usuarioCreacion, clienteNumDoc);
+    }
+
+    // ── PDF Medios de Pago ────────────────────────────────────────────────────
+    public async Task<byte[]> ExportarMediosPagoPdfAsync(
+        string titulo, string ruc,
+        string? codEstablecimiento = null, DateTime? fechaDesde = null,
+        DateTime? fechaHasta = null, int? usuarioCreacion = null,
+        string? clienteNumDoc = null, int? limit = null)
+    {
+        var datos = await GetMediosPagoTopAsync(
+            ruc, codEstablecimiento, fechaDesde, fechaHasta, usuarioCreacion, clienteNumDoc, limit);
+        return await _pdfService.ExportarMediosPagoPdfAsync(
+            titulo, datos, ruc, codEstablecimiento, fechaDesde, fechaHasta, usuarioCreacion, clienteNumDoc);
+    }
+
+    // ── PDF Control de Caja ───────────────────────────────────────────────────
+    public async Task<byte[]> ExportarControlCajaPdfAsync(
+        string titulo, string ruc,
+        string? codEstablecimiento = null, DateTime? fechaDesde = null,
+        DateTime? fechaHasta = null, int? usuarioCreacion = null,
+        string? clienteNumDoc = null, int? limit = null)
+    {
+        DateTime? desde = fechaDesde?.Date;
+        DateTime? hasta = fechaDesde.HasValue
+            ? (fechaHasta.HasValue
+                ? fechaHasta.Value.Date.AddDays(1).AddSeconds(-1)
+                : fechaDesde.Value.Date.AddDays(1).AddSeconds(-1))
+            : null;
+
+        var datos = await _unitOfWork.Reportes.GetListadoControlCajaAsync(
+            ruc, codEstablecimiento, desde, hasta, usuarioCreacion, clienteNumDoc, limit);
+        var dtos = datos.Select(MapToListarDto);
+
+        return await _pdfService.ExportarControlCajaPdfAsync(
+            titulo, dtos, ruc, codEstablecimiento, fechaDesde, fechaHasta, usuarioCreacion, clienteNumDoc);
+    }
+
+    // ── Ticket Control de Caja ────────────────────────────────────────────────
+    public async Task<byte[]> ExportarControlCajaTicketAsync(
+        string titulo, string ruc,
+        string nombreResponsable,
+        string? codEstablecimiento = null, DateTime? fechaDesde = null,
+        DateTime? fechaHasta = null, int? usuarioCreacion = null,
+        string? clienteNumDoc = null, int? limit = null)
+    {
+        DateTime? desde = fechaDesde?.Date;
+        DateTime? hasta = fechaDesde.HasValue
+            ? (fechaHasta.HasValue
+                ? fechaHasta.Value.Date.AddDays(1).AddSeconds(-1)
+                : fechaDesde.Value.Date.AddDays(1).AddSeconds(-1))
+            : null;
+
+        // 1. Comprobantes
+        var comprobantes = (await _unitOfWork.Reportes.GetListadoControlCajaAsync(
+            ruc, codEstablecimiento, desde, hasta, usuarioCreacion, clienteNumDoc, limit)).ToList();
+
+        if (!comprobantes.Any())
+            return await _ticketService.GenerarAsync(
+                titulo, Enumerable.Empty<ControlCajaTicketItemDto>(),
+                ruc, codEstablecimiento, fechaDesde, fechaHasta, nombreResponsable);
+
+        // 2. Pagos
+        var ids = comprobantes.Select(c => c.ComprobanteId);
+        var pagos = (await _unitOfWork.Reportes.GetPagosByComprobanteIdsAsync(ids)).ToList();
+        var pagosPorId = pagos
+            .GroupBy(p => p.ComprobanteId)
+            .ToDictionary(g => g.Key,
+                g => g.Select(p => new PagoResumenDto { MedioPago = p.MedioPago, Monto = p.Monto }).ToList());
+
+        // 3. Unir
+        var items = comprobantes.Select(c => new ControlCajaTicketItemDto
+        {
+            ComprobanteId        = c.ComprobanteId,
+            TipoComprobante      = c.TipoComprobante,
+            Serie                = c.Serie ?? "",
+            Correlativo          = c.Correlativo,
+            NumeroCompleto       = c.NumeroCompleto ?? "",
+            FechaEmision         = c.FechaEmision,
+            ImporteTotal         = c.ImporteTotal ?? 0,
+            ValorVenta           = c.ValorVenta ?? 0,
+            TotalIGV             = c.TotalIGV ?? 0,
+            TipoMoneda           = c.TipoMoneda ?? "PEN",
+            EstadoSunat          = c.EstadoSunat,
+            ComprobanteAfectadoId = c.ComprobanteAfectadoId,
+            NumDocAfectado       = c.NumDocAfectado,
+            Pagos                = pagosPorId.TryGetValue(c.ComprobanteId, out var p) ? p : new()
+        });
+
+        return await _ticketService.GenerarAsync(
+            titulo, items, ruc, codEstablecimiento, fechaDesde, fechaHasta, nombreResponsable);
     }
 
     // ── Mapper ────────────────────────────────────────────────────────────────

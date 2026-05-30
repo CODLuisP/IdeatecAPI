@@ -177,6 +177,7 @@ public class ReportesController : ControllerBase
         }
     }
 
+    /// <param name="formato">excel (default) | pdf</param>
     [HttpGet("listado/{ruc}/excel")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -188,22 +189,30 @@ public class ReportesController : ControllerBase
         [FromQuery] DateTime? fechaHasta = null,
         [FromQuery] int? usuarioCreacion = null,
         [FromQuery] string? clienteNumDoc = null,
-        [FromQuery] int? limit = null)
+        [FromQuery] int? limit = null,
+        [FromQuery] string formato = "excel")
     {
         try
         {
+            if (formato.ToLower() == "pdf")
+            {
+                var pdf = await _reportesService.ExportarListadoPdfAsync(
+                    titulo, ruc, codEstablecimiento, fechaDesde, fechaHasta,
+                    usuarioCreacion, clienteNumDoc, limit);
+                return File(pdf, "application/pdf", $"comprobantes-{ruc}-{DateTime.Now:yyyyMMdd}.pdf");
+            }
+
             var bytes = await _reportesService.ExportarListadoReportesExcelAsync(
                 titulo, ruc, codEstablecimiento, fechaDesde, fechaHasta,
                 usuarioCreacion, clienteNumDoc, limit);
-
             return File(bytes,
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 $"comprobantes-{ruc}-{DateTime.Now:yyyyMMdd}.xlsx");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error al exportar Excel listado RUC {Ruc}", ruc);
-            return StatusCode(500, new { mensaje = "Error al generar Excel.", detalle = ex.Message });
+            _logger.LogError(ex, "Error al exportar listado RUC {Ruc}", ruc);
+            return StatusCode(500, new { mensaje = "Error al generar archivo.", detalle = ex.Message });
         }
     }
 
@@ -238,6 +247,7 @@ public class ReportesController : ControllerBase
         }
     }
 
+    /// <param name="formato">excel (default) | pdf</param>
     [HttpGet("productos-top/{ruc}/excel")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -250,22 +260,30 @@ public class ReportesController : ControllerBase
         [FromQuery] int? usuarioCreacion = null,
         [FromQuery] string? clienteNumDoc = null,
         [FromQuery] int? limit = null,
-        [FromQuery] string orderBy = "monto")
+        [FromQuery] string orderBy = "monto",
+        [FromQuery] string formato = "excel")
     {
         try
         {
+            if (formato.ToLower() == "pdf")
+            {
+                var pdf = await _reportesService.ExportarProductosTopPdfAsync(
+                    titulo, ruc, codEstablecimiento, fechaDesde, fechaHasta,
+                    usuarioCreacion, clienteNumDoc, limit, orderBy);
+                return File(pdf, "application/pdf", $"productos-top-{ruc}-{DateTime.Now:yyyyMMdd}.pdf");
+            }
+
             var bytes = await _reportesService.ExportarProductosTopExcelAsync(
                 titulo, ruc, codEstablecimiento, fechaDesde, fechaHasta,
                 usuarioCreacion, clienteNumDoc, limit, orderBy);
-
             return File(bytes,
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 $"productos-top-{ruc}-{DateTime.Now:yyyyMMdd}.xlsx");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error al exportar Excel productos top RUC {Ruc}", ruc);
-            return StatusCode(500, new { mensaje = "Error al generar Excel.", detalle = ex.Message });
+            _logger.LogError(ex, "Error al exportar productos top RUC {Ruc}", ruc);
+            return StatusCode(500, new { mensaje = "Error al generar archivo.", detalle = ex.Message });
         }
     }
 
@@ -295,6 +313,7 @@ public class ReportesController : ControllerBase
         }
     }
 
+    /// <param name="formato">excel (default) | pdf</param>
     [HttpGet("medios-pago/{ruc}/excel")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -306,25 +325,34 @@ public class ReportesController : ControllerBase
         [FromQuery] DateTime? fechaHasta = null,
         [FromQuery] int? usuarioCreacion = null,
         [FromQuery] string? clienteNumDoc = null,
-        [FromQuery] int? limit = null)
+        [FromQuery] int? limit = null,
+        [FromQuery] string formato = "excel")
     {
         try
         {
+            if (formato.ToLower() == "pdf")
+            {
+                var pdf = await _reportesService.ExportarMediosPagoPdfAsync(
+                    titulo, ruc, codEstablecimiento, fechaDesde, fechaHasta,
+                    usuarioCreacion, clienteNumDoc, limit);
+                return File(pdf, "application/pdf", $"medios-pago-{ruc}-{DateTime.Now:yyyyMMdd}.pdf");
+            }
+
             var bytes = await _reportesService.ExportarMediosPagoTopExcelAsync(
                 titulo, ruc, codEstablecimiento, fechaDesde, fechaHasta,
                 usuarioCreacion, clienteNumDoc, limit);
-
             return File(bytes,
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 $"medios-pago-{ruc}-{DateTime.Now:yyyyMMdd}.xlsx");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error al exportar Excel medios de pago RUC {Ruc}", ruc);
-            return StatusCode(500, new { mensaje = "Error al generar Excel.", detalle = ex.Message });
+            _logger.LogError(ex, "Error al exportar medios de pago RUC {Ruc}", ruc);
+            return StatusCode(500, new { mensaje = "Error al generar archivo.", detalle = ex.Message });
         }
     }
 
+    /// <param name="formato">excel (default) | pdf</param>
     [HttpGet("control-caja/{ruc}/excel")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -336,22 +364,60 @@ public class ReportesController : ControllerBase
         [FromQuery] DateTime? fechaHasta = null,
         [FromQuery] int? usuarioCreacion = null,
         [FromQuery] string? clienteNumDoc = null,
-        [FromQuery] int? limit = null)
+        [FromQuery] int? limit = null,
+        [FromQuery] string formato = "excel")
     {
         try
         {
+            if (formato.ToLower() == "pdf")
+            {
+                var pdf = await _reportesService.ExportarControlCajaPdfAsync(
+                    titulo, ruc, codEstablecimiento, fechaDesde, fechaHasta,
+                    usuarioCreacion, clienteNumDoc, limit);
+                return File(pdf, "application/pdf", $"control-caja-{ruc}-{DateTime.Now:yyyyMMdd}.pdf");
+            }
+
             var bytes = await _reportesService.ExportarControlCajaExcelAsync(
                 titulo, ruc, codEstablecimiento, fechaDesde, fechaHasta,
                 usuarioCreacion, clienteNumDoc, limit);
-
             return File(bytes,
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 $"control-caja-{ruc}-{DateTime.Now:yyyyMMdd}.xlsx");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error al exportar Excel control de caja RUC {Ruc}", ruc);
-            return StatusCode(500, new { mensaje = "Error al generar Excel.", detalle = ex.Message });
+            _logger.LogError(ex, "Error al exportar control de caja RUC {Ruc}", ruc);
+            return StatusCode(500, new { mensaje = "Error al generar archivo.", detalle = ex.Message });
+        }
+    }
+
+    [HttpGet("control-caja/{ruc}/ticket")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> ExportarControlCajaTicket(
+        string ruc,
+        [FromQuery] string titulo = "REPORTE DE CAJA",
+        [FromQuery] string nombreResponsable = "",
+        [FromQuery] string? codEstablecimiento = null,
+        [FromQuery] DateTime? fechaDesde = null,
+        [FromQuery] DateTime? fechaHasta = null,
+        [FromQuery] int? usuarioCreacion = null,
+        [FromQuery] string? clienteNumDoc = null,
+        [FromQuery] int? limit = null)
+    {
+        try
+        {
+            var pdf = await _reportesService.ExportarControlCajaTicketAsync(
+                titulo, ruc, nombreResponsable, codEstablecimiento,
+                fechaDesde, fechaHasta, usuarioCreacion, clienteNumDoc, limit);
+
+            return File(pdf, "application/pdf",
+                $"ticket-caja-{ruc}-{DateTime.Now:yyyyMMdd_HHmmss}.pdf");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al generar ticket caja RUC {Ruc}", ruc);
+            return StatusCode(500, new { mensaje = "Error al generar ticket.", detalle = ex.Message });
         }
     }
 
