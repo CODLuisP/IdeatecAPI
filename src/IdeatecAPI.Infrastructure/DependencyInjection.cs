@@ -25,6 +25,8 @@ using IdeatecAPI.Application.Common.Interfaces;
 using IdeatecAPI.Application.Features.Trabajadores.Services;
 using IdeatecAPI.Application.Features.DeudaContado.Services;
 using IdeatecAPI.Application.Features.PlantillaVelsat.Services;
+using IdeatecAPI.Application.Features.NotificacionesEnviadas.Services;
+using IdeatecAPI.Application.Features.NotificacionDias.Services;
 
 namespace IdeatecAPI.Infrastructure;
 
@@ -113,6 +115,12 @@ public static class DependencyInjection
         services.AddScoped<ITrabajadorService, TrabajadorService>();
         
         services.AddScoped<IPlantillaVelsatService, PlantillaVelsatService>();
+
+        // Notificaciones Enviadas
+        services.AddScoped<INotificacionEnviadaService, NotificacionEnviadaService>();
+
+        // Notificación Días
+        services.AddScoped<INotificacionDiasService, NotificacionDiasService>();
 
         //Notificaciones WebSocket
         services.AddHttpClient<IWebSocketNotifier, WebSocketNotifier>();
