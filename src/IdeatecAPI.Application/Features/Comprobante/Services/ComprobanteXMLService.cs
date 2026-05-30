@@ -374,6 +374,7 @@ public class ComprobanteService : IComprobanteService
                 TipoMoneda = dto.TipoMoneda,
                 TipoCambio = dto.TipoCambio,
                 TipoPago = dto.TipoPago,
+                ValeId = dto.ValeId,
                 EmpresaId = dto.Company.EmpresaId,
                 EmpresaRuc = dto.Company.NumeroDocumento,
                 EmpresaRazonSocial = dto.Company.RazonSocial,
@@ -959,6 +960,7 @@ public class ComprobanteService : IComprobanteService
             FechaVencimiento = comprobante.FechaVencimiento,
             TipoMoneda = comprobante.TipoMoneda ?? "PEN",
             TipoPago = comprobante.TipoPago,
+            ValeId = comprobante.ValeId,
 
             Cliente = new ClienteDTO
             {
@@ -1113,6 +1115,7 @@ public class ComprobanteService : IComprobanteService
         FechaVencimiento = c.FechaVencimiento,
         TipoMoneda = c.TipoMoneda ?? "PEN",
         TipoPago = c.TipoPago,
+        ValeId = c.ValeId,
 
         Cliente = new ClienteDTO
         {

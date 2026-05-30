@@ -14,6 +14,7 @@ public class ListarComprobanteDTO
     public DateTime FechaVencimiento { get; set; }
     public string TipoMoneda { get; set; } = "PEN";
     public string? TipoPago { get; set; } = "Contado";
+    public string? ValeId { get; set; }
     public ClienteDTO Cliente { get; set; } = new();
     public EmpresaDTO Company { get; set; } = new();
 
