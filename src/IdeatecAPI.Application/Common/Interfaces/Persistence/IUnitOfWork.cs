@@ -26,6 +26,7 @@ public interface IUnitOfWork : IDisposable
     IPlantillaVelsatRepository PlantillaVelsat { get; }
     INotificacionEnviadaRepository NotificacionesEnviadas { get; }
     INotificacionDiasRepository NotificacionDias { get; }
+    IValeRepository Vales { get; }
 
     void SetEnvironment(string env);
 

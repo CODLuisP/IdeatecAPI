@@ -43,7 +43,10 @@ public class Comprobante
     public decimal? TipoCambio { get; set; }
 
     // Forma de Pago
-    public string? TipoPago { get; set; } 
+    public string? TipoPago { get; set; }
+
+    // Vale
+    public string? ValeId { get; set; }
 
     // Totales
     public string? CodigoTipoDescGlobal { get; set; }

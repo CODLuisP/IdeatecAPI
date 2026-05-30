@@ -27,6 +27,7 @@ using IdeatecAPI.Application.Features.DeudaContado.Services;
 using IdeatecAPI.Application.Features.PlantillaVelsat.Services;
 using IdeatecAPI.Application.Features.NotificacionesEnviadas.Services;
 using IdeatecAPI.Application.Features.NotificacionDias.Services;
+using IdeatecAPI.Application.Features.Vales.Services;
 
 namespace IdeatecAPI.Infrastructure;
 
@@ -121,6 +122,9 @@ public static class DependencyInjection
 
         // Notificación Días
         services.AddScoped<INotificacionDiasService, NotificacionDiasService>();
+
+        // Vales
+        services.AddScoped<IValeService, ValeService>();
 
         //Notificaciones WebSocket
         services.AddHttpClient<IWebSocketNotifier, WebSocketNotifier>();
