@@ -153,8 +153,9 @@ public class UsuarioRepository : DapperRepository<Usuario>, IUsuarioRepository
         if (!string.IsNullOrEmpty(ruc))
             sql += " AND u.ruc = @Ruc";
 
+        // ✅ Solo usuarios de esa sucursal, sin importar el rol
         if (!string.IsNullOrEmpty(sucursalID))
-            sql += " AND (u.sucursalID = @SucursalID OR (u.rol = 'superadmin' AND u.ruc = @Ruc))";
+            sql += " AND u.sucursalID = @SucursalID AND u.rol != 'superadmin'";
 
         if (usuarioId.HasValue)
             sql += " AND u.usuarioID = @UsuarioId";

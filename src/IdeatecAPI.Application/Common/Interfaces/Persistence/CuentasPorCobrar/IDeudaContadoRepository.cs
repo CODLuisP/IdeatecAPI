@@ -10,7 +10,10 @@ public interface IDeudaContadoRepository
         string? establecimientoAnexo,
         DateTime? fechaInicio,
         DateTime? fechaFin,
-        string? clienteNumDoc);
+        string? clienteNumDoc,
+        string? serie = null,
+        int? correlativo = null,
+        string estadoPago = "PENDIENTE");
 
     Task<Pago?> GetPagoByIdAsync(int pagoId);
 

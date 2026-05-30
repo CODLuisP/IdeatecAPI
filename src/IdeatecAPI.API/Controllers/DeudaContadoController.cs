@@ -17,6 +17,7 @@ public class DeudaContadoController : ControllerBase
         _deudaContadoService = deudaContadoService;
     }
 
+    /// <param name="estadoPago">PENDIENTE (default) | PAGADO | TODOS</param>
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -25,7 +26,10 @@ public class DeudaContadoController : ControllerBase
         [FromQuery] string? establecimientoAnexo,
         [FromQuery] DateTime? fechaInicio,
         [FromQuery] DateTime? fechaFin,
-        [FromQuery] string? clienteNumDoc)
+        [FromQuery] string? clienteNumDoc,
+        [FromQuery] string? serie,
+        [FromQuery] int? correlativo,
+        [FromQuery] string estadoPago = "PENDIENTE")
     {
         if (string.IsNullOrEmpty(empresaRuc))
             return BadRequest(new { message = "El RUC de la empresa es obligatorio" });
@@ -35,7 +39,10 @@ public class DeudaContadoController : ControllerBase
             establecimientoAnexo,
             fechaInicio,
             fechaFin,
-            clienteNumDoc);
+            clienteNumDoc,
+            serie,
+            correlativo,
+            estadoPago);
 
         return Ok(result);
     }

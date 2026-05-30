@@ -24,6 +24,8 @@ public interface IUnitOfWork : IDisposable
     IDeudaContadoRepository DeudaContado { get; }
     ITrabajadorRepository Trabajadores { get; }
     IPlantillaVelsatRepository PlantillaVelsat { get; }
+    INotificacionEnviadaRepository NotificacionesEnviadas { get; }
+    INotificacionDiasRepository NotificacionDias { get; }
 
     void SetEnvironment(string env);
 
