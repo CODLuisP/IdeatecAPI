@@ -376,7 +376,7 @@ public class ComprobantePdfService : IComprobantePdfService
                 var qrBytes = GenerateQrCode(qrContent);
                 if (qrBytes.Length > 0)
                 {
-                    col.Item().PaddingTop(6).AlignLeft()
+                    col.Item().PaddingTop(6).AlignCenter()
                         .Width(60).Height(60)
                         .Image(qrBytes).FitArea();
                 }
@@ -399,32 +399,38 @@ public class ComprobantePdfService : IComprobantePdfService
             bool tieneInicialYCuotas = pagos.Any() && cuotas.Any();
             bool esCredito = (c.TipoPago?.ToLower() ?? "") is "credito" or "crédito";
 
+            col.Item().PaddingTop(2).LineHorizontal(0.5f).LineColor(ColorAzulMarino);
+            col.Item().PaddingTop(3).Text("FORMA DE PAGO").Bold().FontSize(6).FontColor(ColorAzulMarino);
+
             if (!esCredito)
             {
-                col.Item().Text("Tipo de Pago: Contado").Bold().FontSize(6).FontColor(ColorAzulMarino);
-                foreach (var p in pagos)
-                    TicketFilaTotal(col, p.MedioPago ?? "Efectivo", FormatearMoneda(p.Monto ?? 0, moneda));
+                TicketFilaTotal(col, "Tipo", "Contado");
+                if (pagos.Any())
+                    foreach (var p in pagos)
+                        TicketFilaTotal(col, p.MedioPago ?? "Efectivo", FormatearMoneda(p.Monto ?? 0, moneda));
+                else
+                    TicketFilaTotal(col, "Efectivo", FormatearMoneda(c.ImporteTotal ?? 0, moneda));
             }
             else if (tieneInicialYCuotas)
             {
-                col.Item().Text("Tipo de Pago: Crédito con inicial").Bold().FontSize(7).FontColor(ColorAzulMarino);
+                TicketFilaTotal(col, "Tipo", "Crédito con inicial");
                 foreach (var p in pagos)
                     TicketFilaTotal(col, $"Inicial ({p.MedioPago ?? "Efectivo"})", FormatearMoneda(p.Monto ?? 0, moneda));
 
-                col.Item().PaddingTop(2).Text("Cuotas:").Bold().FontSize(6);
+                col.Item().PaddingTop(2).Text("Cuotas:").Bold().FontSize(6).FontColor(ColorAzulMarino);
                 foreach (var cu in cuotas)
-                    TicketFilaTotal(col, $"{cu.NumeroCuota} {cu.FechaVencimiento:dd/MM/yy}", FormatearMoneda(cu.Monto ?? 0, moneda));
+                    TicketFilaTotal(col, $"{cu.NumeroCuota}  {cu.FechaVencimiento:dd/MM/yy}", FormatearMoneda(cu.Monto ?? 0, moneda));
             }
             else
             {
-                col.Item().Text("Tipo de Pago: Crédito").Bold().FontSize(7).FontColor(ColorAzulMarino);
+                TicketFilaTotal(col, "Tipo", "Crédito");
                 TicketFilaTotal(col, "Monto Crédito", FormatearMoneda(c.MontoCredito ?? 0, moneda));
 
                 if (cuotas.Any())
                 {
-                    col.Item().PaddingTop(2).Text("Cuotas:").Bold().FontSize(6);
+                    col.Item().PaddingTop(2).Text("Cuotas:").Bold().FontSize(6).FontColor(ColorAzulMarino);
                     foreach (var cu in cuotas)
-                        TicketFilaTotal(col, $"{cu.NumeroCuota} {cu.FechaVencimiento:dd/MM/yy}", FormatearMoneda(cu.Monto ?? 0, moneda));
+                        TicketFilaTotal(col, $"{cu.NumeroCuota}  {cu.FechaVencimiento:dd/MM/yy}", FormatearMoneda(cu.Monto ?? 0, moneda));
                 }
             }
         });
@@ -548,24 +554,25 @@ public class ComprobantePdfService : IComprobantePdfService
             : ObtenerLabelTipoDoc(c.ClienteTipoDoc);
 
         container.Background(ColorGrisClaro).Border(1).BorderColor(ColorGrisBorde)
-        .Padding(6)
+        .Padding(3)
         .Row(row =>
         {
             // ── Izquierda: Cliente, Documento, Dirección ──
             row.RelativeItem(6).Column(rec =>
     {
-        BuildFilaDatoSpaced(rec, "Cliente", c.ClienteRazonSocial ?? "-");
-        BuildFilaDatoSpaced(rec, tipoDocLabel, c.ClienteNumDoc ?? "-");
+        BuildFilaDatoSpaced(rec, "Cliente", c.ClienteRazonSocial ?? "-", labelWidth: 55f);
+        BuildFilaDatoSpaced(rec, tipoDocLabel, c.ClienteNumDoc ?? "-", labelWidth: 55f);
 
         if (!string.IsNullOrEmpty(c.ClienteDireccion))
             BuildFilaDatoSpaced(rec, "Dirección",
-                $"{c.ClienteDireccion}, {c.ClienteDistrito} {c.ClienteProvincia} {c.ClienteDepartamento}".Trim());
+                $"{c.ClienteDireccion}, {c.ClienteDistrito} {c.ClienteProvincia} {c.ClienteDepartamento}".Trim(),
+                labelWidth: 55f);
     });
 
             // ── Derecha: Fecha Emisión, Tipo Pago, Fecha Vencimiento ──
-            row.RelativeItem(4).PaddingLeft(40).Column(right =>
+            row.RelativeItem(4).PaddingLeft(10).Column(right =>
     {
-        BuildFilaDatoSpaced(right, "Fecha Emisión", c.FechaEmision.ToString("dd/MM/yyyy"));
+        BuildFilaDatoSpaced(right, "Fecha Emisión", $"{c.FechaEmision:dd/MM/yyyy} {c.HoraEmision:HH:mm:ss}");
         BuildFilaDatoSpaced(right, "Tipo Pago", c.TipoPago ?? "-");
         BuildFilaDatoSpaced(right, "Fecha Vencimiento", c.FechaVencimiento.ToString("dd/MM/yyyy"));
 
@@ -723,6 +730,10 @@ public class ComprobantePdfService : IComprobantePdfService
                     if (detracciones.Any())
                         left.Item().PaddingTop(6)
                             .Element(lc => BuildSeccionDetraccion(lc, detracciones, moneda, c.TipoComprobante));
+
+                    // Medios de pago — encima del QR
+                    left.Item().PaddingTop(6)
+                        .Element(lc => BuildSeccionMediosPago(lc, c, pagos, cuotas, moneda));
 
                     // QR
                     if (!string.IsNullOrEmpty(empresa.Ruc))
@@ -883,6 +894,67 @@ public class ComprobantePdfService : IComprobantePdfService
                             d.Item().Text($"Obs.: {det.Observacion}").FontSize(7).FontColor(ColorTextoSuave);
                     }
                 });
+        });
+    }
+
+    private static void BuildSeccionMediosPago(
+        IContainer container,
+        Domain.Entities.Comprobante c,
+        List<Domain.Entities.Pago> pagos,
+        List<Domain.Entities.Cuota> cuotas,
+        string moneda)
+    {
+        bool esCredito    = (c.TipoPago?.ToLower() ?? "") is "credito" or "crédito";
+        bool tieneInicial = pagos.Any() && cuotas.Any();
+
+        container.Column(col =>
+        {
+            col.Item().Text("Forma de Pago").Bold().FontSize(9).FontColor(ColorAzulMarino);
+
+            // Cajón de ancho fijo (~140pt ≈ la mitad de la columna izquierda)
+            col.Item().PaddingTop(2).Row(r =>
+            {
+                r.ConstantItem(140)
+                    .Background(ColorGrisClaro).Border(1).BorderColor(ColorGrisBorde)
+                    .Padding(5).Column(d =>
+                    {
+                        void FilaMedio(ColumnDescriptor col, string label, string valor) =>
+                            col.Item().Row(r =>
+                            {
+                                r.RelativeItem().Text(label).FontSize(8);
+                                r.AutoItem().Text(valor).FontSize(8);
+                            });
+
+                        if (!esCredito)
+                        {
+                            if (pagos.Any())
+                                foreach (var p in pagos)
+                                    FilaMedio(d, p.MedioPago ?? "Efectivo", FormatearMoneda(p.Monto ?? 0, moneda));
+                            else
+                                FilaMedio(d, "Efectivo", FormatearMoneda(c.ImporteTotal ?? 0, moneda));
+                        }
+                        else if (tieneInicial)
+                        {
+                            foreach (var p in pagos)
+                                FilaMedio(d, $"Inicial ({p.MedioPago ?? "Efectivo"})", FormatearMoneda(p.Monto ?? 0, moneda));
+
+                            d.Item().PaddingTop(3).Text("Cuotas:").Bold().FontSize(8).FontColor(ColorAzulMarino);
+                            foreach (var cu in cuotas)
+                                FilaMedio(d, $"Cuota {cu.NumeroCuota}  {cu.FechaVencimiento:dd/MM/yyyy}", FormatearMoneda(cu.Monto ?? 0, moneda));
+                        }
+                        else
+                        {
+                            FilaMedio(d, "Monto Crédito", FormatearMoneda(c.MontoCredito ?? 0, moneda));
+                            if (cuotas.Any())
+                            {
+                                d.Item().PaddingTop(3).Text("Cuotas:").Bold().FontSize(8).FontColor(ColorAzulMarino);
+                                foreach (var cu in cuotas)
+                                    FilaMedio(d, $"Cuota {cu.NumeroCuota}  {cu.FechaVencimiento:dd/MM/yyyy}", FormatearMoneda(cu.Monto ?? 0, moneda));
+                            }
+                        }
+                    });
+                r.RelativeItem(); // espacio vacío a la derecha
+            });
         });
     }
 
@@ -1059,11 +1131,11 @@ public class ComprobantePdfService : IComprobantePdfService
         };
     }
 
-    private static void BuildFilaDatoSpaced(ColumnDescriptor col, string label, string valor, float spacing = 4f)
+    private static void BuildFilaDatoSpaced(ColumnDescriptor col, string label, string valor, float spacing = 2f, float labelWidth = 85f)
     {
         col.Item().PaddingBottom(spacing).Row(r =>
         {
-            r.ConstantItem(85).Text(label + ":").Bold().FontSize(8).FontColor(ColorAzulMarino);
+            r.ConstantItem(labelWidth).Text(label + ":").Bold().FontSize(8).FontColor(ColorAzulMarino);
             r.RelativeItem().Text(valor).FontSize(8);
         });
     }
