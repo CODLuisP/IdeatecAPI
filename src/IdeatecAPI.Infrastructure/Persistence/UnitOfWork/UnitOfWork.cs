@@ -43,6 +43,7 @@ public class UnitOfWork : IUnitOfWork
     private INotificacionEnviadaRepository? _notificacionesEnviadas;
     private INotificacionDiasRepository? _notificacionDias;
     private IValeRepository? _vales;
+    private IConfiguracionRepository? _configuracion;
 
     public UnitOfWork(IConfiguration configuration, ICurrentUserService currentUserService)
     {
@@ -211,6 +212,11 @@ public class UnitOfWork : IUnitOfWork
         get { _vales ??= new ValeRepository(CurrentConnection, _transaction); return _vales; }
     }
 
+    public IConfiguracionRepository Configuracion
+    {
+        get { _configuracion ??= new ConfiguracionRepository(CurrentConnection, _transaction); return _configuracion; }
+    }
+
     public void BeginTransaction()
     {
         _transaction = CurrentConnection.BeginTransaction();
@@ -264,6 +270,7 @@ public class UnitOfWork : IUnitOfWork
         _notificacionesEnviadas = null;
         _notificacionDias = null;
         _vales = null;
+        _configuracion = null;
     }
 
     public IRepository<T> Repository<T>() where T : class

@@ -27,6 +27,7 @@ public interface IUnitOfWork : IDisposable
     INotificacionEnviadaRepository NotificacionesEnviadas { get; }
     INotificacionDiasRepository NotificacionDias { get; }
     IValeRepository Vales { get; }
+    IConfiguracionRepository Configuracion { get; }
 
     void SetEnvironment(string env);
 

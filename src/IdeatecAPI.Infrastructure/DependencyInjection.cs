@@ -28,6 +28,7 @@ using IdeatecAPI.Application.Features.PlantillaVelsat.Services;
 using IdeatecAPI.Application.Features.NotificacionesEnviadas.Services;
 using IdeatecAPI.Application.Features.NotificacionDias.Services;
 using IdeatecAPI.Application.Features.Vales.Services;
+using IdeatecAPI.Application.Features.Configuracion.Services;
 
 namespace IdeatecAPI.Infrastructure;
 
@@ -125,6 +126,9 @@ public static class DependencyInjection
 
         // Vales
         services.AddScoped<IValeService, ValeService>();
+
+        // Configuracion
+        services.AddScoped<IConfiguracionService, ConfiguracionService>();
 
         //Notificaciones WebSocket
         services.AddHttpClient<IWebSocketNotifier, WebSocketNotifier>();
