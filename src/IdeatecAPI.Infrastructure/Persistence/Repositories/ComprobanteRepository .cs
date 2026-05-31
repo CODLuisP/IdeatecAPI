@@ -26,8 +26,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
                 codigoTipoDescGlobal, descuentoGlobal, totalOperacionesGravadas, totalOperacionesExoneradas, 
                 totalOperacionesInafectas, totalOperacionesGratuitas, totalIgvGratuitas, totalIGV, totalDescuentos, totalOtrosCargos,
                 totalIcbper, totalImpuestos, valorVenta, subTotal, importeTotal, montoCredito,
-                estadoSunat, enviadoEnResumen, xmlGenerado, usuarioCreacion, fechaCreacion, codigoHashCPE,
-                valeid
+                estadoSunat, enviadoEnResumen, xmlGenerado, usuarioCreacion, fechaCreacion, codigoHashCPE
             ) VALUES (
                 @TipoOperacion, @TipoComprobante, @Serie, @Correlativo,
                 @FechaEmision, @HoraEmision, @FechaVencimiento, @TipoMoneda,
@@ -41,8 +40,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
                 @codigoTipoDescGlobal,  @DescuentoGlobal, @TotalOperacionesGravadas, @TotalOperacionesExoneradas, 
                 @TotalOperacionesInafectas, @TotalOperacionesGratuitas, @TotalIgvGratuitas, @TotalIGV, @TotalDescuentos, @TotalOtrosCargos,
                 @TotalIcbper, @TotalImpuestos, @ValorVenta, @SubTotal, @ImporteTotal, @MontoCredito,
-                @EstadoSunat,  @EnviadoEnResumen, @XmlGenerado, @UsuarioCreacion, @FechaCreacion, @CodigoHashCPE,
-                @ValeId
+                @EstadoSunat,  @EnviadoEnResumen, @XmlGenerado, @UsuarioCreacion, @FechaCreacion, @CodigoHashCPE
             );
             SELECT LAST_INSERT_ID();";
 
@@ -102,8 +100,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
             comprobante.EnviadoEnResumen,
             comprobante.UsuarioCreacion,
             comprobante.FechaCreacion,
-            comprobante.CodigoHashCPE,
-            comprobante.ValeId
+            comprobante.CodigoHashCPE
         };
 
         int comprobanteId = await _connection.ExecuteScalarAsync<int>(sql, parameters, _transaction);
@@ -643,6 +640,22 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         WHERE comprobanteID = @ComprobanteId";
 
         await _connection.ExecuteAsync(sql, new { ComprobanteId = comprobanteId, RutaCdr = rutaCdr }, _transaction);
+    }
+
+    public async Task InsertValesAsync(int comprobanteId, IEnumerable<int> valeIds)
+    {
+        var sql = @"
+            INSERT IGNORE INTO comprobantevale (comprobanteId, valeId)
+            VALUES (@ComprobanteId, @ValeId);";
+
+        foreach (var valeId in valeIds)
+            await _connection.ExecuteAsync(sql, new { ComprobanteId = comprobanteId, ValeId = valeId }, _transaction);
+    }
+
+    public async Task<IEnumerable<int>> GetValesByComprobanteIdAsync(int comprobanteId)
+    {
+        var sql = "SELECT valeId FROM comprobantevale WHERE comprobanteId = @ComprobanteId";
+        return await _connection.QueryAsync<int>(sql, new { ComprobanteId = comprobanteId }, _transaction);
     }
 
     public async Task<bool> UpdateOrdenServicioSpotAsync(string ruc, string serie, int correlativo, string? ordenServicio, bool? spot)

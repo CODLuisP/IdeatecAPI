@@ -45,9 +45,6 @@ public class Comprobante
     // Forma de Pago
     public string? TipoPago { get; set; }
 
-    // Vale
-    public string? ValeId { get; set; }
-
     // Orden de servicio y SPOT
     public string? OrdenServicio { get; set; }
     public bool? Spot { get; set; }

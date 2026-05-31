@@ -375,7 +375,6 @@ public class ComprobanteService : IComprobanteService
                 TipoMoneda = dto.TipoMoneda,
                 TipoCambio = dto.TipoCambio,
                 TipoPago = dto.TipoPago,
-                ValeId = dto.ValeId,
                 EmpresaId = dto.Company.EmpresaId,
                 EmpresaRuc = dto.Company.NumeroDocumento,
                 EmpresaRazonSocial = dto.Company.RazonSocial,
@@ -520,6 +519,9 @@ public class ComprobanteService : IComprobanteService
                 .GenerarComprobanteAsync(comprobante);
 
             comprobante.ComprobanteId = newComprobanteId;
+
+            if (dto.Vales?.Any() == true)
+                await _unitOfWork.Comprobantes.InsertValesAsync(newComprobanteId, dto.Vales);
 
             _unitOfWork.Commit();
 
@@ -859,6 +861,7 @@ public class ComprobanteService : IComprobanteService
             return null;
 
         var datos = await _unitOfWork.Comprobantes.GetDatosCompletosByComprobanteIdAsync(comprobanteId);
+        var vales = (await _unitOfWork.Comprobantes.GetValesByComprobanteIdAsync(comprobanteId)).ToList();
 
         return MapToDto(comprobante,
             datos.Detalles.ToList(),
@@ -866,7 +869,8 @@ public class ComprobanteService : IComprobanteService
             datos.Cuotas.ToList(),
             datos.Leyendas.ToList(),
             datos.Guias.ToList(),
-            datos.Detracciones.ToList());
+            datos.Detracciones.ToList(),
+            vales);
     }
 
     public async Task<ObtenerComprobanteDTO?> GetByRucSerieNumeroAsync(string ruc, string serie, int numero)
@@ -878,13 +882,16 @@ public class ComprobanteService : IComprobanteService
         var comprobanteId = comprobante.ComprobanteId;
         var datos = await _unitOfWork.Comprobantes.GetDatosCompletosByComprobanteIdAsync(comprobanteId);
 
+        var vales = (await _unitOfWork.Comprobantes.GetValesByComprobanteIdAsync(comprobanteId)).ToList();
+
         return MapToDto(comprobante,
             datos.Detalles.ToList(),
             datos.Pagos.ToList(),
             datos.Cuotas.ToList(),
             datos.Leyendas.ToList(),
             datos.Guias.ToList(),
-            datos.Detracciones.ToList());
+            datos.Detracciones.ToList(),
+            vales);
     }
 
     public async Task<ObtenerComprobanteDTO?> GetByComprobanteUnicoAsync(string ruc, string serie, int numero)
@@ -944,7 +951,8 @@ public class ComprobanteService : IComprobanteService
     List<Domain.Entities.Cuota> cuotas,
     List<Domain.Entities.NoteLegend> leyendas,
     List<Domain.Entities.GuiaComprobante> guias,
-    List<Domain.Entities.Detraccion> detracciones)
+    List<Domain.Entities.Detraccion> detracciones,
+    List<int>? vales = null)
     {
         return new ObtenerComprobanteDTO
         {
@@ -961,7 +969,7 @@ public class ComprobanteService : IComprobanteService
             FechaVencimiento = comprobante.FechaVencimiento,
             TipoMoneda = comprobante.TipoMoneda ?? "PEN",
             TipoPago = comprobante.TipoPago,
-            ValeId = comprobante.ValeId,
+            Vales = vales,
             OrdenServicio = comprobante.OrdenServicio,
             Spot = comprobante.Spot,
 
@@ -1118,7 +1126,7 @@ public class ComprobanteService : IComprobanteService
         FechaVencimiento = c.FechaVencimiento,
         TipoMoneda = c.TipoMoneda ?? "PEN",
         TipoPago = c.TipoPago,
-        ValeId = c.ValeId,
+        Vales = [],
         OrdenServicio = c.OrdenServicio,
         Spot = c.Spot,
 

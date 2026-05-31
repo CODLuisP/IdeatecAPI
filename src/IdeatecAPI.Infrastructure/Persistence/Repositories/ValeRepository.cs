@@ -14,7 +14,7 @@ public class ValeRepository : DapperRepository<Vale>, IValeRepository
 
     public async Task<IEnumerable<Vale>> GetAllValesAsync()
     {
-        var sql = "SELECT * FROM vale";
+        var sql = "SELECT * FROM vale WHERE estado = 1;";
         return await _connection.QueryAsync<Vale>(sql, transaction: _transaction);
     }
 
@@ -24,7 +24,7 @@ public class ValeRepository : DapperRepository<Vale>, IValeRepository
             INSERT INTO vale
                 (nombre, descripcion, fechaemision, duracion, estado)
             VALUES
-                (@Nombre, @Descripcion, @FechaEmision, @Duracion, @Estado);";
+                (@Nombre, @Descripcion, @FechaEmision, @Duracion, 1);";
 
         var result = await _connection.ExecuteAsync(sql, vale, _transaction);
         return result > 0;
@@ -38,8 +38,7 @@ public class ValeRepository : DapperRepository<Vale>, IValeRepository
                 nombre       = @Nombre,
                 descripcion  = @Descripcion,
                 fechaemision = @FechaEmision,
-                duracion     = @Duracion,
-                estado       = @Estado
+                duracion     = @Duracion
             WHERE idvale = @IdVale;";
 
         var result = await _connection.ExecuteAsync(sql, new
@@ -48,7 +47,6 @@ public class ValeRepository : DapperRepository<Vale>, IValeRepository
             vale.Descripcion,
             vale.FechaEmision,
             vale.Duracion,
-            vale.Estado,
             IdVale = idVale
         }, _transaction);
 
