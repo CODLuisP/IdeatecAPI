@@ -694,6 +694,8 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         fechaVencimiento        AS FechaVencimiento,
         tipoMoneda              AS TipoMoneda,
         tipoPago                AS TipoPago,
+        ordenservicio           AS OrdenServicio,
+        spot                    AS Spot,
         empresaID               AS EmpresaId,
         empresaRuc              AS EmpresaRuc,
         empresaRazonSocial      AS EmpresaRazonSocial,
