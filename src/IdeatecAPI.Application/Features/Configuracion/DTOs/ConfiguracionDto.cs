@@ -16,4 +16,6 @@ public class ConfiguracionDto
     public bool? DeudasCobrar { get; set; }
     public bool? Trabajadores { get; set; }
     public bool? CargaComprobantes { get; set; }
+    public bool? AfectacionIgv { get; set; }
+    public bool? DescUnitario { get; set; }
 }

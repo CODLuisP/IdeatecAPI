@@ -24,11 +24,13 @@ public class ConfiguracionRepository : DapperRepository<Configuracion>, IConfigu
             INSERT INTO configuracion
                 (ruc, isimprime, tamañoimpresion, igv, isconsumo, guiaremision,
                  iscredito, itemsdefecto, isboletaorfactura, isenvioresumen,
-                 isvale, deudascobrar, trabajadores, cargacomprobantes)
+                 isvale, deudascobrar, trabajadores, cargacomprobantes,
+                 afectacionigv, descunitario)
             VALUES
                 (@Ruc, @IsImprime, @TamañoImpresion, @Igv, @IsConsumo, @GuiaRemision,
                  @IsCredito, @ItemsDefecto, @IsBoletaOrFactura, @IsEnvioResumen,
-                 @IsVale, @DeudasCobrar, @Trabajadores, @CargaComprobantes);";
+                 @IsVale, @DeudasCobrar, @Trabajadores, @CargaComprobantes,
+                 @AfectacionIgv, @DescUnitario);";
 
         var result = await _connection.ExecuteAsync(sql, configuracion, _transaction);
         return result > 0;
@@ -51,7 +53,9 @@ public class ConfiguracionRepository : DapperRepository<Configuracion>, IConfigu
                 isvale            = @IsVale,
                 deudascobrar      = @DeudasCobrar,
                 trabajadores      = @Trabajadores,
-                cargacomprobantes = @CargaComprobantes
+                cargacomprobantes = @CargaComprobantes,
+                afectacionigv     = @AfectacionIgv,
+                descunitario      = @DescUnitario
             WHERE ruc = @Ruc;";
 
         var result = await _connection.ExecuteAsync(sql, new
@@ -69,6 +73,8 @@ public class ConfiguracionRepository : DapperRepository<Configuracion>, IConfigu
             configuracion.DeudasCobrar,
             configuracion.Trabajadores,
             configuracion.CargaComprobantes,
+            configuracion.AfectacionIgv,
+            configuracion.DescUnitario,
             Ruc = ruc
         }, _transaction);
 

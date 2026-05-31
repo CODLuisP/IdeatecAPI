@@ -27,7 +27,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
                 totalOperacionesInafectas, totalOperacionesGratuitas, totalIgvGratuitas, totalIGV, totalDescuentos, totalOtrosCargos,
                 totalIcbper, totalImpuestos, valorVenta, subTotal, importeTotal, montoCredito,
                 estadoSunat, enviadoEnResumen, xmlGenerado, usuarioCreacion, fechaCreacion, codigoHashCPE,
-                valeid
+                valeid, ordenservicio, spot
             ) VALUES (
                 @TipoOperacion, @TipoComprobante, @Serie, @Correlativo,
                 @FechaEmision, @HoraEmision, @FechaVencimiento, @TipoMoneda,
@@ -42,7 +42,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
                 @TotalOperacionesInafectas, @TotalOperacionesGratuitas, @TotalIgvGratuitas, @TotalIGV, @TotalDescuentos, @TotalOtrosCargos,
                 @TotalIcbper, @TotalImpuestos, @ValorVenta, @SubTotal, @ImporteTotal, @MontoCredito,
                 @EstadoSunat,  @EnviadoEnResumen, @XmlGenerado, @UsuarioCreacion, @FechaCreacion, @CodigoHashCPE,
-                @ValeId
+                @ValeId, @OrdenServicio, @Spot
             );
             SELECT LAST_INSERT_ID();";
 
@@ -103,7 +103,9 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
             comprobante.UsuarioCreacion,
             comprobante.FechaCreacion,
             comprobante.CodigoHashCPE,
-            comprobante.ValeId
+            comprobante.ValeId,
+            comprobante.OrdenServicio,
+            comprobante.Spot
         };
 
         int comprobanteId = await _connection.ExecuteScalarAsync<int>(sql, parameters, _transaction);

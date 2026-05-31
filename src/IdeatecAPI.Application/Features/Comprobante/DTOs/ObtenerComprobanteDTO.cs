@@ -19,6 +19,8 @@ public class ObtenerComprobanteDTO
     public string TipoMoneda { get; set; } = "PEN";
     public string? TipoPago { get; set; } = "Contado";
     public string? ValeId { get; set; }
+    public string? OrdenServicio { get; set; }
+    public bool? Spot { get; set; }
 
     public ClienteDTO Cliente { get; set; } = new();
     public EmpresaDTO Company { get; set; } = new();

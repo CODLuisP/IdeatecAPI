@@ -48,6 +48,10 @@ public class Comprobante
     // Vale
     public string? ValeId { get; set; }
 
+    // Orden de servicio y SPOT
+    public string? OrdenServicio { get; set; }
+    public bool? Spot { get; set; }
+
     // Totales
     public string? CodigoTipoDescGlobal { get; set; }
     public decimal? DescuentoGlobal { get; set; }

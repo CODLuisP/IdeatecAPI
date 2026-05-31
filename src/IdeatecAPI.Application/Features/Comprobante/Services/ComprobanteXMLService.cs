@@ -375,6 +375,8 @@ public class ComprobanteService : IComprobanteService
                 TipoCambio = dto.TipoCambio,
                 TipoPago = dto.TipoPago,
                 ValeId = dto.ValeId,
+                OrdenServicio = dto.OrdenServicio,
+                Spot = dto.Spot,
                 EmpresaId = dto.Company.EmpresaId,
                 EmpresaRuc = dto.Company.NumeroDocumento,
                 EmpresaRazonSocial = dto.Company.RazonSocial,
@@ -961,6 +963,8 @@ public class ComprobanteService : IComprobanteService
             TipoMoneda = comprobante.TipoMoneda ?? "PEN",
             TipoPago = comprobante.TipoPago,
             ValeId = comprobante.ValeId,
+            OrdenServicio = comprobante.OrdenServicio,
+            Spot = comprobante.Spot,
 
             Cliente = new ClienteDTO
             {
@@ -1116,6 +1120,8 @@ public class ComprobanteService : IComprobanteService
         TipoMoneda = c.TipoMoneda ?? "PEN",
         TipoPago = c.TipoPago,
         ValeId = c.ValeId,
+        OrdenServicio = c.OrdenServicio,
+        Spot = c.Spot,
 
         Cliente = new ClienteDTO
         {

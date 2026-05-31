@@ -41,7 +41,9 @@ public class ConfiguracionService : IConfiguracionService
             IsVale            = configuracion.IsVale,
             DeudasCobrar      = configuracion.DeudasCobrar,
             Trabajadores      = configuracion.Trabajadores,
-            CargaComprobantes = configuracion.CargaComprobantes
+            CargaComprobantes = configuracion.CargaComprobantes,
+            AfectacionIgv     = configuracion.AfectacionIgv,
+            DescUnitario      = configuracion.DescUnitario
         };
     }
 
@@ -66,7 +68,9 @@ public class ConfiguracionService : IConfiguracionService
                 IsVale            = dto.IsVale,
                 DeudasCobrar      = dto.DeudasCobrar,
                 Trabajadores      = dto.Trabajadores,
-                CargaComprobantes = dto.CargaComprobantes
+                CargaComprobantes = dto.CargaComprobantes,
+                AfectacionIgv     = dto.AfectacionIgv,
+                DescUnitario      = dto.DescUnitario
             };
 
             var result = await _unitOfWork.Configuracion.RegistrarConfiguracionAsync(configuracion);
@@ -104,7 +108,9 @@ public class ConfiguracionService : IConfiguracionService
                 IsVale            = dto.IsVale,
                 DeudasCobrar      = dto.DeudasCobrar,
                 Trabajadores      = dto.Trabajadores,
-                CargaComprobantes = dto.CargaComprobantes
+                CargaComprobantes = dto.CargaComprobantes,
+                AfectacionIgv     = dto.AfectacionIgv,
+                DescUnitario      = dto.DescUnitario
             };
 
             var result = await _unitOfWork.Configuracion.EditarConfiguracionAsync(ruc, configuracion);
