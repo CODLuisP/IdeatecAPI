@@ -2,7 +2,7 @@ namespace IdeatecAPI.Application.Features.Configuracion.DTOs;
 
 public class RegistrarConfiguracionDto
 {
-    public int Ruc { get; set; }
+    public string? Ruc { get; set; }
     public bool? IsImprime { get; set; }
     public string? TamañoImpresion { get; set; }
     public string? Igv { get; set; }

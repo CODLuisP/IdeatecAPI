@@ -5,9 +5,9 @@ namespace IdeatecAPI.Application.Features.Configuracion.Services;
 
 public interface IConfiguracionService
 {
-    Task<ConfiguracionDto?> GetByRucAsync(int ruc);
+    Task<ConfiguracionDto?> GetByRucAsync(string ruc);
     Task<bool> RegistrarConfiguracionAsync(RegistrarConfiguracionDto dto);
-    Task<bool> EditarConfiguracionAsync(int ruc, EditarConfiguracionDto dto);
+    Task<bool> EditarConfiguracionAsync(string ruc, EditarConfiguracionDto dto);
 }
 
 public class ConfiguracionService : IConfiguracionService
@@ -19,7 +19,7 @@ public class ConfiguracionService : IConfiguracionService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<ConfiguracionDto?> GetByRucAsync(int ruc)
+    public async Task<ConfiguracionDto?> GetByRucAsync(string ruc)
     {
         var configuracion = await _unitOfWork.Configuracion.GetByRucAsync(ruc);
 
@@ -81,9 +81,9 @@ public class ConfiguracionService : IConfiguracionService
         }
     }
 
-    public async Task<bool> EditarConfiguracionAsync(int ruc, EditarConfiguracionDto dto)
+    public async Task<bool> EditarConfiguracionAsync(string ruc, EditarConfiguracionDto dto)
     {
-        if (ruc <= 0)
+        if (string.IsNullOrEmpty(ruc))
             throw new ArgumentException("Ruc inválido");
 
         _unitOfWork.BeginTransaction();

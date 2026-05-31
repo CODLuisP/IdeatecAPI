@@ -20,7 +20,7 @@ public class ConfiguracionController : ControllerBase
     [HttpGet("{ruc}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetByRuc(int ruc)
+    public async Task<IActionResult> GetByRuc(string ruc)
     {
         var configuracion = await _configuracionService.GetByRucAsync(ruc);
 
@@ -46,7 +46,7 @@ public class ConfiguracionController : ControllerBase
     [HttpPut("{ruc}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> Editar(int ruc, [FromBody] EditarConfiguracionDto dto)
+    public async Task<IActionResult> Editar(string ruc, [FromBody] EditarConfiguracionDto dto)
     {
         var result = await _configuracionService.EditarConfiguracionAsync(ruc, dto);
 

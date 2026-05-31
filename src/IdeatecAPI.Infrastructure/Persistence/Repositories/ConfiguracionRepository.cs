@@ -12,7 +12,7 @@ public class ConfiguracionRepository : DapperRepository<Configuracion>, IConfigu
     {
     }
 
-    public async Task<Configuracion?> GetByRucAsync(int ruc)
+    public async Task<Configuracion?> GetByRucAsync(string ruc)
     {
         var sql = "SELECT * FROM configuracion WHERE ruc = @Ruc";
         return await _connection.QueryFirstOrDefaultAsync<Configuracion>(sql, new { Ruc = ruc }, _transaction);
@@ -34,7 +34,7 @@ public class ConfiguracionRepository : DapperRepository<Configuracion>, IConfigu
         return result > 0;
     }
 
-    public async Task<bool> EditarConfiguracionAsync(int ruc, Configuracion configuracion)
+    public async Task<bool> EditarConfiguracionAsync(string ruc, Configuracion configuracion)
     {
         var sql = @"
             UPDATE configuracion
