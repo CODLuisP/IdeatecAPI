@@ -48,7 +48,8 @@ public interface IComprobanteService
     Task<ObtenerComprobanteDTO?> GetComprobanteByIdAsync(int comprobanteId);
     Task<IEnumerable<ObtenerComprobanteDTO>> GetComprobanteByEstadoAsync(string estado);
     Task<ComprobanteResponse> SendToSunatAsync(int comprobanteId); // Generar XML, firmar y enviar a sunat
-    Task<CargaMasivaResponse> GenerarMasivoAsync(List<GenerarComprobanteDTO> dtos); //CARGA MASIVA BOLETAS Y FACTURAS 
+    Task<CargaMasivaResponse> GenerarMasivoAsync(List<GenerarComprobanteDTO> dtos); //CARGA MASIVA BOLETAS Y FACTURAS
+    Task<bool> ActualizarOrdenServicioSpotAsync(string ruc, string serie, int correlativo, ActualizarOrdenServicioSpotDto dto);
 }
 
 public class ComprobanteResponse
@@ -375,8 +376,6 @@ public class ComprobanteService : IComprobanteService
                 TipoCambio = dto.TipoCambio,
                 TipoPago = dto.TipoPago,
                 ValeId = dto.ValeId,
-                OrdenServicio = dto.OrdenServicio,
-                Spot = dto.Spot,
                 EmpresaId = dto.Company.EmpresaId,
                 EmpresaRuc = dto.Company.NumeroDocumento,
                 EmpresaRazonSocial = dto.Company.RazonSocial,
@@ -1241,6 +1240,12 @@ public class ComprobanteService : IComprobanteService
 
         response.Fallidos = response.Total - response.Exitosos;
         return response;
+    }
+
+    public async Task<bool> ActualizarOrdenServicioSpotAsync(string ruc, string serie, int correlativo, ActualizarOrdenServicioSpotDto dto)
+    {
+        return await _unitOfWork.Comprobantes.UpdateOrdenServicioSpotAsync(
+            ruc, serie, correlativo, dto.OrdenServicio, dto.Spot);
     }
 
     // Siempre devuelve la hora actual en zona horaria Lima (UTC-5), sin importar

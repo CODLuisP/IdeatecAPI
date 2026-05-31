@@ -604,6 +604,34 @@ public class ComprobantesController : ControllerBase
         }
     }
 
+    [HttpPatch("{ruc}/{serie}/{correlativo}/orden-spot")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> ActualizarOrdenServicioSpot(
+        string ruc, string serie, int correlativo,
+        [FromBody] ActualizarOrdenServicioSpotDto dto)
+    {
+        try
+        {
+            var result = await _comprobanteService.ActualizarOrdenServicioSpotAsync(ruc, serie, correlativo, dto);
+
+            if (!result)
+                return BadRequest(new { mensaje = $"No se encontró el comprobante {serie}-{correlativo} para el RUC '{ruc}'." });
+
+            return Ok(new { mensaje = "Orden de servicio y SPOT actualizados correctamente" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al actualizar orden/spot del comprobante {Ruc}/{Serie}/{Correlativo}", ruc, serie, correlativo);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al actualizar el comprobante.",
+                detalle = ex.Message
+            });
+        }
+    }
+
     //carga masiva de boletas y facturas
     [HttpPost("GenerarMasivo")]
     [ProducesResponseType(StatusCodes.Status200OK)]

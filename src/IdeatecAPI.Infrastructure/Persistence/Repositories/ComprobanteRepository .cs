@@ -27,7 +27,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
                 totalOperacionesInafectas, totalOperacionesGratuitas, totalIgvGratuitas, totalIGV, totalDescuentos, totalOtrosCargos,
                 totalIcbper, totalImpuestos, valorVenta, subTotal, importeTotal, montoCredito,
                 estadoSunat, enviadoEnResumen, xmlGenerado, usuarioCreacion, fechaCreacion, codigoHashCPE,
-                valeid, ordenservicio, spot
+                valeid
             ) VALUES (
                 @TipoOperacion, @TipoComprobante, @Serie, @Correlativo,
                 @FechaEmision, @HoraEmision, @FechaVencimiento, @TipoMoneda,
@@ -42,7 +42,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
                 @TotalOperacionesInafectas, @TotalOperacionesGratuitas, @TotalIgvGratuitas, @TotalIGV, @TotalDescuentos, @TotalOtrosCargos,
                 @TotalIcbper, @TotalImpuestos, @ValorVenta, @SubTotal, @ImporteTotal, @MontoCredito,
                 @EstadoSunat,  @EnviadoEnResumen, @XmlGenerado, @UsuarioCreacion, @FechaCreacion, @CodigoHashCPE,
-                @ValeId, @OrdenServicio, @Spot
+                @ValeId
             );
             SELECT LAST_INSERT_ID();";
 
@@ -103,9 +103,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
             comprobante.UsuarioCreacion,
             comprobante.FechaCreacion,
             comprobante.CodigoHashCPE,
-            comprobante.ValeId,
-            comprobante.OrdenServicio,
-            comprobante.Spot
+            comprobante.ValeId
         };
 
         int comprobanteId = await _connection.ExecuteScalarAsync<int>(sql, parameters, _transaction);
@@ -645,6 +643,41 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         WHERE comprobanteID = @ComprobanteId";
 
         await _connection.ExecuteAsync(sql, new { ComprobanteId = comprobanteId, RutaCdr = rutaCdr }, _transaction);
+    }
+
+    public async Task<bool> UpdateOrdenServicioSpotAsync(string ruc, string serie, int correlativo, string? ordenServicio, bool? spot)
+    {
+        var setClauses = new List<string>();
+        var parameters = new Dapper.DynamicParameters();
+
+        if (ordenServicio is not null)
+        {
+            setClauses.Add("ordenservicio = @OrdenServicio");
+            parameters.Add("OrdenServicio", ordenServicio);
+        }
+
+        if (spot is not null)
+        {
+            setClauses.Add("spot = @Spot");
+            parameters.Add("Spot", spot);
+        }
+
+        if (setClauses.Count == 0)
+            return false;
+
+        parameters.Add("Ruc",         ruc);
+        parameters.Add("Serie",       serie);
+        parameters.Add("Correlativo", correlativo);
+
+        var sql = $@"
+            UPDATE comprobante
+            SET {string.Join(", ", setClauses)}
+            WHERE empresaRuc  = @Ruc
+              AND serie       = @Serie
+              AND correlativo = @Correlativo;";
+
+        var result = await _connection.ExecuteAsync(sql, parameters, _transaction);
+        return result > 0;
     }
 
     private const string BaseSelect = @"

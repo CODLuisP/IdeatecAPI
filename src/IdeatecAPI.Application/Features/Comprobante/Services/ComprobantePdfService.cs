@@ -589,6 +589,12 @@ public class ComprobantePdfService : IComprobantePdfService
         if (c.TipoMoneda != "PEN" && c.TipoCambio.HasValue)
             BuildFilaDatoSpaced(right, "Moneda", $"{c.TipoMoneda} (T.C. S/ {c.TipoCambio:F3})");
 
+        if (!string.IsNullOrWhiteSpace(c.OrdenServicio))
+            BuildFilaDatoSpaced(right, "Orden Servicio", c.OrdenServicio);
+
+        if (c.Spot == true)
+            BuildFilaDatoSpaced(right, "SPOT", "Sí");
+
         if (c.TipoComprobante is "07" or "08"
             && !string.IsNullOrEmpty(c.TipDocAfectado)
             && !string.IsNullOrEmpty(c.NumDocAfectado))

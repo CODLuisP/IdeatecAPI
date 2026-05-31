@@ -43,4 +43,5 @@ public interface IComprobanteRepository : IRepository<Comprobante>
     Task<int?> GetSucursalIdByRucAndAnexoAsync(string empresaRuc, string codEstablecimiento);
     Task UpdateXmlGeneradoAsync(int comprobanteId, string rutaZip);
     Task UpdateXmlRespuestaSunatAsync(int comprobanteId, string rutaCdr);
+    Task<bool> UpdateOrdenServicioSpotAsync(string ruc, string serie, int correlativo, string? ordenServicio, bool? spot);
 }
