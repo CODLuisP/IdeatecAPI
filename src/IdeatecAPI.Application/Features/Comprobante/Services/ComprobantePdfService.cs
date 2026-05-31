@@ -298,7 +298,7 @@ public class ComprobantePdfService : IComprobantePdfService
                     });
 
                     // Total
-                    table.Cell().Element(tc => TD(tc, 
+                    table.Cell().Element(tc => TD(tc,
                         (esGratuito ? 0 : d.TotalVentaItem ?? 0).ToString("F2"), right: true));
                 }
             });
@@ -472,7 +472,7 @@ public class ComprobantePdfService : IComprobantePdfService
         {
             col.Item().Row(row =>
             {
-                // LOGO
+                // LOGO (sin cambios)
                 if (!string.IsNullOrEmpty(empresa.LogoBase64))
                 {
                     try
@@ -485,7 +485,6 @@ public class ComprobantePdfService : IComprobantePdfService
                         var (pw, ph) = LeerDimensionesImagen(logoBytes);
                         float ratio = (float)pw / ph;
 
-                        // Límites para A4
                         const float maxAlto = 70f;
                         const float maxAncho = 110f;
 
@@ -493,21 +492,18 @@ public class ComprobantePdfService : IComprobantePdfService
 
                         if (ratio > 1.5f)
                         {
-                            // Rectangular horizontal (800x400) → escala desde ancho máximo
                             ancho = maxAncho;
-                            alto = ancho / ratio; // ~55pt
+                            alto = ancho / ratio;
                         }
                         else if (ratio < 0.75f)
                         {
-                            // Vertical (400x600) → escala desde alto máximo
                             alto = maxAlto;
-                            ancho = alto * ratio; // ~46pt
+                            ancho = alto * ratio;
                         }
                         else
                         {
-                            // Cuadrado (400x400) → escala desde alto máximo
                             alto = maxAlto;
-                            ancho = alto * ratio; // ~70pt
+                            ancho = alto * ratio;
                         }
 
                         row.ConstantItem(ancho)
@@ -521,7 +517,7 @@ public class ComprobantePdfService : IComprobantePdfService
                 }
                 else { row.ConstantItem(70); }
 
-                // DATOS EMPRESA — con padding derecho para no invadir el recuadro
+                // DATOS EMPRESA (sin cambios)
                 row.RelativeItem().PaddingLeft(6).PaddingRight(10).AlignMiddle().Column(emp =>
                 {
                     emp.Item().Text(empresa.RazonSocial)
@@ -537,7 +533,7 @@ public class ComprobantePdfService : IComprobantePdfService
                             .FontSize(8).FontColor(ColorTextoSuave);
                 });
 
-                // RECUADRO COMPROBANTE
+                // RECUADRO COMPROBANTE (sin cambios - sin Orden Servicio)
                 row.ConstantItem(160).AlignMiddle().Border(1).BorderColor(ColorAzulMarino).Column(box =>
                 {
                     box.Item().Background(ColorGrisClaro).Padding(5).AlignCenter()
@@ -550,6 +546,24 @@ public class ComprobantePdfService : IComprobantePdfService
                         .Bold().FontSize(9).FontColor(ColorAzulMarino);
                 });
             });
+
+            col.Item().Height(6);
+
+            // === NUEVO: Cuadro independiente para Orden de Servicio ===
+            if (!string.IsNullOrWhiteSpace(c.OrdenServicio))
+            {
+                col.Item().PaddingTop(1).Row(row =>
+            {
+                // Espacio para alinear con el recuadro del comprobante
+                row.ConstantItem(70); // Mismo ancho que el área del logo
+                row.RelativeItem(); // Espacio de datos empresa
+                row.ConstantItem(160).AlignMiddle().Border(1).BorderColor(ColorAzulMarino)
+                    .Background(ColorGrisClaro).Padding(5).AlignCenter()
+                    .Text($"ORDEN DE SERVICIO: {c.OrdenServicio}")
+                    .Bold().FontSize(9).FontColor(ColorAzulMarino);
+            });
+            }
+            // ========================================================
 
             col.Item().Height(6);
         });
@@ -588,12 +602,6 @@ public class ComprobantePdfService : IComprobantePdfService
 
         if (c.TipoMoneda != "PEN" && c.TipoCambio.HasValue)
             BuildFilaDatoSpaced(right, "Moneda", $"{c.TipoMoneda} (T.C. S/ {c.TipoCambio:F3})");
-
-        if (!string.IsNullOrWhiteSpace(c.OrdenServicio))
-            BuildFilaDatoSpaced(right, "Orden Servicio", c.OrdenServicio);
-
-        if (c.Spot == true)
-            BuildFilaDatoSpaced(right, "SPOT", "Sí");
 
         if (c.TipoComprobante is "07" or "08"
             && !string.IsNullOrEmpty(c.TipDocAfectado)
@@ -747,9 +755,39 @@ public class ComprobantePdfService : IComprobantePdfService
                         left.Item().PaddingTop(6)
                             .Element(lc => BuildSeccionDetraccion(lc, detracciones, moneda, c.TipoComprobante));
 
-                    // Medios de pago — encima del QR
-                    left.Item().PaddingTop(6)
-                        .Element(lc => BuildSeccionMediosPago(lc, c, pagos, cuotas, moneda));
+                    // Medios de pago — encima del QR (solo si NO es el RUC 20512134832)
+                    if (empresa.Ruc != "20512134832")
+                    {
+                        left.Item().PaddingTop(6)
+                            .Element(lc => BuildSeccionMediosPago(lc, c, pagos, cuotas, moneda));
+                    }
+
+                    // SPOT para RUC 20512134832 cuando Spot es true
+                    if (empresa.Ruc == "20512134832" && c.Spot == true)
+                    {
+                        var montoSpot = (c.ImporteTotal ?? 0) * 0.10m;
+
+                        left.Item().PaddingTop(6).Column(spotCol =>
+                        {
+                            spotCol.Item().PaddingTop(2)
+                                .Background(ColorGrisClaro).Border(1).BorderColor(ColorGrisBorde)
+                                .Padding(5).Column(d =>
+                                {
+                                    d.Item().Text("Leyenda: Operación sujeta al SPOT con el Gobierno Central")
+                                        .FontSize(9);
+                                    d.Item().Text("Bien o Servicio: 019 Arrendamiento de bienes")
+                                        .FontSize(9);
+                                    d.Item().Text("Medio de pago: 001 Depósito en cuenta")
+                                        .FontSize(9);
+                                    d.Item().Text("N° Cta. Banco de la Nación: 00068273250")
+                                        .FontSize(9);
+                                    d.Item().Text("Porcentaje de detracción: 10%")
+                                        .FontSize(9);
+                                    d.Item().Text($"Monto detracción: {FormatearMoneda(montoSpot, moneda)}")
+                                        .FontSize(9).Bold();
+                                });
+                        });
+                    }
 
                     // QR
                     if (!string.IsNullOrEmpty(empresa.Ruc))
@@ -920,7 +958,7 @@ public class ComprobantePdfService : IComprobantePdfService
         List<Domain.Entities.Cuota> cuotas,
         string moneda)
     {
-        bool esCredito    = (c.TipoPago?.ToLower() ?? "") is "credito" or "crédito";
+        bool esCredito = (c.TipoPago?.ToLower() ?? "") is "credito" or "crédito";
         bool tieneInicial = pagos.Any() && cuotas.Any();
 
         container.Column(col =>
@@ -1172,7 +1210,7 @@ public class ComprobantePdfService : IComprobantePdfService
         using var qrGenerator = new QRCodeGenerator();
         using var qrCodeData = qrGenerator.CreateQrCode(text, QRCodeGenerator.ECCLevel.Q);
         using var qrCode = new PngByteQRCode(qrCodeData);
-        
+
         // Color Azul Marino: #1A2B4A -> R:26, G:43, B:74, A:255
         byte[] darkColor = new byte[] { 26, 43, 74, 255 };
         // Fondo Blanco -> R:255, G:255, B:255, A:255
