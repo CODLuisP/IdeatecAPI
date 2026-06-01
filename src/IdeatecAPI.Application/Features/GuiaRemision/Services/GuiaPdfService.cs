@@ -41,7 +41,7 @@ public class GuiaPdfService : IGuiaPdfService
                 page.MarginLeft(15, Unit.Millimetre);
                 page.MarginRight(15, Unit.Millimetre);
                 page.DefaultTextStyle(x =>
-                    x.FontFamily("Arial").FontSize(9).FontColor(ColorTexto));
+                    x.FontFamily(Fonts.Lato).FontSize(9).FontColor(ColorTexto));
 
                 page.Header().Element(c => BuildHeader(c, guia, empresa));
                 page.Content().Element(c => BuildContent(c, guia, detalles));

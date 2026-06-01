@@ -46,4 +46,6 @@ public interface IComprobanteRepository : IRepository<Comprobante>
     Task<bool> UpdateOrdenServicioSpotAsync(string ruc, string serie, int correlativo, string? ordenServicio, bool? spot);
     Task InsertValesAsync(int comprobanteId, IEnumerable<int> valeIds);
     Task<IEnumerable<int>> GetValesByComprobanteIdAsync(int comprobanteId);
+    Task<IEnumerable<Vale>> GetValesFullByComprobanteIdAsync(int comprobanteId);
+    Task<int> ObtenerYIncrementarCorrelativoAsync(int sucursalId, string tipoComprobante, string serie);
 }

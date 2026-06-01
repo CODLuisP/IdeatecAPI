@@ -141,8 +141,6 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
             await RegistrarDetraccionAsync(detraccion);
         }
 
-        await ActualizarSerieCorrelativoAsync(comprobante);
-
         return comprobanteId;
     }
 
@@ -228,35 +226,42 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
 
     private async Task ActualizarSerieCorrelativoAsync(Comprobante comprobante)
     {
-        // 1. Obtener el ID de la sucursal para asegurar precisión
         var sucursalId = await GetSucursalIdByRucAndAnexoAsync(comprobante.EmpresaRuc!, comprobante.EmpresaEstablecimientoAnexo!);
-        
         if (sucursalId == null)
             throw new InvalidOperationException($"No se encontró una sucursal activa para el RUC {comprobante.EmpresaRuc} y establecimiento {comprobante.EmpresaEstablecimientoAnexo}");
 
-        // 2. Definir SQL de actualización por ID (Independencia total por entorno ya que _connection es dinámica)
         string sql = comprobante.TipoComprobante switch
         {
-            "01" => @"UPDATE sucursal SET 
-                        serieFactura       = @Serie,
-                        correlativoFactura = correlativoFactura + 1
-                    WHERE sucursalID = @SucursalId",
-
-            "03" => @"UPDATE sucursal SET 
-                        serieBoleta       = @Serie,
-                        correlativoBoleta = correlativoBoleta + 1
-                    WHERE sucursalID = @SucursalId",
-
-            _ => throw new InvalidOperationException($"Tipo de comprobante '{comprobante.TipoComprobante}' no soportado para incremento automático.")
+            "01" => @"UPDATE sucursal SET serieFactura = @Serie, correlativoFactura = correlativoFactura + 1 WHERE sucursalID = @SucursalId",
+            "03" => @"UPDATE sucursal SET serieBoleta  = @Serie, correlativoBoleta  = correlativoBoleta  + 1 WHERE sucursalID = @SucursalId",
+            _    => throw new InvalidOperationException($"Tipo de comprobante '{comprobante.TipoComprobante}' no soportado para incremento automático.")
         };
 
-        var parameters = new
+        await _connection.ExecuteAsync(sql, new { comprobante.Serie, SucursalId = sucursalId }, _transaction);
+    }
+
+    public async Task<int> ObtenerYIncrementarCorrelativoAsync(int sucursalId, string tipoComprobante, string serie)
+    {
+        // Bloquea la fila hasta que la transacción haga Commit — ninguna otra transacción puede leer FOR UPDATE hasta entonces
+        string sqlSelect = tipoComprobante switch
         {
-            comprobante.Serie,
-            SucursalId = sucursalId
+            "01" => "SELECT correlativoFactura FROM sucursal WHERE sucursalID = @SucursalId FOR UPDATE",
+            "03" => "SELECT correlativoBoleta  FROM sucursal WHERE sucursalID = @SucursalId FOR UPDATE",
+            _    => throw new InvalidOperationException($"Tipo de comprobante '{tipoComprobante}' no soportado.")
         };
 
-        await _connection.ExecuteAsync(sql, parameters, _transaction);
+        int correlativoActual = await _connection.ExecuteScalarAsync<int>(sqlSelect, new { SucursalId = sucursalId }, _transaction);
+
+        string sqlUpdate = tipoComprobante switch
+        {
+            "01" => "UPDATE sucursal SET serieFactura = @Serie, correlativoFactura = correlativoFactura + 1 WHERE sucursalID = @SucursalId",
+            "03" => "UPDATE sucursal SET serieBoleta  = @Serie, correlativoBoleta  = correlativoBoleta  + 1 WHERE sucursalID = @SucursalId",
+            _    => throw new InvalidOperationException($"Tipo de comprobante '{tipoComprobante}' no soportado.")
+        };
+
+        await _connection.ExecuteAsync(sqlUpdate, new { Serie = serie, SucursalId = sucursalId }, _transaction);
+
+        return correlativoActual;
     }
 
     public async Task<IEnumerable<Comprobante>> GetByRucAndFechasAsync(string ruc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null)
@@ -656,6 +661,21 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
     {
         var sql = "SELECT valeId FROM comprobantevale WHERE comprobanteId = @ComprobanteId";
         return await _connection.QueryAsync<int>(sql, new { ComprobanteId = comprobanteId }, _transaction);
+    }
+
+    public async Task<IEnumerable<Vale>> GetValesFullByComprobanteIdAsync(int comprobanteId)
+    {
+        var sql = @"
+            SELECT v.idvale       AS IdVale,
+                   v.nombre       AS Nombre,
+                   v.descripcion  AS Descripcion,
+                   v.fechaemision AS FechaEmision,
+                   v.duracion     AS Duracion,
+                   v.estado       AS Estado
+            FROM vale v
+            INNER JOIN comprobantevale cv ON cv.valeId = v.idvale
+            WHERE cv.comprobanteId = @ComprobanteId";
+        return await _connection.QueryAsync<Vale>(sql, new { ComprobanteId = comprobanteId }, _transaction);
     }
 
     public async Task<bool> UpdateOrdenServicioSpotAsync(string ruc, string serie, int correlativo, string? ordenServicio, bool? spot)

@@ -1,6 +1,7 @@
 
 using IdeatecAPI.Application.Features.Detraccion.DTOs;
 using IdeatecAPI.Application.Features.Notas.DTOs;
+using IdeatecAPI.Application.Features.Vales.DTOs;
 
 namespace IdeatecAPI.Application.Features.Comprobante.DTOs;
 public class ObtenerComprobanteDTO
@@ -18,7 +19,7 @@ public class ObtenerComprobanteDTO
     public DateTime FechaVencimiento { get; set; }
     public string TipoMoneda { get; set; } = "PEN";
     public string? TipoPago { get; set; } = "Contado";
-    public List<int>? Vales { get; set; }
+    public List<ValeDto>? Vales { get; set; }
     public string? OrdenServicio { get; set; }
     public bool? Spot { get; set; }
 

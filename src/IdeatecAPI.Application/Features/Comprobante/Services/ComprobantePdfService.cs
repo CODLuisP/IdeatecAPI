@@ -55,11 +55,11 @@ public class ComprobantePdfService : IComprobantePdfService
             LogoBase64 = empresaEntidad.LogoBase64,
         };
 
-        var detalles = datos.Detalles.ToList();
-        var pagos = datos.Pagos.ToList();
-        var cuotas = datos.Cuotas.ToList();
-        var leyendas = datos.Leyendas.ToList();
-        var guias = datos.Guias.ToList();
+        var detalles    = datos.Detalles.ToList();
+        var pagos       = datos.Pagos.ToList();
+        var cuotas      = datos.Cuotas.ToList();
+        var leyendas    = datos.Leyendas.ToList();
+        var guias       = datos.Guias.ToList();
         var detracciones = datos.Detracciones.ToList();
 
         // Tipo de cambio oficial SUNAT (solo cuando el comprobante es en USD)
@@ -67,26 +67,28 @@ public class ComprobantePdfService : IComprobantePdfService
         if (comprobante.TipoMoneda == "USD")
             tipoCambioOficial = await _tipoCambioService.GetTipoCambioVentaAsync(comprobante.FechaEmision);
 
+        // Vales — solo se usan en ticket; vacío si no tiene
         bool esTicket = tamano == TamanoPdf.Ticket80mm || tamano == TamanoPdf.Ticket58mm;
+        var vales = esTicket
+            ? (await _unitOfWork.Comprobantes.GetValesFullByComprobanteIdAsync(comprobanteId)).ToList()
+            : new List<Domain.Entities.Vale>();
 
         var doc = Document.Create(container =>
         {
+            // ── Página 1: comprobante ────────────────────────────────────────
             container.Page(page =>
             {
                 if (esTicket)
-                {
                     page.ContinuousSize(ResolverAnchoTicket(tamano), Unit.Point);
-                }
                 else
-                {
                     page.Size(ResolverTamano(tamano));
-                }
+
                 page.MarginTop(esTicket ? 8 : 15, Unit.Millimetre);
                 page.MarginBottom(esTicket ? 8 : 15, Unit.Millimetre);
                 page.MarginLeft(esTicket ? 3 : 15, Unit.Millimetre);
                 page.MarginRight(esTicket ? 3 : 15, Unit.Millimetre);
                 page.DefaultTextStyle(x =>
-                    x.FontFamily("Arial").FontSize(esTicket ? 7 : 9).FontColor(ColorTexto));
+                    x.FontFamily(Fonts.Lato).FontSize(esTicket ? 7 : 9).FontColor(ColorTexto));
 
                 if (esTicket)
                 {
@@ -102,6 +104,26 @@ public class ComprobantePdfService : IComprobantePdfService
                                      leyendas, guias, detracciones, tipoCambioOficial));
                 }
             });
+
+            // ── Página 2: vale (solo en ticket y si tiene vales) ─────────────
+            if (esTicket && vales.Any())
+            {
+                foreach (var vale in vales)
+                {
+                    container.Page(page =>
+                    {
+                        page.ContinuousSize(ResolverAnchoTicket(tamano), Unit.Point);
+                        page.MarginTop(4, Unit.Millimetre);
+                        page.MarginBottom(8, Unit.Millimetre);
+                        page.MarginLeft(3, Unit.Millimetre);
+                        page.MarginRight(3, Unit.Millimetre);
+                        page.DefaultTextStyle(x =>
+                            x.FontFamily(Fonts.Lato).FontSize(7).FontColor(ColorTexto));
+
+                        page.Content().Element(c => BuildValeTicket(c, comprobante, vale));
+                    });
+                }
+            }
         });
 
         return doc.GeneratePdf();
@@ -1083,6 +1105,68 @@ public class ComprobantePdfService : IComprobantePdfService
     }
 
     // ════════════════════════════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════════════════════
+    // VALE — segunda página del ticket
+    // ════════════════════════════════════════════════════════════════════════
+    // Convierte un DateTime UTC almacenado en BD → hora de Lima (UTC-5)
+    private static DateTime AHoraLima(DateTime dt)
+    {
+        var tz = TimeZoneInfo.FindSystemTimeZoneById(
+            OperatingSystem.IsWindows() ? "SA Pacific Standard Time" : "America/Lima");
+        return TimeZoneInfo.ConvertTimeFromUtc(
+            DateTime.SpecifyKind(dt, DateTimeKind.Utc), tz);
+    }
+
+    private static void BuildValeTicket(
+        IContainer container,
+        Domain.Entities.Comprobante c,
+        Domain.Entities.Vale vale)
+    {
+        // c.HoraEmision ya viene en hora Lima desde el frontend → usar directo
+        var emitido     = $"{c.FechaEmision:dd/MM/yyyy} {c.HoraEmision:HH:mm:ss}";
+        var validoHasta = c.FechaEmision.AddMonths(1);
+
+        container.Column(col =>
+        {
+            col.Item().Height(10); // 2 saltos antes del contenido
+
+            // COD. VALE — centrado, negrita
+            col.Item().AlignCenter()
+                .Text($"COD. VALE: {c.NumeroCompleto}")
+                .Bold().FontSize(8).FontColor(ColorAzulMarino);
+
+            col.Item().Height(6);
+
+            // Descripción — convierte <br> HTML a saltos de línea reales
+            if (!string.IsNullOrWhiteSpace(vale.Descripcion))
+            {
+                var desc = vale.Descripcion
+                    .Replace("<br><br>", "\n\n", StringComparison.OrdinalIgnoreCase)
+                    .Replace("<br />",   "\n",   StringComparison.OrdinalIgnoreCase)
+                    .Replace("<br/>",    "\n",   StringComparison.OrdinalIgnoreCase)
+                    .Replace("<br>",     "\n",   StringComparison.OrdinalIgnoreCase);
+
+                col.Item().Text(desc).FontSize(7).Justify();
+            }
+
+            col.Item().Height(6);
+
+            // Emitido
+            col.Item().Row(r =>
+            {
+                r.ConstantItem(40).Text("Emitido:").Bold().FontSize(6).FontColor(ColorAzulMarino);
+                r.RelativeItem().Text(emitido).FontSize(6);
+            });
+
+            // Válido hasta
+            col.Item().Row(r =>
+            {
+                r.ConstantItem(40).Text("Válido hasta:").Bold().FontSize(6).FontColor(ColorAzulMarino);
+                r.RelativeItem().Text(validoHasta.ToString("dd/MM/yyyy")).FontSize(6);
+            });
+        });
+    }
+
     // HELPERS
     // ════════════════════════════════════════════════════════════════════════
     private static void BuildFilaDato(ColumnDescriptor col, string label, string valor)

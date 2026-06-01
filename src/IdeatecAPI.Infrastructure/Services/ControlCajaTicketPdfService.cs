@@ -2,6 +2,7 @@ using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Application.Common.Interfaces.Persistence.Reportes;
 using IdeatecAPI.Application.Features.Reportes.DTOs;
 using QuestPDF.Fluent;
+using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using QRCoder;
 
@@ -77,7 +78,7 @@ public class ControlCajaTicketPdfService : IControlCajaTicketPdfService
                 page.MarginBottom(8, Unit.Millimetre);
                 page.MarginLeft(3, Unit.Millimetre);
                 page.MarginRight(3, Unit.Millimetre);
-                page.DefaultTextStyle(x => x.FontFamily("Arial").FontSize(7).FontColor("#1A1A1A"));
+                page.DefaultTextStyle(x => x.FontFamily(Fonts.Lato).FontSize(7).FontColor("#1A1A1A"));
 
                 page.Content().Column(col =>
                 {

@@ -12,12 +12,18 @@ public class ComprobantesController : ControllerBase
 {
     private readonly IComprobanteService _comprobanteService;
     private readonly IComprobantePdfService _pdfService;
+    private readonly IComprobanteHtmlService _htmlService;
     private readonly ILogger<ComprobantesController> _logger;
 
-    public ComprobantesController(IComprobanteService comprobanteService, IComprobantePdfService pdfService, ILogger<ComprobantesController> logger)
+    public ComprobantesController(
+        IComprobanteService comprobanteService,
+        IComprobantePdfService pdfService,
+        IComprobanteHtmlService htmlService,
+        ILogger<ComprobantesController> logger)
     {
         _comprobanteService = comprobanteService;
         _pdfService         = pdfService;
+        _htmlService        = htmlService;
         _logger             = logger;
     }
 
@@ -498,6 +504,37 @@ public class ComprobantesController : ControllerBase
             return StatusCode(StatusCodes.Status500InternalServerError, new
             {
                 mensaje = "Ocurrió un error al generar el PDF.",
+                detalle = ex.Message
+            });
+        }
+    }
+
+    [HttpGet("{id}/html")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> DescargarHtml(int id,
+        [FromQuery] TamanoPdf tamano = TamanoPdf.Ticket80mm)
+    {
+        try
+        {
+            if (tamano != TamanoPdf.Ticket58mm && tamano != TamanoPdf.Ticket80mm)
+                return BadRequest(new { mensaje = "Este endpoint solo soporta Ticket58mm y Ticket80mm." });
+
+            var html = await _htmlService.GenerarHtmlTicketAsync(id, tamano);
+            return Content(html, "text/html; charset=utf-8");
+        }
+        catch (KeyNotFoundException ex)
+        {
+            _logger.LogWarning("Comprobante no encontrado al generar HTML: {Mensaje}", ex.Message);
+            return NotFound(new { mensaje = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al generar HTML del comprobante ID {Id}", id);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al generar el HTML.",
                 detalle = ex.Message
             });
         }

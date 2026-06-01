@@ -81,6 +81,7 @@ public static class DependencyInjection
         services.AddScoped<IResumenXmlService, GeneraResumenXmlService>();
         services.AddScoped<ISunatResumenService, SunatResumenService>();
         services.AddScoped<IComprobantePdfService, ComprobantePdfService>();
+        services.AddScoped<IComprobanteHtmlService, ComprobanteHtmlService>();
 
 
         services.AddScoped<ITokenService, TokenService>();
