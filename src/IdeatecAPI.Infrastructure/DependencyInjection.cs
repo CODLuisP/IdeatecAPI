@@ -28,6 +28,7 @@ using IdeatecAPI.Application.Features.PlantillaVelsat.Services;
 using IdeatecAPI.Application.Features.NotificacionesEnviadas.Services;
 using IdeatecAPI.Application.Features.NotificacionDias.Services;
 using IdeatecAPI.Application.Features.Vales.Services;
+using IdeatecAPI.Application.Common.Interfaces;
 using IdeatecAPI.Application.Features.Configuracion.Services;
 using IdeatecAPI.Application.Common.Interfaces.Persistence.Reportes;
 
@@ -99,6 +100,9 @@ public static class DependencyInjection
         // ── Servicios de Email ──
         services.AddHttpClient("mailersend");
         services.AddScoped<IEmailService, EmailService>();
+
+        // ── Tipo de Cambio SUNAT ──
+        services.AddScoped<ITipoCambioService, TipoCambioService>();
 
         //Dashboard
         services.AddScoped<IDashboardService, DashboardService>();

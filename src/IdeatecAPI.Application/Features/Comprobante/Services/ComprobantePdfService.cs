@@ -1,3 +1,4 @@
+using IdeatecAPI.Application.Common.Interfaces;
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Application.Features.Comprobante.Services;
 using IdeatecAPI.Application.Features.Empresas.DTOs;
@@ -12,6 +13,7 @@ namespace IdeatecAPI.Infrastructure.Services;
 public class ComprobantePdfService : IComprobantePdfService
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ITipoCambioService _tipoCambioService;
 
     private static readonly string ColorAzulMarino = "#1A2B4A";
     private static readonly string ColorBlanco = "#FFFFFF";
@@ -20,9 +22,10 @@ public class ComprobantePdfService : IComprobantePdfService
     private static readonly string ColorTexto = "#1A1A1A";
     private static readonly string ColorTextoSuave = "#4A5568";
 
-    public ComprobantePdfService(IUnitOfWork unitOfWork)
+    public ComprobantePdfService(IUnitOfWork unitOfWork, ITipoCambioService tipoCambioService)
     {
         _unitOfWork = unitOfWork;
+        _tipoCambioService = tipoCambioService;
     }
 
     public async Task<byte[]> GenerarPdfAsync(int comprobanteId, TamanoPdf tamano = TamanoPdf.A4)
@@ -59,6 +62,11 @@ public class ComprobantePdfService : IComprobantePdfService
         var guias       = datos.Guias.ToList();
         var detracciones = datos.Detracciones.ToList();
 
+        // Tipo de cambio oficial SUNAT (solo cuando el comprobante es en USD)
+        decimal? tipoCambioOficial = null;
+        if (comprobante.TipoMoneda == "USD")
+            tipoCambioOficial = await _tipoCambioService.GetTipoCambioVentaAsync(comprobante.FechaEmision);
+
         // Vales — solo se usan en ticket; vacío si no tiene
         bool esTicket = tamano == TamanoPdf.Ticket80mm || tamano == TamanoPdf.Ticket58mm;
         var vales = esTicket
@@ -86,14 +94,14 @@ public class ComprobantePdfService : IComprobantePdfService
                 {
                     page.Content().Element(c =>
                         BuildTicket(c, comprobante, empresa, detalles, pagos, cuotas,
-                                    leyendas, guias, detracciones));
+                                    leyendas, guias, detracciones, tipoCambioOficial));
                 }
                 else
                 {
                     page.Header().Element(c => BuildHeader(c, comprobante, empresa));
                     page.Content().Element(c =>
                         BuildContent(c, comprobante, empresa, detalles, pagos, cuotas,
-                                     leyendas, guias, detracciones));
+                                     leyendas, guias, detracciones, tipoCambioOficial));
                 }
             });
 
@@ -131,7 +139,8 @@ public class ComprobantePdfService : IComprobantePdfService
         List<Domain.Entities.Cuota> cuotas,
         List<Domain.Entities.NoteLegend> leyendas,
         List<Domain.Entities.GuiaComprobante> guias,
-        List<Domain.Entities.Detraccion> detracciones)
+        List<Domain.Entities.Detraccion> detracciones,
+        decimal? tipoCambioOficial = null)
     {
         var moneda = c.TipoMoneda ?? "PEN";
 
@@ -385,7 +394,7 @@ public class ComprobantePdfService : IComprobantePdfService
             {
                 col.Item().PaddingTop(3).LineHorizontal(0.5f).LineColor(ColorAzulMarino);
                 col.Item().PaddingTop(3)
-                    .Element(dc => BuildSeccionDetraccionTicket(dc, detracciones, moneda, c.TipoComprobante));
+                    .Element(dc => BuildSeccionDetraccionTicket(dc, detracciones, moneda, c.TipoComprobante, tipoCambioOficial));
                 col.Item().PaddingTop(2).LineHorizontal(0.5f).LineColor(ColorAzulMarino);
                 col.Item().Height(6);
 
@@ -469,7 +478,8 @@ public class ComprobantePdfService : IComprobantePdfService
     }
 
     private static void BuildSeccionDetraccionTicket(IContainer container,
-        List<Domain.Entities.Detraccion> detracciones, string moneda, string? tipoComprobante)
+        List<Domain.Entities.Detraccion> detracciones, string moneda, string? tipoComprobante,
+        decimal? tipoCambioOficial = null)
     {
         container.Column(col =>
         {
@@ -480,7 +490,11 @@ public class ComprobantePdfService : IComprobantePdfService
                     TicketFilaTotal(col, "Cta. BN", det.CuentaBancoDetraccion ?? "-");
 
                 TicketFilaTotal(col, "% Detrac.", $"{det.PorcentajeDetraccion:F2}%");
-                TicketFilaTotal(col, "Monto", FormatearMoneda(det.MontoDetraccion ?? 0, moneda));
+
+                var montoSoles = moneda == "USD" && tipoCambioOficial.HasValue
+                    ? Math.Round((det.MontoDetraccion ?? 0) * tipoCambioOficial.Value, 2)
+                    : (det.MontoDetraccion ?? 0);
+                TicketFilaTotal(col, "Monto", $"S/ {montoSoles:F2}");
             }
         });
     }
@@ -718,7 +732,8 @@ public class ComprobantePdfService : IComprobantePdfService
         List<Domain.Entities.Cuota> cuotas,
         List<Domain.Entities.NoteLegend> leyendas,
         List<Domain.Entities.GuiaComprobante> guias,
-        List<Domain.Entities.Detraccion> detracciones)
+        List<Domain.Entities.Detraccion> detracciones,
+        decimal? tipoCambioOficial = null)
     {
         var moneda = c.TipoMoneda ?? "PEN";
 
@@ -775,7 +790,7 @@ public class ComprobantePdfService : IComprobantePdfService
                 {
                     if (detracciones.Any())
                         left.Item().PaddingTop(6)
-                            .Element(lc => BuildSeccionDetraccion(lc, detracciones, moneda, c.TipoComprobante));
+                            .Element(lc => BuildSeccionDetraccion(lc, detracciones, moneda, c.TipoComprobante, tipoCambioOficial));
 
                     // Medios de pago — encima del QR (solo si NO es el RUC 20512134832)
                     if (empresa.Ruc != "20512134832")
@@ -787,7 +802,10 @@ public class ComprobantePdfService : IComprobantePdfService
                     // SPOT para RUC 20512134832 cuando Spot es true
                     if (empresa.Ruc == "20512134832" && c.Spot == true)
                     {
-                        var montoSpot = (c.ImporteTotal ?? 0) * 0.10m;
+                        var montoSpotBase  = (c.ImporteTotal ?? 0) * 0.10m;
+                        var montoSpotSoles = moneda == "USD" && tipoCambioOficial.HasValue
+                            ? Math.Round(montoSpotBase * tipoCambioOficial.Value, 2)
+                            : montoSpotBase;
 
                         left.Item().PaddingTop(6).Column(spotCol =>
                         {
@@ -805,7 +823,7 @@ public class ComprobantePdfService : IComprobantePdfService
                                         .FontSize(9);
                                     d.Item().Text("Porcentaje de detracción: 10%")
                                         .FontSize(9);
-                                    d.Item().Text($"Monto detracción: {FormatearMoneda(montoSpot, moneda)}")
+                                    d.Item().Text($"Monto detracción: S/ {montoSpotSoles:F2}")
                                         .FontSize(9).Bold();
                                 });
                         });
@@ -831,7 +849,7 @@ public class ComprobantePdfService : IComprobantePdfService
                 row.ConstantItem(10);
 
                 // Derecha: Totales
-                row.RelativeItem(4).Element(rc => BuildSeccionTotales(rc, c, detalles, moneda));
+                row.RelativeItem(4).Element(rc => BuildSeccionTotales(rc, c, detalles, moneda, tipoCambioOficial));
             });
 
             // Pie de página pegado al contenido
@@ -949,7 +967,8 @@ public class ComprobantePdfService : IComprobantePdfService
     }
 
     private static void BuildSeccionDetraccion(IContainer container,
-        List<Domain.Entities.Detraccion> detracciones, string moneda, string? tipoComprobante)
+        List<Domain.Entities.Detraccion> detracciones, string moneda, string? tipoComprobante,
+        decimal? tipoCambioOficial = null)
     {
         container.Column(col =>
         {
@@ -964,7 +983,11 @@ public class ComprobantePdfService : IComprobantePdfService
                             FilaPago(d, "Cta. Banco de la Nación", det.CuentaBancoDetraccion ?? "-");
 
                         FilaPago(d, "% Detracción", $"{det.PorcentajeDetraccion:F2}%");
-                        FilaPago(d, "Monto Detracción", FormatearMoneda(det.MontoDetraccion ?? 0, moneda));
+
+                        var montoSoles = moneda == "USD" && tipoCambioOficial.HasValue
+                            ? Math.Round((det.MontoDetraccion ?? 0) * tipoCambioOficial.Value, 2)
+                            : (det.MontoDetraccion ?? 0);
+                        FilaPago(d, "Monto Detracción", $"S/ {montoSoles:F2}");
 
                         if (!string.IsNullOrEmpty(det.Observacion))
                             d.Item().Text($"Obs.: {det.Observacion}").FontSize(7).FontColor(ColorTextoSuave);
@@ -1045,7 +1068,8 @@ public class ComprobantePdfService : IComprobantePdfService
     private static void BuildSeccionTotales(IContainer container,
         Domain.Entities.Comprobante c,
         List<Domain.Entities.ComprobanteDetalle> d,
-        string moneda)
+        string moneda,
+        decimal? tipoCambioOficial = null)
     {
         container.Column(col =>
         {
