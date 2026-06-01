@@ -80,7 +80,7 @@ public class ComprobantePdfService : IComprobantePdfService
                 page.MarginLeft(esTicket ? 3 : 15, Unit.Millimetre);
                 page.MarginRight(esTicket ? 3 : 15, Unit.Millimetre);
                 page.DefaultTextStyle(x =>
-                    x.FontFamily("Arial").FontSize(esTicket ? 7 : 9).FontColor(ColorTexto));
+                    x.FontFamily(Fonts.Lato).FontSize(esTicket ? 7 : 9).FontColor(ColorTexto));
 
                 if (esTicket)
                 {
@@ -110,7 +110,7 @@ public class ComprobantePdfService : IComprobantePdfService
                         page.MarginLeft(3, Unit.Millimetre);
                         page.MarginRight(3, Unit.Millimetre);
                         page.DefaultTextStyle(x =>
-                            x.FontFamily("Arial").FontSize(7).FontColor(ColorTexto));
+                            x.FontFamily(Fonts.Lato).FontSize(7).FontColor(ColorTexto));
 
                         page.Content().Element(c => BuildValeTicket(c, comprobante, vale));
                     });
