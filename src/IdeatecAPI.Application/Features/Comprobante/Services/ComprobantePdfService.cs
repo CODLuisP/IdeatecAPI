@@ -55,11 +55,11 @@ public class ComprobantePdfService : IComprobantePdfService
             LogoBase64 = empresaEntidad.LogoBase64,
         };
 
-        var detalles    = datos.Detalles.ToList();
-        var pagos       = datos.Pagos.ToList();
-        var cuotas      = datos.Cuotas.ToList();
-        var leyendas    = datos.Leyendas.ToList();
-        var guias       = datos.Guias.ToList();
+        var detalles = datos.Detalles.ToList();
+        var pagos = datos.Pagos.ToList();
+        var cuotas = datos.Cuotas.ToList();
+        var leyendas = datos.Leyendas.ToList();
+        var guias = datos.Guias.ToList();
         var detracciones = datos.Detracciones.ToList();
 
         // Tipo de cambio oficial SUNAT (solo cuando el comprobante es en USD)
@@ -595,7 +595,7 @@ public class ComprobantePdfService : IComprobantePdfService
                 row.RelativeItem(); // Espacio de datos empresa
                 row.ConstantItem(160).AlignMiddle().Border(1).BorderColor(ColorAzulMarino)
                     .Background(ColorGrisClaro).Padding(5).AlignCenter()
-                    .Text($"ORDEN DE SERVICIO: {c.OrdenServicio}")
+                    .Text($"{c.OrdenServicio}")
                     .Bold().FontSize(9).FontColor(ColorAzulMarino);
             });
             }
@@ -802,7 +802,7 @@ public class ComprobantePdfService : IComprobantePdfService
                     // SPOT para RUC 20512134832 cuando Spot es true
                     if (empresa.Ruc == "20512134832" && c.Spot == true)
                     {
-                        var montoSpotBase  = (c.ImporteTotal ?? 0) * 0.10m;
+                        var montoSpotBase = (c.ImporteTotal ?? 0) * 0.10m;
                         var montoSpotSoles = moneda == "USD" && tipoCambioOficial.HasValue
                             ? Math.Round(montoSpotBase * tipoCambioOficial.Value, 2)
                             : montoSpotBase;
@@ -1123,7 +1123,7 @@ public class ComprobantePdfService : IComprobantePdfService
         Domain.Entities.Vale vale)
     {
         // c.HoraEmision ya viene en hora Lima desde el frontend → usar directo
-        var emitido     = $"{c.FechaEmision:dd/MM/yyyy} {c.HoraEmision:HH:mm:ss}";
+        var emitido = $"{c.FechaEmision:dd/MM/yyyy} {c.HoraEmision:HH:mm:ss}";
         var validoHasta = c.FechaEmision.AddMonths(1);
 
         container.Column(col =>
@@ -1142,9 +1142,9 @@ public class ComprobantePdfService : IComprobantePdfService
             {
                 var desc = vale.Descripcion
                     .Replace("<br><br>", "\n\n", StringComparison.OrdinalIgnoreCase)
-                    .Replace("<br />",   "\n",   StringComparison.OrdinalIgnoreCase)
-                    .Replace("<br/>",    "\n",   StringComparison.OrdinalIgnoreCase)
-                    .Replace("<br>",     "\n",   StringComparison.OrdinalIgnoreCase);
+                    .Replace("<br />", "\n", StringComparison.OrdinalIgnoreCase)
+                    .Replace("<br/>", "\n", StringComparison.OrdinalIgnoreCase)
+                    .Replace("<br>", "\n", StringComparison.OrdinalIgnoreCase);
 
                 col.Item().Text(desc).FontSize(7).Justify();
             }
