@@ -414,7 +414,8 @@ public class ComprobanteHtmlService : IComprobanteHtmlService
     private static string Fmt(decimal monto, string moneda) =>
         moneda == "USD" ? $"$ {monto:F2}" : $"S/ {monto:F2}";
 
-    /// <summary>Escapa HTML básico para evitar inyección.</summary>
+    /// <summary>Escapa HTML básico y codifica @ para evitar que Cloudflare oculte emails.</summary>
     private static string HE(string s) =>
-        s.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;").Replace("\"", "&quot;");
+        s.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;").Replace("\"", "&quot;")
+         .Replace("@", "&#64;");
 }
