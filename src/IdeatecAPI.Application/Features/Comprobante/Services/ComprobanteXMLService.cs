@@ -7,6 +7,7 @@ using IdeatecAPI.Application.Features.Detraccion.DTOs;
 using IdeatecAPI.Application.Features.Notas.DTOs;
 using IdeatecAPI.Application.Features.Notas.Services;
 using IdeatecAPI.Application.Features.Reportes.DTOs;
+using IdeatecAPI.Application.Features.Vales.DTOs;
 using Microsoft.Extensions.Configuration;
 
 namespace IdeatecAPI.Application.Features.Comprobante.Services;
@@ -856,7 +857,7 @@ public class ComprobanteService : IComprobanteService
             return null;
 
         var datos = await _unitOfWork.Comprobantes.GetDatosCompletosByComprobanteIdAsync(comprobanteId);
-        var vales = (await _unitOfWork.Comprobantes.GetValesByComprobanteIdAsync(comprobanteId)).ToList();
+        var vales = (await _unitOfWork.Comprobantes.GetValesFullByComprobanteIdAsync(comprobanteId)).ToList();
 
         return MapToDto(comprobante,
             datos.Detalles.ToList(),
@@ -876,8 +877,7 @@ public class ComprobanteService : IComprobanteService
 
         var comprobanteId = comprobante.ComprobanteId;
         var datos = await _unitOfWork.Comprobantes.GetDatosCompletosByComprobanteIdAsync(comprobanteId);
-
-        var vales = (await _unitOfWork.Comprobantes.GetValesByComprobanteIdAsync(comprobanteId)).ToList();
+        var vales = (await _unitOfWork.Comprobantes.GetValesFullByComprobanteIdAsync(comprobanteId)).ToList();
 
         return MapToDto(comprobante,
             datos.Detalles.ToList(),
@@ -947,7 +947,7 @@ public class ComprobanteService : IComprobanteService
     List<Domain.Entities.NoteLegend> leyendas,
     List<Domain.Entities.GuiaComprobante> guias,
     List<Domain.Entities.Detraccion> detracciones,
-    List<int>? vales = null)
+    List<Domain.Entities.Vale>? vales = null)
     {
         return new ObtenerComprobanteDTO
         {
@@ -964,7 +964,15 @@ public class ComprobanteService : IComprobanteService
             FechaVencimiento = comprobante.FechaVencimiento,
             TipoMoneda = comprobante.TipoMoneda ?? "PEN",
             TipoPago = comprobante.TipoPago,
-            Vales = vales,
+            Vales = vales?.Select(v => new ValeDto
+            {
+                IdVale      = v.IdVale,
+                Nombre      = v.Nombre,
+                Descripcion = v.Descripcion,
+                FechaEmision = v.FechaEmision,
+                Duracion    = v.Duracion,
+                Estado      = v.Estado
+            }).ToList(),
             OrdenServicio = comprobante.OrdenServicio,
             Spot = comprobante.Spot,
 

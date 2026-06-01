@@ -663,6 +663,21 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         return await _connection.QueryAsync<int>(sql, new { ComprobanteId = comprobanteId }, _transaction);
     }
 
+    public async Task<IEnumerable<Vale>> GetValesFullByComprobanteIdAsync(int comprobanteId)
+    {
+        var sql = @"
+            SELECT v.idvale       AS IdVale,
+                   v.nombre       AS Nombre,
+                   v.descripcion  AS Descripcion,
+                   v.fechaemision AS FechaEmision,
+                   v.duracion     AS Duracion,
+                   v.estado       AS Estado
+            FROM vale v
+            INNER JOIN comprobantevale cv ON cv.valeId = v.idvale
+            WHERE cv.comprobanteId = @ComprobanteId";
+        return await _connection.QueryAsync<Vale>(sql, new { ComprobanteId = comprobanteId }, _transaction);
+    }
+
     public async Task<bool> UpdateOrdenServicioSpotAsync(string ruc, string serie, int correlativo, string? ordenServicio, bool? spot)
     {
         var setClauses = new List<string>();
