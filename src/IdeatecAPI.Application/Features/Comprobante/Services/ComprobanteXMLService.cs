@@ -57,6 +57,8 @@ public class ComprobanteResponse
     public bool Exitoso { get; set; }
     public string? Mensaje { get; set; }
     public int? ComprobanteId { get; set; }
+    public string? Serie { get; set; }
+    public string? Correlativo { get; set; }
     public string? XmlBase64 { get; set; }
     public string? XmlString { get; set; }
     public string? RutaZip { get; set; }
@@ -348,19 +350,15 @@ public class ComprobanteService : IComprobanteService
         _unitOfWork.BeginTransaction();
         try
         {
-            // Validación de duplicidad (SIN modificar tu mapeo)
-            if (int.TryParse(dto.Correlativo, out var correlativoInt))
-            {
-                if (await _unitOfWork.Notes.ExisteNoteAsync(
-                        empresa.Id,
-                        dto.TipoComprobante,
-                        dto.Serie,
-                        correlativoInt))
-                {
-                    throw new InvalidOperationException(
-                        $"Ya existe el comprobante {dto.Serie}-{dto.Correlativo}");
-                }
-            }
+            // Obtener sucursal y asignar correlativo atómicamente (SELECT FOR UPDATE dentro de la transacción)
+            var sucursalId = await _unitOfWork.Comprobantes.GetSucursalIdByRucAndAnexoAsync(
+                dto.Company.NumeroDocumento!,
+                dto.Company.EstablecimientoAnexo!
+            ) ?? throw new KeyNotFoundException($"No se encontró sucursal activa para RUC {dto.Company.NumeroDocumento}");
+
+            var correlativoAsignado = await _unitOfWork.Comprobantes.ObtenerYIncrementarCorrelativoAsync(
+                sucursalId, dto.TipoComprobante!, dto.Serie);
+            dto.Correlativo = correlativoAsignado.ToString().PadLeft(8, '0');
 
             var comprobante = new Domain.Entities.Comprobante
             {
@@ -525,18 +523,15 @@ public class ComprobanteService : IComprobanteService
 
             _unitOfWork.Commit();
 
-            var sucursalIdNotify = await _unitOfWork.Comprobantes.GetSucursalIdByRucAndAnexoAsync(
-                comprobante.EmpresaRuc!,
-                comprobante.EmpresaEstablecimientoAnexo!
-            );
-
-            _ = Task.Run(() => _wsNotifier.NotifyAsync(sucursalIdNotify, comprobante.EmpresaRuc, "pending"));
+            _ = Task.Run(() => _wsNotifier.NotifyAsync(sucursalId, comprobante.EmpresaRuc, "pending"));
 
             return new ComprobanteResponse
             {
                 Exitoso = true,
                 Mensaje = "Comprobante guardado correctamente",
                 ComprobanteId = newComprobanteId,
+                Serie = comprobante.Serie,
+                Correlativo = dto.Correlativo,
                 EstadoSunat = "PENDIENTE"
             };
         }
