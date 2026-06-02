@@ -4,6 +4,7 @@ public class ComprobanteDetalle
     public int DetalleId { get; set; }
     public int ComprobanteId { get; set; }
     public int? TrabajadorID { get; set; }
+    public string? NombreTrabajador { get; set; }
     public int? Item { get; set; }
     public int? ProductoId { get; set; }
     public string? Codigo { get; set; }

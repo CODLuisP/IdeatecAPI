@@ -151,7 +151,20 @@ public class ComprobanteHtmlService : IComprobanteHtmlService
             : "";
 
         string monedaRow = comprobante.TipoMoneda != "PEN" && comprobante.TipoCambio.HasValue
-            ? $"<tr><td class=\"lbl\">Moneda:</td><td>{HE(comprobante.TipoMoneda)} T.C. S/{comprobante.TipoCambio:F3}</td></tr>"
+            ? $"<tr><td class=\"lbl\">Moneda:</td><td>{HE(comprobante.TipoMoneda ?? "")} T.C. S/{comprobante.TipoCambio:F3}</td></tr>"
+            : "";
+
+        bool mostrarPersonal = comprobante.EmpresaRuc != "20512134832";
+
+        string cajeroRow = mostrarPersonal && !string.IsNullOrWhiteSpace(comprobante.NombreCajero)
+            ? $"<tr><td class=\"lbl\">Cajero:</td><td>{HE(comprobante.NombreCajero!)}</td></tr>"
+            : "";
+
+        var nombreTrabajador = detalles
+            .Select(d => d.NombreTrabajador?.Trim())
+            .FirstOrDefault(n => !string.IsNullOrWhiteSpace(n));
+        string atendidoRow = mostrarPersonal && !string.IsNullOrWhiteSpace(nombreTrabajador)
+            ? $"<tr><td class=\"lbl\">Atendido por:</td><td>{HE(nombreTrabajador!)}</td></tr>"
             : "";
 
         // ── HTML final ───────────────────────────────────────────────────────
@@ -251,6 +264,8 @@ public class ComprobanteHtmlService : IComprobanteHtmlService
   <tr><td class=""lbl"">Fecha:</td><td>{comprobante.FechaEmision:dd/MM/yyyy} {comprobante.HoraEmision:HH:mm:ss}</td></tr>
   {fechaVcto}
   {monedaRow}
+  {cajeroRow}
+  {atendidoRow}
 </table>
 
 {docModifica}

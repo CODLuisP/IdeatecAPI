@@ -228,6 +228,18 @@ public class ComprobantePdfService : IComprobantePdfService
 
                 if (c.TipoMoneda != "PEN" && c.TipoCambio.HasValue)
                     TicketFila(cli, "Moneda", $"{c.TipoMoneda} T.C. S/{c.TipoCambio:F3}");
+
+                if (c.EmpresaRuc != "20512134832")
+                {
+                    var nombreTrab = detalles
+                        .Select(d => d.NombreTrabajador?.Trim())
+                        .FirstOrDefault(n => !string.IsNullOrWhiteSpace(n));
+                    if (!string.IsNullOrWhiteSpace(nombreTrab))
+                        TicketFila(cli, "Atendido por", nombreTrab!);
+
+                    if (!string.IsNullOrWhiteSpace(c.NombreCajero))
+                        TicketFila(cli, "Cajero", c.NombreCajero!);
+                }
             });
 
             //documento que modifca
@@ -607,7 +619,8 @@ public class ComprobantePdfService : IComprobantePdfService
 
     // Datos cliente — solo primera página, va al inicio del Content
     private static void BuildDatosCliente(IContainer container,
-    Domain.Entities.Comprobante c)
+    Domain.Entities.Comprobante c,
+    List<Domain.Entities.ComprobanteDetalle> detalles)
     {
         var tipoDocLabel = c.TipoComprobante == "01"
             ? "RUC"
@@ -638,6 +651,18 @@ public class ComprobantePdfService : IComprobantePdfService
 
         if (c.TipoMoneda != "PEN" && c.TipoCambio.HasValue)
             BuildFilaDatoSpaced(right, "Moneda", $"{c.TipoMoneda} (T.C. S/ {c.TipoCambio:F3})");
+
+        if (c.EmpresaRuc != "20512134832")
+        {
+            var nombreTrabajador = detalles
+                .Select(d => d.NombreTrabajador?.Trim())
+                .FirstOrDefault(n => !string.IsNullOrWhiteSpace(n));
+            if (!string.IsNullOrWhiteSpace(nombreTrabajador))
+                BuildFilaDatoSpaced(right, "Atendido por", nombreTrabajador!);
+
+            if (!string.IsNullOrWhiteSpace(c.NombreCajero))
+                BuildFilaDatoSpaced(right, "Cajero", c.NombreCajero!);
+        }
 
         if (c.TipoComprobante is "07" or "08"
             && !string.IsNullOrEmpty(c.TipDocAfectado)
@@ -740,7 +765,7 @@ public class ComprobantePdfService : IComprobantePdfService
         container.Column(col =>
         {
             // Datos cliente solo en primera página
-            col.Item().Element(ct => BuildDatosCliente(ct, c));
+            col.Item().Element(ct => BuildDatosCliente(ct, c, detalles));
             col.Item().PaddingTop(4);
 
             // Guías de remisión
