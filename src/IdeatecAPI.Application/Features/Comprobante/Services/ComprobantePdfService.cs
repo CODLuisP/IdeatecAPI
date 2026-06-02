@@ -838,8 +838,8 @@ public class ComprobantePdfService : IComprobantePdfService
                     {
                         var montoSpotBase = (c.ImporteTotal ?? 0) * 0.10m;
                         var montoSpotSoles = moneda == "USD" && tipoCambioOficial.HasValue
-                            ? Math.Round(montoSpotBase * tipoCambioOficial.Value, 2)
-                            : montoSpotBase;
+                            ? Math.Round(montoSpotBase * tipoCambioOficial.Value, 0, MidpointRounding.AwayFromZero)
+                            : Math.Round(montoSpotBase, 0, MidpointRounding.AwayFromZero);
 
                         left.Item().PaddingTop(6).Column(spotCol =>
                         {
@@ -857,7 +857,7 @@ public class ComprobantePdfService : IComprobantePdfService
                                         .FontSize(9);
                                     d.Item().Text("Porcentaje de detracción: 10%")
                                         .FontSize(9);
-                                    d.Item().Text($"Monto detracción: S/ {montoSpotSoles:F2}")
+                                    d.Item().Text($"Monto detracción: S/ {montoSpotSoles:F0}")
                                         .FontSize(9).Bold();
                                 });
                         });
