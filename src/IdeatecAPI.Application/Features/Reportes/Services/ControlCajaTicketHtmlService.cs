@@ -21,7 +21,8 @@ public class ControlCajaTicketHtmlService : IControlCajaTicketHtmlService
         string? codEstablecimiento,
         DateTime? fechaDesde,
         DateTime? fechaHasta,
-        string nombreResponsable)
+        string nombreResponsable,
+        string? nombreUsuario = null)
     {
         var empresa = await _unitOfWork.Empresas.GetEmpresaByRucAsync(ruc);
 
@@ -85,6 +86,10 @@ public class ControlCajaTicketHtmlService : IControlCajaTicketHtmlService
             ? $"<tr><td class=\"lbl\">Responsable:</td><td>{HE(nombreResponsable)}</td></tr>"
             : "";
 
+        string cajeroHtml = !string.IsNullOrWhiteSpace(nombreUsuario)
+            ? $"<tr><td class=\"lbl\">Cajero:</td><td>{HE(nombreUsuario)}</td></tr>"
+            : "";
+
         // ── Tabla detalle movimientos ────────────────────────────────────────
         var detalle = BuildTablaDetalle(movimientos, "#1A2B4A");
 
@@ -119,50 +124,52 @@ public class ControlCajaTicketHtmlService : IControlCajaTicketHtmlService
 <html lang=""es"">
 <head>
 <meta charset=""utf-8"">
+<meta name=""viewport"" content=""width=device-width,initial-scale=1"">
 <title>{HE(titulo)}</title>
 <style>
   @page {{
     size: 80mm auto;
-    margin: 3mm 3mm 6mm 3mm;
+    margin: 2mm;
   }}
   * {{ box-sizing: border-box; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
   body {{
     font-family: Arial, 'Helvetica Neue', sans-serif;
-    font-size: 9px;
-    width: 74mm;
-    color: #1A1A1A;
+    font-size: 10px;
+    width: 76mm;
+    color: #000;
     background: #fff;
   }}
   .center {{ text-align: center; }}
   .bold   {{ font-weight: bold; }}
-  .small  {{ font-size: 8px; }}
+  .small  {{ font-size: 9px; color: #000; }}
   .tr     {{ text-align: right; }}
-  hr      {{ border: none; border-top: 1px solid #1A2B4A; margin: 3px 0; }}
+  hr      {{ border: none; border-top: 1px solid #000; margin: 3px 0; }}
 
-  .empresa-nombre {{ font-size: 11px; font-weight: bold; text-align: center; color: #1A2B4A; }}
-  .empresa-sub    {{ font-size: 8px; text-align: center; color: #1A2B4A; }}
+  .empresa-nombre {{ font-size: 11px; font-weight: bold; text-align: center; }}
+  .empresa-sub    {{ font-size: 9px; text-align: center; color: #000; }}
 
-  .titulo {{ font-size: 10px; font-weight: bold; text-align: center; color: #1A2B4A; margin: 3px 0; }}
+  .titulo {{ font-size: 10px; font-weight: bold; text-align: center; margin: 3px 0;
+             border-top: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 2px; }}
 
-  table.cabecera {{ width: 100%; border-collapse: collapse; margin: 2px 0; font-size: 8px; }}
-  table.cabecera td {{ padding: 1px 0; vertical-align: top; }}
-  table.cabecera td.lbl {{ font-weight: bold; color: #1A2B4A; width: 38%; white-space: nowrap; }}
+  table.cabecera {{ width: 100%; border-collapse: collapse; margin: 3px 0; }}
+  table.cabecera td {{ font-size: 9px; padding: 1px 0; vertical-align: top; color: #000; }}
+  table.cabecera td.lbl {{ font-weight: bold; width: 38%; color: #000; white-space: nowrap; }}
 
-  table.detalle {{ width: 100%; border-collapse: collapse; margin: 2px 0; font-size: 8px; }}
-  table.detalle th {{ background: #1A2B4A; color: #fff; font-weight: bold; font-size: 7px; padding: 2px; text-align: left; }}
+  table.detalle {{ width: 100%; border-collapse: collapse; margin: 3px 0; font-size: 9px; }}
+  table.detalle th {{ background: #fff; color: #000; padding: 2px; text-align: left; font-weight: bold; border-bottom: 1px solid #000; }}
   table.detalle th.tr {{ text-align: right; }}
-  table.detalle td {{ padding: 2px; border-bottom: 0.3px solid #D0D7E3; vertical-align: top; }}
+  table.detalle td {{ padding: 2px; border-bottom: 1px solid #ccc; vertical-align: top; color: #000; }}
   table.detalle td.tr {{ text-align: right; }}
   table.detalle td.red {{ color: #C00000; }}
 
-  table.totales {{ width: 100%; border-collapse: collapse; margin: 2px 0; font-size: 8px; }}
-  table.totales td {{ padding: 1px 0; }}
-  table.totales td.tr {{ text-align: right; }}
-  table.totales tr.total-row td {{ font-weight: bold; }}
+  table.totales {{ width: 100%; border-collapse: collapse; margin: 3px 0; font-size: 9px; }}
+  table.totales td {{ padding: 2px 1px; color: #000; }}
+  table.totales td.tr {{ text-align: right; font-weight: bold; }}
+  table.totales tr.total-row td {{ font-weight: bold; font-size: 10px; border-top: 1px solid #000; padding: 3px 2px; }}
 
-  .sec-title {{ font-weight: bold; font-size: 9px; color: #1A2B4A; margin: 3px 0 1px; }}
+  .sec-title {{ font-weight: bold; color: #000; font-size: 9px; margin: 4px 0 1px; }}
 
-  .footer {{ font-size: 7px; text-align: center; color: #4A5568; font-style: italic; margin-top: 4px; }}
+  .footer {{ font-size: 9px; text-align: center; color: #000; margin-top: 4px; }}
 </style>
 </head>
 <body>
@@ -181,6 +188,7 @@ public class ControlCajaTicketHtmlService : IControlCajaTicketHtmlService
   <tr><td class=""lbl"">Fecha:</td><td>{fechaReporte:dd/MM/yyyy HH:mm:ss}</td></tr>
   {rangoHtml}
   {responsableHtml}
+  {cajeroHtml}
 </table>
 
 <hr>

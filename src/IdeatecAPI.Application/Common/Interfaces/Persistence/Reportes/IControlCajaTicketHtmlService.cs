@@ -11,5 +11,6 @@ public interface IControlCajaTicketHtmlService
         string? codEstablecimiento,
         DateTime? fechaDesde,
         DateTime? fechaHasta,
-        string nombreResponsable);
+        string nombreResponsable,
+        string? nombreUsuario = null);
 }

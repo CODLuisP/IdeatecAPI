@@ -391,7 +391,39 @@ public class ReportesController : ControllerBase
         }
     }
 
+    [HttpGet("control-caja/{ruc}/ticket-pdf")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> ExportarControlCajaTicketPdf(
+        string ruc,
+        [FromQuery] string titulo = "REPORTE DE CAJA",
+        [FromQuery] string nombreResponsable = "",
+        [FromQuery] string? codEstablecimiento = null,
+        [FromQuery] DateTime? fechaDesde = null,
+        [FromQuery] DateTime? fechaHasta = null,
+        [FromQuery] int? usuarioCreacion = null,
+        [FromQuery] string? clienteNumDoc = null,
+        [FromQuery] int? limit = null,
+        [FromQuery] string? nombreUsuario = null)
+    {
+        try
+        {
+            var bytes = await _reportesService.ExportarControlCajaTicketPdfAsync(
+                titulo, ruc, nombreResponsable, codEstablecimiento,
+                fechaDesde, fechaHasta, usuarioCreacion, clienteNumDoc, limit, nombreUsuario);
+
+            return File(bytes, "application/pdf",
+                $"ticket-caja-{ruc}-{DateTime.Now:yyyyMMddHHmm}.pdf");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al generar ticket PDF caja RUC {Ruc}", ruc);
+            return StatusCode(500, new { mensaje = "Error al generar ticket PDF.", detalle = ex.Message });
+        }
+    }
+
     [HttpGet("control-caja/{ruc}/ticket-html")]
+    [HttpGet("control-caja/{ruc}/ticket")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> ExportarControlCajaTicketHtml(
@@ -403,13 +435,14 @@ public class ReportesController : ControllerBase
         [FromQuery] DateTime? fechaHasta = null,
         [FromQuery] int? usuarioCreacion = null,
         [FromQuery] string? clienteNumDoc = null,
-        [FromQuery] int? limit = null)
+        [FromQuery] int? limit = null,
+        [FromQuery] string? nombreUsuario = null)
     {
         try
         {
             var html = await _reportesService.ExportarControlCajaTicketHtmlAsync(
                 titulo, ruc, nombreResponsable, codEstablecimiento,
-                fechaDesde, fechaHasta, usuarioCreacion, clienteNumDoc, limit);
+                fechaDesde, fechaHasta, usuarioCreacion, clienteNumDoc, limit, nombreUsuario);
 
             return Content(html, "text/html; charset=utf-8");
         }

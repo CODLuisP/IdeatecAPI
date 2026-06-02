@@ -127,7 +127,16 @@ public interface IReportesService
         string nombreResponsable,
         string? codEstablecimiento = null, DateTime? fechaDesde = null,
         DateTime? fechaHasta = null, int? usuarioCreacion = null,
-        string? clienteNumDoc = null, int? limit = null);
+        string? clienteNumDoc = null, int? limit = null,
+        string? nombreUsuario = null);
+
+    Task<byte[]> ExportarControlCajaTicketPdfAsync(
+        string titulo, string ruc,
+        string nombreResponsable,
+        string? codEstablecimiento = null, DateTime? fechaDesde = null,
+        DateTime? fechaHasta = null, int? usuarioCreacion = null,
+        string? clienteNumDoc = null, int? limit = null,
+        string? nombreUsuario = null);
 }
 
 public class ReportesService : IReportesService
@@ -402,7 +411,8 @@ public class ReportesService : IReportesService
         string nombreResponsable,
         string? codEstablecimiento = null, DateTime? fechaDesde = null,
         DateTime? fechaHasta = null, int? usuarioCreacion = null,
-        string? clienteNumDoc = null, int? limit = null)
+        string? clienteNumDoc = null, int? limit = null,
+        string? nombreUsuario = null)
     {
         DateTime? desde = fechaDesde?.Date;
         DateTime? hasta = fechaDesde.HasValue
@@ -448,7 +458,68 @@ public class ReportesService : IReportesService
         });
 
         return await _ticketHtmlService.GenerarHtmlAsync(
-            titulo, items, ruc, codEstablecimiento, fechaDesde, fechaHasta, nombreResponsable);
+            titulo, items, ruc, codEstablecimiento, fechaDesde, fechaHasta, nombreResponsable, nombreUsuario);
+    }
+
+    // ── Ticket PDF Control de Caja ────────────────────────────────────────────
+    public async Task<byte[]> ExportarControlCajaTicketPdfAsync(
+        string titulo, string ruc,
+        string nombreResponsable,
+        string? codEstablecimiento = null, DateTime? fechaDesde = null,
+        DateTime? fechaHasta = null, int? usuarioCreacion = null,
+        string? clienteNumDoc = null, int? limit = null,
+        string? nombreUsuario = null)
+    {
+        DateTime? desde = fechaDesde?.Date;
+        DateTime? hasta = fechaDesde.HasValue
+            ? (fechaHasta.HasValue
+                ? fechaHasta.Value.Date.AddDays(1).AddSeconds(-1)
+                : fechaDesde.Value.Date.AddDays(1).AddSeconds(-1))
+            : null;
+
+        var empresa = await _unitOfWork.Empresas.GetEmpresaByRucAsync(ruc);
+
+        var comprobantes = (await _unitOfWork.Reportes.GetListadoControlCajaAsync(
+            ruc, codEstablecimiento, desde, hasta, usuarioCreacion, clienteNumDoc, limit)).ToList();
+
+        var items = Enumerable.Empty<ControlCajaTicketItemDto>();
+
+        if (comprobantes.Any())
+        {
+            var ids   = comprobantes.Select(c => c.ComprobanteId);
+            var pagos = (await _unitOfWork.Reportes.GetPagosByComprobanteIdsAsync(ids)).ToList();
+            var pagosPorId = pagos
+                .GroupBy(p => p.ComprobanteId)
+                .ToDictionary(g => g.Key,
+                    g => g.Select(p => new PagoResumenDto { MedioPago = p.MedioPago, Monto = p.Monto }).ToList());
+
+            items = comprobantes.Select(c => new ControlCajaTicketItemDto
+            {
+                ComprobanteId         = c.ComprobanteId,
+                TipoComprobante       = c.TipoComprobante,
+                Serie                 = c.Serie ?? "",
+                Correlativo           = c.Correlativo,
+                NumeroCompleto        = c.NumeroCompleto ?? "",
+                FechaEmision          = c.FechaEmision,
+                ImporteTotal          = c.ImporteTotal ?? 0,
+                ValorVenta            = c.ValorVenta ?? 0,
+                TotalIGV              = c.TotalIGV ?? 0,
+                TipoMoneda            = c.TipoMoneda ?? "PEN",
+                EstadoSunat           = c.EstadoSunat,
+                ComprobanteAfectadoId = c.ComprobanteAfectadoId,
+                NumDocAfectado        = c.NumDocAfectado,
+                Pagos                 = pagosPorId.TryGetValue(c.ComprobanteId, out var p) ? p : new()
+            });
+        }
+
+        return await _pdfService.ExportarControlCajaTicketPdfAsync(
+            titulo, items, ruc,
+            codEstablecimiento, fechaDesde, fechaHasta,
+            nombreResponsable,
+            empresa?.NombreComercial ?? empresa?.RazonSocial,
+            empresa?.Direccion,
+            empresa?.LogoBase64,
+            nombreUsuario);
     }
 
     // ── Mapper ────────────────────────────────────────────────────────────────

@@ -4,6 +4,7 @@ using IdeatecAPI.Application.Features.Reportes.DTOs;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
+using System.Text.RegularExpressions;
 
 namespace IdeatecAPI.Application.Features.Reportes.Services;
 
@@ -373,6 +374,445 @@ public class ReportesPdfService : IReportesPdfService
         table.Cell().Element(c => TotalCell(c, $"{tigv:N2}", right: true));
         table.Cell().Element(c => TotalCell(c, $"{timp:N2}", right: true));
         table.Cell().ColumnSpan(3).Element(c => TotalCell(c, ""));
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // REPORTE DE CAJA — PDF A4 (mismo estilo que comprobante)
+    // ═════════════════════════════════════════════════════════════════════════
+
+    public Task<byte[]> ExportarControlCajaTicketPdfAsync(
+        string titulo,
+        IEnumerable<ControlCajaTicketItemDto> datos,
+        string ruc,
+        string? codEstablecimiento = null,
+        DateTime? fechaDesde = null,
+        DateTime? fechaHasta = null,
+        string nombreResponsable = "",
+        string? empresaNombre = null,
+        string? empresaDireccion = null,
+        string? logoBase64 = null,
+        string? nombreUsuario = null)
+    {
+        // alias locales idénticos al ComprobantePdfService
+        const string ColorAzul   = "#1A2B4A";
+        const string ColorBlanco = "#FFFFFF";
+        const string ColorGris   = "#F5F7FA";
+        const string ColorBorde  = "#D0D7E3";
+        const string ColorSuave  = "#4A5568";
+        const string ColorRojo   = "#C00000";
+        const string ColorVerde  = "#375623";
+        const string ColorMorado = "#7030A0";
+        var lista        = datos.ToList();
+        var fechaReporte = DateTime.Now;
+
+        // ── Separar movimientos y ajustes ────────────────────────────────────
+        var idsDelPeriodo = lista.Select(x => x.ComprobanteId).ToHashSet();
+        bool EsNota(ControlCajaTicketItemDto x)     => x.TipoComprobante is "07" or "08";
+        bool AfectaOtro(ControlCajaTicketItemDto x) =>
+            EsNota(x) && x.ComprobanteAfectadoId.HasValue
+            && !idsDelPeriodo.Contains(x.ComprobanteAfectadoId.Value);
+
+        var movimientos = lista.Where(x => !AfectaOtro(x)).ToList();
+        var ajustes     = lista.Where(AfectaOtro).ToList();
+
+        // ── Totales ──────────────────────────────────────────────────────────
+        var totalPen = movimientos.Where(x => x.TipoMoneda == "PEN")
+            .Sum(x => x.TipoComprobante == "07" ? -x.ImporteTotal : x.ImporteTotal);
+        var totalUsd = movimientos.Where(x => x.TipoMoneda == "USD")
+            .Sum(x => x.TipoComprobante == "07" ? -x.ImporteTotal : x.ImporteTotal);
+
+        // ── Resumen por medio de pago ────────────────────────────────────────
+        var resumenPago = movimientos
+            .SelectMany(c => c.Pagos.Select(p => new
+            {
+                Medio  = CajaNormalizarMedio(p.MedioPago),
+                c.TipoMoneda,
+                p.Monto
+            }))
+            .GroupBy(x => (x.Medio, x.TipoMoneda))
+            .Select(g => (Medio: g.Key.Medio, Moneda: g.Key.TipoMoneda, Total: g.Sum(x => x.Monto)))
+            .Where(x => x.Total > 0)
+            .OrderBy(x => x.Moneda).ThenBy(x => x.Medio)
+            .ToList();
+
+        // ── Logo ─────────────────────────────────────────────────────────────
+        byte[]? logoBytes = null;
+        if (!string.IsNullOrEmpty(logoBase64))
+        {
+            var b64 = Regex.IsMatch(logoBase64, @"^data:.+;base64,")
+                ? logoBase64.Split(',')[1] : logoBase64;
+            try { logoBytes = Convert.FromBase64String(b64); } catch { }
+        }
+
+        // ── Período texto ─────────────────────────────────────────────────────
+        string periodoStr = fechaDesde.HasValue
+            ? (fechaHasta.HasValue && fechaHasta.Value.Date != fechaDesde.Value.Date
+                ? $"{fechaDesde:dd/MM/yyyy} al {fechaHasta:dd/MM/yyyy}"
+                : fechaDesde.Value.ToString("dd/MM/yyyy"))
+            : "Todos los períodos";
+
+        var doc = Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4);
+                page.MarginTop(8,     Unit.Millimetre);
+                page.MarginBottom(10, Unit.Millimetre);
+                page.MarginLeft(12,   Unit.Millimetre);
+                page.MarginRight(12,  Unit.Millimetre);
+                page.DefaultTextStyle(x => x.FontFamily(Fonts.Lato).FontSize(9).FontColor("#1A1A1A"));
+
+                // ╔══════════════════════════════════════════════════════╗
+                // ║  HEADER — banda completa ancho total                  ║
+                // ╚══════════════════════════════════════════════════════╝
+                page.Header().Column(hdr =>
+                {
+                    // Banda azul oscuro de extremo a extremo
+                    hdr.Item().Background(ColorAzul).Padding(12).Row(row =>
+                    {
+                        // Logo
+                        if (logoBytes is not null)
+                            row.ConstantItem(60).AlignMiddle()
+                               .MaxHeight(36).Image(logoBytes);
+                        else
+                            row.ConstantItem(4);
+
+                        // Empresa
+                        row.RelativeItem().PaddingLeft(10).AlignMiddle().Column(emp =>
+                        {
+                            emp.Item().Text(empresaNombre ?? ruc)
+                               .Bold().FontSize(13).FontColor(ColorBlanco);
+                            emp.Item().Text($"R.U.C. {ruc}")
+                               .FontSize(8).FontColor(ColorBorde);
+                            if (!string.IsNullOrEmpty(empresaDireccion))
+                                emp.Item().Text(empresaDireccion)
+                                   .FontSize(7).FontColor(ColorBorde);
+                        });
+
+                        // Título del reporte alineado a la derecha
+                        row.ConstantItem(170).AlignMiddle().AlignRight().Column(tit =>
+                        {
+                            tit.Item().AlignRight()
+                               .Text(titulo.ToUpper())
+                               .Bold().FontSize(14).FontColor(ColorBlanco);
+                            tit.Item().PaddingTop(3).AlignRight()
+                               .Text(fechaReporte.ToString("dd/MM/yyyy  HH:mm"))
+                               .FontSize(8).FontColor(ColorBorde);
+                        });
+                    });
+
+                    // Barra gris con los filtros — ancho total
+                    hdr.Item().Background(ColorGris)
+                       .BorderBottom(1).BorderColor(ColorBorde)
+                       .PaddingHorizontal(12).PaddingVertical(5)
+                       .Row(chips =>
+                       {
+                           void Chip(RowDescriptor r, string label, string val)
+                           {
+                               r.AutoItem().PaddingRight(14).Row(inner =>
+                               {
+                                   inner.AutoItem()
+                                        .Text($"{label}: ").Bold().FontSize(7).FontColor(ColorAzul);
+                                   inner.AutoItem()
+                                        .Text(val).FontSize(7).FontColor("#1A1A1A");
+                               });
+                           }
+
+                           Chip(chips, "Período",      periodoStr);
+                           if (!string.IsNullOrEmpty(codEstablecimiento))
+                               Chip(chips, "Estab.",       codEstablecimiento);
+                           if (!string.IsNullOrWhiteSpace(nombreResponsable))
+                               Chip(chips, "Responsable",  nombreResponsable);
+                           if (!string.IsNullOrWhiteSpace(nombreUsuario))
+                               Chip(chips, "Cajero",       nombreUsuario);
+                           Chip(chips, "Registros",   movimientos.Count.ToString());
+                       });
+
+                    hdr.Item().Height(8);
+                });
+
+                // ╔══════════════════════════════════════════════════════╗
+                // ║  CONTENT                                              ║
+                // ╚══════════════════════════════════════════════════════╝
+                page.Content().Column(col =>
+                {
+                    // ── Tabla principal ancho completo ────────────────────
+                    col.Item().Element(c => BuildCajaTabla(c, movimientos, ColorAzul, ColorBorde, ColorGris, ColorRojo));
+
+                    // Leyenda NC / ND
+                    col.Item().PaddingTop(4).Row(r =>
+                    {
+                        r.AutoItem().PaddingRight(10)
+                         .Text("■ N. Crédito: valor en rojo, resta al total")
+                         .Italic().FontSize(7).FontColor(ColorRojo);
+                        r.AutoItem()
+                         .Text("■ N. Débito: suma al total")
+                         .Italic().FontSize(7).FontColor(ColorVerde);
+                    });
+
+                    col.Item().PaddingTop(12);
+
+                    // ── Sección inferior: dos columnas ────────────────────
+                    col.Item().Row(row =>
+                    {
+                        // ── Columna izq: resumen medios de pago ──────────
+                        row.RelativeItem(5).Column(left =>
+                        {
+                            // Título sección
+                            left.Item()
+                                .BorderBottom(2).BorderColor(ColorAzul)
+                                .PaddingBottom(3)
+                                .Text("Resumen por Medio de Pago")
+                                .Bold().FontSize(9).FontColor(ColorAzul);
+
+                            left.Item().PaddingTop(4).Table(t =>
+                            {
+                                t.ColumnsDefinition(c =>
+                                {
+                                    c.RelativeColumn();    // Medio
+                                    c.ConstantColumn(45);  // Moneda
+                                    c.ConstantColumn(75);  // Total
+                                });
+
+                                // Header
+                                void RH(IContainer c, string txt, bool right = false) =>
+                                    c.Background(ColorAzul).Padding(4)
+                                     .Column(col2 =>
+                                     {
+                                         if (right) col2.Item().AlignRight().Text(txt).Bold().FontSize(8).FontColor(ColorBlanco);
+                                         else       col2.Item().Text(txt).Bold().FontSize(8).FontColor(ColorBlanco);
+                                     });
+
+                                t.Header(h =>
+                                {
+                                    h.Cell().Element(c => RH(c, "Medio de Pago"));
+                                    h.Cell().Element(c => RH(c, "Moneda"));
+                                    h.Cell().Element(c => RH(c, "Total", right: true));
+                                });
+
+                                bool par2 = false;
+                                foreach (var mp in resumenPago)
+                                {
+                                    var bg2     = par2 ? ColorBlanco : ColorGris; par2 = !par2;
+                                    var sim     = mp.Moneda == "USD" ? "$" : "S/";
+
+                                    void RC(IContainer c, string txt, bool right = false) =>
+                                        c.Background(bg2).BorderBottom(1).BorderColor(ColorBorde).Padding(3)
+                                         .Column(col2 =>
+                                         {
+                                             if (right) col2.Item().AlignRight().Text(txt).FontSize(8);
+                                             else       col2.Item().Text(txt).FontSize(8);
+                                         });
+
+                                    t.Cell().Element(c => RC(c, mp.Medio));
+                                    t.Cell().Element(c => RC(c, mp.Moneda));
+                                    t.Cell().Element(c => RC(c, $"{sim} {mp.Total:N2}", right: true));
+                                }
+
+                                if (!resumenPago.Any())
+                                {
+                                    t.Cell().ColumnSpan(3)
+                                     .Background(ColorGris).Padding(6)
+                                     .Text("Sin movimientos en el período")
+                                     .Italic().FontSize(8).FontColor(ColorSuave);
+                                }
+                            });
+
+                            // Ajustes de otros períodos
+                            if (ajustes.Any())
+                            {
+                                left.Item().PaddingTop(12)
+                                    .BorderBottom(2).BorderColor(ColorMorado)
+                                    .PaddingBottom(3)
+                                    .Text("Ajustes de Otros Períodos")
+                                    .Bold().FontSize(9).FontColor(ColorMorado);
+                                left.Item().PaddingTop(2)
+                                    .Text("Notas que afectan comprobantes de períodos anteriores — no modifican el total.")
+                                    .Italic().FontSize(7).FontColor(ColorSuave);
+                                left.Item().PaddingTop(5)
+                                    .Element(c => BuildCajaTabla(c, ajustes, ColorMorado, "#D0B8E0", "#F5F0FA", ColorRojo));
+                            }
+                        });
+
+                        row.ConstantItem(12);
+
+                        // ── Columna der: totales ─────────────────────────
+                        row.RelativeItem(4).Column(right =>
+                        {
+                            right.Item()
+                                 .BorderBottom(2).BorderColor(ColorAzul)
+                                 .PaddingBottom(3)
+                                 .Text("Resumen General")
+                                 .Bold().FontSize(9).FontColor(ColorAzul);
+
+                            right.Item().PaddingTop(4)
+                                 .Border(1).BorderColor(ColorBorde).Column(t =>
+                                 {
+                                     void FilaTot(string label, string val, bool bold = false) =>
+                                         t.Item().Background(bold ? ColorBlanco : ColorGris)
+                                          .BorderBottom(1).BorderColor(ColorBorde)
+                                          .Padding(4).Row(r =>
+                                          {
+                                              r.RelativeItem().Text(label).FontSize(8).FontColor(bold ? ColorAzul : "#1A1A1A");
+                                              r.ConstantItem(80).AlignRight().Text(val).FontSize(8).FontColor(bold ? ColorAzul : "#1A1A1A");
+                                          });
+
+                                     FilaTot("Total comprobantes",   movimientos.Count.ToString());
+                                     FilaTot("  Facturas",           movimientos.Count(x => x.TipoComprobante == "01").ToString());
+                                     FilaTot("  Boletas",            movimientos.Count(x => x.TipoComprobante == "03").ToString());
+                                     FilaTot("  Notas de crédito",   movimientos.Count(x => x.TipoComprobante == "07").ToString());
+                                     FilaTot("  Notas de débito",    movimientos.Count(x => x.TipoComprobante == "08").ToString());
+
+                                     // Fila total PEN
+                                     if (totalPen != 0)
+                                         t.Item().Background(ColorAzul).Padding(5).Row(r =>
+                                         {
+                                             r.RelativeItem()
+                                              .Text("TOTAL NETO (PEN)")
+                                              .Bold().FontSize(10).FontColor(ColorBlanco);
+                                             r.ConstantItem(90).AlignRight()
+                                              .Text($"S/ {totalPen:N2}")
+                                              .Bold().FontSize(10).FontColor(ColorBlanco);
+                                         });
+
+                                     // Fila total USD
+                                     if (totalUsd != 0)
+                                         t.Item().Background(ColorAzul).Padding(5).Row(r =>
+                                         {
+                                             r.RelativeItem()
+                                              .Text("TOTAL NETO (USD)")
+                                              .Bold().FontSize(10).FontColor(ColorBlanco);
+                                             r.ConstantItem(90).AlignRight()
+                                              .Text($"$ {totalUsd:N2}")
+                                              .Bold().FontSize(10).FontColor(ColorBlanco);
+                                         });
+                                 });
+                        });
+                    });
+                });
+
+                // ╔══════════════════════════════════════════════════════╗
+                // ║  FOOTER                                               ║
+                // ╚══════════════════════════════════════════════════════╝
+                page.Footer()
+                    .BorderTop(1).BorderColor(ColorAzul)
+                    .PaddingTop(4).Row(r =>
+                    {
+                        r.RelativeItem()
+                         .Text($"Generado el {fechaReporte:dd/MM/yyyy} a las {fechaReporte:HH:mm:ss}")
+                         .Italic().FontSize(7).FontColor(ColorSuave);
+                        r.RelativeItem().AlignCenter()
+                         .Text("Reporte de Control de Caja")
+                         .FontSize(7).FontColor(ColorSuave);
+                        r.RelativeItem().AlignRight().Text(txt =>
+                        {
+                            txt.Span("Pág. ").FontSize(7).FontColor(ColorSuave);
+                            txt.CurrentPageNumber().FontSize(7).FontColor(ColorSuave);
+                            txt.Span(" de ").FontSize(7).FontColor(ColorSuave);
+                            txt.TotalPages().FontSize(7).FontColor(ColorSuave);
+                        });
+                    });
+            });
+        });
+
+        return Task.FromResult(ToBytes(doc));
+    }
+
+    // ── Tabla comprobantes de caja (igual a BuildTablaDetalles del comprobante) ──
+    private static void BuildCajaTabla(IContainer container, List<ControlCajaTicketItemDto> lista,
+        string colorHeader, string colorBorde, string colorGris, string colorRojo)
+    {
+        // Ancho útil A4 con márgenes 12mm c/u ≈ 527pt
+        // Fijos: 18+90+44+62+64+30 = 308 → RelativeColumn ≈ 219pt para Medios de Pago
+        container.Table(table =>
+        {
+            table.ColumnsDefinition(cols =>
+            {
+                cols.ConstantColumn(18);  // #
+                cols.ConstantColumn(90);  // N° Comprobante  "B003-00021834"
+                cols.ConstantColumn(44);  // Tipo            "N.Crédito"
+                cols.ConstantColumn(62);  // F. Emisión      "01/06/2026" sin cortar
+                cols.ConstantColumn(64);  // Importe         "S/ 1,550.00"
+                cols.ConstantColumn(30);  // Mon.            "PEN"
+                cols.RelativeColumn();    // Medios de Pago
+            });
+
+            void TH(IContainer c, string txt, bool right = false) =>
+                c.Background(colorHeader).PaddingVertical(5).PaddingHorizontal(4)
+                 .Column(col2 =>
+                 {
+                     if (right) col2.Item().AlignRight().Text(txt).Bold().FontSize(8).FontColor(Blanco);
+                     else       col2.Item().Text(txt).Bold().FontSize(8).FontColor(Blanco);
+                 });
+
+            table.Header(h =>
+            {
+                h.Cell().Element(c => TH(c, "#"));
+                h.Cell().Element(c => TH(c, "N° Comprobante"));
+                h.Cell().Element(c => TH(c, "Tipo"));
+                h.Cell().Element(c => TH(c, "F. Emisión"));
+                h.Cell().Element(c => TH(c, "Importe", right: true));
+                h.Cell().Element(c => TH(c, "Mon."));
+                h.Cell().Element(c => TH(c, "Medios de Pago"));
+            });
+
+            bool par = false; int n = 1;
+            foreach (var d in lista)
+            {
+                var bg    = par ? Blanco : colorGris; par = !par;
+                bool esNC = d.TipoComprobante == "07";
+                decimal monto = esNC ? -d.ImporteTotal : d.ImporteTotal;
+
+                var tipo = d.TipoComprobante switch
+                {
+                    "01" => "Factura",    "03" => "Boleta",
+                    "07" => "N.Crédito",  "08" => "N.Débito",
+                    _    => d.TipoComprobante ?? "-"
+                };
+                var medios = d.Pagos.Any()
+                    ? string.Join("  |  ", d.Pagos.Select(p =>
+                        $"{CajaNormalizarMedio(p.MedioPago)} {(d.TipoMoneda == "USD" ? "$" : "S/")} {p.Monto:N2}"))
+                    : "-";
+
+                void TD(IContainer c, string txt, bool right = false, bool red = false)
+                {
+                    var cell = c.Background(bg).BorderBottom(1).BorderColor(colorBorde)
+                                .PaddingVertical(4).PaddingHorizontal(4);
+                    string color = red ? colorRojo : "#1A1A1A";
+                    if (right) cell.AlignRight().Text(txt).FontSize(8).FontColor(color);
+                    else       cell.Text(txt).FontSize(8).FontColor(color);
+                }
+
+                table.Cell().Element(c => TD(c, (n++).ToString()));
+                table.Cell().Element(c => TD(c, d.NumeroCompleto));
+                table.Cell().Element(c => TD(c, tipo, red: esNC));
+                table.Cell().Element(c => TD(c, d.FechaEmision.ToString("dd/MM/yyyy")));
+                table.Cell().Element(c => TD(c,
+                    d.TipoMoneda == "USD" ? $"$ {monto:N2}" : $"S/ {monto:N2}",
+                    right: true, red: esNC));
+                table.Cell().Element(c => TD(c, d.TipoMoneda ?? "PEN"));
+                table.Cell().Element(c => TD(c, medios));
+            }
+        });
+    }
+
+    private static string CajaNormalizarMedio(string? medio)
+    {
+        if (string.IsNullOrWhiteSpace(medio)) return "Efectivo";
+        return medio.Trim().ToLower() switch
+        {
+            "efectivo"                                              => "Efectivo",
+            "yape"                                                  => "Yape",
+            "plin"                                                  => "Plin",
+            "transferencia" or "transferencia bancaria"             => "Transferencia",
+            "tarjeta" or "tarjeta de crédito" or "tarjeta de débito"
+                or "tarjeta de debito"                              => "Tarjeta",
+            "depósito" or "deposito" or "depósito bancario"
+                or "deposito bancario"                              => "Depósito",
+            "pos"                                                   => "POS",
+            "cheque"                                                => "Cheque",
+            var s => char.ToUpper(s[0]) + s[1..]
+        };
     }
 
     // ═════════════════════════════════════════════════════════════════════════

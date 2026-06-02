@@ -44,4 +44,17 @@ public interface IReportesPdfService
         DateTime? fechaHasta = null,
         int? usuarioCreacion = null,
         string? clienteNumDoc = null);
+
+    Task<byte[]> ExportarControlCajaTicketPdfAsync(
+        string titulo,
+        IEnumerable<ControlCajaTicketItemDto> datos,
+        string ruc,
+        string? codEstablecimiento = null,
+        DateTime? fechaDesde = null,
+        DateTime? fechaHasta = null,
+        string nombreResponsable = "",
+        string? empresaNombre = null,
+        string? empresaDireccion = null,
+        string? logoBase64 = null,
+        string? nombreUsuario = null);
 }
