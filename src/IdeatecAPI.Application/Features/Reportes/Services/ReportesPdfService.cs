@@ -5,7 +5,7 @@ using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 
-namespace IdeatecAPI.Infrastructure.Services;
+namespace IdeatecAPI.Application.Features.Reportes.Services;
 
 public class ReportesPdfService : IReportesPdfService
 {

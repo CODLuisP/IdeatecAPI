@@ -2,9 +2,9 @@ using IdeatecAPI.Application.Features.Reportes.DTOs;
 
 namespace IdeatecAPI.Application.Common.Interfaces.Persistence.Reportes;
 
-public interface IControlCajaTicketPdfService
+public interface IControlCajaTicketHtmlService
 {
-    Task<byte[]> GenerarAsync(
+    Task<string> GenerarHtmlAsync(
         string titulo,
         IEnumerable<ControlCajaTicketItemDto> datos,
         string ruc,

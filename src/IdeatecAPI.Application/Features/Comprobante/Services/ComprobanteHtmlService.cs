@@ -246,8 +246,10 @@ public class ComprobanteHtmlService : IComprobanteHtmlService
 <p class=""empresa-nombre"">{HE(empresa.NombreComercial ?? empresa.RazonSocial ?? "")}</p>
 <p class=""empresa-sub"">{HE(empresa.RazonSocial ?? "")}</p>
 {(!string.IsNullOrEmpty(empresa.Direccion) ? $"<p class=\"empresa-sub\">{HE(empresa.Direccion)}</p>" : "")}
+{(!string.IsNullOrEmpty(empresa.Distrito)     ? $"<p class=\"empresa-sub\">{HE(empresa.Distrito)} - {HE(empresa.Provincia ?? "")} - {HE(empresa.Departamento ?? "")}</p>" : "")}
 {(!string.IsNullOrEmpty(empresa.Telefono)  ? $"<p class=\"empresa-sub\">Tel: {HE(empresa.Telefono)}</p>" : "")}
 {(!string.IsNullOrEmpty(empresa.Email)     ? $"<p class=\"empresa-sub\">{HE(empresa.Email)}</p>" : "")}
+{(empresa.Ruc == "20263635869" ? "<p class=\"empresa-sub\">Atención: Lunes a Sábado de 9:30 am - 08:30 pm</p><p class=\"empresa-sub\">Domingos 9:30 am - 06:00 pm</p><p class=\"empresa-sub\">Venta de teles, edredones, sábanas, fardos de muebles y confección de cortinas.</p>" : "")}
 
 <hr>
 

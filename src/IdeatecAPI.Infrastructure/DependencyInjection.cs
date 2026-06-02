@@ -110,7 +110,7 @@ public static class DependencyInjection
         //Reportes
         services.AddScoped<IComprobanteExcelService, ComprobanteExcelService>();
         services.AddScoped<IReportesPdfService, ReportesPdfService>();
-        services.AddScoped<IControlCajaTicketPdfService, ControlCajaTicketPdfService>();
+        services.AddScoped<IControlCajaTicketHtmlService, ControlCajaTicketHtmlService>();
         services.AddScoped<IReportesService, ReportesService>();
 
         //Cuentas por cobrar

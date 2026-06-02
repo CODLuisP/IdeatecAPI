@@ -122,7 +122,7 @@ public interface IReportesService
         string? clienteNumDoc = null, int? limit = null);
 
     // ── Ticket ────────────────────────────────────────────────────────────────
-    Task<byte[]> ExportarControlCajaTicketAsync(
+    Task<string> ExportarControlCajaTicketHtmlAsync(
         string titulo, string ruc,
         string nombreResponsable,
         string? codEstablecimiento = null, DateTime? fechaDesde = null,
@@ -135,18 +135,18 @@ public class ReportesService : IReportesService
     private readonly IUnitOfWork _unitOfWork;
     private readonly IComprobanteExcelService _excelService;
     private readonly IReportesPdfService _pdfService;
-    private readonly IControlCajaTicketPdfService _ticketService;
+    private readonly IControlCajaTicketHtmlService _ticketHtmlService;
 
     public ReportesService(
         IUnitOfWork unitOfWork,
         IComprobanteExcelService excelService,
         IReportesPdfService pdfService,
-        IControlCajaTicketPdfService ticketService)
+        IControlCajaTicketHtmlService ticketHtmlService)
     {
-        _unitOfWork     = unitOfWork;
-        _excelService   = excelService;
-        _pdfService     = pdfService;
-        _ticketService  = ticketService;
+        _unitOfWork         = unitOfWork;
+        _excelService       = excelService;
+        _pdfService         = pdfService;
+        _ticketHtmlService  = ticketHtmlService;
     }
 
     public async Task<ReporteResponseDto> GetReportesPorEmpresaAsync(
@@ -396,8 +396,8 @@ public class ReportesService : IReportesService
             titulo, dtos, ruc, codEstablecimiento, fechaDesde, fechaHasta, usuarioCreacion, clienteNumDoc);
     }
 
-    // ── Ticket Control de Caja ────────────────────────────────────────────────
-    public async Task<byte[]> ExportarControlCajaTicketAsync(
+    // ── Ticket HTML Control de Caja ───────────────────────────────────────────
+    public async Task<string> ExportarControlCajaTicketHtmlAsync(
         string titulo, string ruc,
         string nombreResponsable,
         string? codEstablecimiento = null, DateTime? fechaDesde = null,
@@ -416,7 +416,7 @@ public class ReportesService : IReportesService
             ruc, codEstablecimiento, desde, hasta, usuarioCreacion, clienteNumDoc, limit)).ToList();
 
         if (!comprobantes.Any())
-            return await _ticketService.GenerarAsync(
+            return await _ticketHtmlService.GenerarHtmlAsync(
                 titulo, Enumerable.Empty<ControlCajaTicketItemDto>(),
                 ruc, codEstablecimiento, fechaDesde, fechaHasta, nombreResponsable);
 
@@ -431,23 +431,23 @@ public class ReportesService : IReportesService
         // 3. Unir
         var items = comprobantes.Select(c => new ControlCajaTicketItemDto
         {
-            ComprobanteId        = c.ComprobanteId,
-            TipoComprobante      = c.TipoComprobante,
-            Serie                = c.Serie ?? "",
-            Correlativo          = c.Correlativo,
-            NumeroCompleto       = c.NumeroCompleto ?? "",
-            FechaEmision         = c.FechaEmision,
-            ImporteTotal         = c.ImporteTotal ?? 0,
-            ValorVenta           = c.ValorVenta ?? 0,
-            TotalIGV             = c.TotalIGV ?? 0,
-            TipoMoneda           = c.TipoMoneda ?? "PEN",
-            EstadoSunat          = c.EstadoSunat,
+            ComprobanteId         = c.ComprobanteId,
+            TipoComprobante       = c.TipoComprobante,
+            Serie                 = c.Serie ?? "",
+            Correlativo           = c.Correlativo,
+            NumeroCompleto        = c.NumeroCompleto ?? "",
+            FechaEmision          = c.FechaEmision,
+            ImporteTotal          = c.ImporteTotal ?? 0,
+            ValorVenta            = c.ValorVenta ?? 0,
+            TotalIGV              = c.TotalIGV ?? 0,
+            TipoMoneda            = c.TipoMoneda ?? "PEN",
+            EstadoSunat           = c.EstadoSunat,
             ComprobanteAfectadoId = c.ComprobanteAfectadoId,
-            NumDocAfectado       = c.NumDocAfectado,
-            Pagos                = pagosPorId.TryGetValue(c.ComprobanteId, out var p) ? p : new()
+            NumDocAfectado        = c.NumDocAfectado,
+            Pagos                 = pagosPorId.TryGetValue(c.ComprobanteId, out var p) ? p : new()
         });
 
-        return await _ticketService.GenerarAsync(
+        return await _ticketHtmlService.GenerarHtmlAsync(
             titulo, items, ruc, codEstablecimiento, fechaDesde, fechaHasta, nombreResponsable);
     }
 

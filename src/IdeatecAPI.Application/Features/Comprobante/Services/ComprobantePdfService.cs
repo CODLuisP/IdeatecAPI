@@ -565,7 +565,7 @@ public class ComprobantePdfService : IComprobantePdfService
                 }
                 else { row.ConstantItem(70); }
 
-                // DATOS EMPRESA (sin cambios)
+                // DATOS EMPRESA
                 row.RelativeItem().PaddingLeft(6).PaddingRight(10).AlignMiddle().Column(emp =>
                 {
                     emp.Item().Text(empresa.RazonSocial)
@@ -579,6 +579,15 @@ public class ComprobantePdfService : IComprobantePdfService
                     if (!string.IsNullOrEmpty(empresa.Email))
                         emp.Item().Text($"Email: {empresa.Email}")
                             .FontSize(8).FontColor(ColorTextoSuave);
+                    if (empresa.Ruc == "20263635869")
+                    {
+                        emp.Item().PaddingTop(2).Text("Atención: Lunes a Sábado de 9:30 am - 08:30 pm")
+                            .FontSize(7).FontColor(ColorTextoSuave);
+                        emp.Item().Text("Domingos 9:30 am - 06:00 pm")
+                            .FontSize(7).FontColor(ColorTextoSuave);
+                        emp.Item().Text("Venta de teles, edredones, sábanas, fardos de muebles y confección de cortinas.")
+                            .FontSize(7).FontColor(ColorTextoSuave);
+                    }
                 });
 
                 // RECUADRO COMPROBANTE (sin cambios - sin Orden Servicio)

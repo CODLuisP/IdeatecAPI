@@ -391,10 +391,10 @@ public class ReportesController : ControllerBase
         }
     }
 
-    [HttpGet("control-caja/{ruc}/ticket")]
+    [HttpGet("control-caja/{ruc}/ticket-html")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> ExportarControlCajaTicket(
+    public async Task<IActionResult> ExportarControlCajaTicketHtml(
         string ruc,
         [FromQuery] string titulo = "REPORTE DE CAJA",
         [FromQuery] string nombreResponsable = "",
@@ -407,16 +407,15 @@ public class ReportesController : ControllerBase
     {
         try
         {
-            var pdf = await _reportesService.ExportarControlCajaTicketAsync(
+            var html = await _reportesService.ExportarControlCajaTicketHtmlAsync(
                 titulo, ruc, nombreResponsable, codEstablecimiento,
                 fechaDesde, fechaHasta, usuarioCreacion, clienteNumDoc, limit);
 
-            return File(pdf, "application/pdf",
-                $"ticket-caja-{ruc}-{DateTime.Now:yyyyMMdd_HHmmss}.pdf");
+            return Content(html, "text/html; charset=utf-8");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error al generar ticket caja RUC {Ruc}", ruc);
+            _logger.LogError(ex, "Error al generar ticket HTML caja RUC {Ruc}", ruc);
             return StatusCode(500, new { mensaje = "Error al generar ticket.", detalle = ex.Message });
         }
     }
