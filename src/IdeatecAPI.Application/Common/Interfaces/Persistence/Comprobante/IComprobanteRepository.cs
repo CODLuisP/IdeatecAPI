@@ -20,10 +20,10 @@ public interface IComprobanteRepository : IRepository<Comprobante>
     Task<IEnumerable<Comprobante>> GetByEstadoAsync(string estado);
     Task<IEnumerable<ComprobanteDetalle>> GetDetallesByIdAsync(int comprobanteId);
     Task<IEnumerable<Comprobante>> GetByRucAndFechasAsync(string ruc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null);
-    Task<IEnumerable<Comprobante>> GetByDocClienteAndFechasAsync(string rucEmpresa, string clienteNumDoc, DateTime? fechaDesde, DateTime? fechaHasta);
-    Task<IEnumerable<Comprobante>> GetBySucursalAndFechasAsync(string empresaRuc, string codEstablecimiento, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null);
-    Task<IEnumerable<Comprobante>> GetByDocUsuarioAndFechasAsync(string rucEmpresa, int usuarioCreacion, DateTime? fechaDesde, DateTime? fechaHasta);
-    Task<IEnumerable<Comprobante>> GetByClienteAndSucursalAsync(string empresaRuc, string codEstablecimiento, string clienteNumDoc, DateTime? fechaDesde, DateTime? fechaHasta);
+    Task<IEnumerable<Comprobante>> GetByDocClienteAndFechasAsync(string rucEmpresa, string clienteNumDoc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null);
+    Task<IEnumerable<Comprobante>> GetBySucursalAndFechasAsync(string empresaRuc, string codEstablecimiento, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null);
+    Task<IEnumerable<Comprobante>> GetByDocUsuarioAndFechasAsync(string rucEmpresa, int usuarioCreacion, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null);
+    Task<IEnumerable<Comprobante>> GetByClienteAndSucursalAsync(string empresaRuc, string codEstablecimiento, string clienteNumDoc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null);
     Task UpdateCorreoWhatsappAsync(int comprobanteId, string? correo, bool? enviadoPorCorreo, string? whatsApp, bool? enviadoPorWhatsApp);
     Task<int> GetCantidadByClienteNumDocAsync(string clienteNumDoc);
     Task<IEnumerable<Pago>> GetPagosByIdAsync(int comprobanteId);
@@ -48,4 +48,5 @@ public interface IComprobanteRepository : IRepository<Comprobante>
     Task<IEnumerable<int>> GetValesByComprobanteIdAsync(int comprobanteId);
     Task<IEnumerable<Vale>> GetValesFullByComprobanteIdAsync(int comprobanteId);
     Task<int> ObtenerYIncrementarCorrelativoAsync(int sucursalId, string tipoComprobante, string serie);
+    Task<IEnumerable<Comprobante>> GetNotasByComprobanteAfectadoIdAsync(int comprobanteAfectadoId, string tipoComprobante);
 }

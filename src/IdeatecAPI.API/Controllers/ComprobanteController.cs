@@ -195,12 +195,13 @@ public class ComprobantesController : ControllerBase
         int sucursalId,
         [FromQuery] DateTime? fechaDesde,
         [FromQuery] DateTime? fechaHasta,
-        [FromQuery] int? limit = null)
+        [FromQuery] int? limit = null,
+        [FromQuery] int? offset = null)
     {
         try
         {
             var (desde, hasta) = NormalizarFechas(fechaDesde, fechaHasta);
-            var result = await _comprobanteService.GetListadoBySucursalAndFechasAsync(sucursalId, desde, hasta, limit);
+            var result = await _comprobanteService.GetListadoBySucursalAndFechasAsync(sucursalId, desde, hasta, limit, offset);
             return Ok(result ?? Enumerable.Empty<object>());
         }
         catch (KeyNotFoundException ex)
@@ -226,12 +227,14 @@ public class ComprobantesController : ControllerBase
         string rucEmpresa,
         string clienteNumDoc,
         [FromQuery] DateTime? fechaDesde,
-        [FromQuery] DateTime? fechaHasta)
+        [FromQuery] DateTime? fechaHasta,
+        [FromQuery] int? limit = null,
+        [FromQuery] int? offset = null)
     {
         try
         {
             var (desde, hasta) = NormalizarFechas(fechaDesde, fechaHasta);
-            var result = await _comprobanteService.GetListadoByDocClienteAndFechasAsync(rucEmpresa, clienteNumDoc, desde, hasta);
+            var result = await _comprobanteService.GetListadoByDocClienteAndFechasAsync(rucEmpresa, clienteNumDoc, desde, hasta, limit, offset);
             return Ok(result ?? Enumerable.Empty<object>());
         }
         catch (Exception ex)
@@ -252,12 +255,14 @@ public class ComprobantesController : ControllerBase
         string rucEmpresa,
         int usuarioId,
         [FromQuery] DateTime? fechaDesde,
-        [FromQuery] DateTime? fechaHasta)
+        [FromQuery] DateTime? fechaHasta,
+        [FromQuery] int? limit = null,
+        [FromQuery] int? offset = null)
     {
         try
         {
             var (desde, hasta) = NormalizarFechas(fechaDesde, fechaHasta);
-            var result = await _comprobanteService.GetListadoByDocUsuarioAndFechasAsync(rucEmpresa, usuarioId, desde, hasta);
+            var result = await _comprobanteService.GetListadoByDocUsuarioAndFechasAsync(rucEmpresa, usuarioId, desde, hasta, limit, offset);
             return Ok(result ?? Enumerable.Empty<object>());
         }
         catch (Exception ex)
@@ -279,12 +284,14 @@ public class ComprobantesController : ControllerBase
         int sucursalId,
         string clienteNumDoc,
         [FromQuery] DateTime? fechaDesde,
-        [FromQuery] DateTime? fechaHasta)
+        [FromQuery] DateTime? fechaHasta,
+        [FromQuery] int? limit = null,
+        [FromQuery] int? offset = null)
     {
         try
         {
             var (desde, hasta) = NormalizarFechas(fechaDesde, fechaHasta);
-            var result = await _comprobanteService.GetListadoByClienteAndSucursalAsync(sucursalId, clienteNumDoc, desde, hasta);
+            var result = await _comprobanteService.GetListadoByClienteAndSucursalAsync(sucursalId, clienteNumDoc, desde, hasta, limit, offset);
             return Ok(result ?? Enumerable.Empty<object>());
         }
         catch (KeyNotFoundException ex)

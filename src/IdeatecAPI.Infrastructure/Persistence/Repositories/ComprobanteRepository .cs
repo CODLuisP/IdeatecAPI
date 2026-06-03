@@ -278,7 +278,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
             sql, new { Ruc = ruc, FechaDesde = fechaDesde, FechaHasta = fechaHasta, Limit = limit, Offset = offset }, _transaction);
     }
 
-    public async Task<IEnumerable<Comprobante>> GetBySucursalAndFechasAsync(string empresaRuc, string codEstablecimiento, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null)
+    public async Task<IEnumerable<Comprobante>> GetBySucursalAndFechasAsync(string empresaRuc, string codEstablecimiento, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null)
     {
         var sql = BaseSelect + @"
         WHERE empresaRuc = @EmpresaRuc
@@ -286,39 +286,44 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         AND (@FechaDesde IS NULL OR fechaEmision >= @FechaDesde)
         AND (@FechaHasta IS NULL OR fechaEmision <= @FechaHasta)
         ORDER BY fechaEmision DESC"
-        + (limit.HasValue ? " LIMIT @Limit" : "");
+        + (limit.HasValue ? " LIMIT @Limit" : "")
+        + (limit.HasValue && offset.HasValue ? " OFFSET @Offset" : "");
 
         return await _connection.QueryAsync<Comprobante>(
-            sql, new { EmpresaRuc = empresaRuc, CodEstablecimiento = codEstablecimiento, FechaDesde = fechaDesde, FechaHasta = fechaHasta, Limit = limit }, _transaction);
+            sql, new { EmpresaRuc = empresaRuc, CodEstablecimiento = codEstablecimiento, FechaDesde = fechaDesde, FechaHasta = fechaHasta, Limit = limit, Offset = offset }, _transaction);
     }
 
-    public async Task<IEnumerable<Comprobante>> GetByDocClienteAndFechasAsync(string rucEmpresa, string clienteNumDoc, DateTime? fechaDesde, DateTime? fechaHasta)
+    public async Task<IEnumerable<Comprobante>> GetByDocClienteAndFechasAsync(string rucEmpresa, string clienteNumDoc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null)
     {
         var sql = BaseSelect + @"
         WHERE empresaRuc = @RucEmpresa
         AND clienteNumDoc = @ClienteNumDoc
         AND (@FechaDesde IS NULL OR fechaEmision >= @FechaDesde)
         AND (@FechaHasta IS NULL OR fechaEmision <= @FechaHasta)
-        ORDER BY fechaEmision DESC";
+        ORDER BY fechaEmision DESC"
+        + (limit.HasValue ? " LIMIT @Limit" : "")
+        + (limit.HasValue && offset.HasValue ? " OFFSET @Offset" : "");
 
         return await _connection.QueryAsync<Comprobante>(
-            sql, new { RucEmpresa = rucEmpresa, ClienteNumDoc = clienteNumDoc, FechaDesde = fechaDesde, FechaHasta = fechaHasta }, _transaction);
+            sql, new { RucEmpresa = rucEmpresa, ClienteNumDoc = clienteNumDoc, FechaDesde = fechaDesde, FechaHasta = fechaHasta, Limit = limit, Offset = offset }, _transaction);
     }
 
-    public async Task<IEnumerable<Comprobante>> GetByDocUsuarioAndFechasAsync(string rucEmpresa, int usuarioCreacion, DateTime? fechaDesde, DateTime? fechaHasta)
+    public async Task<IEnumerable<Comprobante>> GetByDocUsuarioAndFechasAsync(string rucEmpresa, int usuarioCreacion, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null)
     {
         var sql = BaseSelect + @"
         WHERE empresaRuc = @RucEmpresa
         AND usuarioCreacion = @UsuarioCreacion
         AND (@FechaDesde IS NULL OR fechaEmision >= @FechaDesde)
         AND (@FechaHasta IS NULL OR fechaEmision <= @FechaHasta)
-        ORDER BY fechaEmision DESC";
+        ORDER BY fechaEmision DESC"
+        + (limit.HasValue ? " LIMIT @Limit" : "")
+        + (limit.HasValue && offset.HasValue ? " OFFSET @Offset" : "");
 
         return await _connection.QueryAsync<Comprobante>(
-            sql, new { RucEmpresa = rucEmpresa, UsuarioCreacion = usuarioCreacion, FechaDesde = fechaDesde, FechaHasta = fechaHasta }, _transaction);
+            sql, new { RucEmpresa = rucEmpresa, UsuarioCreacion = usuarioCreacion, FechaDesde = fechaDesde, FechaHasta = fechaHasta, Limit = limit, Offset = offset }, _transaction);
     }
 
-    public async Task<IEnumerable<Comprobante>> GetByClienteAndSucursalAsync(string empresaRuc, string codEstablecimiento, string clienteNumDoc, DateTime? fechaDesde, DateTime? fechaHasta)
+    public async Task<IEnumerable<Comprobante>> GetByClienteAndSucursalAsync(string empresaRuc, string codEstablecimiento, string clienteNumDoc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null)
     {
         var sql = BaseSelect + @"
         WHERE empresaRuc = @EmpresaRuc
@@ -326,11 +331,13 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         AND clienteNumDoc = @ClienteNumDoc
         AND (@FechaDesde IS NULL OR fechaEmision >= @FechaDesde)
         AND (@FechaHasta IS NULL OR fechaEmision <= @FechaHasta)
-        ORDER BY fechaEmision DESC";
+        ORDER BY fechaEmision DESC"
+        + (limit.HasValue ? " LIMIT @Limit" : "")
+        + (limit.HasValue && offset.HasValue ? " OFFSET @Offset" : "");
 
         return await _connection.QueryAsync<Comprobante>(
             sql,
-            new { EmpresaRuc = empresaRuc, CodEstablecimiento = codEstablecimiento, ClienteNumDoc = clienteNumDoc, FechaDesde = fechaDesde, FechaHasta = fechaHasta },
+            new { EmpresaRuc = empresaRuc, CodEstablecimiento = codEstablecimiento, ClienteNumDoc = clienteNumDoc, FechaDesde = fechaDesde, FechaHasta = fechaHasta, Limit = limit, Offset = offset },
             _transaction);
     }
 
@@ -802,5 +809,26 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         var tz = TimeZoneInfo.FindSystemTimeZoneById(
             OperatingSystem.IsWindows() ? "SA Pacific Standard Time" : "America/Lima");
         return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+    }
+
+    public async Task<IEnumerable<Domain.Entities.Comprobante>> GetNotasByComprobanteAfectadoIdAsync(
+        int comprobanteAfectadoId, string tipoComprobante)
+    {
+        var sql = @"
+            SELECT
+                comprobanteID           AS ComprobanteId,
+                tipoComprobante         AS TipoComprobante,
+                tipoNotaCreditoDebito   AS TipoNotaCreditoDebito,
+                importeTotal            AS ImporteTotal,
+                estadoSunat             AS EstadoSunat
+            FROM comprobante
+            WHERE comprobanteAfectadoID = @ComprobanteAfectadoId
+            AND tipoComprobante = @TipoComprobante";
+
+        return await _connection.QueryAsync<Domain.Entities.Comprobante>(sql, new
+        {
+            ComprobanteAfectadoId = comprobanteAfectadoId,
+            TipoComprobante       = tipoComprobante
+        }, _transaction);
     }
 }
