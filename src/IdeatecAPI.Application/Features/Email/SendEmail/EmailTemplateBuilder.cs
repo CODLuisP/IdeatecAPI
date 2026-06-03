@@ -27,7 +27,7 @@ public static class EmailTemplateBuilder
         </p>
 
         <p style="margin:0 0 20px;color:#475569;font-size:14px;line-height:1.7;">
-          Para la renovación del servicio <strong style="color:#0f172a;">{Escape(periodoTexto)}</strong>, sírvanse realizar el pago de <strong style="color:#0f172a;">S/.{Escape(monto)}</strong> a cualquiera de nuestras cuentas soles a nombre de <strong style="color:#0f172a;">VESAT SAC</strong>:
+          Para la renovación del servicio <strong style="color:#0f172a;">{Escape(periodoTexto)}</strong>, sírvanse realizar el pago de <strong style="color:#0f172a;">S/.{Escape(monto)}</strong> a cualquiera de nuestras cuentas soles a nombre de <strong style="color:#0f172a;">VELSAT SAC</strong>:
         </p>
 
         <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:20px;">
