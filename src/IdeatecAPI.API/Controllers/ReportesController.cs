@@ -1,6 +1,8 @@
+using ClosedXML.Excel;
 using IdeatecAPI.Application.Features.Comprobante.DTOs;
 using IdeatecAPI.Application.Features.Reportes.DTOs;
 using IdeatecAPI.Application.Features.Reportes.Services;
+using IdeatecAPI.Application.Features.Trabajadores.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,12 +14,17 @@ namespace IdeatecAPI.API.Controllers;
 public class ReportesController : ControllerBase
 {
     private readonly IReportesService _reportesService;
+    private readonly ITrabajadorService _trabajadorService;
     private readonly ILogger<ReportesController> _logger;
 
-    public ReportesController(IReportesService reportesService, ILogger<ReportesController> logger)
+    public ReportesController(
+        IReportesService reportesService,
+        ITrabajadorService trabajadorService,
+        ILogger<ReportesController> logger)
     {
-        _reportesService = reportesService;
-        _logger = logger;
+        _reportesService   = reportesService;
+        _trabajadorService = trabajadorService;
+        _logger            = logger;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -450,6 +457,279 @@ public class ReportesController : ControllerBase
         {
             _logger.LogError(ex, "Error al generar ticket HTML caja RUC {Ruc}", ruc);
             return StatusCode(500, new { mensaje = "Error al generar ticket.", detalle = ex.Message });
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // VENTAS POR PRODUCTO (matriz diaria / semanal / quincenal / mensual)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Genera un Excel con la cantidad de servicios/productos vendidos por período.
+    /// agrupacion: diario | mensual | semanal | quincenal
+    ///   - diario    → requiere 'fecha' (yyyy-MM-dd). Una fila por producto, sin pivote.
+    ///   - mensual   → requiere 'mes' y 'anio'. Columnas: 1..31
+    ///   - semanal   → requiere 'mes' y 'anio'. Columnas: Sem 1..Sem 5
+    ///   - quincenal → requiere 'mes' y 'anio'. Columnas: 1ra Quincena | 2da Quincena
+    /// </summary>
+    [HttpGet("ventas-producto-excel/{sucursalId:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetVentasProductoExcelAsync(
+        int sucursalId,
+        [FromQuery] string agrupacion  = "mensual",
+        [FromQuery] string? fecha      = null,
+        [FromQuery] int? mes           = null,
+        [FromQuery] int? anio          = null)
+    {
+        // ── Validar parámetros ──────────────────────────────────────────────
+        agrupacion = agrupacion.ToLower().Trim();
+        var agrupacionesValidas = new[] { "diario", "mensual", "semanal", "quincenal" };
+        if (!agrupacionesValidas.Contains(agrupacion))
+            return BadRequest(new { mensaje = $"Agrupación inválida. Use: {string.Join(", ", agrupacionesValidas)}." });
+
+        DateTime fechaDesde, fechaHasta;
+
+        if (agrupacion == "diario")
+        {
+            if (string.IsNullOrWhiteSpace(fecha) ||
+                !DateTime.TryParseExact(fecha.Trim(), "yyyy-MM-dd",
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.None, out var fechaParsed))
+                return BadRequest(new { mensaje = "Para agrupación 'diario' se requiere el parámetro 'fecha' en formato yyyy-MM-dd (ej: 2026-05-15)." });
+
+            fechaDesde = fechaParsed.Date;
+            fechaHasta = fechaParsed.Date;
+        }
+        else
+        {
+            if (!mes.HasValue || !anio.HasValue)
+                return BadRequest(new { mensaje = "Para esta agrupación se requieren los parámetros 'mes' y 'anio'." });
+            if (mes < 1 || mes > 12)
+                return BadRequest(new { mensaje = "El parámetro 'mes' debe estar entre 1 y 12." });
+
+            fechaDesde = new DateTime(anio.Value, mes.Value, 1);
+            fechaHasta = new DateTime(anio.Value, mes.Value,
+                DateTime.DaysInMonth(anio.Value, mes.Value));
+        }
+
+        try
+        {
+            var filas = (await _trabajadorService.GetVentasPorDiaAsync(
+                sucursalId, fechaDesde, fechaHasta)).ToList();
+
+            if (filas.Count == 0)
+                return NoContent();
+
+            var productos = filas.Select(f => f.Descripcion!).Distinct().OrderBy(d => d).ToList();
+
+            // Lookup (descripcion, dia) -> cantidad
+            var lookup = filas.ToDictionary(
+                f => (f.Descripcion!, f.Dia),
+                f => f.SumaCantidad);
+
+            // ── Paleta ────────────────────────────────────────────────────
+            var azulOscuro = XLColor.FromHtml("#1F4E79");
+            var azulMedio  = XLColor.FromHtml("#2E75B6");
+            var azulClaro  = XLColor.FromHtml("#D6E4F0");
+            var azulFila   = XLColor.FromHtml("#EBF3FB");
+            var blanco     = XLColor.White;
+            var verdeTotal = XLColor.FromHtml("#E2EFDA");
+
+            using var workbook = new XLWorkbook();
+            var ws = workbook.Worksheets.Add("Ventas por Producto");
+            ws.ShowGridLines = false;
+
+            // ── Definir columnas según agrupación ─────────────────────────
+            // Cada columna: (cabecera, lista de días que agrupa)
+            List<(string Cabecera, List<int> Dias)> columnas;
+            int diasEnMes = agrupacion == "diario" ? 1
+                : DateTime.DaysInMonth(anio!.Value, mes!.Value);
+
+            columnas = agrupacion switch
+            {
+                "diario" => new List<(string, List<int>)>
+                {
+                    ($"{fechaDesde:dd/MM/yyyy}", new List<int> { fechaDesde.Day })
+                },
+                "mensual" => Enumerable.Range(1, diasEnMes)
+                    .Select(d => (d.ToString(), new List<int> { d }))
+                    .ToList(),
+                "semanal" => new List<(string, List<int>)>
+                {
+                    ("Sem 1", Enumerable.Range(1,  7).Where(d => d <= diasEnMes).ToList()),
+                    ("Sem 2", Enumerable.Range(8,  7).Where(d => d <= diasEnMes).ToList()),
+                    ("Sem 3", Enumerable.Range(15, 7).Where(d => d <= diasEnMes).ToList()),
+                    ("Sem 4", Enumerable.Range(22, 7).Where(d => d <= diasEnMes).ToList()),
+                    ("Sem 5", Enumerable.Range(29, diasEnMes - 28)
+                                        .Where(d => d >= 29 && d <= diasEnMes).ToList()),
+                }.Where(c => c.Item2.Count > 0).ToList(),
+                "quincenal" => new List<(string, List<int>)>
+                {
+                    ("1ra Quincena", Enumerable.Range(1,  15).Where(d => d <= diasEnMes).ToList()),
+                    ("2da Quincena", Enumerable.Range(16, diasEnMes - 15).Where(d => d <= diasEnMes).ToList()),
+                },
+                _ => throw new InvalidOperationException()
+            };
+
+            bool conTotal = agrupacion != "diario";
+            int totalCols = 1 + columnas.Count + (conTotal ? 1 : 0);
+
+            // ── Título ────────────────────────────────────────────────────
+            string tituloTexto = "REPORTE VENTAS POR PRODUCTO";
+            ws.Cell(1, 1).Value = tituloTexto;
+            var tRange = ws.Range(1, 1, 1, totalCols);
+            tRange.Merge();
+            tRange.Style
+                .Font.SetBold(true)
+                .Font.SetFontSize(14)
+                .Font.SetFontColor(azulOscuro)
+                .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+
+            // ── Subtítulo ─────────────────────────────────────────────────
+            string subtitulo = agrupacion == "diario"
+                ? $"Día {fechaDesde:dd/MM/yyyy}"
+                : $"Mes {mes:D2} - {anio}";
+            ws.Cell(2, 1).Value = subtitulo;
+            var sRange = ws.Range(2, 1, 2, totalCols);
+            sRange.Merge();
+            sRange.Style
+                .Font.SetBold(true)
+                .Font.SetFontSize(11)
+                .Font.SetFontColor(azulMedio)
+                .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+
+            // ── Cabecera ──────────────────────────────────────────────────
+            int headerRow = 4;
+            ws.Cell(headerRow, 1).Value = "Producto";
+            for (int c = 0; c < columnas.Count; c++)
+                ws.Cell(headerRow, c + 2).Value = columnas[c].Cabecera;
+            if (conTotal)
+                ws.Cell(headerRow, totalCols).Value = "TOTAL";
+
+            var hRange = ws.Range(headerRow, 1, headerRow, totalCols);
+            hRange.Style
+                .Fill.SetBackgroundColor(azulMedio)
+                .Font.SetFontColor(blanco)
+                .Font.SetBold(true)
+                .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center)
+                .Alignment.SetVertical(XLAlignmentVerticalValues.Center)
+                .Alignment.SetWrapText(true)
+                .Border.SetOutsideBorder(XLBorderStyleValues.Thin)
+                .Border.SetInsideBorder(XLBorderStyleValues.Thin);
+            ws.Row(headerRow).Height = 30;
+
+            // ── Filas de datos ────────────────────────────────────────────
+            for (int r = 0; r < productos.Count; r++)
+            {
+                int excelRow = headerRow + 1 + r;
+                string prod = productos[r];
+                var bgRow = r % 2 == 0 ? azulFila : blanco;
+
+                // Nombre del producto
+                ws.Cell(excelRow, 1).Value = prod;
+                ws.Cell(excelRow, 1).Style
+                    .Fill.SetBackgroundColor(azulClaro)
+                    .Alignment.SetWrapText(true)
+                    .Border.SetOutsideBorder(XLBorderStyleValues.Thin);
+
+                decimal totalFila = 0;
+                for (int c = 0; c < columnas.Count; c++)
+                {
+                    decimal suma = columnas[c].Dias
+                        .Sum(dia => lookup.TryGetValue((prod, dia), out var v) ? v : 0);
+                    totalFila += suma;
+
+                    var cell = ws.Cell(excelRow, c + 2);
+                    cell.Value = suma > 0 ? suma : (XLCellValue)"";
+                    cell.Style
+                        .Fill.SetBackgroundColor(bgRow)
+                        .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center)
+                        .Border.SetOutsideBorder(XLBorderStyleValues.Thin);
+                }
+
+                if (conTotal)
+                {
+                    var tc = ws.Cell(excelRow, totalCols);
+                    tc.Value = totalFila;
+                    tc.Style
+                        .Fill.SetBackgroundColor(verdeTotal)
+                        .Font.SetBold(true)
+                        .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center)
+                        .Border.SetOutsideBorder(XLBorderStyleValues.Thin);
+                }
+            }
+
+            // ── Fila TOTAL por columna (solo cuando hay pivote) ───────────
+            if (conTotal)
+            {
+                int totalRow = headerRow + productos.Count + 1;
+                ws.Cell(totalRow, 1).Value = "TOTAL";
+                ws.Cell(totalRow, 1).Style
+                    .Fill.SetBackgroundColor(azulOscuro)
+                    .Font.SetFontColor(blanco)
+                    .Font.SetBold(true)
+                    .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center)
+                    .Border.SetOutsideBorder(XLBorderStyleValues.Thin);
+
+                decimal granTotal = 0;
+                for (int c = 0; c < columnas.Count; c++)
+                {
+                    decimal sumaCol = productos.Sum(prod =>
+                        columnas[c].Dias.Sum(dia =>
+                            lookup.TryGetValue((prod, dia), out var v) ? v : 0));
+                    granTotal += sumaCol;
+
+                    var cell = ws.Cell(totalRow, c + 2);
+                    cell.Value = sumaCol;
+                    cell.Style
+                        .Fill.SetBackgroundColor(azulOscuro)
+                        .Font.SetFontColor(blanco)
+                        .Font.SetBold(true)
+                        .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center)
+                        .Border.SetOutsideBorder(XLBorderStyleValues.Thin);
+                }
+
+                var gtCell = ws.Cell(totalRow, totalCols);
+                gtCell.Value = granTotal;
+                gtCell.Style
+                    .Fill.SetBackgroundColor(azulOscuro)
+                    .Font.SetFontColor(blanco)
+                    .Font.SetBold(true)
+                    .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center)
+                    .Border.SetOutsideBorder(XLBorderStyleValues.Thin);
+            }
+
+            // ── Anchos ────────────────────────────────────────────────────
+            ws.Column(1).Width = 38;
+            for (int c = 2; c <= totalCols; c++)
+                ws.Column(c).Width = agrupacion == "mensual" ? 5 : 14;
+
+            ws.SheetView.FreezeRows(headerRow);
+
+            // ── Exportar ──────────────────────────────────────────────────
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+
+            string sufijo = agrupacion == "diario"
+                ? fechaDesde.ToString("yyyyMMdd")
+                : $"{anio}{mes:D2}";
+            string fileName = $"ReporteVentasProducto_{agrupacion}_{sufijo}.xlsx";
+
+            return File(stream.ToArray(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                fileName);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { mensaje = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al generar Excel ventas-producto sucursal {SucursalId}", sucursalId);
+            return StatusCode(500, new { mensaje = "Ocurrió un error al generar el Excel.", detalle = ex.Message });
         }
     }
 

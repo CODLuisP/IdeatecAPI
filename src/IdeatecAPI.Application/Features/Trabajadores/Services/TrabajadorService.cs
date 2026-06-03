@@ -34,6 +34,16 @@ public interface ITrabajadorService
     string descripcion,
     DateTime? fechaDesde,
     DateTime? fechaHasta);
+
+    Task<IEnumerable<MatrizFilaDTO>> GetMatrizServiciosTrabajadoresAsync(
+    int sucursalId,
+    DateTime? fechaDesde,
+    DateTime? fechaHasta);
+
+    Task<IEnumerable<VentaDiariaFilaDTO>> GetVentasPorDiaAsync(
+    int sucursalId,
+    DateTime fechaDesde,
+    DateTime fechaHasta);
 }
 
 public class TrabajadorService : ITrabajadorService
@@ -320,5 +330,29 @@ public class TrabajadorService : ITrabajadorService
     {
         return await _unitOfWork.Trabajadores.GetDetalleByServicioAsync(
             sucursalId, descripcion, fechaDesde, fechaHasta);
+    }
+
+    public async Task<IEnumerable<MatrizFilaDTO>> GetMatrizServiciosTrabajadoresAsync(
+        int sucursalId,
+        DateTime? fechaDesde,
+        DateTime? fechaHasta)
+    {
+        if (sucursalId <= 0)
+            throw new ArgumentException("SucursalId inválido.");
+
+        return await _unitOfWork.Trabajadores.GetMatrizServiciosTrabajadoresAsync(
+            sucursalId, fechaDesde, fechaHasta);
+    }
+
+    public async Task<IEnumerable<VentaDiariaFilaDTO>> GetVentasPorDiaAsync(
+        int sucursalId,
+        DateTime fechaDesde,
+        DateTime fechaHasta)
+    {
+        if (sucursalId <= 0)
+            throw new ArgumentException("SucursalId inválido.");
+
+        return await _unitOfWork.Trabajadores.GetVentasPorDiaAsync(
+            sucursalId, fechaDesde, fechaHasta);
     }
 }
