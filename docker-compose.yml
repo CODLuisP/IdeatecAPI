@@ -8,6 +8,7 @@ services:
       - "5004:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
+      - TZ=America/Lima
       - ASPNETCORE_URLS=http://+:8080
       - ConnectionStrings__ProductionConnection=server=db-static-web-app-do-user-29042775-0.e.db.ondigitalocean.com;port=25060;database=ideafactu;uid=factuadmin;password=AVNS_yjLC46it_1VXv0zcI9C;Charset=utf8mb4;Pooling=true;MinimumPoolSize=3;MaximumPoolSize=50;ConnectionTimeout=5;Allow User Variables=True;SslMode=Required;
       - ConnectionStrings__BetaConnection=server=63.251.107.133;port=3306;database=ideafactu;uid=velsatuser;password=velsatAPI23;Charset=utf8mb4;Pooling=true;MinimumPoolSize=2;MaximumPoolSize=30;ConnectionTimeout=5;Allow User Variables=True;SslMode=None;
