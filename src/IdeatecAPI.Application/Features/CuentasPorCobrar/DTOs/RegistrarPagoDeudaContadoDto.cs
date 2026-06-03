@@ -10,4 +10,5 @@ public class RegistrarPagoDeudaContadoDto
     public string? NumeroOperacion { get; set; }
     public string? Observaciones { get; set; }
     public int UsuarioRegistroPago { get; set; }
+    public string TipoMoneda { get; set; } = "PEN";
 }

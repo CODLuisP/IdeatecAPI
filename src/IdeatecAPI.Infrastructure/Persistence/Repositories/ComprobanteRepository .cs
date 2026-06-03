@@ -810,4 +810,25 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
             OperatingSystem.IsWindows() ? "SA Pacific Standard Time" : "America/Lima");
         return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
     }
+
+    public async Task<IEnumerable<Domain.Entities.Comprobante>> GetNotasByComprobanteAfectadoIdAsync(
+        int comprobanteAfectadoId, string tipoComprobante)
+    {
+        var sql = @"
+            SELECT
+                comprobanteID           AS ComprobanteId,
+                tipoComprobante         AS TipoComprobante,
+                tipoNotaCreditoDebito   AS TipoNotaCreditoDebito,
+                importeTotal            AS ImporteTotal,
+                estadoSunat             AS EstadoSunat
+            FROM comprobante
+            WHERE comprobanteAfectadoID = @ComprobanteAfectadoId
+            AND tipoComprobante = @TipoComprobante";
+
+        return await _connection.QueryAsync<Domain.Entities.Comprobante>(sql, new
+        {
+            ComprobanteAfectadoId = comprobanteAfectadoId,
+            TipoComprobante       = tipoComprobante
+        }, _transaction);
+    }
 }

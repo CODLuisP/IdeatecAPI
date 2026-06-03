@@ -22,9 +22,15 @@ public class ListaDeudaContadoDto
     public decimal? ImporteTotal { get; set; }
     public string? TipoPago { get; set; }
 
+    public decimal? TipoCambio { get; set; }
+
     // Datos del pago y su estado
     public int PagoId { get; set; }
     public decimal? MontoTotal { get; set; }
     public decimal? MontoPagado { get; set; }
     public string? Estado { get; set; }  // PENDIENTE | PARCIAL | PAGADO
+
+    // Saldo real considerando notas de crédito/débito parciales
+    public decimal? SaldoReal { get; set; }
+    public bool TieneNotas { get; set; }
 }

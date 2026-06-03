@@ -34,11 +34,24 @@ public class DeudaContadoRepository : IDeudaContadoRepository
             || correlativo.HasValue
             || !string.Equals(estadoPago, "PENDIENTE", StringComparison.OrdinalIgnoreCase);
 
+        var saldoRealExpr = @"COALESCE((
+            SELECT p.monto
+            - COALESCE(SUM(CASE WHEN n.tipoComprobante = '07'
+                                AND n.tipoNotaCreditoDebito IN ('04','05','07','08','09')
+                                AND n.estadoSunat IN ('ACEPTADO','ACEPTADO_CON_OBSERVACIONES')
+                           THEN n.importeTotal ELSE 0 END), 0)
+            + COALESCE(SUM(CASE WHEN n.tipoComprobante = '08'
+                                AND n.estadoSunat IN ('ACEPTADO','ACEPTADO_CON_OBSERVACIONES')
+                           THEN n.importeTotal ELSE 0 END), 0)
+            FROM comprobante n
+            WHERE n.comprobanteAfectadoID = c.comprobanteID
+        ), p.monto)";
+
         var having = estadoPago.ToUpper() switch
         {
-            "PAGADO"    => "HAVING COALESCE(SUM(pd.montoPagado), 0) >= p.monto",
-            "TODOS"     => "",
-            _           => "HAVING COALESCE(SUM(pd.montoPagado), 0) < p.monto"  // PENDIENTE (default)
+            "PAGADO" => $"HAVING COALESCE(SUM(pd.montoPagado), 0) >= {saldoRealExpr}",
+            "TODOS"  => "",
+            _        => $"HAVING COALESCE(SUM(pd.montoPagado), 0) < {saldoRealExpr}"  // PENDIENTE (default)
         };
 
         var sql = $@"
@@ -51,6 +64,7 @@ public class DeudaContadoRepository : IDeudaContadoRepository
                 c.fechaEmision          AS FechaEmision,
                 c.fechaVencimiento      AS FechaVencimiento,
                 c.tipoMoneda            AS TipoMoneda,
+                c.tipoCambio            AS TipoCambio,
                 c.estadoSunat           AS EstadoSunat,
                 c.establecimientoAnexo  AS EstablecimientoAnexo,
                 c.usuarioCreacion       AS UsuarioCreacion,
@@ -65,9 +79,40 @@ public class DeudaContadoRepository : IDeudaContadoRepository
                 p.pagoID                AS PagoId,
                 p.monto                 AS MontoTotal,
                 COALESCE(SUM(pd.montoPagado), 0) AS MontoPagado,
+                -- Saldo real: monto original - NC parciales (04,05,07,08,09) + ND
+                COALESCE((
+                    SELECT p.monto
+                    - COALESCE(SUM(CASE WHEN n.tipoComprobante = '07'
+                                        AND n.tipoNotaCreditoDebito IN ('04','05','07','08','09')
+                                        AND n.estadoSunat IN ('ACEPTADO','ACEPTADO_CON_OBSERVACIONES')
+                                   THEN n.importeTotal ELSE 0 END), 0)
+                    + COALESCE(SUM(CASE WHEN n.tipoComprobante = '08'
+                                        AND n.estadoSunat IN ('ACEPTADO','ACEPTADO_CON_OBSERVACIONES')
+                                   THEN n.importeTotal ELSE 0 END), 0)
+                    FROM comprobante n
+                    WHERE n.comprobanteAfectadoID = c.comprobanteID
+                ), p.monto)             AS SaldoReal,
+                -- Indica si tiene notas que afectan el monto
+                CASE WHEN EXISTS (
+                    SELECT 1 FROM comprobante n
+                    WHERE n.comprobanteAfectadoID = c.comprobanteID
+                    AND n.tipoComprobante IN ('07','08')
+                    AND n.estadoSunat IN ('ACEPTADO','ACEPTADO_CON_OBSERVACIONES')
+                ) THEN 1 ELSE 0 END    AS TieneNotas,
                 CASE
-                    WHEN COALESCE(SUM(pd.montoPagado), 0) = 0          THEN 'PENDIENTE'
-                    WHEN COALESCE(SUM(pd.montoPagado), 0) >= p.monto   THEN 'PAGADO'
+                    WHEN COALESCE(SUM(pd.montoPagado), 0) = 0 THEN 'PENDIENTE'
+                    WHEN COALESCE(SUM(pd.montoPagado), 0) >= COALESCE((
+                        SELECT p.monto
+                        - COALESCE(SUM(CASE WHEN n.tipoComprobante = '07'
+                                            AND n.tipoNotaCreditoDebito IN ('04','05','07','08','09')
+                                            AND n.estadoSunat IN ('ACEPTADO','ACEPTADO_CON_OBSERVACIONES')
+                                       THEN n.importeTotal ELSE 0 END), 0)
+                        + COALESCE(SUM(CASE WHEN n.tipoComprobante = '08'
+                                            AND n.estadoSunat IN ('ACEPTADO','ACEPTADO_CON_OBSERVACIONES')
+                                       THEN n.importeTotal ELSE 0 END), 0)
+                        FROM comprobante n
+                        WHERE n.comprobanteAfectadoID = c.comprobanteID
+                    ), p.monto) THEN 'PAGADO'
                     ELSE 'PARCIAL'
                 END AS Estado
             FROM comprobante c
@@ -86,7 +131,7 @@ public class DeudaContadoRepository : IDeudaContadoRepository
             GROUP BY
                 c.comprobanteID, c.tipoComprobante, c.serie, c.correlativo,
                 c.numeroCompleto, c.fechaEmision, c.fechaVencimiento, c.tipoMoneda,
-                c.estadoSunat, c.establecimientoAnexo, c.usuarioCreacion,
+                c.tipoCambio, c.estadoSunat, c.establecimientoAnexo, c.usuarioCreacion,
                 c.clienteNumDoc, c.clienteRznSocial, c.clienteCorreo, c.clienteWhatsApp,
                 c.valorVenta, c.totalIGV, c.importeTotal, c.tipoPago,
                 p.pagoID, p.monto
@@ -138,7 +183,8 @@ public class DeudaContadoRepository : IDeudaContadoRepository
                 numeroOperacion     AS NumeroOperacion,
                 observaciones       AS Observaciones,
                 usuarioRegistroPago AS UsuarioRegistroPago,
-                fechaRegistro       AS FechaRegistro
+                fechaRegistro       AS FechaRegistro,
+                tipoMoneda          AS TipoMoneda
             FROM pagodeudacontado
             WHERE pagoID = @PagoId
             ORDER BY fechaRegistro ASC";
@@ -159,7 +205,8 @@ public class DeudaContadoRepository : IDeudaContadoRepository
                 numeroOperacion,
                 observaciones,
                 usuarioRegistroPago,
-                fechaRegistro
+                fechaRegistro,
+                tipoMoneda
             ) VALUES (
                 @PagoId,
                 @MontoPagado,
@@ -169,7 +216,8 @@ public class DeudaContadoRepository : IDeudaContadoRepository
                 @NumeroOperacion,
                 @Observaciones,
                 @UsuarioRegistroPago,
-                NOW()
+                NOW(),
+                @TipoMoneda
             )";
 
         var result = await _connection.ExecuteAsync(sql, new
@@ -181,7 +229,8 @@ public class DeudaContadoRepository : IDeudaContadoRepository
             dto.EntidadFinanciera,
             dto.NumeroOperacion,
             dto.Observaciones,
-            dto.UsuarioRegistroPago
+            dto.UsuarioRegistroPago,
+            dto.TipoMoneda
         }, _transaction);
 
         return result > 0;
@@ -292,7 +341,8 @@ public class DeudaContadoRepository : IDeudaContadoRepository
                 entidadFinanciera = @EntidadFinanciera,
                 numeroOperacion   = @NumeroOperacion,
                 observaciones     = @Observaciones,
-                usuarioRegistroPago = @UsuarioRegistroPago
+                usuarioRegistroPago = @UsuarioRegistroPago,
+                tipoMoneda        = @TipoMoneda
             WHERE deudaPagoID = @DeudaPagoId
             AND pagoID      = @PagoId";
 
@@ -305,6 +355,7 @@ public class DeudaContadoRepository : IDeudaContadoRepository
             dto.NumeroOperacion,
             dto.Observaciones,
             dto.UsuarioRegistroPago,
+            dto.TipoMoneda,
             dto.DeudaPagoId,
             dto.PagoId
         }, _transaction);
