@@ -92,12 +92,39 @@ public class DeudaContadoService : IDeudaContadoService
             if (pago.Monto == null)
                 throw new InvalidOperationException("El pago no tiene monto registrado");
 
+            // Validar que la moneda del pago coincida con la del comprobante
+            var comprobanteId = pago.ComprobanteId ?? 0;
+            var comprobante = await _unitOfWork.Comprobantes.GetByIdAsync(comprobanteId);
+            if (comprobante != null
+                && !string.IsNullOrEmpty(comprobante.TipoMoneda)
+                && comprobante.TipoMoneda != dto.TipoMoneda)
+                throw new InvalidOperationException(
+                    $"La moneda del pago ({dto.TipoMoneda}) no coincide con la del comprobante ({comprobante.TipoMoneda})");
+
+            // Calcular saldo real considerando notas de crédito/débito parciales
+            var notasNC = await _unitOfWork.Comprobantes.GetNotasByComprobanteAfectadoIdAsync(comprobanteId, "07");
+            var notasND = await _unitOfWork.Comprobantes.GetNotasByComprobanteAfectadoIdAsync(comprobanteId, "08");
+
+            var motivosDescuentoParcial = new[] { "04", "05", "07", "08", "09" };
+            var estadosValidos = new[] { "ACEPTADO", "ACEPTADO_CON_OBSERVACIONES" };
+
+            var descuentoNC = notasNC
+                .Where(n => motivosDescuentoParcial.Contains(n.TipoNotaCreditoDebito)
+                         && estadosValidos.Contains(n.EstadoSunat))
+                .Sum(n => n.ImporteTotal ?? 0);
+
+            var incrementoND = notasND
+                .Where(n => estadosValidos.Contains(n.EstadoSunat))
+                .Sum(n => n.ImporteTotal ?? 0);
+
+            var saldoReal = (pago.Monto ?? 0) - descuentoNC + incrementoND;
+
             var historial = await _unitOfWork.DeudaContado.GetHistorialPagosByPagoIdAsync(dto.PagoId);
             var montoPagadoAnterior = historial.Sum(h => h.MontoPagado);
 
-            if (montoPagadoAnterior + dto.MontoPagado > pago.Monto)
+            if (montoPagadoAnterior + dto.MontoPagado > saldoReal)
                 throw new InvalidOperationException(
-                    $"El monto a pagar excede el saldo pendiente. Saldo: {pago.Monto - montoPagadoAnterior}");
+                    $"El monto a pagar excede el saldo pendiente. Saldo: {saldoReal - montoPagadoAnterior:N2} {dto.TipoMoneda}");
 
             var result = await _unitOfWork.DeudaContado.RegistrarPagoAsync(dto);
 

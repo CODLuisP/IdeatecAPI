@@ -12,4 +12,5 @@ public class PagoDeudaContadoDto
     public string? Observaciones { get; set; }
     public int? UsuarioRegistroPago { get; set; }
     public DateTime FechaRegistro { get; set; }
+    public string? TipoMoneda { get; set; }
 }
