@@ -467,10 +467,10 @@ public class ReportesController : ControllerBase
     /// <summary>
     /// Genera un Excel con la cantidad de servicios/productos vendidos por período.
     /// agrupacion: diario | mensual | semanal | quincenal
-    ///   - diario    → requiere 'fecha' (yyyy-MM-dd). Una fila por producto, sin pivote.
-    ///   - mensual   → requiere 'mes' y 'anio'. Columnas: 1..31
-    ///   - semanal   → requiere 'mes' y 'anio'. Columnas: Sem 1..Sem 5
-    ///   - quincenal → requiere 'mes' y 'anio'. Columnas: 1ra Quincena | 2da Quincena
+    ///   - diario    → requiere 'fecha' (yyyy-MM-dd). Una columna con el total del día.
+    ///   - mensual   → requiere 'mes' y 'anio'. Columnas: 1..31 (cada día del mes).
+    ///   - semanal   → requiere 'fecha' (inicio). Columnas: los 7 días desde esa fecha.
+    ///   - quincenal → requiere 'mes', 'anio' y 'quincena' (1 o 2). Columnas: cada día de la quincena.
     /// </summary>
     [HttpGet("ventas-producto-excel/{sucursalId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -482,37 +482,63 @@ public class ReportesController : ControllerBase
         [FromQuery] string agrupacion  = "mensual",
         [FromQuery] string? fecha      = null,
         [FromQuery] int? mes           = null,
-        [FromQuery] int? anio          = null)
+        [FromQuery] int? anio          = null,
+        [FromQuery] int? quincena      = null)
     {
-        // ── Validar parámetros ──────────────────────────────────────────────
+        // ── Validar agrupación ──────────────────────────────────────────────
         agrupacion = agrupacion.ToLower().Trim();
         var agrupacionesValidas = new[] { "diario", "mensual", "semanal", "quincenal" };
         if (!agrupacionesValidas.Contains(agrupacion))
             return BadRequest(new { mensaje = $"Agrupación inválida. Use: {string.Join(", ", agrupacionesValidas)}." });
 
+        var cultura = System.Globalization.CultureInfo.InvariantCulture;
         DateTime fechaDesde, fechaHasta;
+        string subtitulo;
 
-        if (agrupacion == "diario")
+        // ── Calcular rango según agrupación ────────────────────────────────
+        if (agrupacion is "diario" or "semanal")
         {
             if (string.IsNullOrWhiteSpace(fecha) ||
-                !DateTime.TryParseExact(fecha.Trim(), "yyyy-MM-dd",
-                    System.Globalization.CultureInfo.InvariantCulture,
+                !DateTime.TryParseExact(fecha.Trim(), "yyyy-MM-dd", cultura,
                     System.Globalization.DateTimeStyles.None, out var fechaParsed))
-                return BadRequest(new { mensaje = "Para agrupación 'diario' se requiere el parámetro 'fecha' en formato yyyy-MM-dd (ej: 2026-05-15)." });
+                return BadRequest(new { mensaje = $"Para '{agrupacion}' se requiere 'fecha' en formato yyyy-MM-dd." });
 
             fechaDesde = fechaParsed.Date;
-            fechaHasta = fechaParsed.Date;
+            fechaHasta = agrupacion == "diario" ? fechaDesde : fechaDesde.AddDays(6);
+            subtitulo  = agrupacion == "diario"
+                ? $"Día {fechaDesde:dd/MM/yyyy}"
+                : $"Semana {fechaDesde:dd/MM/yyyy} – {fechaHasta:dd/MM/yyyy}";
         }
-        else
+        else // mensual | quincenal
         {
             if (!mes.HasValue || !anio.HasValue)
-                return BadRequest(new { mensaje = "Para esta agrupación se requieren los parámetros 'mes' y 'anio'." });
+                return BadRequest(new { mensaje = "Para esta agrupación se requieren 'mes' y 'anio'." });
             if (mes < 1 || mes > 12)
                 return BadRequest(new { mensaje = "El parámetro 'mes' debe estar entre 1 y 12." });
 
-            fechaDesde = new DateTime(anio.Value, mes.Value, 1);
-            fechaHasta = new DateTime(anio.Value, mes.Value,
-                DateTime.DaysInMonth(anio.Value, mes.Value));
+            int diasEnMes = DateTime.DaysInMonth(anio.Value, mes.Value);
+
+            if (agrupacion == "quincenal")
+            {
+                if (!quincena.HasValue || quincena is not (1 or 2))
+                    return BadRequest(new { mensaje = "Para 'quincenal' se requiere 'quincena' con valor 1 o 2." });
+
+                fechaDesde = quincena == 1
+                    ? new DateTime(anio.Value, mes.Value, 1)
+                    : new DateTime(anio.Value, mes.Value, 16);
+                fechaHasta = quincena == 1
+                    ? new DateTime(anio.Value, mes.Value, 15)
+                    : new DateTime(anio.Value, mes.Value, diasEnMes);
+                subtitulo = quincena == 1
+                    ? $"{quincena}ra Quincena – {fechaDesde:MMMM yyyy}"
+                    : $"{quincena}da Quincena – {fechaDesde:MMMM yyyy}";
+            }
+            else // mensual
+            {
+                fechaDesde = new DateTime(anio.Value, mes.Value, 1);
+                fechaHasta = new DateTime(anio.Value, mes.Value, diasEnMes);
+                subtitulo  = $"Mes {mes:D2} - {anio}";
+            }
         }
 
         try
@@ -542,37 +568,17 @@ public class ReportesController : ControllerBase
             var ws = workbook.Worksheets.Add("Ventas por Producto");
             ws.ShowGridLines = false;
 
-            // ── Definir columnas según agrupación ─────────────────────────
-            // Cada columna: (cabecera, lista de días que agrupa)
-            List<(string Cabecera, List<int> Dias)> columnas;
-            int diasEnMes = agrupacion == "diario" ? 1
-                : DateTime.DaysInMonth(anio!.Value, mes!.Value);
-
-            columnas = agrupacion switch
-            {
-                "diario" => new List<(string, List<int>)>
+            // ── Definir columnas: (cabecera, día numérico) ────────────────
+            // Para todos los casos generamos una columna por cada día del rango.
+            // La cabecera muestra el número de día; el lookup usa DAY(fechaEmision).
+            List<(string Cabecera, List<int> Dias)> columnas = Enumerable
+                .Range(0, (fechaHasta - fechaDesde).Days + 1)
+                .Select(offset =>
                 {
-                    ($"{fechaDesde:dd/MM/yyyy}", new List<int> { fechaDesde.Day })
-                },
-                "mensual" => Enumerable.Range(1, diasEnMes)
-                    .Select(d => (d.ToString(), new List<int> { d }))
-                    .ToList(),
-                "semanal" => new List<(string, List<int>)>
-                {
-                    ("Sem 1", Enumerable.Range(1,  7).Where(d => d <= diasEnMes).ToList()),
-                    ("Sem 2", Enumerable.Range(8,  7).Where(d => d <= diasEnMes).ToList()),
-                    ("Sem 3", Enumerable.Range(15, 7).Where(d => d <= diasEnMes).ToList()),
-                    ("Sem 4", Enumerable.Range(22, 7).Where(d => d <= diasEnMes).ToList()),
-                    ("Sem 5", Enumerable.Range(29, diasEnMes - 28)
-                                        .Where(d => d >= 29 && d <= diasEnMes).ToList()),
-                }.Where(c => c.Item2.Count > 0).ToList(),
-                "quincenal" => new List<(string, List<int>)>
-                {
-                    ("1ra Quincena", Enumerable.Range(1,  15).Where(d => d <= diasEnMes).ToList()),
-                    ("2da Quincena", Enumerable.Range(16, diasEnMes - 15).Where(d => d <= diasEnMes).ToList()),
-                },
-                _ => throw new InvalidOperationException()
-            };
+                    var dia = fechaDesde.AddDays(offset);
+                    return (dia.Day.ToString(), new List<int> { dia.Day });
+                })
+                .ToList();
 
             bool conTotal = agrupacion != "diario";
             int totalCols = 1 + columnas.Count + (conTotal ? 1 : 0);
@@ -589,9 +595,6 @@ public class ReportesController : ControllerBase
                 .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
 
             // ── Subtítulo ─────────────────────────────────────────────────
-            string subtitulo = agrupacion == "diario"
-                ? $"Día {fechaDesde:dd/MM/yyyy}"
-                : $"Mes {mes:D2} - {anio}";
             ws.Cell(2, 1).Value = subtitulo;
             var sRange = ws.Range(2, 1, 2, totalCols);
             sRange.Merge();
@@ -713,9 +716,13 @@ public class ReportesController : ControllerBase
             using var stream = new MemoryStream();
             workbook.SaveAs(stream);
 
-            string sufijo = agrupacion == "diario"
-                ? fechaDesde.ToString("yyyyMMdd")
-                : $"{anio}{mes:D2}";
+            string sufijo = agrupacion switch
+            {
+                "diario"    => fechaDesde.ToString("yyyyMMdd"),
+                "semanal"   => $"{fechaDesde:yyyyMMdd}_{fechaHasta:yyyyMMdd}",
+                "quincenal" => $"{anio}{mes:D2}_Q{quincena}",
+                _           => $"{anio}{mes:D2}"
+            };
             string fileName = $"ReporteVentasProducto_{agrupacion}_{sufijo}.xlsx";
 
             return File(stream.ToArray(),
