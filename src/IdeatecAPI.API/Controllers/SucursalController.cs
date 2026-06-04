@@ -117,7 +117,7 @@ public class SucursalController : ControllerBase
     {
         try
         {
-            var resultado = await _sucursalService.EditarInfoSucursalAsync(sucursalId, dto.Nombre, dto.Direccion);
+            var resultado = await _sucursalService.EditarInfoSucursalAsync(sucursalId, dto.Nombre, dto.Direccion, dto.Telefono);
 
             if (!resultado)
                 return NotFound(new { mensaje = $"No se encontró la sucursal con ID {sucursalId}." });

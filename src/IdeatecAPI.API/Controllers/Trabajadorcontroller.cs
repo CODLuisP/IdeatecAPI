@@ -340,11 +340,10 @@ public class TrabajadorController : ControllerBase
     {
         try
         {
-            var filas = (await _trabajadorService.GetMatrizServiciosTrabajadoresAsync(
-                sucursalId, fechaDesde, fechaHasta)).ToList();
+            var filasEnumerable = await _trabajadorService.GetMatrizServiciosTrabajadoresAsync(
+                sucursalId, fechaDesde, fechaHasta);
 
-            if (filas.Count == 0)
-                return NoContent();
+            var filas = filasEnumerable?.ToList() ?? new List<MatrizFilaDTO>();
 
             // Ejes de la matriz
             var servicios = filas.Select(f => f.Descripcion!).Distinct().OrderBy(d => d).ToList();

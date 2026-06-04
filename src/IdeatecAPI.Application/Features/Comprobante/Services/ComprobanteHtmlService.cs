@@ -24,6 +24,20 @@ public class ComprobanteHtmlService : IComprobanteHtmlService
         var datos  = await _unitOfWork.Comprobantes.GetDatosCompletosByComprobanteIdAsync(comprobanteId);
         var vales  = (await _unitOfWork.Comprobantes.GetValesFullByComprobanteIdAsync(comprobanteId)).ToList();
 
+        // Sucursal — solo si el establecimiento anexo no es la sede principal (0000)
+        string? sucursalNombre    = null;
+        string? sucursalDireccion = null;
+        string? sucursalTelefono  = null;
+        var codEstab = comprobante.EmpresaEstablecimientoAnexo;
+        bool esSedePrincipal = string.IsNullOrEmpty(codEstab) || codEstab == "0000";
+        if (!esSedePrincipal && !string.IsNullOrEmpty(comprobante.EmpresaRuc))
+        {
+            var sucursal = await _unitOfWork.Sucursal.GetByRucYCodEstablecimientoAsync(comprobante.EmpresaRuc, codEstab!);
+            sucursalNombre    = sucursal?.Nombre;
+            sucursalDireccion = sucursal?.Direccion;
+            sucursalTelefono  = sucursal?.Telefono;
+        }
+
         var detalles     = datos.Detalles.ToList();
         var pagos        = datos.Pagos.ToList();
         var cuotas       = datos.Cuotas.ToList();
@@ -169,139 +183,138 @@ public class ComprobanteHtmlService : IComprobanteHtmlService
 
         // ── HTML final ───────────────────────────────────────────────────────
         return $@"<!DOCTYPE html>
-<html lang=""es"">
-<head>
-<meta charset=""utf-8"">
-<meta name=""viewport"" content=""width=device-width,initial-scale=1"">
-<title>{HE(tipoNombre)} {HE(comprobante.NumeroCompleto ?? "")}</title>
-<style>
-  @page {{
-    size: {paginaMm} auto;
-    margin: {margenMm};
-  }}
-  * {{ box-sizing: border-box; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
-  body {{
-    font-family: Arial, 'Helvetica Neue', sans-serif;
-    font-size: 10px;
-    width: {anchoMm};
-    color: #000;
-    background: #fff;
-  }}
-  .center  {{ text-align: center; }}
-  .bold    {{ font-weight: bold; }}
-  .small   {{ font-size: 9px; color: #000; }}
-  hr       {{ border: none; border-top: 1px solid #000; margin: 3px 0; }}
-  .empresa-nombre {{ font-size: 11px; font-weight: bold; text-align: center; }}
-  .empresa-sub    {{ font-size: 9px; text-align: center; color: #000; }}
+            <html lang=""es"">
+            <head>
+            <meta charset=""utf-8"">
+            <meta name=""viewport"" content=""width=device-width,initial-scale=1"">
+            <title>{HE(tipoNombre)} {HE(comprobante.NumeroCompleto ?? "")}</title>
+            <style>
+            @page {{
+                size: {paginaMm} auto;
+                margin: {margenMm};
+            }}
+            * {{ box-sizing: border-box; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+            body {{
+                font-family: Arial, 'Helvetica Neue', sans-serif;
+                font-size: 10px;
+                width: {anchoMm};
+                color: #000;
+                background: #fff;
+            }}
+            .center  {{ text-align: center; }}
+            .bold    {{ font-weight: bold; }}
+            .small   {{ font-size: 9px; color: #000; }}
+            hr       {{ border: none; border-top: 1px solid #000; margin: 3px 0; }}
+            .empresa-nombre {{ font-size: 11px; font-weight: bold; text-align: center; }}
+            .empresa-sub    {{ font-size: 9px; text-align: center; color: #000; }}
 
-  .badge {{
-    font-weight: bold;
-    font-size: 10px;
-    text-align: center;
-    padding: 3px 2px;
-    margin: 3px 0;
-    border-top: 1px solid #000;
-    border-bottom: 1px solid #000;
-  }}
-  .numero-doc {{ font-size: 10px; font-weight: bold; text-align: center; margin-bottom: 3px; }}
+            .badge {{
+                font-weight: bold;
+                font-size: 10px;
+                text-align: center;
+                padding: 3px 2px;
+                margin: 3px 0;
+                border-top: 1px solid #000;
+                border-bottom: 1px solid #000;
+            }}
+            .numero-doc {{ font-size: 10px; font-weight: bold; text-align: center; margin-bottom: 3px; }}
 
-  table.cliente {{ width: 100%; border-collapse: collapse; margin: 3px 0; }}
-  table.cliente td {{ font-size: 9px; padding: 1px 0; vertical-align: top; color: #000; }}
-  table.cliente td.lbl {{ font-weight: bold; width: 38%; color: #000; white-space: nowrap; }}
+            table.cliente {{ width: 100%; border-collapse: collapse; margin: 3px 0; }}
+            table.cliente td {{ font-size: 9px; padding: 1px 0; vertical-align: top; color: #000; }}
+            table.cliente td.lbl {{ font-weight: bold; width: 38%; color: #000; white-space: nowrap; }}
 
-  table.items {{ width: 100%; border-collapse: collapse; margin: 3px 0; font-size: 9px; }}
-  table.items th {{ background: none; color: #000; padding: 2px; text-align: left; font-weight: bold; border-bottom: 1px solid #000; }}
-  table.items td {{ padding: 2px; border-bottom: 1px solid #ccc; vertical-align: top; color: #000; }}
-  table.items .tdesc {{ }}
-  table.items .tr {{ text-align: right; }}
+            table.items {{ width: 100%; border-collapse: collapse; margin: 3px 0; font-size: 9px; }}
+            table.items th {{ background: none; color: #000; padding: 2px; text-align: left; font-weight: bold; border-bottom: 1px solid #000; }}
+            table.items td {{ padding: 2px; border-bottom: 1px solid #ccc; vertical-align: top; color: #000; }}
+            table.items .tdesc {{ }}
+            table.items .tr {{ text-align: right; }}
 
-  table.totales {{ width: 100%; border-collapse: collapse; margin: 3px 0; font-size: 9px; }}
-  table.totales tr td {{ padding: 2px 1px; color: #000; }}
-  table.totales tr td:last-child {{ text-align: right; font-weight: bold; }}
-  table.totales tr.total-final {{ background: none; color: #000; font-weight: bold; font-size: 10px; border-top: 1px solid #000; }}
-  table.totales tr.total-final td {{ padding: 3px 2px; }}
+            table.totales {{ width: 100%; border-collapse: collapse; margin: 3px 0; font-size: 9px; }}
+            table.totales tr td {{ padding: 2px 1px; color: #000; }}
+            table.totales tr td:last-child {{ text-align: right; font-weight: bold; }}
+            table.totales tr.total-final {{ background: none; color: #000; font-weight: bold; font-size: 10px; border-top: 1px solid #000; }}
+            table.totales tr.total-final td {{ padding: 3px 2px; }}
 
-  .leyenda {{ font-weight: bold; font-size: 9px; color: #000; margin: 2px 0; }}
+            .leyenda {{ font-weight: bold; font-size: 9px; color: #000; margin: 2px 0; }}
 
-  table.pagos {{ width: 100%; border-collapse: collapse; font-size: 9px; }}
-  table.pagos td {{ padding: 1px 0; color: #000; }}
-  table.pagos td:last-child {{ text-align: right; }}
+            table.pagos {{ width: 100%; border-collapse: collapse; font-size: 9px; }}
+            table.pagos td {{ padding: 1px 0; color: #000; }}
+            table.pagos td:last-child {{ text-align: right; }}
 
-  .qr {{ text-align: center; margin: 6px 0 3px; }}
-  .qr img {{ width: 55mm; height: 55mm; }}
+            .qr {{ text-align: center; margin: 6px 0 3px; }}
+            .qr img {{ width: 55mm; height: 55mm; }}
 
-  .footer {{ font-size: 9px; text-align: center; color: #000; margin-top: 3px; }}
+            .footer {{ font-size: 9px; text-align: center; color: #000; margin-top: 3px; }}
 
-  .motivo {{ font-size: 9px; margin: 2px 0; color: #000; }}
-  .sec-title {{ font-weight: bold; color: #000; font-size: 9px; margin: 4px 0 1px; }}
+            .motivo {{ font-size: 9px; margin: 2px 0; color: #000; }}
+            .sec-title {{ font-weight: bold; color: #000; font-size: 9px; margin: 4px 0 1px; }}
 
-  /* Ocultar en pantalla lo que solo es para impresión no es necesario aquí,
-     el frontend abre esta URL en ventana nueva y llama window.print() */
-</style>
-</head>
-<body>
+            /* Ocultar en pantalla lo que solo es para impresión no es necesario aquí,
+                el frontend abre esta URL en ventana nueva y llama window.print() */
+            </style>
+            </head>
+            <body>
 
-{logoHtml}
+            {logoHtml}
 
-<p class=""empresa-nombre"">{HE(empresa.NombreComercial ?? empresa.RazonSocial ?? "")}</p>
-<p class=""empresa-sub"">{HE(empresa.RazonSocial ?? "")}</p>
-{(!string.IsNullOrEmpty(empresa.Direccion) ? $"<p class=\"empresa-sub\">{HE(empresa.Direccion)}</p>" : "")}
-{(!string.IsNullOrEmpty(empresa.Distrito)     ? $"<p class=\"empresa-sub\">{HE(empresa.Distrito)} - {HE(empresa.Provincia ?? "")} - {HE(empresa.Departamento ?? "")}</p>" : "")}
-{(!string.IsNullOrEmpty(empresa.Telefono)  ? $"<p class=\"empresa-sub\">Tel: {HE(empresa.Telefono)}</p>" : "")}
-{(!string.IsNullOrEmpty(empresa.Email)     ? $"<p class=\"empresa-sub\">{HE(empresa.Email)}</p>" : "")}
-{(empresa.Ruc == "20263635869" ? "<p class=\"empresa-sub\">Atención: Lunes a Sábado de 9:30 am - 08:30 pm</p><p class=\"empresa-sub\">Domingos 9:30 am - 06:00 pm</p><p class=\"empresa-sub\">Venta de teles, edredones, sábanas, fardos de muebles y confección de cortinas.</p>" : "")}
+            {(!string.IsNullOrEmpty(empresa.NombreComercial) ? $"<p class=\"empresa-nombre\">{HE(empresa.NombreComercial)}</p>" : "")}
+            {(string.IsNullOrEmpty(empresa.NombreComercial) ? $"<p class=\"empresa-nombre\">{HE(empresa.RazonSocial ?? "")}</p>" : $"<p class=\"empresa-sub\">{HE(empresa.RazonSocial ?? "")}</p>")}
+            {(BuildDirFiscalHtml(empresa.Direccion, empresa.Distrito, empresa.Provincia, empresa.Departamento))}
+            {(BuildSucursalHtml(sucursalNombre, sucursalDireccion))}
+            {(BuildTelefonoEmailHtml(sucursalTelefono ?? empresa.Telefono, esSedePrincipal ? empresa.Email : null))}
+            {(empresa.Ruc == "20263635869" ? "<p class=\"empresa-sub\">Atención: Lunes a Sábado de 9:00 am - 08:00 pm</p><p class=\"empresa-sub\">Domingos 9:00 am - 06:00 pm</p><p class=\"empresa-sub\">Venta de telas, edredones, sábanas, forros de muebles y confección de cortinas.</p>" : "")}
 
-<hr>
+            <hr>
 
-<p class=""center bold"" style=""font-size:10px;"">RUC: {HE(empresa.Ruc ?? "")}</p>
-<div class=""badge"">{HE(tipoNombre)}</div>
-<p class=""numero-doc"">N° {HE(comprobante.Serie ?? "")}-{comprobante.Correlativo:D8}</p>
+            <p class=""center bold"" style=""font-size:10px;"">RUC: {HE(empresa.Ruc ?? "")}</p>
+            <div class=""badge"">{HE(tipoNombre)}</div>
+            <p class=""numero-doc"">N° {HE(comprobante.Serie ?? "")}-{comprobante.Correlativo:D8}</p>
 
-<hr>
+            <hr>
 
-<table class=""cliente"">
-  <tr><td class=""lbl"">Cliente:</td><td>{HE(comprobante.ClienteRazonSocial ?? "-")}</td></tr>
-  <tr><td class=""lbl"">{HE(labelDoc)}:</td><td>{HE(comprobante.ClienteNumDoc ?? "-")}</td></tr>
-  {(!string.IsNullOrEmpty(comprobante.ClienteDireccion) ? $"<tr><td class=\"lbl\">Dir.:</td><td>{HE(comprobante.ClienteDireccion)}</td></tr>" : "")}
-  <tr><td class=""lbl"">Fecha:</td><td>{comprobante.FechaEmision:dd/MM/yyyy} {comprobante.HoraEmision:HH:mm:ss}</td></tr>
-  {fechaVcto}
-  {monedaRow}
-  {cajeroRow}
-  {atendidoRow}
-</table>
+            <table class=""cliente"">
+            <tr><td class=""lbl"">Cliente:</td><td>{HE(comprobante.ClienteRazonSocial ?? "-")}</td></tr>
+            <tr><td class=""lbl"">{HE(labelDoc)}:</td><td>{HE(comprobante.ClienteNumDoc ?? "-")}</td></tr>
+            {(!string.IsNullOrEmpty(comprobante.ClienteDireccion) ? $"<tr><td class=\"lbl\">Dir.:</td><td>{HE(comprobante.ClienteDireccion)}</td></tr>" : "")}
+            <tr><td class=""lbl"">Fecha:</td><td>{comprobante.FechaEmision:dd/MM/yyyy} {comprobante.HoraEmision:HH:mm:ss}</td></tr>
+            {fechaVcto}
+            {monedaRow}
+            {cajeroRow}
+            {atendidoRow}
+            </table>
 
-{docModifica}
+            {docModifica}
 
-<hr>
+            <hr>
 
-{items}
+            {items}
 
-<hr>
+            <hr>
 
-{totales}
+            {totales}
 
-{(leyendas.Any() ? "<hr>" + leyendasHtml : "")}
+            {(leyendas.Any() ? "<hr>" + leyendasHtml : "")}
 
-{(comprobante.TipoComprobante is "07" or "08" && !string.IsNullOrEmpty(comprobante.MotivoNota)
-    ? $"<p class=\"motivo\"><span class=\"bold\" style=\"color:#1A2B4A;\">MOTIVO: </span>{HE(comprobante.MotivoNota)}</p>"
-    : "")}
+            {(comprobante.TipoComprobante is "07" or "08" && !string.IsNullOrEmpty(comprobante.MotivoNota)
+                ? $"<p class=\"motivo\"><span class=\"bold\" style=\"color:#1A2B4A;\">MOTIVO: </span>{HE(comprobante.MotivoNota)}</p>"
+                : "")}
 
-{(detracciones.Any() ? "<hr>" + detracHtml : "")}
+            {(detracciones.Any() ? "<hr>" + detracHtml : "")}
 
-{pagosHtml}
+            {pagosHtml}
 
-<hr>
+            <hr>
 
-<div class=""qr"">
-  <img src=""data:image/png;base64,{qrBase64}"" alt=""QR"">
-</div>
+            <div class=""qr"">
+            <img src=""data:image/png;base64,{qrBase64}"" alt=""QR"">
+            </div>
 
-<p class=""footer"">Representación impresa de {HE(tipoNombre)}<br>Consulte en www.sunat.gob.pe</p>
+            <p class=""footer"">Representación impresa de {HE(tipoNombre)}<br>Consulte en www.sunat.gob.pe</p>
 
-{valesHtml}
+            {valesHtml}
 
-</body>
-</html>";
+            </body>
+            </html>";
     }
 
     // ── Sección pagos ────────────────────────────────────────────────────────
@@ -435,4 +448,32 @@ public class ComprobanteHtmlService : IComprobanteHtmlService
     private static string HE(string s) =>
         s.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;").Replace("\"", "&quot;")
          .Replace("@", "&#64;");
+
+    private static string BuildDirFiscalHtml(string? direccion, string? distrito, string? provincia, string? departamento)
+    {
+        if (string.IsNullOrEmpty(direccion)) return "";
+        var partes = new List<string> { HE(direccion) };
+        var ubigeo = string.Join(" ", new[] { distrito, provincia, departamento }
+            .Where(x => !string.IsNullOrEmpty(x))
+            .Select(x => HE(x!)));
+        if (!string.IsNullOrEmpty(ubigeo)) partes.Add(ubigeo);
+        return $"<p class=\"empresa-sub\">Dir. Fiscal: {string.Join(", ", partes)}</p>";
+    }
+
+    private static string BuildSucursalHtml(string? nombre, string? direccion)
+    {
+        if (string.IsNullOrEmpty(nombre) && string.IsNullOrEmpty(direccion)) return "";
+        var partes = new List<string>();
+        if (!string.IsNullOrEmpty(nombre))    partes.Add(HE(nombre));
+        if (!string.IsNullOrEmpty(direccion)) partes.Add(HE(direccion));
+        return $"<p class=\"empresa-sub\">Suc.: {string.Join(" - ", partes)}</p>";
+    }
+
+    private static string BuildTelefonoEmailHtml(string? telefono, string? email)
+    {
+        var partes = new List<string>();
+        if (!string.IsNullOrEmpty(telefono)) partes.Add($"Tel: {HE(telefono)}");
+        if (!string.IsNullOrEmpty(email))    partes.Add(HE(email));
+        return partes.Any() ? $"<p class=\"empresa-sub\">{string.Join(" | ", partes)}</p>" : "";
+    }
 }
