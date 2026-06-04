@@ -379,4 +379,79 @@ public class TrabajadorRepository : DapperRepository<Trabajador>, ITrabajadorRep
             _transaction
         );
     }
+
+    public async Task<IEnumerable<MatrizFilaDTO>> GetMatrizServiciosTrabajadoresAsync(
+        int sucursalId,
+        DateTime? fechaDesde,
+        DateTime? fechaHasta)
+    {
+        var sql = @"
+        SELECT
+            t.id                    AS TrabajadorId,
+            t.nombres               AS Nombres,
+            t.apellidos             AS Apellidos,
+            cd.descripcion          AS Descripcion,
+            SUM(cd.cantidad)        AS SumaCantidad
+        FROM trabajador t
+        INNER JOIN comprobantedetalle cd ON cd.trabajadorID = t.id
+        INNER JOIN comprobante c ON c.comprobanteID = cd.comprobanteID
+        WHERE t.sucursal = @SucursalId
+          AND t.estado = 1
+          AND (@FechaDesde IS NULL OR c.fechaEmision >= @FechaDesde)
+          AND (@FechaHasta IS NULL OR c.fechaEmision <= @FechaHasta)
+        GROUP BY t.id, t.nombres, t.apellidos, cd.descripcion
+        ORDER BY cd.descripcion ASC, t.apellidos ASC, t.nombres ASC;";
+
+        return await _connection.QueryAsync<MatrizFilaDTO>(
+            sql,
+            new { SucursalId = sucursalId, FechaDesde = fechaDesde, FechaHasta = fechaHasta },
+            _transaction
+        );
+    }
+
+    public async Task<IEnumerable<VentaDiariaFilaDTO>> GetVentasPorDiaAsync(
+        int sucursalId,
+        DateTime fechaDesde,
+        DateTime fechaHasta)
+    {
+        // Paso 1: obtener ruc + codEstablecimiento de la sucursal (mismo patrón que ReportesRepository)
+        var sqlSucursal = @"
+            SELECT empresaRuc, codEstablecimiento
+            FROM sucursal
+            WHERE sucursalID = @SucursalId AND estado = 1
+            LIMIT 1;";
+
+        var sucursal = await _connection.QueryFirstOrDefaultAsync<(string Ruc, string Cod)>(
+            sqlSucursal, new { SucursalId = sucursalId }, _transaction);
+
+        if (sucursal == default)
+            return [];
+
+        // Paso 2: query principal filtrando por ruc + establecimientoAnexo
+        var sql = @"
+        SELECT
+            cd.descripcion          AS Descripcion,
+            DAY(c.fechaEmision)     AS Dia,
+            SUM(cd.cantidad)        AS SumaCantidad
+        FROM comprobantedetalle cd
+        INNER JOIN comprobante c ON c.comprobanteID = cd.comprobanteID
+        WHERE c.empresaRuc           = @Ruc
+          AND c.establecimientoAnexo = @Cod
+          AND c.fechaEmision        >= @FechaDesde
+          AND c.fechaEmision        <= @FechaHasta
+        GROUP BY cd.descripcion, DAY(c.fechaEmision)
+        ORDER BY cd.descripcion ASC, DAY(c.fechaEmision) ASC;";
+
+        return await _connection.QueryAsync<VentaDiariaFilaDTO>(
+            sql,
+            new
+            {
+                sucursal.Ruc,
+                sucursal.Cod,
+                FechaDesde = fechaDesde,
+                FechaHasta = fechaHasta.Date.AddDays(1).AddTicks(-1)
+            },
+            _transaction
+        );
+    }
 }

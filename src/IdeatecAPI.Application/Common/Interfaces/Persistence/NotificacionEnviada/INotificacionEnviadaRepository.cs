@@ -4,7 +4,8 @@ namespace IdeatecAPI.Application.Common.Interfaces.Persistence;
 
 public interface INotificacionEnviadaRepository : IRepository<NotificacionEnviada>
 {
-    Task<IEnumerable<NotificacionEnviada>> GetAllNotificacionesEnviadasAsync();
-    Task<bool> RegistrarNotificacionEnviadaAsync(NotificacionEnviada notificacion);
-    Task<bool> EditarNotificacionEnviadaAsync(NotificacionEnviada notificacion);
+    Task<IEnumerable<NotificacionEnviada>> GetAllAsync();
+    Task<bool> RegistrarAsync(NotificacionEnviada notificacion);
+    Task<bool> EditarAsync(NotificacionEnviada notificacion);
+    Task<bool> EliminarAsync(int id);
 }

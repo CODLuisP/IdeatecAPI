@@ -25,4 +25,14 @@ public interface ITrabajadorRepository : IRepository<Trabajador>
     string descripcion,
     DateTime? fechaDesde,
     DateTime? fechaHasta);
+
+    Task<IEnumerable<MatrizFilaDTO>> GetMatrizServiciosTrabajadoresAsync(
+    int sucursalId,
+    DateTime? fechaDesde,
+    DateTime? fechaHasta);
+
+    Task<IEnumerable<VentaDiariaFilaDTO>> GetVentasPorDiaAsync(
+    int sucursalId,
+    DateTime fechaDesde,
+    DateTime fechaHasta);
 }

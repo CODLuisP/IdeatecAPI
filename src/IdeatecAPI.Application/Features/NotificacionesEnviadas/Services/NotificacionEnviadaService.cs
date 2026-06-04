@@ -5,9 +5,10 @@ namespace IdeatecAPI.Application.Features.NotificacionesEnviadas.Services;
 
 public interface INotificacionEnviadaService
 {
-    Task<IEnumerable<NotificacionEnviadaDto>> GetAllNotificacionesEnviadasAsync();
-    Task<bool> RegistrarNotificacionEnviadaAsync(RegistrarNotificacionEnviadaDto dto);
-    Task<bool> EditarNotificacionEnviadaAsync(int id, EditarNotificacionEnviadaDto dto);
+    Task<IEnumerable<NotificacionEnviadaDto>> GetAllAsync();
+    Task<bool> RegistrarAsync(RegistrarNotificacionEnviadaDto dto);
+    Task<bool> EditarAsync(int id, EditarNotificacionEnviadaDto dto);
+    Task<bool> EliminarAsync(int id);
 }
 
 public class NotificacionEnviadaService : INotificacionEnviadaService
@@ -19,46 +20,34 @@ public class NotificacionEnviadaService : INotificacionEnviadaService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<IEnumerable<NotificacionEnviadaDto>> GetAllNotificacionesEnviadasAsync()
+    public async Task<IEnumerable<NotificacionEnviadaDto>> GetAllAsync()
     {
-        var notificaciones = await _unitOfWork.NotificacionesEnviadas.GetAllNotificacionesEnviadasAsync();
+        var notificaciones = await _unitOfWork.NotificacionesEnviadas.GetAllAsync();
 
         return notificaciones.Select(n => new NotificacionEnviadaDto
         {
-            Id = n.Id,
-            NumDoc = n.NumDoc,
-            PeriodoTipo = n.PeriodoTipo,
-            Moneda = n.Moneda,
-            TipoDoc = n.TipoDoc,
-            EmailEnviado = n.EmailEnviado,
-            WhatsappEnviado = n.WhatsappEnviado,
-            FechaFin = n.FechaFin,
-            FechaEnvio = n.FechaEnvio,
-            UsuarioId = n.UsuarioId
+            Id              = n.Id,
+            EmailEnviado    = n.EmailEnviado,
+            WhatsappEnviado = n.WhatsappEnviado
         });
     }
 
-    public async Task<bool> RegistrarNotificacionEnviadaAsync(RegistrarNotificacionEnviadaDto dto)
+    public async Task<bool> RegistrarAsync(RegistrarNotificacionEnviadaDto dto)
     {
-        _unitOfWork.BeginTransaction();
+        if (dto.Id <= 0)
+            throw new ArgumentException("El Id es obligatorio y debe ser mayor a 0.");
 
+        _unitOfWork.BeginTransaction();
         try
         {
             var notificacion = new Domain.Entities.NotificacionEnviada
             {
-                NumDoc = dto.NumDoc,
-                PeriodoTipo = dto.PeriodoTipo,
-                Moneda = dto.Moneda,
-                TipoDoc = dto.TipoDoc,
-                EmailEnviado = dto.EmailEnviado,
-                WhatsappEnviado = dto.WhatsappEnviado,
-                FechaFin = dto.FechaFin,
-                FechaEnvio = dto.FechaEnvio,
-                UsuarioId = dto.UsuarioId
+                Id              = dto.Id,
+                EmailEnviado    = dto.EmailEnviado,
+                WhatsappEnviado = dto.WhatsappEnviado
             };
 
-            var result = await _unitOfWork.NotificacionesEnviadas.RegistrarNotificacionEnviadaAsync(notificacion);
-
+            var result = await _unitOfWork.NotificacionesEnviadas.RegistrarAsync(notificacion);
             _unitOfWork.Commit();
             return result;
         }
@@ -69,31 +58,41 @@ public class NotificacionEnviadaService : INotificacionEnviadaService
         }
     }
 
-    public async Task<bool> EditarNotificacionEnviadaAsync(int id, EditarNotificacionEnviadaDto dto)
+    public async Task<bool> EditarAsync(int id, EditarNotificacionEnviadaDto dto)
     {
         if (id <= 0)
-            throw new ArgumentException("Id inválido");
+            throw new ArgumentException("Id inválido.");
 
         _unitOfWork.BeginTransaction();
-
         try
         {
             var notificacion = new Domain.Entities.NotificacionEnviada
             {
-                Id = id,
-                NumDoc = dto.NumDoc,
-                PeriodoTipo = dto.PeriodoTipo,
-                Moneda = dto.Moneda,
-                TipoDoc = dto.TipoDoc,
-                EmailEnviado = dto.EmailEnviado,
-                WhatsappEnviado = dto.WhatsappEnviado,
-                FechaFin = dto.FechaFin,
-                FechaEnvio = dto.FechaEnvio,
-                UsuarioId = dto.UsuarioId
+                Id              = id,
+                EmailEnviado    = dto.EmailEnviado,
+                WhatsappEnviado = dto.WhatsappEnviado
             };
 
-            var result = await _unitOfWork.NotificacionesEnviadas.EditarNotificacionEnviadaAsync(notificacion);
+            var result = await _unitOfWork.NotificacionesEnviadas.EditarAsync(notificacion);
+            _unitOfWork.Commit();
+            return result;
+        }
+        catch
+        {
+            _unitOfWork.Rollback();
+            throw;
+        }
+    }
 
+    public async Task<bool> EliminarAsync(int id)
+    {
+        if (id <= 0)
+            throw new ArgumentException("Id inválido.");
+
+        _unitOfWork.BeginTransaction();
+        try
+        {
+            var result = await _unitOfWork.NotificacionesEnviadas.EliminarAsync(id);
             _unitOfWork.Commit();
             return result;
         }

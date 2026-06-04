@@ -88,6 +88,23 @@ public class ReporteServicioRawDTO
     public decimal TotalVentaItem { get; set; }
 }
 
+public class VentaDiariaFilaDTO
+{
+    public string? Descripcion { get; set; }
+    public int Dia { get; set; }           // DAY(fechaEmision)
+    public decimal SumaCantidad { get; set; }
+}
+
+public class MatrizFilaDTO
+{
+    public int TrabajadorId { get; set; }
+    public string? Nombres { get; set; }
+    public string? Apellidos { get; set; }
+    public string? NombreCompleto => $"{Nombres} {Apellidos}".Trim();
+    public string? Descripcion { get; set; }
+    public decimal SumaCantidad { get; set; }
+}
+
 public class ReporteClienteDTO
 {
     public string? ClienteNumDoc { get; set; }
