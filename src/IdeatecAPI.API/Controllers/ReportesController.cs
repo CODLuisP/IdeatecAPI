@@ -546,9 +546,6 @@ public class ReportesController : ControllerBase
             var filas = (await _trabajadorService.GetVentasPorDiaAsync(
                 sucursalId, fechaDesde, fechaHasta)).ToList();
 
-            if (filas.Count == 0)
-                return NoContent();
-
             var productos = filas.Select(f => f.Descripcion!).Distinct().OrderBy(d => d).ToList();
 
             // Lookup (descripcion, dia) -> cantidad
