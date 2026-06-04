@@ -92,21 +92,21 @@ public class ComprobanteHtmlService : IComprobanteHtmlService
                 ? Math.Round((d.PrecioVenta ?? 0) + (d.DescuentoUnitario ?? 0), 2)
                 : (d.PrecioVenta ?? 0);
             string descTxt  = HE(d.Descripcion ?? "-") + (esGratuito ? " <em>(GR)</em>" : "");
-            string totalTxt = esGratuito ? "0.00" : (d.TotalVentaItem ?? 0).ToString("F2");
+            string totalTxt = esGratuito ? "0" : N(d.TotalVentaItem ?? 0);
 
             items.Append("<tr>");
             items.Append($"<td>{idx++}</td>");
             if (mostrarCodigo) items.Append($"<td>{HE(d.Codigo ?? "-")}</td>");
-            items.Append($"<td>{d.Cantidad:F2}</td>");
+            items.Append($"<td>{N(d.Cantidad)}</td>");
             items.Append($"<td class=\"tdesc\">{descTxt}</td>");
-            items.Append($"<td class=\"tr\">{pVent:F2}</td>");
+            items.Append($"<td class=\"tr\">{N(pVent)}</td>");
             items.Append($"<td class=\"tr\">{totalTxt}</td>");
             items.Append("</tr>");
 
             if ((d.DescuentoUnitario ?? 0) > 0)
             {
                 int colspan = mostrarCodigo ? 6 : 5;
-                items.Append($"<tr><td colspan=\"{colspan}\" class=\"tr\" style=\"font-size:8px;color:#555;\">Dscto: -{d.DescuentoUnitario:F2}</td></tr>");
+                items.Append($"<tr><td colspan=\"{colspan}\" class=\"tr\" style=\"font-size:10px;color:#555;\">Dscto: -{N(d.DescuentoUnitario ?? 0)}</td></tr>");
             }
         }
         items.Append("</tbody></table>");
@@ -196,58 +196,58 @@ public class ComprobanteHtmlService : IComprobanteHtmlService
             * {{ box-sizing: border-box; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
             body {{
                 font-family: Arial, 'Helvetica Neue', sans-serif;
-                font-size: 10px;
+                font-size: 12px;
                 width: {anchoMm};
                 color: #000;
                 background: #fff;
             }}
             .center  {{ text-align: center; }}
             .bold    {{ font-weight: bold; }}
-            .small   {{ font-size: 9px; color: #000; }}
+            .small   {{ font-size: 11px; color: #000; }}
             hr       {{ border: none; border-top: 1px solid #000; margin: 3px 0; }}
-            .empresa-nombre {{ font-size: 11px; font-weight: bold; text-align: center; }}
-            .empresa-sub    {{ font-size: 9px; text-align: center; color: #000; }}
+            .empresa-nombre {{ font-size: 13px; font-weight: bold; text-align: center; }}
+            .empresa-sub    {{ font-size: 11px; text-align: center; color: #000; }}
 
             .badge {{
                 font-weight: bold;
-                font-size: 10px;
+                font-size: 12px;
                 text-align: center;
                 padding: 3px 2px;
                 margin: 3px 0;
                 border-top: 1px solid #000;
                 border-bottom: 1px solid #000;
             }}
-            .numero-doc {{ font-size: 10px; font-weight: bold; text-align: center; margin-bottom: 3px; }}
+            .numero-doc {{ font-size: 12px; font-weight: bold; text-align: center; margin-bottom: 3px; }}
 
             table.cliente {{ width: 100%; border-collapse: collapse; margin: 3px 0; }}
-            table.cliente td {{ font-size: 9px; padding: 1px 0; vertical-align: top; color: #000; }}
+            table.cliente td {{ font-size: 11px; padding: 1px 0; vertical-align: top; color: #000; }}
             table.cliente td.lbl {{ font-weight: bold; width: 38%; color: #000; white-space: nowrap; }}
 
-            table.items {{ width: 100%; border-collapse: collapse; margin: 3px 0; font-size: 9px; }}
+            table.items {{ width: 100%; border-collapse: collapse; margin: 3px 0; font-size: 11px; }}
             table.items th {{ background: none; color: #000; padding: 2px; text-align: left; font-weight: bold; border-bottom: 1px solid #000; }}
             table.items td {{ padding: 2px; border-bottom: 1px solid #ccc; vertical-align: top; color: #000; }}
             table.items .tdesc {{ }}
             table.items .tr {{ text-align: right; }}
 
-            table.totales {{ width: 100%; border-collapse: collapse; margin: 3px 0; font-size: 9px; }}
+            table.totales {{ width: 100%; border-collapse: collapse; margin: 3px 0; font-size: 11px; }}
             table.totales tr td {{ padding: 2px 1px; color: #000; }}
             table.totales tr td:last-child {{ text-align: right; font-weight: bold; }}
-            table.totales tr.total-final {{ background: none; color: #000; font-weight: bold; font-size: 10px; border-top: 1px solid #000; }}
+            table.totales tr.total-final {{ background: none; color: #000; font-weight: bold; font-size: 12px; border-top: 1px solid #000; }}
             table.totales tr.total-final td {{ padding: 3px 2px; }}
 
-            .leyenda {{ font-weight: bold; font-size: 9px; color: #000; margin: 2px 0; }}
+            .leyenda {{ font-weight: bold; font-size: 11px; color: #000; margin: 2px 0; }}
 
-            table.pagos {{ width: 100%; border-collapse: collapse; font-size: 9px; }}
+            table.pagos {{ width: 100%; border-collapse: collapse; font-size: 11px; }}
             table.pagos td {{ padding: 1px 0; color: #000; }}
             table.pagos td:last-child {{ text-align: right; }}
 
             .qr {{ text-align: center; margin: 6px 0 3px; }}
             .qr img {{ width: 55mm; height: 55mm; }}
 
-            .footer {{ font-size: 9px; text-align: center; color: #000; margin-top: 3px; }}
+            .footer {{ font-size: 11px; text-align: center; color: #000; margin-top: 3px; }}
 
-            .motivo {{ font-size: 9px; margin: 2px 0; color: #000; }}
-            .sec-title {{ font-weight: bold; color: #000; font-size: 9px; margin: 4px 0 1px; }}
+            .motivo {{ font-size: 11px; margin: 2px 0; color: #000; }}
+            .sec-title {{ font-weight: bold; color: #000; font-size: 11px; margin: 4px 0 1px; }}
 
             /* Ocultar en pantalla lo que solo es para impresión no es necesario aquí,
                 el frontend abre esta URL en ventana nueva y llama window.print() */
@@ -266,7 +266,7 @@ public class ComprobanteHtmlService : IComprobanteHtmlService
 
             <hr>
 
-            <p class=""center bold"" style=""font-size:10px;"">RUC: {HE(empresa.Ruc ?? "")}</p>
+            <p class=""center bold"" style=""font-size:12px;"">RUC: {HE(empresa.Ruc ?? "")}</p>
             <div class=""badge"">{HE(tipoNombre)}</div>
             <p class=""numero-doc"">N° {HE(comprobante.Serie ?? "")}-{comprobante.Correlativo:D8}</p>
 
@@ -396,7 +396,7 @@ public class ComprobanteHtmlService : IComprobanteHtmlService
         foreach (var vale in vales)
         {
             sb.Append("<div style=\"page-break-before:always;\"></div>");
-            sb.Append($"<p class=\"center bold\" style=\"font-size:9px;margin-top:6px;\">COD. VALE: {HE(c.NumeroCompleto ?? "")}</p>");
+            sb.Append($"<p class=\"center bold\" style=\"font-size:11px;margin-top:6px;\">COD. VALE: {HE(c.NumeroCompleto ?? "")}</p>");
             if (!string.IsNullOrWhiteSpace(vale.Descripcion))
             {
                 var desc = vale.Descripcion
@@ -404,7 +404,7 @@ public class ComprobanteHtmlService : IComprobanteHtmlService
                     .Replace("<br />",   "\n",   StringComparison.OrdinalIgnoreCase)
                     .Replace("<br/>",    "\n",   StringComparison.OrdinalIgnoreCase)
                     .Replace("<br>",     "\n",   StringComparison.OrdinalIgnoreCase);
-                sb.Append($"<p style=\"font-size:8px;white-space:pre-line;\">{HE(desc)}</p>");
+                sb.Append($"<p style=\"font-size:10px;white-space:pre-line;\">{HE(desc)}</p>");
             }
             sb.Append($"<p class=\"small\">Emitido: {c.FechaEmision:dd/MM/yyyy} {c.HoraEmision:HH:mm:ss}</p>");
             sb.Append($"<p class=\"small\">Válido hasta: {c.FechaEmision.AddMonths(1):dd/MM/yyyy}</p>");
@@ -441,8 +441,11 @@ public class ComprobanteHtmlService : IComprobanteHtmlService
     private static void FilaTot(StringBuilder sb, string label, string valor) =>
         sb.Append($"<tr><td>{label}</td><td>{valor}</td></tr>");
 
+    // Quita ceros decimales innecesarios: 50.00→50, 50.50→50.5, 50.55→50.55
+    private static string N(decimal v) => v.ToString("0.##");
+
     private static string Fmt(decimal monto, string moneda) =>
-        moneda == "USD" ? $"$ {monto:F2}" : $"S/ {monto:F2}";
+        moneda == "USD" ? $"$ {N(monto)}" : $"S/ {N(monto)}";
 
     /// <summary>Escapa HTML básico y codifica @ para evitar que Cloudflare oculte emails.</summary>
     private static string HE(string s) =>
