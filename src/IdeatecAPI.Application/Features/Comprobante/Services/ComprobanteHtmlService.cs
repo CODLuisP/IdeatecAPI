@@ -29,9 +29,10 @@ public class ComprobanteHtmlService : IComprobanteHtmlService
         string? sucursalDireccion = null;
         string? sucursalTelefono  = null;
         var codEstab = comprobante.EmpresaEstablecimientoAnexo;
-        if (!string.IsNullOrEmpty(codEstab) && codEstab != "0000" && !string.IsNullOrEmpty(comprobante.EmpresaRuc))
+        bool esSedePrincipal = string.IsNullOrEmpty(codEstab) || codEstab == "0000";
+        if (!esSedePrincipal && !string.IsNullOrEmpty(comprobante.EmpresaRuc))
         {
-            var sucursal = await _unitOfWork.Sucursal.GetByRucYCodEstablecimientoAsync(comprobante.EmpresaRuc, codEstab);
+            var sucursal = await _unitOfWork.Sucursal.GetByRucYCodEstablecimientoAsync(comprobante.EmpresaRuc, codEstab!);
             sucursalNombre    = sucursal?.Nombre;
             sucursalDireccion = sucursal?.Direccion;
             sucursalTelefono  = sucursal?.Telefono;
@@ -260,8 +261,8 @@ public class ComprobanteHtmlService : IComprobanteHtmlService
             {(string.IsNullOrEmpty(empresa.NombreComercial) ? $"<p class=\"empresa-nombre\">{HE(empresa.RazonSocial ?? "")}</p>" : $"<p class=\"empresa-sub\">{HE(empresa.RazonSocial ?? "")}</p>")}
             {(BuildDirFiscalHtml(empresa.Direccion, empresa.Distrito, empresa.Provincia, empresa.Departamento))}
             {(BuildSucursalHtml(sucursalNombre, sucursalDireccion))}
-            {(BuildTelefonoEmailHtml(sucursalTelefono ?? empresa.Telefono, empresa.Email))}
-            {(empresa.Ruc == "20263635869" ? "<p class=\"empresa-sub\">Atención: Lunes a Sábado de 9:30 am - 08:30 pm</p><p class=\"empresa-sub\">Domingos 9:30 am - 06:00 pm</p><p class=\"empresa-sub\">Venta de telas, edredones, sábanas, forros de muebles y confección de cortinas.</p>" : "")}
+            {(BuildTelefonoEmailHtml(sucursalTelefono ?? empresa.Telefono, esSedePrincipal ? empresa.Email : null))}
+            {(empresa.Ruc == "20263635869" ? "<p class=\"empresa-sub\">Atención: Lunes a Sábado de 9:00 am - 08:00 pm</p><p class=\"empresa-sub\">Domingos 9:00 am - 06:00 pm</p><p class=\"empresa-sub\">Venta de telas, edredones, sábanas, forros de muebles y confección de cortinas.</p>" : "")}
 
             <hr>
 

@@ -63,9 +63,10 @@ public class ComprobantePdfService : IComprobantePdfService
         string? sucursalDireccion = null;
         string? sucursalTelefono  = null;
         var codEstab = comprobante.EmpresaEstablecimientoAnexo;
-        if (!string.IsNullOrEmpty(codEstab) && codEstab != "0000" && !string.IsNullOrEmpty(comprobante.EmpresaRuc))
+        bool esSedePrincipal = string.IsNullOrEmpty(codEstab) || codEstab == "0000";
+        if (!esSedePrincipal && !string.IsNullOrEmpty(comprobante.EmpresaRuc))
         {
-            var sucEntidad = await _unitOfWork.Sucursal.GetByRucYCodEstablecimientoAsync(comprobante.EmpresaRuc, codEstab);
+            var sucEntidad = await _unitOfWork.Sucursal.GetByRucYCodEstablecimientoAsync(comprobante.EmpresaRuc, codEstab!);
             sucursalNombre    = sucEntidad?.Nombre;
             sucursalDireccion = sucEntidad?.Direccion;
             sucursalTelefono  = sucEntidad?.Telefono;
@@ -111,11 +112,11 @@ public class ComprobantePdfService : IComprobantePdfService
                     page.Content().Element(c =>
                         BuildTicket(c, comprobante, empresa, detalles, pagos, cuotas,
                                     leyendas, guias, detracciones, tipoCambioOficial,
-                                    sucursalNombre, sucursalDireccion, sucursalTelefono));
+                                    sucursalNombre, sucursalDireccion, sucursalTelefono, esSedePrincipal));
                 }
                 else
                 {
-                    page.Header().Element(c => BuildHeader(c, comprobante, empresa, sucursalNombre, sucursalDireccion, sucursalTelefono));
+                    page.Header().Element(c => BuildHeader(c, comprobante, empresa, sucursalNombre, sucursalDireccion, sucursalTelefono, esSedePrincipal));
                     page.Content().Element(c =>
                         BuildContent(c, comprobante, empresa, detalles, pagos, cuotas,
                                      leyendas, guias, detracciones, tipoCambioOficial));
@@ -160,7 +161,8 @@ public class ComprobantePdfService : IComprobantePdfService
         decimal? tipoCambioOficial = null,
         string? sucursalNombre = null,
         string? sucursalDireccion = null,
-        string? sucursalTelefono = null)
+        string? sucursalTelefono = null,
+        bool esSedePrincipal = true)
     {
         var moneda = c.TipoMoneda ?? "PEN";
 
@@ -238,11 +240,11 @@ public class ComprobantePdfService : IComprobantePdfService
                     .FontSize(6).FontColor(ColorTextoSuave);
             }
 
-            // Teléfono (sucursal tiene prioridad) y email en la misma línea
+            // Teléfono (sucursal tiene prioridad) y email solo en sede principal
             var telefonoMostrar = sucursalTelefono ?? empresa.Telefono;
             var contacto = new List<string>();
-            if (!string.IsNullOrEmpty(telefonoMostrar)) contacto.Add($"Tel: {telefonoMostrar}");
-            if (!string.IsNullOrEmpty(empresa.Email))   contacto.Add(empresa.Email);
+            if (!string.IsNullOrEmpty(telefonoMostrar))           contacto.Add($"Tel: {telefonoMostrar}");
+            if (esSedePrincipal && !string.IsNullOrEmpty(empresa.Email)) contacto.Add(empresa.Email);
             if (contacto.Any())
                 col.Item().AlignCenter().Text(string.Join(" | ", contacto))
                     .FontSize(6).FontColor(ColorTextoSuave);
@@ -565,7 +567,7 @@ public class ComprobantePdfService : IComprobantePdfService
     // LAYOUT A4 / CARTA / MEDIA CARTA
     // ════════════════════════════════════════════════════════════════════════
     private static void BuildHeader(IContainer container, Domain.Entities.Comprobante c, EmpresaDto empresa,
-        string? sucursalNombre = null, string? sucursalDireccion = null, string? sucursalTelefono = null)
+        string? sucursalNombre = null, string? sucursalDireccion = null, string? sucursalTelefono = null, bool esSedePrincipal = true)
     {
         container.Column(col =>
         {
@@ -654,20 +656,20 @@ public class ComprobantePdfService : IComprobantePdfService
                             .FontSize(8).FontColor(ColorTextoSuave);
                     }
 
-                    // Teléfono (sucursal tiene prioridad) y email en la misma línea
+                    // Teléfono (sucursal tiene prioridad) y email solo en sede principal
                     var telefonoMostrar = sucursalTelefono ?? empresa.Telefono;
                     var contacto = new List<string>();
-                    if (!string.IsNullOrEmpty(telefonoMostrar)) contacto.Add($"Telf: {telefonoMostrar}");
-                    if (!string.IsNullOrEmpty(empresa.Email))   contacto.Add($"Email: {empresa.Email}");
+                    if (!string.IsNullOrEmpty(telefonoMostrar))                contacto.Add($"Telf: {telefonoMostrar}");
+                    if (esSedePrincipal && !string.IsNullOrEmpty(empresa.Email)) contacto.Add($"Email: {empresa.Email}");
                     if (contacto.Any())
                         emp.Item().Text(string.Join("  |  ", contacto))
                             .FontSize(8).FontColor(ColorTextoSuave);
 
                     if (empresa.Ruc == "20263635869")
                     {
-                        emp.Item().PaddingTop(2).Text("Atención: Lunes a Sábado de 9:30 am - 08:30 pm")
+                        emp.Item().PaddingTop(2).Text("Atención: Lunes a Sábado de 9:00 am - 08:00 pm")
                             .FontSize(7).FontColor(ColorTextoSuave);
-                        emp.Item().Text("Domingos 9:30 am - 06:00 pm")
+                        emp.Item().Text("Domingos 9:00 am - 06:00 pm")
                             .FontSize(7).FontColor(ColorTextoSuave);
                         emp.Item().Text("Venta de telas, edredones, sábanas, forros de muebles y confección de cortinas.")
                             .FontSize(7).FontColor(ColorTextoSuave);
