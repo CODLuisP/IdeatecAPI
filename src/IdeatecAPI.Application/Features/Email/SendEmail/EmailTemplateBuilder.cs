@@ -23,7 +23,7 @@ public static class EmailTemplateBuilder
     var verbo = vencido ? "venció" : "vencerá";
     var content = $"""
         <p style="margin:0 0 20px;color:#475569;font-size:14px;line-height:1.7;">
-          Por medio de la presente les saludamos y les comunicamos que el <strong style="color:#0f172a;">{Escape(concepto)}</strong> {verbo} el <strong style="color:#0f172a;">{Escape(fechavencimiento)}</strong>.
+          Por medio de la presente les saludamos y comunicamos que el <strong style="color:#0f172a;">{Escape(concepto)}</strong> {verbo} el <strong style="color:#0f172a;">{Escape(fechavencimiento)}</strong>.
         </p>
 
         <p style="margin:0 0 20px;color:#475569;font-size:14px;line-height:1.7;">
