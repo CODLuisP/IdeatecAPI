@@ -50,10 +50,24 @@ public class ComprobantePdfService : IComprobantePdfService
             RazonSocial = empresaEntidad.RazonSocial,
             NombreComercial = empresaEntidad.NombreComercial,
             Direccion = empresaEntidad.Direccion,
+            Distrito = empresaEntidad.Distrito,
+            Provincia = empresaEntidad.Provincia,
+            Departamento = empresaEntidad.Departamento,
             Telefono = empresaEntidad.Telefono,
             Email = empresaEntidad.Email,
             LogoBase64 = empresaEntidad.LogoBase64,
         };
+
+        // Sucursal — solo si el establecimiento anexo no es la sede principal (0000)
+        string? sucursalNombre    = null;
+        string? sucursalDireccion = null;
+        var codEstab = comprobante.EmpresaEstablecimientoAnexo;
+        if (!string.IsNullOrEmpty(codEstab) && codEstab != "0000" && !string.IsNullOrEmpty(comprobante.EmpresaRuc))
+        {
+            var sucEntidad = await _unitOfWork.Sucursal.GetByRucYCodEstablecimientoAsync(comprobante.EmpresaRuc, codEstab);
+            sucursalNombre    = sucEntidad?.Nombre;
+            sucursalDireccion = sucEntidad?.Direccion;
+        }
 
         var detalles = datos.Detalles.ToList();
         var pagos = datos.Pagos.ToList();
@@ -94,11 +108,12 @@ public class ComprobantePdfService : IComprobantePdfService
                 {
                     page.Content().Element(c =>
                         BuildTicket(c, comprobante, empresa, detalles, pagos, cuotas,
-                                    leyendas, guias, detracciones, tipoCambioOficial));
+                                    leyendas, guias, detracciones, tipoCambioOficial,
+                                    sucursalNombre, sucursalDireccion));
                 }
                 else
                 {
-                    page.Header().Element(c => BuildHeader(c, comprobante, empresa));
+                    page.Header().Element(c => BuildHeader(c, comprobante, empresa, sucursalNombre, sucursalDireccion));
                     page.Content().Element(c =>
                         BuildContent(c, comprobante, empresa, detalles, pagos, cuotas,
                                      leyendas, guias, detracciones, tipoCambioOficial));
@@ -140,7 +155,9 @@ public class ComprobantePdfService : IComprobantePdfService
         List<Domain.Entities.NoteLegend> leyendas,
         List<Domain.Entities.GuiaComprobante> guias,
         List<Domain.Entities.Detraccion> detracciones,
-        decimal? tipoCambioOficial = null)
+        decimal? tipoCambioOficial = null,
+        string? sucursalNombre = null,
+        string? sucursalDireccion = null)
     {
         var moneda = c.TipoMoneda ?? "PEN";
 
@@ -183,18 +200,47 @@ public class ComprobantePdfService : IComprobantePdfService
             }
 
             // 2. DATOS EMPRESA centrados
-            col.Item().AlignCenter()
-                .Text(empresa.NombreComercial ?? empresa.RazonSocial)
-                .Bold().FontSize(9).FontColor(ColorAzulMarino);
+            if (!string.IsNullOrEmpty(empresa.NombreComercial))
+                col.Item().AlignCenter()
+                    .Text(empresa.NombreComercial)
+                    .Bold().FontSize(9).FontColor(ColorAzulMarino);
 
-            col.Item().AlignCenter().Text(empresa.RazonSocial)
-                .FontSize(7).FontColor(ColorTextoSuave);
+            if (string.IsNullOrEmpty(empresa.NombreComercial))
+                col.Item().AlignCenter()
+                    .Text(empresa.RazonSocial)
+                    .Bold().FontSize(9).FontColor(ColorAzulMarino);
+            else
+                col.Item().AlignCenter()
+                    .Text(empresa.RazonSocial)
+                    .FontSize(7).FontColor(ColorTextoSuave);
 
+            // Dir. Fiscal
             if (!string.IsNullOrEmpty(empresa.Direccion))
-                col.Item().AlignCenter().Text(empresa.Direccion)
+            {
+                var dirParts = new List<string> { empresa.Direccion };
+                var ubigeo = string.Join(" ", new[] { empresa.Distrito, empresa.Provincia, empresa.Departamento }
+                    .Where(x => !string.IsNullOrEmpty(x)));
+                if (!string.IsNullOrEmpty(ubigeo)) dirParts.Add(ubigeo);
+                col.Item().AlignCenter().Text($"Dir. Fiscal: {string.Join(", ", dirParts)}")
                     .FontSize(6).FontColor(ColorTextoSuave);
-            if (!string.IsNullOrEmpty(empresa.Email))
-                col.Item().AlignCenter().Text($"Email: {empresa.Email}")
+            }
+
+            // Suc.
+            if (!string.IsNullOrEmpty(sucursalNombre) || !string.IsNullOrEmpty(sucursalDireccion))
+            {
+                var sucParts = new List<string>();
+                if (!string.IsNullOrEmpty(sucursalNombre))    sucParts.Add(sucursalNombre);
+                if (!string.IsNullOrEmpty(sucursalDireccion)) sucParts.Add(sucursalDireccion);
+                col.Item().AlignCenter().Text($"Suc.: {string.Join(" - ", sucParts)}")
+                    .FontSize(6).FontColor(ColorTextoSuave);
+            }
+
+            // Teléfono y email en la misma línea
+            var contacto = new List<string>();
+            if (!string.IsNullOrEmpty(empresa.Telefono)) contacto.Add($"Tel: {empresa.Telefono}");
+            if (!string.IsNullOrEmpty(empresa.Email))    contacto.Add(empresa.Email);
+            if (contacto.Any())
+                col.Item().AlignCenter().Text(string.Join(" | ", contacto))
                     .FontSize(6).FontColor(ColorTextoSuave);
 
             col.Item().Height(6);
@@ -514,7 +560,8 @@ public class ComprobantePdfService : IComprobantePdfService
     // ════════════════════════════════════════════════════════════════════════
     // LAYOUT A4 / CARTA / MEDIA CARTA
     // ════════════════════════════════════════════════════════════════════════
-    private static void BuildHeader(IContainer container, Domain.Entities.Comprobante c, EmpresaDto empresa)
+    private static void BuildHeader(IContainer container, Domain.Entities.Comprobante c, EmpresaDto empresa,
+        string? sucursalNombre = null, string? sucursalDireccion = null)
     {
         container.Column(col =>
         {
@@ -568,24 +615,56 @@ public class ComprobantePdfService : IComprobantePdfService
                 // DATOS EMPRESA
                 row.RelativeItem().PaddingLeft(6).PaddingRight(10).AlignMiddle().Column(emp =>
                 {
-                    emp.Item().Text(empresa.RazonSocial)
-                        .Bold().FontSize(14).FontColor(ColorAzulMarino);
+                    // Nombre comercial (si existe) + razón social
+                    if (!string.IsNullOrEmpty(empresa.NombreComercial))
+                    {
+                        emp.Item().Text(empresa.NombreComercial)
+                            .Bold().FontSize(14).FontColor(ColorAzulMarino);
+                        emp.Item().Text(empresa.RazonSocial)
+                            .FontSize(9).FontColor(ColorTextoSuave);
+                    }
+                    else
+                    {
+                        emp.Item().Text(empresa.RazonSocial)
+                            .Bold().FontSize(14).FontColor(ColorAzulMarino);
+                    }
+
+                    // Dir. Fiscal
                     if (!string.IsNullOrEmpty(empresa.Direccion))
-                        emp.Item().PaddingRight(20).Text(empresa.Direccion)
-                        .FontSize(8).FontColor(ColorTextoSuave);
-                    if (!string.IsNullOrEmpty(empresa.Telefono))
-                        emp.Item().Text($"Telf: {empresa.Telefono}")
+                    {
+                        var dirParts = new List<string> { empresa.Direccion };
+                        var ubigeo = string.Join(" ", new[] { empresa.Distrito, empresa.Provincia, empresa.Departamento }
+                            .Where(x => !string.IsNullOrEmpty(x)));
+                        if (!string.IsNullOrEmpty(ubigeo)) dirParts.Add(ubigeo);
+                        emp.Item().PaddingRight(20).Text($"Dir. Fiscal: {string.Join(", ", dirParts)}")
                             .FontSize(8).FontColor(ColorTextoSuave);
-                    if (!string.IsNullOrEmpty(empresa.Email))
-                        emp.Item().Text($"Email: {empresa.Email}")
+                    }
+
+                    // Suc.
+                    if (!string.IsNullOrEmpty(sucursalNombre) || !string.IsNullOrEmpty(sucursalDireccion))
+                    {
+                        var sucParts = new List<string>();
+                        if (!string.IsNullOrEmpty(sucursalNombre))    sucParts.Add(sucursalNombre);
+                        if (!string.IsNullOrEmpty(sucursalDireccion)) sucParts.Add(sucursalDireccion);
+                        emp.Item().Text($"Suc.: {string.Join(" - ", sucParts)}")
                             .FontSize(8).FontColor(ColorTextoSuave);
+                    }
+
+                    // Teléfono y email en la misma línea
+                    var contacto = new List<string>();
+                    if (!string.IsNullOrEmpty(empresa.Telefono)) contacto.Add($"Telf: {empresa.Telefono}");
+                    if (!string.IsNullOrEmpty(empresa.Email))    contacto.Add($"Email: {empresa.Email}");
+                    if (contacto.Any())
+                        emp.Item().Text(string.Join("  |  ", contacto))
+                            .FontSize(8).FontColor(ColorTextoSuave);
+
                     if (empresa.Ruc == "20263635869")
                     {
                         emp.Item().PaddingTop(2).Text("Atención: Lunes a Sábado de 9:30 am - 08:30 pm")
                             .FontSize(7).FontColor(ColorTextoSuave);
                         emp.Item().Text("Domingos 9:30 am - 06:00 pm")
                             .FontSize(7).FontColor(ColorTextoSuave);
-                        emp.Item().Text("Venta de teles, edredones, sábanas, fardos de muebles y confección de cortinas.")
+                        emp.Item().Text("Venta de telas, edredones, sábanas, fardos de muebles y confección de cortinas.")
                             .FontSize(7).FontColor(ColorTextoSuave);
                     }
                 });

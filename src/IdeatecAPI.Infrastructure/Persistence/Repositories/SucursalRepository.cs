@@ -200,4 +200,21 @@ public class SucursalRepository : DapperRepository<Sucursal>, ISucursalRepositor
 
         return true;
     }
+
+    public async Task<Sucursal?> GetByRucYCodEstablecimientoAsync(string empresaRuc, string codEstablecimiento)
+    {
+        var sql = @"
+            SELECT sucursalID          AS SucursalId,
+                   empresaRuc          AS EmpresaRuc,
+                   codEstablecimiento  AS CodEstablecimiento,
+                   nombre              AS Nombre,
+                   direccion           AS Direccion
+            FROM sucursal
+            WHERE empresaRuc = @EmpresaRuc
+              AND codEstablecimiento = @CodEstablecimiento
+            LIMIT 1";
+
+        return await _connection.QueryFirstOrDefaultAsync<Sucursal>(
+            sql, new { EmpresaRuc = empresaRuc, CodEstablecimiento = codEstablecimiento }, _transaction);
+    }
 }

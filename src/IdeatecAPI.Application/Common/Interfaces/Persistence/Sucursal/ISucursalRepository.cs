@@ -16,4 +16,5 @@ public interface ISucursalRepository : IRepository<Sucursal>
     Task<IEnumerable<Sucursal>> GetByRucTodasAsync(string empresaRuc);
     Task<Sucursal?> GetByIdSinFiltroAsync(int sucursalId);
     Task<bool> HabilitarSucursalAsync(int sucursalId);
+    Task<Sucursal?> GetByRucYCodEstablecimientoAsync(string empresaRuc, string codEstablecimiento);
 }

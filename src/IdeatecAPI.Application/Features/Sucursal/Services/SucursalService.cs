@@ -14,6 +14,7 @@ public interface ISucursalService
     Task<bool> EditarInfoSucursalAsync(int sucursalId, string? nombre, string? direccion);
     Task<IEnumerable<ObtenerSucursalDTO>> GetByRucTodasAsync(string empresaRuc);
     Task<bool> HabilitarSucursalAsync(int sucursalId);
+    Task<ObtenerSucursalDTO?> GetSucursalByRucYCodAsync(string empresaRuc, string codEstablecimiento);
 }
 
 public class SucursalService : ISucursalService
@@ -229,5 +230,11 @@ public class SucursalService : ISucursalService
     public async Task<bool> EditarInfoSucursalAsync(int sucursalId, string? nombre, string? direccion)
     {
         return await _unitOfWork.Sucursal.EditarInfoAsync(sucursalId, nombre, direccion);
+    }
+
+    public async Task<ObtenerSucursalDTO?> GetSucursalByRucYCodAsync(string empresaRuc, string codEstablecimiento)
+    {
+        var sucursal = await _unitOfWork.Sucursal.GetByRucYCodEstablecimientoAsync(empresaRuc, codEstablecimiento);
+        return sucursal is null ? null : MapToDTO(sucursal);
     }
 }
