@@ -29,10 +29,10 @@ public interface IComprobanteService
 
     //obtener Listado de campos solo de la tabla comrpobantes sin su relaciones
     Task<IEnumerable<ListarComprobanteDTO>> GetListadoByRucAndFechasAsync(string ruc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null);
-    Task<IEnumerable<ListarComprobanteDTO>> GetListadoByDocClienteAndFechasAsync(string rucEmpresa, string clienteNumDoc, DateTime? fechaDesde, DateTime? fechaHasta);
-    Task<IEnumerable<ListarComprobanteDTO>> GetListadoByDocUsuarioAndFechasAsync(string rucEmpresa, int usuarioCreacion, DateTime? fechaDesde, DateTime? fechaHasta);
-    Task<IEnumerable<ListarComprobanteDTO>> GetListadoBySucursalAndFechasAsync(int sucursalId, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null);
-    Task<IEnumerable<ListarComprobanteDTO>> GetListadoByClienteAndSucursalAsync(int sucursalId, string clienteNumDoc, DateTime? fechaDesde, DateTime? fechaHasta);
+    Task<IEnumerable<ListarComprobanteDTO>> GetListadoByDocClienteAndFechasAsync(string rucEmpresa, string clienteNumDoc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null);
+    Task<IEnumerable<ListarComprobanteDTO>> GetListadoByDocUsuarioAndFechasAsync(string rucEmpresa, int usuarioCreacion, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null);
+    Task<IEnumerable<ListarComprobanteDTO>> GetListadoBySucursalAndFechasAsync(int sucursalId, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null);
+    Task<IEnumerable<ListarComprobanteDTO>> GetListadoByClienteAndSucursalAsync(int sucursalId, string clienteNumDoc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null);
 
     //Traer solo detalles de un comprobante
     Task<ComprobanteDetallesDTO?> GetDetallesByComprobanteIdAsync(int comprobanteId);
@@ -189,19 +189,19 @@ public class ComprobanteService : IComprobanteService
         return comprobantes.Select(MapToListarDto);
     }
 
-    public async Task<IEnumerable<ListarComprobanteDTO>> GetListadoByDocClienteAndFechasAsync(string rucEmpresa, string clienteNumDoc, DateTime? fechaDesde, DateTime? fechaHasta)
+    public async Task<IEnumerable<ListarComprobanteDTO>> GetListadoByDocClienteAndFechasAsync(string rucEmpresa, string clienteNumDoc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null)
     {
-        var comprobantes = await _unitOfWork.Comprobantes.GetByDocClienteAndFechasAsync(rucEmpresa, clienteNumDoc, fechaDesde, fechaHasta);
+        var comprobantes = await _unitOfWork.Comprobantes.GetByDocClienteAndFechasAsync(rucEmpresa, clienteNumDoc, fechaDesde, fechaHasta, limit, offset);
         return comprobantes.Select(MapToListarDto);
     }
 
-    public async Task<IEnumerable<ListarComprobanteDTO>> GetListadoByDocUsuarioAndFechasAsync(string rucEmpresa, int usuarioCreacion, DateTime? fechaDesde, DateTime? fechaHasta)
+    public async Task<IEnumerable<ListarComprobanteDTO>> GetListadoByDocUsuarioAndFechasAsync(string rucEmpresa, int usuarioCreacion, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null)
     {
-        var comprobantes = await _unitOfWork.Comprobantes.GetByDocUsuarioAndFechasAsync(rucEmpresa, usuarioCreacion, fechaDesde, fechaHasta);
+        var comprobantes = await _unitOfWork.Comprobantes.GetByDocUsuarioAndFechasAsync(rucEmpresa, usuarioCreacion, fechaDesde, fechaHasta, limit, offset);
         return comprobantes.Select(MapToListarDto);
     }
 
-    public async Task<IEnumerable<ListarComprobanteDTO>> GetListadoBySucursalAndFechasAsync(int sucursalId, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null)
+    public async Task<IEnumerable<ListarComprobanteDTO>> GetListadoBySucursalAndFechasAsync(int sucursalId, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null)
     {
         var sucursal = await _unitOfWork.Sucursal.GetByIdSucursalAsync(sucursalId);
         var comprobantes = await _unitOfWork.Comprobantes.GetBySucursalAndFechasAsync(
@@ -209,11 +209,12 @@ public class ComprobanteService : IComprobanteService
             sucursal.CodEstablecimiento ?? throw new InvalidOperationException("La sucursal no tiene código de establecimiento"),
             fechaDesde,
             fechaHasta,
-            limit);
+            limit,
+            offset);
         return comprobantes.Select(MapToListarDto);
     }
 
-    public async Task<IEnumerable<ListarComprobanteDTO>> GetListadoByClienteAndSucursalAsync(int sucursalId, string clienteNumDoc, DateTime? fechaDesde, DateTime? fechaHasta)
+    public async Task<IEnumerable<ListarComprobanteDTO>> GetListadoByClienteAndSucursalAsync(int sucursalId, string clienteNumDoc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null)
     {
         var sucursal = await _unitOfWork.Sucursal.GetByIdSucursalAsync(sucursalId);
 
@@ -222,7 +223,9 @@ public class ComprobanteService : IComprobanteService
             sucursal.CodEstablecimiento ?? throw new InvalidOperationException("La sucursal no tiene código de establecimiento"),
             clienteNumDoc,
             fechaDesde,
-            fechaHasta);
+            fechaHasta,
+            limit,
+            offset);
 
         return comprobantes.Select(MapToListarDto);
     }
