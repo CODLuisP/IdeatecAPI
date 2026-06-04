@@ -17,6 +17,7 @@ public class SucursalRepository : DapperRepository<Sucursal>, ISucursalRepositor
                codEstablecimiento                AS CodEstablecimiento,
                nombre                            AS Nombre,
                direccion                         AS Direccion,
+               telefono                          AS Telefono,
                serieFactura                      AS SerieFactura,
                correlativoFactura                AS CorrelativoFactura,
                serieBoleta                       AS SerieBoleta,
@@ -65,7 +66,7 @@ public class SucursalRepository : DapperRepository<Sucursal>, ISucursalRepositor
     {
         var sql = @"
             INSERT INTO sucursal (
-                empresaRuc, codEstablecimiento, nombre, direccion,
+                empresaRuc, codEstablecimiento, nombre, direccion, telefono,
                 serieFactura, correlativoFactura,
                 serieBoleta, correlativoBoleta,
                 serieNotaCreditoFactura, correlativoNotaCreditoFactura,
@@ -75,7 +76,7 @@ public class SucursalRepository : DapperRepository<Sucursal>, ISucursalRepositor
                 serieGuiaRemision, correlativoGuiaRemision,
                 serieGuiaTransportista, correlativoGuiaTransportista
             ) VALUES (
-                @EmpresaRuc, @CodEstablecimiento, @Nombre, @Direccion,
+                @EmpresaRuc, @CodEstablecimiento, @Nombre, @Direccion, @Telefono,
                 @SerieFactura, @CorrelativoFactura,
                 @SerieBoleta, @CorrelativoBoleta,
                 @SerieNotaCreditoFactura, @CorrelativoNotaCreditoFactura,
@@ -98,6 +99,7 @@ public class SucursalRepository : DapperRepository<Sucursal>, ISucursalRepositor
             UPDATE sucursal SET
                 nombre                            = @Nombre,
                 direccion                         = @Direccion,
+                telefono                          = @Telefono,
                 serieFactura                      = @SerieFactura,
                 correlativoFactura                = @CorrelativoFactura,
                 serieBoleta                       = @SerieBoleta,
@@ -120,16 +122,17 @@ public class SucursalRepository : DapperRepository<Sucursal>, ISucursalRepositor
         return filas > 0;
     }
 
-    public async Task<bool> EditarInfoAsync(int sucursalId, string? nombre, string? direccion)
+    public async Task<bool> EditarInfoAsync(int sucursalId, string? nombre, string? direccion, string? telefono)
     {
         var sql = @"
         UPDATE sucursal SET
-            nombre    = COALESCE(@Nombre, nombre),
-            direccion = COALESCE(@Direccion, direccion)
+            nombre    = COALESCE(@Nombre,    nombre),
+            direccion = COALESCE(@Direccion, direccion),
+            telefono  = COALESCE(@Telefono,  telefono)
         WHERE sucursalID = @SucursalId";
 
         var filas = await _connection.ExecuteAsync(sql,
-            new { Nombre = nombre, Direccion = direccion, SucursalId = sucursalId }, _transaction);
+            new { Nombre = nombre, Direccion = direccion, Telefono = telefono, SucursalId = sucursalId }, _transaction);
         return filas > 0;
     }
 
@@ -141,6 +144,7 @@ public class SucursalRepository : DapperRepository<Sucursal>, ISucursalRepositor
                codEstablecimiento                AS CodEstablecimiento,
                nombre                            AS Nombre,
                direccion                         AS Direccion,
+               telefono                          AS Telefono,
                serieFactura                      AS SerieFactura,
                correlativoFactura                AS CorrelativoFactura,
                serieBoleta                       AS SerieBoleta,
@@ -208,7 +212,8 @@ public class SucursalRepository : DapperRepository<Sucursal>, ISucursalRepositor
                    empresaRuc          AS EmpresaRuc,
                    codEstablecimiento  AS CodEstablecimiento,
                    nombre              AS Nombre,
-                   direccion           AS Direccion
+                   direccion           AS Direccion,
+                   telefono            AS Telefono
             FROM sucursal
             WHERE empresaRuc = @EmpresaRuc
               AND codEstablecimiento = @CodEstablecimiento

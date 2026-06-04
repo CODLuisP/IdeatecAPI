@@ -12,7 +12,7 @@ public interface ISucursalRepository : IRepository<Sucursal>
     Task<Sucursal> RegistrarSucursalAsync(Sucursal sucursal);
     Task<bool> EditarSucursalAsync(Sucursal sucursal);
     Task<bool> InhabilitarSucursalAsync(int SucursalId);
-    Task<bool> EditarInfoAsync(int sucursalId, string? nombre, string? direccion);
+    Task<bool> EditarInfoAsync(int sucursalId, string? nombre, string? direccion, string? telefono);
     Task<IEnumerable<Sucursal>> GetByRucTodasAsync(string empresaRuc);
     Task<Sucursal?> GetByIdSinFiltroAsync(int sucursalId);
     Task<bool> HabilitarSucursalAsync(int sucursalId);

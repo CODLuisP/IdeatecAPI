@@ -5,6 +5,7 @@ namespace IdeatecAPI.Application.Features.Sucursal.DTOs
         public int SucursalId { get; set; }
         public string? Nombre { get; set; }
         public string? Direccion { get; set; }
+        public string? Telefono { get; set; }
         public string? SerieFactura { get; set; }
         public int? CorrelativoFactura { get; set; }
         public string? SerieBoleta { get; set; }

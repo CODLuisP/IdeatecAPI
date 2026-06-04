@@ -24,6 +24,7 @@ public class AgregarSucursalDTO
     // ── Nuevos campos ──
     public string NombreSucursal { get; set; } = string.Empty;
     public string? Direccion { get; set; }
+    public string? Telefono { get; set; }
 
     public string UsernameAdminSucursal { get; set; } = string.Empty;
     public string EmailAdmin { get; set; } = string.Empty;
