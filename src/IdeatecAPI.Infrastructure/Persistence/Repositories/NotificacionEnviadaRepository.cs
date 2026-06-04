@@ -12,41 +12,46 @@ public class NotificacionEnviadaRepository : DapperRepository<NotificacionEnviad
     {
     }
 
-    public async Task<IEnumerable<NotificacionEnviada>> GetAllNotificacionesEnviadasAsync()
+    public async Task<IEnumerable<NotificacionEnviada>> GetAllAsync()
     {
-        var sql = "SELECT * FROM notificacionenviada";
+        var sql = @"
+            SELECT
+                id              AS Id,
+                emailEnviado    AS EmailEnviado,
+                whatsappEnviado AS WhatsappEnviado
+            FROM notificacionenviada
+            ORDER BY id;";
+
         return await _connection.QueryAsync<NotificacionEnviada>(sql, transaction: _transaction);
     }
 
-    public async Task<bool> RegistrarNotificacionEnviadaAsync(NotificacionEnviada notificacion)
+    public async Task<bool> RegistrarAsync(NotificacionEnviada notificacion)
     {
         var sql = @"
-            INSERT INTO notificacionenviada
-                (numdoc, periodoTipo, moneda, tipoDoc, emailEnviado, whatsappEnviado, fechafin, fechaEnvio, usuarioId)
-            VALUES
-                (@NumDoc, @PeriodoTipo, @Moneda, @TipoDoc, @EmailEnviado, @WhatsappEnviado, @FechaFin, @FechaEnvio, @UsuarioId);";
+            INSERT INTO notificacionenviada (id, emailEnviado, whatsappEnviado)
+            VALUES (@Id, @EmailEnviado, @WhatsappEnviado);";
 
         var result = await _connection.ExecuteAsync(sql, notificacion, _transaction);
         return result > 0;
     }
 
-    public async Task<bool> EditarNotificacionEnviadaAsync(NotificacionEnviada notificacion)
+    public async Task<bool> EditarAsync(NotificacionEnviada notificacion)
     {
         var sql = @"
             UPDATE notificacionenviada
             SET
-                numdoc          = @NumDoc,
-                periodoTipo     = @PeriodoTipo,
-                moneda          = @Moneda,
-                tipoDoc         = @TipoDoc,
                 emailEnviado    = @EmailEnviado,
-                whatsappEnviado = @WhatsappEnviado,
-                fechafin        = @FechaFin,
-                fechaEnvio      = @FechaEnvio,
-                usuarioId       = @UsuarioId
+                whatsappEnviado = @WhatsappEnviado
             WHERE id = @Id;";
 
         var result = await _connection.ExecuteAsync(sql, notificacion, _transaction);
+        return result > 0;
+    }
+
+    public async Task<bool> EliminarAsync(int id)
+    {
+        var sql = "DELETE FROM notificacionenviada WHERE id = @Id;";
+        var result = await _connection.ExecuteAsync(sql, new { Id = id }, _transaction);
         return result > 0;
     }
 }
