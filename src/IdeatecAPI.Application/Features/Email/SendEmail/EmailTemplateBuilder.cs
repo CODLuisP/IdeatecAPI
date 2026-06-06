@@ -56,12 +56,6 @@ public static class EmailTemplateBuilder
           </tr>
         </table>
 
-        <div style="background:#fefce8;border:0.5px solid #fde68a;padding:12px 16px;margin-bottom:20px;display:flex;align-items:flex-start;gap:10px;">
-          <p style="margin:0;color:#713f12;font-size:13px;line-height:1.6;">
-            También puede pagar por <strong>YAPE</strong> al número <strong>989 112 969</strong>
-          </p>
-        </div>
-
         <div style="background:#f0fdf4;border:0.5px solid #bbf7d0;padding:12px 16px;margin-bottom:24px;">
           <p style="margin:0;color:#14532d;font-size:13px;line-height:1.6;">
             Después de realizar su pago, envíenos el voucher por esta misma vía o por WhatsApp al <strong>952 075 881</strong>
