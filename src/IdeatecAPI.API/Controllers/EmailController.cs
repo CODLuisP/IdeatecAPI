@@ -95,11 +95,13 @@ public class EmailController : ControllerBase
             return BadRequest(new { success = false, message = "Los campos toEmail, toName, subject y mensaje son requeridos." });
         }
 
+        var body = EmailTemplateBuilder.BuildNotificacionVencimientoServicio(toName, subject, mensaje);
+
         var result = await _mediator.Send(new SendEmailCommand(
             toEmail,
             toName,
             subject,
-            mensaje,
+            body,
             TipoComprobante.Notificacion,
             null,
             null,
