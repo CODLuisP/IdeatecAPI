@@ -532,6 +532,7 @@ public class ReportesService : IReportesService
         Correlativo     = c.Correlativo?.ToString() ?? "",
         FechaEmision    = c.FechaEmision,
         TipoMoneda      = c.TipoMoneda ?? "PEN",
+        TipoCambio      = c.TipoCambio ?? 0,
         ValorVenta      = c.ValorVenta ?? 0,
         TotalIGV        = c.TotalIGV ?? 0,
         ImporteTotal    = c.ImporteTotal ?? 0,

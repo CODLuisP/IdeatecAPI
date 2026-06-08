@@ -14,21 +14,12 @@ public static class EmailTemplateBuilder
   public static string BuildNotificacionVencimientoServicio(
     string toName,
     string subject,
-    string concepto,
-    string fechavencimiento,
-    string periodoTexto,
-    string monto,
-    bool vencido)
+    string mensaje)
   {
-    var verbo = vencido ? "venció" : "vencerá";
     var content = $"""
-        <p style="margin:0 0 20px;color:#475569;font-size:14px;line-height:1.7;">
-          Por medio de la presente les saludamos y comunicamos que el <strong style="color:#0f172a;">{Escape(concepto)}</strong> {verbo} el <strong style="color:#0f172a;">{Escape(fechavencimiento)}</strong>.
-        </p>
-
-        <p style="margin:0 0 20px;color:#475569;font-size:14px;line-height:1.7;">
-          Para la renovación del servicio <strong style="color:#0f172a;">{Escape(periodoTexto)}</strong>, sírvanse realizar el pago de <strong style="color:#0f172a;">S/.{Escape(monto)}</strong> a cualquiera de nuestras cuentas soles a nombre de <strong style="color:#0f172a;">VELSAT SAC</strong>:
-        </p>
+        <div style="border:1px solid #e2e8f0;padding:16px 20px;margin-bottom:20px;">
+          <p style="margin:0;color:#475569;font-size:14px;line-height:1.7;">{Escape(mensaje)}</p>
+        </div>
 
         <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:20px;">
           <tr>
@@ -55,12 +46,6 @@ public static class EmailTemplateBuilder
             </td>
           </tr>
         </table>
-
-        <div style="background:#fefce8;border:0.5px solid #fde68a;padding:12px 16px;margin-bottom:20px;display:flex;align-items:flex-start;gap:10px;">
-          <p style="margin:0;color:#713f12;font-size:13px;line-height:1.6;">
-            También puede pagar por <strong>YAPE</strong> al número <strong>989 112 969</strong>
-          </p>
-        </div>
 
         <div style="background:#f0fdf4;border:0.5px solid #bbf7d0;padding:12px 16px;margin-bottom:24px;">
           <p style="margin:0;color:#14532d;font-size:13px;line-height:1.6;">

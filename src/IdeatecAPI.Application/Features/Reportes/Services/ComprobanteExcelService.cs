@@ -602,9 +602,13 @@ public Task<byte[]> ExportarListadoReportesAsync(
         else if (item.EstadoSunat == "PENDIENTE")
             bgColor = XLColor.FromHtml("#FFF9C4");
 
-        var valorVenta = item.TipoComprobante == "07" ? -item.ValorVenta   : item.ValorVenta;
-        var igv        = item.TipoComprobante == "07" ? -item.TotalIGV     : item.TotalIGV;
-        var importe    = item.TipoComprobante == "07" ? -item.ImporteTotal : item.ImporteTotal;
+        var tc2 = (item.TipoMoneda == "USD" && item.TipoCambio > 0) ? item.TipoCambio : 1m;
+        bool esUsd2 = tc2 != 1m;
+        static decimal Conv2(decimal v, decimal t, bool usd) =>
+            usd ? Math.Round(v * t, 0) : Math.Round(v * t, 2);
+        var valorVenta = Conv2((item.TipoComprobante == "07" ? -item.ValorVenta   : item.ValorVenta),   tc2, esUsd2);
+        var igv        = Conv2((item.TipoComprobante == "07" ? -item.TotalIGV     : item.TotalIGV),     tc2, esUsd2);
+        var importe    = Conv2((item.TipoComprobante == "07" ? -item.ImporteTotal : item.ImporteTotal), tc2, esUsd2);
 
         ws.Cell(fila, 1).Value  = item.NumeroCompleto;
         ws.Cell(fila, 2).Value  = item.TipoComprobante switch
@@ -621,7 +625,9 @@ public Task<byte[]> ExportarListadoReportesAsync(
         ws.Cell(fila, 6).Value  = valorVenta;
         ws.Cell(fila, 7).Value  = igv;
         ws.Cell(fila, 8).Value  = importe;
-        ws.Cell(fila, 9).Value  = item.TipoMoneda;
+        ws.Cell(fila, 9).Value  = (item.TipoMoneda == "USD" && item.TipoCambio > 0)
+            ? $"USD ({item.TipoCambio:F2})"
+            : item.TipoMoneda;
         ws.Cell(fila, 10).Value = item.EstadoSunat;
         ws.Cell(fila, 11).Value = !string.IsNullOrEmpty(item.NumDocAfectado) ? item.NumDocAfectado : "-";
         ws.Cell(fila, 12).Value = item.TipoPago switch
@@ -703,9 +709,13 @@ private static void EscribirFila(IXLWorksheet ws, int fila, ListarComprobanteDTO
                 _    => index % 2 == 0 ? XLColor.White : XLColor.FromHtml("#EBF3FB")
             };
 
-    var valorVenta = (!esRechazado && item.TipoComprobante == "07") ? -item.ValorVenta   : item.ValorVenta;
-    var igv        = (!esRechazado && item.TipoComprobante == "07") ? -item.TotalIGV     : item.TotalIGV;
-    var importe    = (!esRechazado && item.TipoComprobante == "07") ? -item.ImporteTotal : item.ImporteTotal;
+    var tc = (item.TipoMoneda == "USD" && item.TipoCambio > 0) ? item.TipoCambio : 1m;
+    bool esUsd = tc != 1m;
+    static decimal Conv(decimal v, decimal t, bool usd) =>
+        usd ? Math.Round(v * t, 0) : Math.Round(v * t, 2);
+    var valorVenta = Conv((!esRechazado && item.TipoComprobante == "07") ? -item.ValorVenta   : item.ValorVenta,   tc, esUsd);
+    var igv        = Conv((!esRechazado && item.TipoComprobante == "07") ? -item.TotalIGV     : item.TotalIGV,     tc, esUsd);
+    var importe    = Conv((!esRechazado && item.TipoComprobante == "07") ? -item.ImporteTotal : item.ImporteTotal, tc, esUsd);
 
     ws.Cell(fila, 1).Value  = item.NumeroCompleto;
     ws.Cell(fila, 2).Value  = item.TipoComprobante switch
@@ -722,7 +732,9 @@ private static void EscribirFila(IXLWorksheet ws, int fila, ListarComprobanteDTO
     ws.Cell(fila, 6).Value  = valorVenta;
     ws.Cell(fila, 7).Value  = igv;
     ws.Cell(fila, 8).Value  = importe;
-    ws.Cell(fila, 9).Value  = item.TipoMoneda;
+    ws.Cell(fila, 9).Value  = (item.TipoMoneda == "USD" && item.TipoCambio > 0)
+        ? $"USD ({item.TipoCambio:F2})"
+        : item.TipoMoneda;
     ws.Cell(fila, 10).Value = item.EstadoSunat;
     ws.Cell(fila, 11).Value = !string.IsNullOrEmpty(item.NumDocAfectado) ? item.NumDocAfectado : "-";
     ws.Cell(fila, 12).Value = item.TipoPago switch

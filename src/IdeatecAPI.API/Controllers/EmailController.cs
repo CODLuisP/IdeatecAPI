@@ -84,43 +84,18 @@ public class EmailController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> Notificar([FromForm] string toEmail,
                                               [FromForm] string toName,
-                                              [FromForm] string concepto,
-                                              [FromForm] string fechavencimiento,
-                                              [FromForm] int periodo,
-                                              [FromForm] string monto,
-                                              [FromForm] bool vencido)
+                                              [FromForm] string subject,
+                                              [FromForm] string mensaje)
     {
         if (string.IsNullOrWhiteSpace(toEmail) ||
             string.IsNullOrWhiteSpace(toName) ||
-            string.IsNullOrWhiteSpace(concepto) ||
-            string.IsNullOrWhiteSpace(fechavencimiento) ||
-            string.IsNullOrWhiteSpace(monto) ||
-            periodo <= 0)
+            string.IsNullOrWhiteSpace(subject) ||
+            string.IsNullOrWhiteSpace(mensaje))
         {
-            return BadRequest(new { success = false, message = "Todos los campos son requeridos." });
+            return BadRequest(new { success = false, message = "Los campos toEmail, toName, subject y mensaje son requeridos." });
         }
 
-        var periodoTexto = periodo switch
-        {
-            1 => "mensual",
-            2 => "bimestral",
-            3 => "trimestral",
-            4 => "cuatrimestral",
-            5 => "quinquenal",
-            6 => "semestral",
-            12 => "anual",
-            _ => $"cada {periodo} meses"
-        };
-
-        var subject = "Notificación de vencimiento de servicio";
-        var body = EmailTemplateBuilder.BuildNotificacionVencimientoServicio(
-            toName,
-            subject,
-            concepto,
-            fechavencimiento,
-            periodoTexto,
-            monto,
-            vencido);
+        var body = EmailTemplateBuilder.BuildNotificacionVencimientoServicio(toName, subject, mensaje);
 
         var result = await _mediator.Send(new SendEmailCommand(
             toEmail,
