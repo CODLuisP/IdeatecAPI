@@ -250,11 +250,6 @@ public static class EmailTemplateBuilder
                       Estimado/a <strong style="color:#0f2e64;">{Escape(toName)}</strong>
                     </p>
                     {content}
-                    <div style="padding:0px;">
-                      <p style="margin:0;color:#92400e;font-size:12px;">
-                        Para consultas escríbenos a <strong>info@ideatec.com.pe</strong>
-                      </p>
-                    </div>
                   </td>
                 </tr>
 
