@@ -1066,17 +1066,17 @@ public class ComprobantePdfService : IComprobantePdfService
                     {
                         c.Background(bg).Padding(3).Column(col =>
                         {
-                            col.Item().AlignRight()
+                            col.Item()
                                 .Text(FormatearMoneda(pVentOriginal, moneda))
                                 .FontSize(8);
-                            col.Item().AlignRight()
+                            col.Item()
                                 .Text($"-{FormatearMoneda(dsctoConIgv, moneda)}")
                                 .FontSize(7).FontColor(ColorTextoSuave);
                         });
                     }
                     else
                     {
-                        TD(c, FormatearMoneda(pVentOriginal, moneda), right: true);
+                        TD(c, FormatearMoneda(pVentOriginal, moneda));
                     }
                 });
 
