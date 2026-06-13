@@ -94,7 +94,8 @@ public class ComprobanteHtmlService : IComprobanteHtmlService
             string descTxt  = HE(d.Descripcion ?? "-") + (esGratuito ? " <em>(GR)</em>" : "");
             string totalTxt = esGratuito ? "0" : N(d.TotalVentaItem ?? 0);
 
-            items.Append("<tr>");
+            bool tieneDescuento = (d.DescuentoUnitario ?? 0) > 0;
+            items.Append(tieneDescuento ? "<tr class=\"nodiv\">" : "<tr>");
             items.Append($"<td>{idx++}</td>");
             if (mostrarCodigo) items.Append($"<td>{HE(d.Codigo ?? "-")}</td>");
             items.Append($"<td>{N(d.Cantidad)}</td>");
@@ -103,7 +104,7 @@ public class ComprobanteHtmlService : IComprobanteHtmlService
             items.Append($"<td class=\"tr\">{totalTxt}</td>");
             items.Append("</tr>");
 
-            if ((d.DescuentoUnitario ?? 0) > 0)
+            if (tieneDescuento)
             {
                 int colspan = mostrarCodigo ? 6 : 5;
                 items.Append($"<tr><td colspan=\"{colspan}\" class=\"tr\" style=\"font-size:10px;color:#555;\">Dscto: -{N(d.DescuentoUnitario ?? 0)}</td></tr>");
@@ -228,6 +229,7 @@ public class ComprobanteHtmlService : IComprobanteHtmlService
             table.items td {{ padding: 2px; border-bottom: 1px solid #ccc; vertical-align: top; color: #000; }}
             table.items .tdesc {{ }}
             table.items .tr {{ text-align: right; }}
+            table.items tr.nodiv td {{ border-bottom: none; }}
 
             table.totales {{ width: 100%; border-collapse: collapse; margin: 3px 0; font-size: 11px; }}
             table.totales tr td {{ padding: 2px 1px; color: #000; }}
