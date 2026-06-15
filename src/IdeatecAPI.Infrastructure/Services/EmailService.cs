@@ -29,8 +29,7 @@ public class EmailService : IEmailService
         string subject,
         string htmlBody,
         string? textBody = null,
-        byte[]? adjunto = null,
-        string? nombreAdjunto = null)
+        IEnumerable<(byte[] Bytes, string Nombre)>? adjuntos = null)
     {
         var smtpConfig = _config.GetSection("Smtp");
         var apiKey = smtpConfig["ApiKey"] ?? throw new InvalidOperationException("MailerSend ApiKey no configurado.");
@@ -47,18 +46,16 @@ public class EmailService : IEmailService
         if (!string.IsNullOrWhiteSpace(textBody))
             payload["text"] = textBody;
 
-        // Adjunto en base64 (si viene)
-        if (adjunto != null && !string.IsNullOrWhiteSpace(nombreAdjunto))
+        // Adjuntos en base64
+        var lista = adjuntos?.ToList();
+        if (lista is { Count: > 0 })
         {
-            payload["attachments"] = new[]
+            payload["attachments"] = lista.Select(a => new
             {
-                new
-                {
-                    content  = Convert.ToBase64String(adjunto),
-                    filename = nombreAdjunto,
-                    disposition = "attachment"
-                }
-            };
+                content     = Convert.ToBase64String(a.Bytes),
+                filename    = a.Nombre,
+                disposition = "attachment"
+            }).ToArray();
         }
 
         var json    = JsonSerializer.Serialize(payload);
@@ -103,18 +100,16 @@ public class EmailService : IEmailService
         string toEmail,
         string subject,
         string htmlBody,
-        byte[]? adjunto = null,
-        string? nombreAdjunto = null)
+        IEnumerable<(byte[] Bytes, string Nombre)>? adjuntos = null)
     {
         try
         {
             await SendViaApiAsync(
-                toEmail:       toEmail,
-                toName:        toEmail,
-                subject:       subject,
-                htmlBody:      htmlBody,
-                adjunto:       adjunto,
-                nombreAdjunto: nombreAdjunto
+                toEmail:  toEmail,
+                toName:   toEmail,
+                subject:  subject,
+                htmlBody: htmlBody,
+                adjuntos: adjuntos
             );
 
             _logger.LogInformation("Email enviado a {Email}", toEmail);

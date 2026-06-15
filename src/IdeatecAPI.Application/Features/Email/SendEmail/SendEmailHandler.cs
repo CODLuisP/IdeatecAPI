@@ -39,8 +39,7 @@ public class SendEmailHandler : IRequestHandler<SendEmailCommand, SendEmailResul
                 request.ToEmail,
                 request.Subject,
                 html,
-                request.Adjunto,        // ← nuevo
-                request.NombreAdjunto   // ← nuevo
+                request.Adjuntos
             );
             return new SendEmailResult(true, "Correo enviado correctamente.");
         }
