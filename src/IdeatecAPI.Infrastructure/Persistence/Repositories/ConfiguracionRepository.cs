@@ -25,12 +25,12 @@ public class ConfiguracionRepository : DapperRepository<Configuracion>, IConfigu
                 (ruc, isimprime, tamañoimpresion, igv, isconsumo, guiaremision,
                  iscredito, itemsdefecto, isboletaorfactura, isenvioresumen,
                  isvale, deudascobrar, trabajadores, cargacomprobantes,
-                 afectacionigv, descunitario)
+                 afectacionigv, descunitario, isstock)
             VALUES
                 (@Ruc, @IsImprime, @TamañoImpresion, @Igv, @IsConsumo, @GuiaRemision,
                  @IsCredito, @ItemsDefecto, @IsBoletaOrFactura, @IsEnvioResumen,
                  @IsVale, @DeudasCobrar, @Trabajadores, @CargaComprobantes,
-                 @AfectacionIgv, @DescUnitario);";
+                 @AfectacionIgv, @DescUnitario, @IsStock);";
 
         var result = await _connection.ExecuteAsync(sql, configuracion, _transaction);
         return result > 0;
@@ -55,7 +55,8 @@ public class ConfiguracionRepository : DapperRepository<Configuracion>, IConfigu
                 trabajadores      = @Trabajadores,
                 cargacomprobantes = @CargaComprobantes,
                 afectacionigv     = @AfectacionIgv,
-                descunitario      = @DescUnitario
+                descunitario      = @DescUnitario,
+                isstock           = @IsStock
             WHERE ruc = @Ruc;";
 
         var result = await _connection.ExecuteAsync(sql, new
@@ -75,6 +76,7 @@ public class ConfiguracionRepository : DapperRepository<Configuracion>, IConfigu
             configuracion.CargaComprobantes,
             configuracion.AfectacionIgv,
             configuracion.DescUnitario,
+            configuracion.IsStock,
             Ruc = ruc
         }, _transaction);
 
