@@ -107,7 +107,7 @@ public class XmlNoteBuilderService : IXmlNoteBuilderService
                 new XElement(Cac + "TaxCategory",
                     new XElement(Cbc + "ID", categoryId),
                     new XElement(Cbc + "Percent",
-                        tipoAfe == "10" ? pctGrupo.ToString("F0") : "0"),
+                        tipoAfe == "10" ? pctGrupo.ToString("F1") : "0"),
                     new XElement(Cbc + "TaxExemptionReasonCode", tipoAfe),
                     new XElement(Cac + "TaxScheme",
                         new XElement(Cbc + "ID", schemeId),
@@ -233,7 +233,7 @@ public class XmlNoteBuilderService : IXmlNoteBuilderService
             _ => ("1000", "IGV", "VAT", "S")
         };
         var percent = d.TipoAfectacionIGV == "10"
-            ? d.PorcentajeIGV.ToString("F0")
+            ? d.PorcentajeIGV.ToString("F1")
             : "0";
 
         var taxTotalLine = new XElement(Cac + "TaxTotal",

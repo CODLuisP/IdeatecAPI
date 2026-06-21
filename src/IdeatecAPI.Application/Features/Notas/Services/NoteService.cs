@@ -334,16 +334,40 @@ public class NoteService : INoteService
         }
 
         // 3. Enviar a SUNAT
+        SunatResponse sunatResponse;
+        try
+        {
+            sunatResponse = await _sunatSender.SendNoteAsync(
+                xmlFirmadoBytes,
+                nombreArchivo,
+                empresa.Ruc,
+                empresa.SolUsuario!,
+                empresa.SolClave!,
+                empresa.Environment
+            );
+        }
+        catch (HttpRequestException ex)
+        {
+            // SUNAT no responde / caída de red — no es un rechazo real, queda PENDIENTE para reintento
+            await _unitOfWork.Notes.UpdateEstadoSunatAsync(
+                comprobanteId,
+                "PENDIENTE",
+                null,
+                $"Error de conexión con SUNAT: {ex.Message}",
+                null,
+                null,
+                firmaResultado.DigestValue
+            );
 
-        // 3. Enviar a SUNAT
-        var sunatResponse = await _sunatSender.SendNoteAsync(
-            xmlFirmadoBytes,
-            nombreArchivo,
-            empresa.Ruc,
-            empresa.SolUsuario!,
-            empresa.SolClave!,
-            empresa.Environment
-        );
+            var sucursalIdError = await _unitOfWork.Comprobantes.GetSucursalIdByRucAndAnexoAsync(
+                note.EmpresaRuc!,
+                note.EstablecimientoAnexo!
+            );
+            _ = Task.Run(() => _wsNotifier.NotifyAsync(sucursalIdError, note.EmpresaRuc, "status"));
+
+            return await GetNoteByIdAsync(comprobanteId)
+                ?? throw new InvalidOperationException("Error al recuperar la nota actualizada");
+        }
 
         // 4. Subir CDR en segundo plano
         if (!string.IsNullOrEmpty(sunatResponse.CdrBase64))
@@ -368,9 +392,21 @@ public class NoteService : INoteService
         }
 
         // 5. Actualizar estado en BD
-        var nuevoEstado = sunatResponse.Success
-            ? (sunatResponse.TieneObservaciones ? "ACEPTADO_CON_OBSERVACIONES" : "ACEPTADO")
-            : "RECHAZADO";
+        string nuevoEstado;
+        if (sunatResponse.Success)
+        {
+            nuevoEstado = sunatResponse.TieneObservaciones ? "ACEPTADO_CON_OBSERVACIONES" : "ACEPTADO";
+        }
+        else if (sunatResponse.CodigoRespuesta == "SUNAT_ERROR_HTML" || sunatResponse.CodigoRespuesta == "ERROR_RED")
+        {
+            // Caída de servidor o red de SUNAT — no es un rechazo de validación, queda PENDIENTE para reintento
+            nuevoEstado = "PENDIENTE";
+        }
+        else
+        {
+            // Error de validación real de SUNAT
+            nuevoEstado = "RECHAZADO";
+        }
 
         await _unitOfWork.Notes.UpdateEstadoSunatAsync(
             comprobanteId,
