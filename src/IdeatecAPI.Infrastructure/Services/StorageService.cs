@@ -7,6 +7,7 @@ public class StorageService : IStorageService
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly string _microservicioUrl;
+    private readonly string _entorno;
 
     // Mapeo de códigos SUNAT a nombres de carpeta
     private static readonly Dictionary<string, string> TiposCarpeta = new()
@@ -24,6 +25,8 @@ public class StorageService : IStorageService
         _httpClientFactory = httpClientFactory;
         _microservicioUrl = configuration["Storage:MicroservicioUrl"]
             ?? throw new InvalidOperationException("Storage:MicroservicioUrl no configurado");
+        _entorno = configuration["Storage:Entorno"]
+            ?? throw new InvalidOperationException("Storage:Entorno no configurado");
     }
 
     public async Task<string> SubirZipAsync(string ruc, string tipoComprobante, string nombreArchivo, byte[] zipBytes)
@@ -33,8 +36,7 @@ public class StorageService : IStorageService
 
         await SubirAlMicroservicio(ruc, tipo, filename, zipBytes);
 
-        // Retorna la ruta lógica que guardamos en BD
-        return $"/{ruc}/{tipo}/{filename}";
+        return $"/{_entorno}/{ruc}/{tipo}/{filename}";
     }
 
     public async Task<string> SubirCdrAsync(string ruc, string tipoComprobante, string nombreArchivo, string cdrBase64)
@@ -45,7 +47,7 @@ public class StorageService : IStorageService
 
         await SubirAlMicroservicio(ruc, tipo, filename, cdrBytes);
 
-        return $"/{ruc}/{tipo}/{filename}";
+        return $"/{_entorno}/{ruc}/{tipo}/{filename}";
     }
 
     private async Task SubirAlMicroservicio(string ruc, string tipo, string filename, byte[] zipBytes)
@@ -59,6 +61,7 @@ public class StorageService : IStorageService
         form.Add(fileContent, "file", filename);
         form.Add(new StringContent(ruc), "ruc");
         form.Add(new StringContent(tipo), "tipo");
+        form.Add(new StringContent(_entorno), "entorno");
 
         var response = await client.PostAsync($"{_microservicioUrl}/files/upload", form);
         response.EnsureSuccessStatusCode();

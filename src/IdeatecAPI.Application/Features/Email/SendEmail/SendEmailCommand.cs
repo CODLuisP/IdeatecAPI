@@ -9,8 +9,7 @@ public record SendEmailCommand(
     TipoComprobante Tipo = TipoComprobante.Texto,
     DatosComprobante? Comprobante = null,
     DatosGuiaRemision? Guia = null,
-    byte[]? Adjunto = null,          // ← nuevo
-    string? NombreAdjunto = null     // ← nuevo
+    IEnumerable<(byte[] Bytes, string Nombre)>? Adjuntos = null
 ) : IRequest<SendEmailResult>;
 
 public record SendEmailResult(bool Success, string Message);

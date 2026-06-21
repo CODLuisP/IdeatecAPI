@@ -821,7 +821,8 @@ public class ComprobanteService : IComprobanteService
         // 9. Guardar ruta CDR en BD (hilo principal, conexión libre)
         if (!string.IsNullOrEmpty(sunatResponse.CdrBase64))
         {
-            var rutaCdr = $"/{empresa.Ruc}/{ObtenerTipoCarpeta(comprobante.TipoComprobante!)}/R-{nombreArchivo}.zip";
+            var entorno = _configuration["Storage:Entorno"] ?? "produccion";
+            var rutaCdr = $"/{entorno}/{empresa.Ruc}/{ObtenerTipoCarpeta(comprobante.TipoComprobante!)}/R-{nombreArchivo}.zip";
             await _unitOfWork.Comprobantes.UpdateXmlRespuestaSunatAsync(comprobanteId, rutaCdr);
         }
 

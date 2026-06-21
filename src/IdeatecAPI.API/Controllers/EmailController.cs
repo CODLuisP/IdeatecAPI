@@ -27,7 +27,8 @@ public class EmailController : ControllerBase
                                       [FromForm] string tipo = "0",
                                       [FromForm] string? comprobanteJson = null,
                                       [FromForm] string? guiaJson = null,
-                                      IFormFile? adjunto = null)
+                                      IFormFile? pdf = null,
+                                      IFormFile? xml = null)
     {
         if (string.IsNullOrWhiteSpace(toEmail) ||
             string.IsNullOrWhiteSpace(toName) ||
@@ -43,7 +44,6 @@ public class EmailController : ControllerBase
             _ => TipoComprobante.Texto
         };
 
-        // Deserializar comprobante/guia desde JSON string
         var jsonOptions = new System.Text.Json.JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true
@@ -57,21 +57,20 @@ public class EmailController : ControllerBase
             ? System.Text.Json.JsonSerializer.Deserialize<DatosGuiaRemision>(guiaJson, jsonOptions)
             : null;
 
-        // Leer bytes del PDF
-        byte[]? adjuntoBytes = null;
-        string? nombreAdjunto = null;
-        if (adjunto != null)
+        // Construir lista de adjuntos (pdf y/o xml)
+        var adjuntos = new List<(byte[] Bytes, string Nombre)>();
+        foreach (var archivo in new[] { pdf, xml })
         {
+            if (archivo is null) continue;
             using var ms = new MemoryStream();
-            await adjunto.CopyToAsync(ms);
-            adjuntoBytes = ms.ToArray();
-            nombreAdjunto = adjunto.FileName;
+            await archivo.CopyToAsync(ms);
+            adjuntos.Add((ms.ToArray(), archivo.FileName));
         }
 
         var result = await _mediator.Send(new SendEmailCommand(
             toEmail, toName, subject, body,
             tipoEnum, comprobante, guia,
-            adjuntoBytes, nombreAdjunto
+            adjuntos.Count > 0 ? adjuntos : null
         ));
 
         if (!result.Success)
@@ -102,11 +101,7 @@ public class EmailController : ControllerBase
             toName,
             subject,
             body,
-            TipoComprobante.Notificacion,
-            null,
-            null,
-            null,
-            null
+            TipoComprobante.Notificacion
         ));
 
         if (!result.Success)

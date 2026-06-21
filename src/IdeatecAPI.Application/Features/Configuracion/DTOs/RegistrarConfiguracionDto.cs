@@ -18,4 +18,5 @@ public class RegistrarConfiguracionDto
     public bool? CargaComprobantes { get; set; }
     public bool? AfectacionIgv { get; set; }
     public bool? DescUnitario { get; set; }
+    public bool? IsStock { get; set; }
 }
