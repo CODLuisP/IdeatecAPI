@@ -714,7 +714,8 @@ public class ComprobanteService : IComprobanteService
                 empresa.Ruc,
                 comprobante.TipoComprobante!,
                 nombreArchivo,
-                memStream.ToArray()
+                memStream.ToArray(),
+                empresa.Environment
             );
             await _unitOfWork.Comprobantes.UpdateXmlGeneradoAsync(comprobanteId, rutaXml);
             Console.WriteLine($"[STORAGE ✅] xmlGenerado guardado: {rutaXml}");
@@ -781,7 +782,8 @@ public class ComprobanteService : IComprobanteService
                         empresa.Ruc,
                         comprobante.TipoComprobante!,
                         nombreArchivo,
-                        cdrBase64Capture
+                        cdrBase64Capture,
+                        empresa.Environment
                     );
                 }
                 catch (Exception ex)
@@ -821,8 +823,7 @@ public class ComprobanteService : IComprobanteService
         // 9. Guardar ruta CDR en BD (hilo principal, conexión libre)
         if (!string.IsNullOrEmpty(sunatResponse.CdrBase64))
         {
-            var entorno = _configuration["Storage:Entorno"] ?? "produccion";
-            var rutaCdr = $"/{entorno}/{empresa.Ruc}/{ObtenerTipoCarpeta(comprobante.TipoComprobante!)}/R-{nombreArchivo}.zip";
+            var rutaCdr = $"/{empresa.Environment}/{empresa.Ruc}/{ObtenerTipoCarpeta(comprobante.TipoComprobante!)}/R-{nombreArchivo}.zip";
             await _unitOfWork.Comprobantes.UpdateXmlRespuestaSunatAsync(comprobanteId, rutaCdr);
         }
 

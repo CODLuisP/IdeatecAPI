@@ -292,7 +292,7 @@ public class GuiaService : IGuiaService
         }
 
         // ── 5. Subir ZIP a storage y enviar a SUNAT en paralelo ───────────
-        var subirZipTask = SubirZipSeguroAsync(empresa.Ruc, nombreArchivo, zipBytes);
+        var subirZipTask = SubirZipSeguroAsync(empresa.Ruc, nombreArchivo, zipBytes, empresa.Environment);
         var sunatTask = _sunatGuia.SendGuiaAsync(
             xmlFirmadoBytes, nombreArchivo,
             empresa.Ruc, empresa.SolUsuario!, empresa.SolClave!,
@@ -328,7 +328,7 @@ public class GuiaService : IGuiaService
 
         // ── 8. CDR + WebSocket en segundo plano (no bloquean la respuesta) ─
         _ = Task.WhenAll(
-            SubirCdrSeguroAsync(empresa.Ruc, nombreArchivo, sunatResponse.CdrBase64),
+            SubirCdrSeguroAsync(empresa.Ruc, nombreArchivo, sunatResponse.CdrBase64, empresa.Environment),
             _wsNotifier.NotifyAsync(guia.SucursalId, guia.EmpresaRuc, "status")
         );
 
@@ -352,11 +352,11 @@ public class GuiaService : IGuiaService
 
     // ── Helpers de storage (aíslan el try/catch del flujo principal) ──────────
 
-    private async Task<string?> SubirZipSeguroAsync(string ruc, string nombreArchivo, byte[] zipBytes)
+    private async Task<string?> SubirZipSeguroAsync(string ruc, string nombreArchivo, byte[] zipBytes, string entorno)
     {
         try
         {
-            var ruta = await _storageService.SubirZipAsync(ruc, "09", nombreArchivo, zipBytes);
+            var ruta = await _storageService.SubirZipAsync(ruc, "09", nombreArchivo, zipBytes, entorno);
             _logger.LogInformation("[STORAGE] ZIP subido correctamente: {Ruta}", ruta);
             return ruta;
         }
@@ -367,12 +367,12 @@ public class GuiaService : IGuiaService
         }
     }
 
-    private async Task SubirCdrSeguroAsync(string ruc, string nombreArchivo, string? cdrBase64)
+    private async Task SubirCdrSeguroAsync(string ruc, string nombreArchivo, string? cdrBase64, string entorno)
     {
         if (string.IsNullOrEmpty(cdrBase64)) return;
         try
         {
-            await _storageService.SubirCdrAsync(ruc, "09", nombreArchivo, cdrBase64);
+            await _storageService.SubirCdrAsync(ruc, "09", nombreArchivo, cdrBase64, entorno);
             _logger.LogInformation("[STORAGE] CDR subido correctamente: {Archivo}", nombreArchivo);
         }
         catch (Exception ex)

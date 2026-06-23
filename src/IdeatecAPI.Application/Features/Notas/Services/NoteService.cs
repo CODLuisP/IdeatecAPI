@@ -323,7 +323,8 @@ public class NoteService : INoteService
                 empresa.Ruc,
                 note.TipoDoc!,
                 nombreArchivo,
-                memStream.ToArray()
+                memStream.ToArray(),
+                empresa.Environment
             );
             await _unitOfWork.Notes.UpdateXmlGeneradoAsync(comprobanteId, rutaXml);
             Console.WriteLine($"[STORAGE ✅] xmlGenerado nota guardado: {rutaXml}");
@@ -381,7 +382,8 @@ public class NoteService : INoteService
                         empresa.Ruc,
                         note.TipoDoc!,
                         nombreArchivo,
-                        cdrBase64Capture
+                        cdrBase64Capture,
+                        empresa.Environment
                     );
                 }
                 catch (Exception ex)
@@ -421,7 +423,7 @@ public class NoteService : INoteService
         // 6. Guardar ruta CDR en BD (hilo principal)
         if (!string.IsNullOrEmpty(sunatResponse.CdrBase64))
         {
-            var rutaCdr = $"/{empresa.Ruc}/{ObtenerTipoCarpeta(note.TipoDoc!)}/R-{nombreArchivo}.zip";
+            var rutaCdr = $"/{empresa.Environment}/{empresa.Ruc}/{ObtenerTipoCarpeta(note.TipoDoc!)}/R-{nombreArchivo}.zip";
             await _unitOfWork.Notes.UpdateXmlRespuestaSunatAsync(comprobanteId, rutaCdr);
         }
 
