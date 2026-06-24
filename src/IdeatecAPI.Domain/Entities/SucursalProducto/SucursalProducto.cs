@@ -7,6 +7,8 @@ public class SucursalProducto
     public string? NomSucursal { get; set; }
     public decimal? PrecioUnitario { get; set; }
     public int? Stock { get; set; }
+    public decimal? UltimoPrecioCompra { get; set; }
+    public DateTime? FechaUltimaCompra { get; set; }
     public bool? Estado { get; set; }
     public DateTime? FechaCreacion { get; set; }
 }

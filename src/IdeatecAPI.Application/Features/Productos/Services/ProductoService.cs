@@ -76,7 +76,11 @@ public class ProductoService : IProductoService
                     UnidadMedida = dto.UnidadMedida,
                     TipoAfectacionIGV = dto.TipoAfectacionIGV,
                     IncluirIGV = dto.IncluirIGV,
-                    CategoriaId = dto.CategoriaId
+                    CategoriaId = dto.CategoriaId,
+                    CodigoBarras = dto.CodigoBarras,
+                    EsPaquete = dto.EsPaquete,
+                    ProductoBaseId = dto.ProductoBaseId,
+                    FactorConversion = dto.FactorConversion
                 };
 
                 var productoCreado = await _unitOfWork.Productos.RegistrarProductoAsync(producto);
@@ -148,7 +152,11 @@ public class ProductoService : IProductoService
                 UnidadMedida = dto.UnidadMedida,
                 TipoAfectacionIGV = dto.TipoAfectacionIGV,
                 IncluirIGV = dto.IncluirIGV,
-                CategoriaId = dto.CategoriaId
+                CategoriaId = dto.CategoriaId,
+                CodigoBarras = dto.CodigoBarras,
+                EsPaquete = dto.EsPaquete,
+                ProductoBaseId = dto.ProductoBaseId,
+                FactorConversion = dto.FactorConversion
             };
 
             await _unitOfWork.Productos.EditarProductoAsync(producto);
@@ -248,6 +256,10 @@ public class ProductoService : IProductoService
         IncluirIGV = p.IncluirIGV,
         Estado = p.Estado,
         FechaCreacion = p.FechaCreacion,
+        CodigoBarras = p.CodigoBarras,
+        EsPaquete = p.EsPaquete,
+        ProductoBaseId = p.ProductoBaseId,
+        FactorConversion = p.FactorConversion,
         Categoria = p.Categoria == null ? null : new ObtenerCategoriaDTO
         {
             CategoriaId = p.Categoria.CategoriaId,
@@ -258,7 +270,9 @@ public class ProductoService : IProductoService
             SucursalProductoId = p.SucursalProducto.SucursalProductoId,
             NomSucursal = p.SucursalProducto.NomSucursal,
             PrecioUnitario = p.SucursalProducto.PrecioUnitario,
-            Stock = p.SucursalProducto.Stock
+            Stock = p.SucursalProducto.Stock,
+            UltimoPrecioCompra = p.SucursalProducto.UltimoPrecioCompra,
+            FechaUltimaCompra = p.SucursalProducto.FechaUltimaCompra
         }
     };
 
@@ -301,6 +315,10 @@ public class ProductoService : IProductoService
         IncluirIGV = p.IncluirIGV,
         Estado = p.Estado,
         FechaCreacion = p.FechaCreacion,
+        CodigoBarras = p.CodigoBarras,
+        EsPaquete = p.EsPaquete,
+        ProductoBaseId = p.ProductoBaseId,
+        FactorConversion = p.FactorConversion,
         Categoria = p.Categoria == null ? null : new ObtenerCategoriaDTO
         {
             CategoriaId = p.Categoria.CategoriaId,

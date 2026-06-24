@@ -28,6 +28,8 @@ public interface IUnitOfWork : IDisposable
     INotificacionDiasRepository NotificacionDias { get; }
     IValeRepository Vales { get; }
     IConfiguracionRepository Configuracion { get; }
+    IProveedorRepository Proveedores { get; }
+    ICompraProveedorRepository ComprasProveedor { get; }
 
     void SetEnvironment(string env);
 

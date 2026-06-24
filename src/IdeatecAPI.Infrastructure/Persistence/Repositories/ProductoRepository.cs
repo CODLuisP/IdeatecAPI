@@ -26,13 +26,19 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
             p.estado            AS Estado,
             p.fechaCreacion     AS FechaCreacion,
             p.categoriaID       AS CategoriaId,
+            p.codigoBarras      AS CodigoBarras,
+            p.esPaquete         AS EsPaquete,
+            p.productoBaseId    AS ProductoBaseId,
+            p.factorConversion  AS FactorConversion,
 
             c.categoriaID       AS CategoriaId,
             c.categoriaNombre   AS CategoriaNombre,
 
             sp.sucursalProductoID        AS SucursalProductoId,
             sp.precioUnitario            AS PrecioUnitario,
-            sp.stock                     AS Stock
+            sp.stock                     AS Stock,
+            sp.ultimoPrecioCompra        AS UltimoPrecioCompra,
+            sp.fechaUltimaCompra         AS FechaUltimaCompra
         FROM producto p
         INNER JOIN categoria c
             ON c.categoriaID = p.categoriaID
@@ -76,6 +82,10 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
                 p.estado            AS Estado,
                 p.fechaCreacion     AS FechaCreacion,
                 p.categoriaID       AS CategoriaId,
+                p.codigoBarras      AS CodigoBarras,
+                p.esPaquete         AS EsPaquete,
+                p.productoBaseId    AS ProductoBaseId,
+                p.factorConversion  AS FactorConversion,
 
                 c.categoriaID       AS CategoriaId,
                 c.categoriaNombre   AS CategoriaNombre
@@ -118,6 +128,10 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
                 p.estado            AS Estado,
                 p.fechaCreacion     AS FechaCreacion,
                 p.categoriaID       AS CategoriaId,
+                p.codigoBarras      AS CodigoBarras,
+                p.esPaquete         AS EsPaquete,
+                p.productoBaseId    AS ProductoBaseId,
+                p.factorConversion  AS FactorConversion,
 
                 c.categoriaID       AS CategoriaId,
                 c.categoriaNombre   AS CategoriaNombre,
@@ -125,6 +139,8 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
                 sp.sucursalProductoID AS SucursalProductoId,
                 sp.precioUnitario     AS PrecioUnitario,
                 sp.stock              AS Stock,
+                sp.ultimoPrecioCompra AS UltimoPrecioCompra,
+                sp.fechaUltimaCompra  AS FechaUltimaCompra,
                 s.nombre              AS NomSucursal
             FROM producto p
             INNER JOIN categoria c ON c.categoriaID = p.categoriaID
@@ -190,13 +206,19 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
             p.estado            AS Estado,
             p.fechaCreacion     AS FechaCreacion,
             p.categoriaID       AS CategoriaId,
+            p.codigoBarras      AS CodigoBarras,
+            p.esPaquete         AS EsPaquete,
+            p.productoBaseId    AS ProductoBaseId,
+            p.factorConversion  AS FactorConversion,
 
             c.categoriaID       AS CategoriaId,
             c.categoriaNombre   AS CategoriaNombre,
 
             sp.sucursalProductoID AS SucursalProductoId,
             sp.precioUnitario     AS PrecioUnitario,
-            sp.stock              AS Stock
+            sp.stock              AS Stock,
+            sp.ultimoPrecioCompra AS UltimoPrecioCompra,
+            sp.fechaUltimaCompra  AS FechaUltimaCompra
         FROM producto p
         INNER JOIN categoria c ON c.categoriaID = p.categoriaID
         INNER JOIN sucursalproducto sp ON sp.productoID = p.productoID
@@ -238,11 +260,11 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
             INSERT INTO producto (
                 codigo, tipoProducto, codigoSunat, nomProducto,
                 unidadMedida, tipoAfectacionIGV, incluirIGV,
-                categoriaID
+                categoriaID, codigoBarras, esPaquete, productoBaseId, factorConversion
             ) VALUES (
                 @Codigo, @TipoProducto, @CodigoSunat, @NomProducto,
                 @UnidadMedida, @TipoAfectacionIGV, @IncluirIGV,
-                @CategoriaId
+                @CategoriaId, @CodigoBarras, @EsPaquete, @ProductoBaseId, @FactorConversion
             );
             SELECT LAST_INSERT_ID();";
 
@@ -256,6 +278,10 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
             producto.TipoAfectacionIGV,
             producto.IncluirIGV,
             producto.CategoriaId,
+            producto.CodigoBarras,
+            producto.EsPaquete,
+            producto.ProductoBaseId,
+            producto.FactorConversion,
         }, _transaction);
         producto.ProductoId = newId;
         return producto;
@@ -287,7 +313,11 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
                 unidadMedida      = @UnidadMedida,
                 tipoAfectacionIGV = @TipoAfectacionIGV,
                 incluirIGV        = @IncluirIGV,
-                categoriaID       = @CategoriaId
+                categoriaID       = @CategoriaId,
+                codigoBarras      = @CodigoBarras,
+                esPaquete         = @EsPaquete,
+                productoBaseId    = @ProductoBaseId,
+                factorConversion  = @FactorConversion
             WHERE productoID = @ProductoId AND estado = 1";
 
         var filas = await _connection.ExecuteAsync(sql, producto, _transaction);
@@ -333,10 +363,25 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
     
     public async Task<bool> EliminarSucursalProductoAsync(int sucursalProductoId)
     {
-        var sql = @"UPDATE sucursalproducto SET estado = 0 
+        var sql = @"UPDATE sucursalproducto SET estado = 0
                     WHERE sucursalProductoID = @SucursalProductoId AND estado = 1";
 
         var filas = await _connection.ExecuteAsync(sql, new { SucursalProductoId = sucursalProductoId }, _transaction);
+        return filas > 0;
+    }
+
+    public async Task<bool> RegistrarCompraStockAsync(int productoId, int sucursalId, int cantidad, decimal precioCompra)
+    {
+        var sql = @"
+            UPDATE sucursalproducto
+            SET stock = stock + @Cantidad,
+                ultimoPrecioCompra = @PrecioCompra,
+                fechaUltimaCompra = NOW()
+            WHERE productoID = @ProductoId
+            AND sucursalID = @SucursalId
+            AND estado = 1";
+
+        var filas = await _connection.ExecuteAsync(sql, new { ProductoId = productoId, SucursalId = sucursalId, Cantidad = cantidad, PrecioCompra = precioCompra }, _transaction);
         return filas > 0;
     }
 
@@ -371,6 +416,10 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
                 p.estado            AS Estado,
                 p.fechaCreacion     AS FechaCreacion,
                 p.categoriaID       AS CategoriaId,
+                p.codigoBarras      AS CodigoBarras,
+                p.esPaquete         AS EsPaquete,
+                p.productoBaseId    AS ProductoBaseId,
+                p.factorConversion  AS FactorConversion,
 
                 c.categoriaID       AS CategoriaId,
                 c.categoriaNombre   AS CategoriaNombre
@@ -421,6 +470,10 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
                 p.estado            AS Estado,
                 p.fechaCreacion     AS FechaCreacion,
                 p.categoriaID       AS CategoriaId,
+                p.codigoBarras      AS CodigoBarras,
+                p.esPaquete         AS EsPaquete,
+                p.productoBaseId    AS ProductoBaseId,
+                p.factorConversion  AS FactorConversion,
 
                 c.categoriaID       AS CategoriaId,
                 c.categoriaNombre   AS CategoriaNombre
@@ -472,6 +525,10 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
                 p.estado            AS Estado,
                 p.fechaCreacion     AS FechaCreacion,
                 p.categoriaID       AS CategoriaId,
+                p.codigoBarras      AS CodigoBarras,
+                p.esPaquete         AS EsPaquete,
+                p.productoBaseId    AS ProductoBaseId,
+                p.factorConversion  AS FactorConversion,
 
                 c.categoriaID       AS CategoriaId,
                 c.categoriaNombre   AS CategoriaNombre,
@@ -479,6 +536,8 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
                 sp.sucursalProductoID        AS SucursalProductoId,
                 sp.precioUnitario            AS PrecioUnitario,
                 sp.stock                     AS Stock,
+                sp.ultimoPrecioCompra         AS UltimoPrecioCompra,
+                sp.fechaUltimaCompra          AS FechaUltimaCompra,
 
                 s.nombre            AS NomSucursal
             FROM producto p

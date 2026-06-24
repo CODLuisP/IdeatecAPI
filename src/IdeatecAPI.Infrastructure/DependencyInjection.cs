@@ -30,6 +30,7 @@ using IdeatecAPI.Application.Features.NotificacionDias.Services;
 using IdeatecAPI.Application.Features.Vales.Services;
 using IdeatecAPI.Application.Common.Interfaces;
 using IdeatecAPI.Application.Features.Configuracion.Services;
+using IdeatecAPI.Application.Features.Proveedor.Services;
 using IdeatecAPI.Application.Common.Interfaces.Persistence.Reportes;
 
 namespace IdeatecAPI.Infrastructure;
@@ -137,6 +138,10 @@ public static class DependencyInjection
 
         // Configuracion
         services.AddScoped<IConfiguracionService, ConfiguracionService>();
+
+        // Proveedores y Compras
+        services.AddScoped<IProveedorService, ProveedorService>();
+        services.AddScoped<ICompraProveedorService, CompraProveedorService>();
 
         //Notificaciones WebSocket
         services.AddHttpClient<IWebSocketNotifier, WebSocketNotifier>();

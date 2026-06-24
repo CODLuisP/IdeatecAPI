@@ -44,6 +44,8 @@ public class UnitOfWork : IUnitOfWork
     private INotificacionDiasRepository? _notificacionDias;
     private IValeRepository? _vales;
     private IConfiguracionRepository? _configuracion;
+    private IProveedorRepository? _proveedores;
+    private ICompraProveedorRepository? _comprasProveedor;
 
     public UnitOfWork(IConfiguration configuration, ICurrentUserService currentUserService)
     {
@@ -217,6 +219,16 @@ public class UnitOfWork : IUnitOfWork
         get { _configuracion ??= new ConfiguracionRepository(CurrentConnection, _transaction); return _configuracion; }
     }
 
+    public IProveedorRepository Proveedores
+    {
+        get { _proveedores ??= new ProveedorRepository(CurrentConnection, _transaction); return _proveedores; }
+    }
+
+    public ICompraProveedorRepository ComprasProveedor
+    {
+        get { _comprasProveedor ??= new CompraProveedorRepository(CurrentConnection, _transaction); return _comprasProveedor; }
+    }
+
     public void BeginTransaction()
     {
         _transaction = CurrentConnection.BeginTransaction();
@@ -271,6 +283,8 @@ public class UnitOfWork : IUnitOfWork
         _notificacionDias = null;
         _vales = null;
         _configuracion = null;
+        _proveedores = null;
+        _comprasProveedor = null;
     }
 
     public IRepository<T> Repository<T>() where T : class

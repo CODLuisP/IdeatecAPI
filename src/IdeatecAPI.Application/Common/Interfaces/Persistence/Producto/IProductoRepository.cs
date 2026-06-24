@@ -23,5 +23,6 @@ public interface IProductoRepository : IRepository<Producto>
     Task<bool> EditarSucursalProductoAsync(SucursalProducto sucursalProducto);
     Task<bool> EliminarSucursalProductoAsync(int sucursalProductoId); 
     Task<Producto?> ObtenerProductoPorCodigoAsync(string codigo);
-    Task<bool> ExisteEnSucursalAsync(int productoId, int sucursalId);   
+    Task<bool> ExisteEnSucursalAsync(int productoId, int sucursalId);
+    Task<bool> RegistrarCompraStockAsync(int productoId, int sucursalId, int cantidad, decimal precioCompra);
 }

@@ -12,6 +12,10 @@ public class Producto
     public int? CategoriaId { get; set; }
     public bool? Estado { get; set; }
     public DateTime? FechaCreacion { get; set; }
+    public string? CodigoBarras { get; set; }
+    public bool? EsPaquete { get; set; }
+    public int? ProductoBaseId { get; set; }
+    public decimal? FactorConversion { get; set; }
     public Categoria? Categoria { get; set; }
     public SucursalProducto? SucursalProducto { get; set; }
 }

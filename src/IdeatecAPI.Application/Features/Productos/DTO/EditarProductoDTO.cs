@@ -15,6 +15,10 @@ public class EditarProductoDTO
     public string? TipoAfectacionIGV { get; set; }
     public bool? IncluirIGV { get; set; }
     public int? CategoriaId { get; set; }
+    public string? CodigoBarras { get; set; }
+    public bool? EsPaquete { get; set; }
+    public int? ProductoBaseId { get; set; }
+    public decimal? FactorConversion { get; set; }
 
     // Datos de SucursalProducto
     public int SucursalProductoId { get; set; }

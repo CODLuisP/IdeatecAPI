@@ -15,6 +15,10 @@ public class RegistrarProductoDTO
     public string? TipoAfectacionIGV { get; set; }
     public bool? IncluirIGV { get; set; }
     public int? CategoriaId { get; set; }
+    public string? CodigoBarras { get; set; }
+    public bool? EsPaquete { get; set; }
+    public int? ProductoBaseId { get; set; }
+    public decimal? FactorConversion { get; set; }
 
     // Datos iniciales de precio y stock por sucursal
     public int SucursalId { get; set; }
