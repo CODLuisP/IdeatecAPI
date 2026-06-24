@@ -7,7 +7,6 @@ public class StorageService : IStorageService
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly string _microservicioUrl;
-    private readonly string _entorno;
 
     // Mapeo de códigos SUNAT a nombres de carpeta
     private static readonly Dictionary<string, string> TiposCarpeta = new()
@@ -25,32 +24,30 @@ public class StorageService : IStorageService
         _httpClientFactory = httpClientFactory;
         _microservicioUrl = configuration["Storage:MicroservicioUrl"]
             ?? throw new InvalidOperationException("Storage:MicroservicioUrl no configurado");
-        _entorno = configuration["Storage:Entorno"]
-            ?? throw new InvalidOperationException("Storage:Entorno no configurado");
     }
 
-    public async Task<string> SubirZipAsync(string ruc, string tipoComprobante, string nombreArchivo, byte[] zipBytes)
+    public async Task<string> SubirZipAsync(string ruc, string tipoComprobante, string nombreArchivo, byte[] zipBytes, string entorno)
     {
         var tipo = TiposCarpeta.GetValueOrDefault(tipoComprobante, tipoComprobante);
         var filename = $"{nombreArchivo}.zip";
 
-        await SubirAlMicroservicio(ruc, tipo, filename, zipBytes);
+        await SubirAlMicroservicio(ruc, tipo, filename, zipBytes, entorno);
 
-        return $"/{_entorno}/{ruc}/{tipo}/{filename}";
+        return $"/{entorno}/{ruc}/{tipo}/{filename}";
     }
 
-    public async Task<string> SubirCdrAsync(string ruc, string tipoComprobante, string nombreArchivo, string cdrBase64)
+    public async Task<string> SubirCdrAsync(string ruc, string tipoComprobante, string nombreArchivo, string cdrBase64, string entorno)
     {
         var tipo = TiposCarpeta.GetValueOrDefault(tipoComprobante, tipoComprobante);
         var cdrBytes = Convert.FromBase64String(cdrBase64);
         var filename = $"R-{nombreArchivo}.zip";
 
-        await SubirAlMicroservicio(ruc, tipo, filename, cdrBytes);
+        await SubirAlMicroservicio(ruc, tipo, filename, cdrBytes, entorno);
 
-        return $"/{_entorno}/{ruc}/{tipo}/{filename}";
+        return $"/{entorno}/{ruc}/{tipo}/{filename}";
     }
 
-    private async Task SubirAlMicroservicio(string ruc, string tipo, string filename, byte[] zipBytes)
+    private async Task SubirAlMicroservicio(string ruc, string tipo, string filename, byte[] zipBytes, string entorno)
     {
         var client = _httpClientFactory.CreateClient();
 
@@ -61,7 +58,7 @@ public class StorageService : IStorageService
         form.Add(fileContent, "file", filename);
         form.Add(new StringContent(ruc), "ruc");
         form.Add(new StringContent(tipo), "tipo");
-        form.Add(new StringContent(_entorno), "entorno");
+        form.Add(new StringContent(entorno), "entorno");
 
         var response = await client.PostAsync($"{_microservicioUrl}/files/upload", form);
         response.EnsureSuccessStatusCode();
