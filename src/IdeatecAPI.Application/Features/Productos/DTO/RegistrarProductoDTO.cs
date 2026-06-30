@@ -15,6 +15,7 @@ public class RegistrarProductoDTO
     public string? TipoAfectacionIGV { get; set; }
     public bool? IncluirIGV { get; set; }
     public int? CategoriaId { get; set; }
+    public string? UrlImagenProducto { get; set; }
     public string? CodigoBarras { get; set; }
     public bool? EsPaquete { get; set; }
     public int? ProductoBaseId { get; set; }

@@ -29,6 +29,7 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
             p.esPaquete         AS EsPaquete,
             p.productoBaseId    AS ProductoBaseId,
             p.factorConversion  AS FactorConversion,
+            p.urlImagenProducto AS UrlImagenProducto,
 
             c.categoriaID       AS CategoriaId,
             c.categoriaNombre   AS CategoriaNombre,
@@ -88,6 +89,7 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
                 p.esPaquete         AS EsPaquete,
                 p.productoBaseId    AS ProductoBaseId,
                 p.factorConversion  AS FactorConversion,
+                p.urlImagenProducto AS UrlImagenProducto,
 
                 c.categoriaID       AS CategoriaId,
                 c.categoriaNombre   AS CategoriaNombre
@@ -133,6 +135,7 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
                 p.esPaquete         AS EsPaquete,
                 p.productoBaseId    AS ProductoBaseId,
                 p.factorConversion  AS FactorConversion,
+                p.urlImagenProducto AS UrlImagenProducto,
 
                 c.categoriaID       AS CategoriaId,
                 c.categoriaNombre   AS CategoriaNombre,
@@ -214,6 +217,7 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
             p.esPaquete         AS EsPaquete,
             p.productoBaseId    AS ProductoBaseId,
             p.factorConversion  AS FactorConversion,
+            p.urlImagenProducto AS UrlImagenProducto,
 
             c.categoriaID       AS CategoriaId,
             c.categoriaNombre   AS CategoriaNombre,
@@ -268,11 +272,11 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
             INSERT INTO producto (
                 codigo, tipoProducto, codigoSunat, nomProducto,
                 unidadMedida, tipoAfectacionIGV, incluirIGV,
-                categoriaID, codigoBarras, esPaquete, productoBaseId, factorConversion
+                categoriaID, urlImagenProducto, codigoBarras, esPaquete, productoBaseId, factorConversion
             ) VALUES (
                 @Codigo, @TipoProducto, @CodigoSunat, @NomProducto,
                 @UnidadMedida, @TipoAfectacionIGV, @IncluirIGV,
-                @CategoriaId, @CodigoBarras, @EsPaquete, @ProductoBaseId, @FactorConversion
+                @CategoriaId, @UrlImagenProducto, @CodigoBarras, @EsPaquete, @ProductoBaseId, @FactorConversion
             );
             SELECT LAST_INSERT_ID();";
 
@@ -286,6 +290,7 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
             producto.TipoAfectacionIGV,
             producto.IncluirIGV,
             producto.CategoriaId,
+            producto.UrlImagenProducto,
             producto.CodigoBarras,
             producto.EsPaquete,
             producto.ProductoBaseId,
@@ -326,6 +331,7 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
                 tipoAfectacionIGV = @TipoAfectacionIGV,
                 incluirIGV        = @IncluirIGV,
                 categoriaID       = @CategoriaId,
+                urlImagenProducto = @UrlImagenProducto,
                 codigoBarras      = @CodigoBarras,
                 esPaquete         = @EsPaquete,
                 productoBaseId    = @ProductoBaseId,

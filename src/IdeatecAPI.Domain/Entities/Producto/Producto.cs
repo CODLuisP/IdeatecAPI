@@ -10,6 +10,7 @@ public class Producto
     public string? TipoAfectacionIGV { get; set; }
     public bool? IncluirIGV { get; set; }
     public int? CategoriaId { get; set; }
+    public string? UrlImagenProducto { get; set; }
     public bool? Estado { get; set; }
     public DateTime? FechaCreacion { get; set; }
     public string? CodigoBarras { get; set; }
