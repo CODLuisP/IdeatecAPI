@@ -25,4 +25,8 @@ public interface IProductoRepository : IRepository<Producto>
     Task<Producto?> ObtenerProductoPorCodigoAsync(string codigo);
     Task<bool> ExisteEnSucursalAsync(int productoId, int sucursalId);
     Task<bool> RegistrarCompraStockAsync(int productoId, int sucursalId, int cantidad, decimal precioCompra);
+    Task<bool> IncrementarStockSinCostoAsync(int productoId, int sucursalId, int cantidad);
+    Task<bool> ActualizarCostoSinStockAsync(int productoId, int sucursalId, decimal precioCompra);
+    Task<Producto?> GetInfoConversionBySucursalProductoIdAsync(int sucursalProductoId);
+    Task<bool> DescontarStockBaseAsync(int productoBaseId, int sucursalId, int cantidad);
 }

@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(dotnet build *)",
-      "Bash(xargs grep -l \"ControlCaja\")"
+      "Bash(xargs grep -l \"ControlCaja\")",
+      "Bash(powershell -NoProfile -Command \"Get-ChildItem -Path 'C:\\\\Users\\\\HP\\\\source\\\\repos\\\\ideatecfacturacion\\\\app\\\\factufly' -Directory | Select-Object Name\")",
+      "Bash(npx tsc *)",
+      "PowerShell(npx --prefix \"C:\\\\Users\\\\HP\\\\source\\\\repos\\\\ideatecfacturacion\" tsc --noEmit -p \"C:\\\\Users\\\\HP\\\\source\\\\repos\\\\ideatecfacturacion\\\\tsconfig.json\" 2>&1)",
+      "PowerShell(Set-Location \"C:\\\\Users\\\\HP\\\\source\\\\repos\\\\ideatecfacturacion\"; npx tsc --noEmit -p tsconfig.json; Write-Output \"EXIT CODE: $LASTEXITCODE\")"
     ]
   }
 }

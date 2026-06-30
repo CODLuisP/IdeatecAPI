@@ -24,4 +24,8 @@ public class RegistrarProductoDTO
     public int SucursalId { get; set; }
     public decimal PrecioUnitario { get; set; }
     public int? Stock { get; set; }
+    public decimal? PrecioMayorista { get; set; }
+    public int? CantidadMinimaMayorista { get; set; }
+    public bool? EnPromocion { get; set; }
+    public decimal? PorcentajeDescuento { get; set; }
 }

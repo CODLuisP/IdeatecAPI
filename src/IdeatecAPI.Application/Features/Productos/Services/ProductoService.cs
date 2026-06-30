@@ -98,6 +98,10 @@ public class ProductoService : IProductoService
                 SucursalId = dto.SucursalId,
                 PrecioUnitario = dto.PrecioUnitario,
                 Stock = dto.Stock,
+                PrecioMayorista = dto.PrecioMayorista,
+                CantidadMinimaMayorista = dto.CantidadMinimaMayorista,
+                EnPromocion = dto.EnPromocion ?? false,
+                PorcentajeDescuento = dto.PorcentajeDescuento,
                 Estado = true,
                 FechaCreacion = DateTime.Now
             };
@@ -165,7 +169,11 @@ public class ProductoService : IProductoService
             {
                 SucursalProductoId = dto.SucursalProductoId,
                 PrecioUnitario = dto.PrecioUnitario,
-                Stock = dto.Stock
+                Stock = dto.Stock,
+                PrecioMayorista = dto.PrecioMayorista,
+                CantidadMinimaMayorista = dto.CantidadMinimaMayorista,
+                EnPromocion = dto.EnPromocion ?? false,
+                PorcentajeDescuento = dto.PorcentajeDescuento
             };
 
             await _unitOfWork.Productos.EditarSucursalProductoAsync(sucursalProducto);
@@ -193,9 +201,32 @@ public class ProductoService : IProductoService
         {
             foreach (var dto in dtos)
             {
-                var resultado = await _unitOfWork.Productos.ActualizarStockAsync(dto.SucursalProductoId, dto.Cantidad);
-                if (!resultado)
-                    throw new InvalidOperationException($"Stock insuficiente o producto no encontrado para SucursalProductoId {dto.SucursalProductoId}.");
+                // Si el producto vendido es un paquete (caja, pack, etc.), el descuento de stock
+                // se redirige al producto base (cantidad x factor de conversión), igual que en compras.
+                var info = await _unitOfWork.Productos.GetInfoConversionBySucursalProductoIdAsync(dto.SucursalProductoId);
+
+                var esPaqueteValido = info?.EsPaquete == true
+                    && info.ProductoBaseId is int
+                    && info.FactorConversion is decimal factorTmp
+                    && factorTmp > 0;
+
+                if (esPaqueteValido)
+                {
+                    var productoBaseId = info!.ProductoBaseId!.Value;
+                    var sucursalId = info.SucursalProducto!.SucursalId;
+                    var factor = info.FactorConversion!.Value;
+                    var cantidadStockBase = (int)Math.Round(dto.Cantidad * factor, MidpointRounding.AwayFromZero);
+
+                    var resultadoBase = await _unitOfWork.Productos.DescontarStockBaseAsync(productoBaseId, sucursalId, cantidadStockBase);
+                    if (!resultadoBase)
+                        throw new InvalidOperationException($"Stock insuficiente en el producto base para cubrir la venta del paquete (SucursalProductoId {dto.SucursalProductoId}).");
+                }
+                else
+                {
+                    var resultado = await _unitOfWork.Productos.ActualizarStockAsync(dto.SucursalProductoId, dto.Cantidad);
+                    if (!resultado)
+                        throw new InvalidOperationException($"Stock insuficiente o producto no encontrado para SucursalProductoId {dto.SucursalProductoId}.");
+                }
             }
 
             _unitOfWork.Commit();
@@ -221,9 +252,31 @@ public class ProductoService : IProductoService
         {
             foreach (var dto in dtos)
             {
-                var resultado = await _unitOfWork.Productos.DevolverStockAsync(dto.ProductoId, dto.SucursalId, dto.Cantidad);
-                if (!resultado)
-                    throw new InvalidOperationException($"Producto no encontrado para ProductoId {dto.ProductoId} en SucursalId {dto.SucursalId}.");
+                // Si el producto devuelto es un paquete, la devolución se redirige al producto
+                // base (cantidad x factor de conversión), simétrico a la venta y a la compra.
+                var producto = await _unitOfWork.Productos.GetProductoByIdAsync(dto.ProductoId, dto.SucursalId);
+
+                var esPaqueteValido = producto?.EsPaquete == true
+                    && producto.ProductoBaseId is int
+                    && producto.FactorConversion is decimal factorTmp
+                    && factorTmp > 0;
+
+                if (esPaqueteValido)
+                {
+                    var productoBaseId = producto!.ProductoBaseId!.Value;
+                    var factor = producto.FactorConversion!.Value;
+                    var cantidadStockBase = (int)Math.Round(dto.Cantidad * factor, MidpointRounding.AwayFromZero);
+
+                    var resultadoBase = await _unitOfWork.Productos.IncrementarStockSinCostoAsync(productoBaseId, dto.SucursalId, cantidadStockBase);
+                    if (!resultadoBase)
+                        throw new InvalidOperationException($"Producto base no encontrado para la devolución del paquete (ProductoId {dto.ProductoId}) en SucursalId {dto.SucursalId}.");
+                }
+                else
+                {
+                    var resultado = await _unitOfWork.Productos.DevolverStockAsync(dto.ProductoId, dto.SucursalId, dto.Cantidad);
+                    if (!resultado)
+                        throw new InvalidOperationException($"Producto no encontrado para ProductoId {dto.ProductoId} en SucursalId {dto.SucursalId}.");
+                }
             }
 
             _unitOfWork.Commit();
@@ -272,7 +325,11 @@ public class ProductoService : IProductoService
             PrecioUnitario = p.SucursalProducto.PrecioUnitario,
             Stock = p.SucursalProducto.Stock,
             UltimoPrecioCompra = p.SucursalProducto.UltimoPrecioCompra,
-            FechaUltimaCompra = p.SucursalProducto.FechaUltimaCompra
+            FechaUltimaCompra = p.SucursalProducto.FechaUltimaCompra,
+            PrecioMayorista = p.SucursalProducto.PrecioMayorista,
+            CantidadMinimaMayorista = p.SucursalProducto.CantidadMinimaMayorista,
+            EnPromocion = p.SucursalProducto.EnPromocion,
+            PorcentajeDescuento = p.SucursalProducto.PorcentajeDescuento
         }
     };
 

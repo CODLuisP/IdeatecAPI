@@ -57,6 +57,32 @@ public class CompraProveedorService : ICompraProveedorService
         if (!existeEnSucursal)
             throw new InvalidOperationException("El producto no está habilitado en esta sucursal.");
 
+        // Si el producto comprado es un paquete (caja, pack, etc.), la CANTIDAD se redirige al
+        // producto base (cantidad x factor de conversión), pero el COSTO (ultimoPrecioCompra)
+        // se registra en el paquete mismo, tal cual se pagó por él — los costos de cada producto
+        // se mantienen independientes, sin mezclarse entre el paquete y su producto base.
+        var producto = await _unitOfWork.Productos.GetProductoByIdAsync(dto.ProductoId.Value, dto.SucursalId.Value);
+
+        var esPaqueteValido = producto?.EsPaquete == true
+            && producto.ProductoBaseId is int productoBaseIdTmp
+            && producto.FactorConversion is decimal factorTmp
+            && factorTmp > 0;
+
+        int? productoBaseId = null;
+        int cantidadStockBase = 0;
+
+        if (esPaqueteValido)
+        {
+            productoBaseId = producto!.ProductoBaseId!.Value;
+            var factor = producto.FactorConversion!.Value;
+
+            var baseExisteEnSucursal = await _unitOfWork.Productos.ExisteEnSucursalAsync(productoBaseId.Value, dto.SucursalId.Value);
+            if (!baseExisteEnSucursal)
+                throw new InvalidOperationException("El producto base de este paquete no está habilitado en esta sucursal.");
+
+            cantidadStockBase = (int)Math.Round(dto.Cantidad.Value * factor, MidpointRounding.AwayFromZero);
+        }
+
         _unitOfWork.BeginTransaction();
         try
         {
@@ -75,11 +101,21 @@ public class CompraProveedorService : ICompraProveedorService
 
             var creada = await _unitOfWork.ComprasProveedor.RegistrarAsync(compra);
 
-            await _unitOfWork.Productos.RegistrarCompraStockAsync(
-                dto.ProductoId.Value,
-                dto.SucursalId.Value,
-                dto.Cantidad.Value,
-                dto.PrecioCompra.Value);
+            if (productoBaseId is int baseId)
+            {
+                // Paquete: el stock sube en el producto base, el costo se queda en el paquete.
+                await _unitOfWork.Productos.IncrementarStockSinCostoAsync(baseId, dto.SucursalId.Value, cantidadStockBase);
+                await _unitOfWork.Productos.ActualizarCostoSinStockAsync(dto.ProductoId.Value, dto.SucursalId.Value, dto.PrecioCompra.Value);
+            }
+            else
+            {
+                // Producto normal: stock y costo juntos, en su propia fila.
+                await _unitOfWork.Productos.RegistrarCompraStockAsync(
+                    dto.ProductoId.Value,
+                    dto.SucursalId.Value,
+                    dto.Cantidad.Value,
+                    dto.PrecioCompra.Value);
+            }
 
             _unitOfWork.Commit();
 
