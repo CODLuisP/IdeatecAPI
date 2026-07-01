@@ -794,21 +794,7 @@ public class ComprobanteService : IComprobanteService
         }
 
         // 8. Actualizar estado BD
-        string nuevoEstado;
-        if (sunatResponse.Success)
-        {
-            nuevoEstado = sunatResponse.TieneObservaciones ? "ACEPTADO_CON_OBSERVACIONES" : "ACEPTADO";
-        }
-        else if (sunatResponse.CodigoRespuesta == "SUNAT_ERROR_HTML" || sunatResponse.CodigoRespuesta == "ERROR_RED")
-        {
-            // Si es un error de servidor o red, lo dejamos en PENDIENTE para reintento
-            nuevoEstado = "PENDIENTE";
-        }
-        else
-        {
-            // Si es un error de validación de SUNAT, es RECHAZADO
-            nuevoEstado = "RECHAZADO";
-        }
+        string nuevoEstado = DeterminarEstadoSunat(sunatResponse);
 
         await _unitOfWork.Comprobantes.UpdateEstadoSunatAsync(
             comprobanteId,
@@ -847,6 +833,31 @@ public class ComprobanteService : IComprobanteService
         };
     }
     // ── HELPERS ──────────────────────────────────────────────────────────────
+    internal static string DeterminarEstadoSunat(SunatResponse sunatResponse)
+    {
+        if (sunatResponse.Success)
+            return sunatResponse.TieneObservaciones ? "ACEPTADO_CON_OBSERVACIONES" : "ACEPTADO";
+
+        switch (sunatResponse.CodigoRespuesta)
+        {
+            // SUNAT no llegó a procesar el documento: falla de comunicación/infraestructura,
+            // no un veredicto sobre el comprobante. Debe poder reintentarse.
+            case "SOAP_FAULT":
+            case "SUNAT_ERROR_HTML":
+            case "ERROR_RED":
+            case "SIN_RESPUESTA":
+            case "ERROR_PARSE":
+            case "CDR_ERROR":
+                return "PENDIENTE";
+
+            default:
+                // Solo es un rechazo real si SUNAT devolvió un CDR (código de rechazo de
+                // validación). Un código futuro no contemplado, si no viene con CDR,
+                // tampoco se considera un rechazo real.
+                return !string.IsNullOrEmpty(sunatResponse.CdrBase64) ? "RECHAZADO" : "PENDIENTE";
+        }
+    }
+
     private static string ObtenerTipoCarpeta(string tipoComprobante) => tipoComprobante switch
     {
         "01" => "facturas",

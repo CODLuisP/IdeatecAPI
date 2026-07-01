@@ -394,21 +394,7 @@ public class NoteService : INoteService
         }
 
         // 5. Actualizar estado en BD
-        string nuevoEstado;
-        if (sunatResponse.Success)
-        {
-            nuevoEstado = sunatResponse.TieneObservaciones ? "ACEPTADO_CON_OBSERVACIONES" : "ACEPTADO";
-        }
-        else if (sunatResponse.CodigoRespuesta == "SUNAT_ERROR_HTML" || sunatResponse.CodigoRespuesta == "ERROR_RED")
-        {
-            // Caída de servidor o red de SUNAT — no es un rechazo de validación, queda PENDIENTE para reintento
-            nuevoEstado = "PENDIENTE";
-        }
-        else
-        {
-            // Error de validación real de SUNAT
-            nuevoEstado = "RECHAZADO";
-        }
+        string nuevoEstado = DeterminarEstadoSunat(sunatResponse);
 
         await _unitOfWork.Notes.UpdateEstadoSunatAsync(
             comprobanteId,
@@ -497,6 +483,31 @@ public class NoteService : INoteService
         "08" => "notas-debito",
         _ => tipoDoc
     };
+
+    internal static string DeterminarEstadoSunat(SunatResponse sunatResponse)
+    {
+        if (sunatResponse.Success)
+            return sunatResponse.TieneObservaciones ? "ACEPTADO_CON_OBSERVACIONES" : "ACEPTADO";
+
+        switch (sunatResponse.CodigoRespuesta)
+        {
+            // SUNAT no llegó a procesar el documento: falla de comunicación/infraestructura,
+            // no un veredicto sobre la nota. Debe poder reintentarse.
+            case "SOAP_FAULT":
+            case "SUNAT_ERROR_HTML":
+            case "ERROR_RED":
+            case "SIN_RESPUESTA":
+            case "ERROR_PARSE":
+            case "CDR_ERROR":
+                return "PENDIENTE";
+
+            default:
+                // Solo es un rechazo real si SUNAT devolvió un CDR (código de rechazo de
+                // validación). Un código futuro no contemplado, si no viene con CDR,
+                // tampoco se considera un rechazo real.
+                return !string.IsNullOrEmpty(sunatResponse.CdrBase64) ? "RECHAZADO" : "PENDIENTE";
+        }
+    }
 
     public async Task<NoteDto> UpdateEstadoSunatAsync(int comprobanteId, UpdateNoteEstadoDto dto)
     {
