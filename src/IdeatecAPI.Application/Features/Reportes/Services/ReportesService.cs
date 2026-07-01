@@ -86,6 +86,7 @@ public interface IReportesService
         string? clienteNumDoc = null,
         int? limit = null);
 
+    //usado actualemente en produccion en control de caja
     Task<byte[]> ExportarControlCajaExcelAsync(
         string titulo,
         string ruc,
@@ -115,6 +116,7 @@ public interface IReportesService
         DateTime? fechaHasta = null, int? usuarioCreacion = null,
         string? clienteNumDoc = null, int? limit = null);
 
+    //usado actualemente en produccion en control de caja
     Task<byte[]> ExportarControlCajaPdfAsync(
         string titulo, string ruc,
         string? codEstablecimiento = null, DateTime? fechaDesde = null,

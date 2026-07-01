@@ -26,20 +26,9 @@ public class ControlCajaTicketHtmlService : IControlCajaTicketHtmlService
     {
         var empresa = await _unitOfWork.Empresas.GetEmpresaByRucAsync(ruc);
 
-        var lista = datos.ToList();
+        var movimientos = datos.ToList();
 
-        // Separar movimientos y ajustes de otros períodos
-        var idsDelPeriodo = lista.Select(x => x.ComprobanteId).ToHashSet();
-        bool EsNota(ControlCajaTicketItemDto x)
-            => x.TipoComprobante == "07" || x.TipoComprobante == "08";
-        bool AfectaOtro(ControlCajaTicketItemDto x)
-            => EsNota(x) && x.ComprobanteAfectadoId.HasValue
-               && !idsDelPeriodo.Contains(x.ComprobanteAfectadoId.Value);
-
-        var movimientos = lista.Where(x => !AfectaOtro(x)).ToList();
-        var ajustes     = lista.Where(AfectaOtro).ToList();
-
-        // Totales por medio de pago (solo movimientos)
+        // Totales por medio de pago
         var resumenPago = movimientos
             .SelectMany(c => c.Pagos.Select(p => new
             {
@@ -106,18 +95,6 @@ public class ControlCajaTicketHtmlService : IControlCajaTicketHtmlService
         {
             var simbolo = r.Moneda == "USD" ? "$" : "S/";
             resumenHtml.Append($"<tr><td>{HE(r.Medio)} ({HE(r.Moneda)})</td><td class=\"tr\">{simbolo} {r.Total:N2}</td></tr>");
-        }
-
-        // ── Ajustes de otros períodos ────────────────────────────────────────
-        string ajustesHtml = "";
-        if (ajustes.Any())
-        {
-            var tablaAjustes = BuildTablaDetalle(ajustes, "#7030A0");
-            ajustesHtml = $@"
-<hr style=""border-color:#7030A0;"">
-<p class=""sec-title"" style=""color:#7030A0;"">AJUSTES DE OTROS PERÍODOS</p>
-<p class=""small"" style=""color:#7030A0;font-style:italic;"">(no afectan el total anterior)</p>
-{tablaAjustes}";
         }
 
         return $@"<!DOCTYPE html>
@@ -208,8 +185,6 @@ public class ControlCajaTicketHtmlService : IControlCajaTicketHtmlService
 <table class=""totales"">
   {resumenHtml}
 </table>
-
-{ajustesHtml}
 
 <p class=""footer"">Generado: {fechaReporte:dd/MM/yyyy HH:mm:ss}</p>
 

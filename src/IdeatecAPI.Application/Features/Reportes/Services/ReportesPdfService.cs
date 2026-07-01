@@ -147,20 +147,8 @@ public class ReportesPdfService : IReportesPdfService
         DateTime? fechaDesde = null, DateTime? fechaHasta = null,
         int? usuarioCreacion = null, string? clienteNumDoc = null)
     {
-        var lista = datos.ToList();
+        var movimientos = datos.ToList();
         var filtros = Filtros(ruc, codEstablecimiento, fechaDesde, fechaHasta, usuarioCreacion, clienteNumDoc);
-
-        // Separar movimientos del período y ajustes (misma lógica que el Excel)
-        var idsDelPeriodo = lista.Select(x => x.ComprobanteId).ToHashSet();
-        bool EsNota(ListarComprobanteDTO x) => x.TipoComprobante == "07" || x.TipoComprobante == "08";
-        bool AfectaOtro(ListarComprobanteDTO x) =>
-            EsNota(x) && x.ComprobanteAfectadoId.HasValue && !idsDelPeriodo.Contains(x.ComprobanteAfectadoId.Value);
-
-        var movimientos = lista.Where(x => !AfectaOtro(x)).ToList();
-        var ajustes     = lista.Where(AfectaOtro).ToList();
-
-        var totalMov = movimientos.Where(x => x.TipoComprobante != "07").Sum(x => x.ImporteTotal)
-                     - movimientos.Where(x => x.TipoComprobante == "07").Sum(x => x.ImporteTotal);
 
         var doc = Document.Create(container =>
         {
@@ -181,19 +169,6 @@ public class ReportesPdfService : IReportesPdfService
                         .Text("MOVIMIENTOS DEL PERÍODO").Bold().FontSize(8).FontColor(Blanco);
                     col.Item().Table(table => BuildTablaCC(table, movimientos,
                         "TOTAL NETO DEL PERÍODO", "#C6EFCE", Azul, fontSize: 7, pad: 2));
-
-                    // ── Ajustes ───────────────────────────────────────────────
-                    if (ajustes.Any())
-                    {
-                        col.Item().PaddingTop(6).Background("#7030A0").Padding(3)
-                            .Text("AJUSTES DE OTROS PERÍODOS (no afectan el total anterior)")
-                            .Bold().FontSize(8).FontColor(Blanco);
-                        col.Item().Table(table => BuildTablaCC(table, ajustes,
-                            "TOTAL AJUSTES", "#E2CFEE", "#7030A0", fontSize: 7, pad: 2));
-                        col.Item().PaddingTop(3).Text(
-                            "Estas notas afectan comprobantes de otros períodos y no se incluyen en el total.")
-                            .Italic().FontSize(8).FontColor("#7030A0");
-                    }
                 });
 
                 page.Footer().AlignRight().Text(txt =>
@@ -401,19 +376,8 @@ public class ReportesPdfService : IReportesPdfService
         const string ColorSuave  = "#4A5568";
         const string ColorRojo   = "#C00000";
         const string ColorVerde  = "#375623";
-        const string ColorMorado = "#7030A0";
-        var lista        = datos.ToList();
+        var movimientos  = datos.ToList();
         var fechaReporte = DateTime.Now;
-
-        // ── Separar movimientos y ajustes ────────────────────────────────────
-        var idsDelPeriodo = lista.Select(x => x.ComprobanteId).ToHashSet();
-        bool EsNota(ControlCajaTicketItemDto x)     => x.TipoComprobante is "07" or "08";
-        bool AfectaOtro(ControlCajaTicketItemDto x) =>
-            EsNota(x) && x.ComprobanteAfectadoId.HasValue
-            && !idsDelPeriodo.Contains(x.ComprobanteAfectadoId.Value);
-
-        var movimientos = lista.Where(x => !AfectaOtro(x)).ToList();
-        var ajustes     = lista.Where(AfectaOtro).ToList();
 
         // ── Totales ──────────────────────────────────────────────────────────
         var totalPen = movimientos.Where(x => x.TipoMoneda == "PEN")
@@ -618,20 +582,6 @@ public class ReportesPdfService : IReportesPdfService
                                 }
                             });
 
-                            // Ajustes de otros períodos
-                            if (ajustes.Any())
-                            {
-                                left.Item().PaddingTop(12)
-                                    .BorderBottom(2).BorderColor(ColorMorado)
-                                    .PaddingBottom(3)
-                                    .Text("Ajustes de Otros Períodos")
-                                    .Bold().FontSize(9).FontColor(ColorMorado);
-                                left.Item().PaddingTop(2)
-                                    .Text("Notas que afectan comprobantes de períodos anteriores — no modifican el total.")
-                                    .Italic().FontSize(7).FontColor(ColorSuave);
-                                left.Item().PaddingTop(5)
-                                    .Element(c => BuildCajaTabla(c, ajustes, ColorMorado, "#D0B8E0", "#F5F0FA", ColorRojo));
-                            }
                         });
 
                         row.ConstantItem(12);

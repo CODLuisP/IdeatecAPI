@@ -426,16 +426,7 @@ public Task<byte[]> ExportarListadoReportesAsync(
         int? usuarioCreacion = null,
         string? clienteNumDoc = null)
     {
-        var lista = datos.ToList();
-
-        // Separar notas que afectan comprobantes fuera del período
-        var idsDelPeriodo = lista.Select(x => x.ComprobanteId).ToHashSet();
-        bool EsNota(ListarComprobanteDTO x) => x.TipoComprobante == "07" || x.TipoComprobante == "08";
-        bool AfectaOtroPeriodo(ListarComprobanteDTO x) =>
-            EsNota(x) && x.ComprobanteAfectadoId.HasValue && !idsDelPeriodo.Contains(x.ComprobanteAfectadoId.Value);
-
-        var movimientos = lista.Where(x => !AfectaOtroPeriodo(x)).ToList();
-        var ajustes     = lista.Where(AfectaOtroPeriodo).ToList();
+        var movimientos = datos.ToList();
 
         using var wb = new XLWorkbook();
         var ws = wb.Worksheets.Add("Control de Caja");
@@ -525,54 +516,6 @@ public Task<byte[]> ExportarListadoReportesAsync(
                 .Font.SetFontColor(XLColor.White)
                 .Fill.SetBackgroundColor(XLColor.Red)
                 .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
-        }
-
-        // ═════════════════════════════════════════════════════════════════════════
-        // SECCIÓN — Ajustes de otros períodos
-        // ═════════════════════════════════════════════════════════════════════════
-        if (ajustes.Count > 0)
-        {
-            filaActual += 2;
-
-            ws.Cell(filaActual, 1).Value = "AJUSTES DE OTROS PERÍODOS (no afectan el total anterior)";
-            ws.Range(filaActual, 1, filaActual, 13).Merge();
-            ws.Cell(filaActual, 1).Style
-                .Font.SetBold(true)
-                .Font.SetFontSize(10)
-                .Font.SetFontColor(XLColor.White)
-                .Fill.SetBackgroundColor(XLColor.FromHtml("#7030A0"))
-                .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Left);
-            filaActual++;
-
-            SetHeaders(ws, filaActual, headers);
-            filaActual++;
-
-            int primeraFilaAjustes = filaActual;
-            foreach (var item in ajustes)
-            {
-                EscribirFilaControlCaja(ws, filaActual, item, ajustes.IndexOf(item));
-                filaActual++;
-            }
-
-            int ultimaFilaAjustes = filaActual - 1;
-
-            ws.Cell(filaActual, 1).Value = "TOTAL AJUSTES";
-            ws.Cell(filaActual, 6).FormulaA1 = $"=SUM(F{primeraFilaAjustes}:F{ultimaFilaAjustes})";
-            ws.Cell(filaActual, 7).FormulaA1 = $"=SUM(G{primeraFilaAjustes}:G{ultimaFilaAjustes})";
-            ws.Cell(filaActual, 8).FormulaA1 = $"=SUM(H{primeraFilaAjustes}:H{ultimaFilaAjustes})";
-            ws.Range(filaActual, 1, filaActual, 13).Style
-                .Font.SetBold(true)
-                .Fill.SetBackgroundColor(XLColor.FromHtml("#E2CFEE"))
-                .NumberFormat.SetFormat("#,##0.00")
-                .Border.SetOutsideBorder(XLBorderStyleValues.Medium);
-            filaActual += 2;
-
-            ws.Cell(filaActual, 1).Value = "Estas notas afectan comprobantes emitidos en otros períodos y no se incluyen en el total del período.";
-            ws.Range(filaActual, 1, filaActual, 13).Merge();
-            ws.Cell(filaActual, 1).Style
-                .Font.SetItalic(true)
-                .Font.SetFontSize(9)
-                .Font.SetFontColor(XLColor.FromHtml("#7030A0"));
         }
 
         // ── Ancho columnas ────────────────────────────────────────────────────────
