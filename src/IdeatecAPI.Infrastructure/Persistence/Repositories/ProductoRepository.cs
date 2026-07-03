@@ -179,7 +179,7 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
     {
         var sql = $@"{SelectColumns}
         AND sp.sucursalID = @SucursalId
-        AND (p.nomProducto LIKE @Palabra OR p.codigo LIKE @Palabra)
+        AND (p.nomProducto LIKE @Palabra OR p.codigo LIKE @Palabra OR p.codigoBarras = @PalabraExacta)
         ORDER BY p.nomProducto ASC
         LIMIT 10";
 
@@ -191,7 +191,7 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
                 producto.SucursalProducto = sucursalProducto;
                 return producto;
             },
-            new { SucursalId = sucursalId, Palabra = $"%{palabra}%" },
+            new { SucursalId = sucursalId, Palabra = $"%{palabra}%", PalabraExacta = palabra },
             transaction: _transaction,
             splitOn: "CategoriaId,SucursalProductoId"
         );
@@ -239,7 +239,7 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
           AND sp.estado = 1
           AND s.estado = 1
           AND s.empresaRuc = @EmpresaRuc
-          AND (p.nomProducto LIKE @Palabra OR p.codigo LIKE @Palabra)
+          AND (p.nomProducto LIKE @Palabra OR p.codigo LIKE @Palabra OR p.codigoBarras = @PalabraExacta)
         ORDER BY p.nomProducto ASC
         LIMIT 10";
 
@@ -251,7 +251,7 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
                 producto.SucursalProducto = sucursalProducto;
                 return producto;
             },
-            new { EmpresaRuc = empresaRuc, Palabra = $"%{palabra}%" },
+            new { EmpresaRuc = empresaRuc, Palabra = $"%{palabra}%", PalabraExacta = palabra },
             transaction: _transaction,
             splitOn: "CategoriaId,SucursalProductoId"
         );
