@@ -741,4 +741,14 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
         );
     }
 
+    public async Task<bool> ExisteCodigoBarrasAsync(string codigoBarras)
+    {
+        var sql = @"SELECT COUNT(1) FROM producto
+                    WHERE codigoBarras = @CodigoBarras
+                    AND codigoBarras != ''
+                    AND estado = 1";
+        var count = await _connection.ExecuteScalarAsync<int>(sql, new { CodigoBarras = codigoBarras }, _transaction);
+        return count > 0;
+    }
+
 }
