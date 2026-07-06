@@ -569,7 +569,7 @@ public Task<byte[]> ExportarListadoReportesAsync(
         ws.Cell(fila, 7).Value  = igv;
         ws.Cell(fila, 8).Value  = importe;
         ws.Cell(fila, 9).Value  = (item.TipoMoneda == "USD" && item.TipoCambio > 0)
-            ? $"USD ({item.TipoCambio:F2})"
+            ? $"USD ({item.TipoCambio:F3})"
             : item.TipoMoneda;
         ws.Cell(fila, 10).Value = item.EstadoSunat;
         ws.Cell(fila, 11).Value = !string.IsNullOrEmpty(item.NumDocAfectado) ? item.NumDocAfectado : "-";
@@ -676,7 +676,7 @@ private static void EscribirFila(IXLWorksheet ws, int fila, ListarComprobanteDTO
     ws.Cell(fila, 7).Value  = igv;
     ws.Cell(fila, 8).Value  = importe;
     ws.Cell(fila, 9).Value  = (item.TipoMoneda == "USD" && item.TipoCambio > 0)
-        ? $"USD ({item.TipoCambio:F2})"
+        ? $"USD ({item.TipoCambio:F3})"
         : item.TipoMoneda;
     ws.Cell(fila, 10).Value = item.EstadoSunat;
     ws.Cell(fila, 11).Value = !string.IsNullOrEmpty(item.NumDocAfectado) ? item.NumDocAfectado : "-";

@@ -1,5 +1,7 @@
 using IdeatecAPI.Application.Features.Comprobante.DTOs;
 using IdeatecAPI.Application.Features.Comprobante.Services;
+using IdeatecAPI.Application.Features.Productos.DTO;
+using IdeatecAPI.Application.Features.Productos.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,17 +15,20 @@ public class ComprobantesController : ControllerBase
     private readonly IComprobanteService _comprobanteService;
     private readonly IComprobantePdfService _pdfService;
     private readonly IComprobanteHtmlService _htmlService;
+    private readonly IProductoService _productoService;
     private readonly ILogger<ComprobantesController> _logger;
 
     public ComprobantesController(
         IComprobanteService comprobanteService,
         IComprobantePdfService pdfService,
         IComprobanteHtmlService htmlService,
+        IProductoService productoService,
         ILogger<ComprobantesController> logger)
     {
         _comprobanteService = comprobanteService;
         _pdfService         = pdfService;
         _htmlService        = htmlService;
+        _productoService    = productoService;
         _logger             = logger;
     }
 
@@ -336,6 +341,37 @@ public class ComprobantesController : ControllerBase
 
     // resto de métodos sin cambios...
     // (EnviarSunat, Generar, DescargarPdf, GetById, GetByRucSerieNumero, GetByEstado, ActualizarCorreoWhatsapp)
+
+    [HttpPut("{id}/descontar-stock")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> DescontarStock(int id, [FromBody] IEnumerable<ActualizarStockDTO> items)
+    {
+        try
+        {
+            var itemsList = items?.ToList();
+            if (itemsList == null || itemsList.Count == 0)
+                return BadRequest(new { mensaje = "No hay ítems de stock que descontar." });
+
+            await _productoService.ActualizarStockAsync(itemsList);
+            return Ok(new { mensaje = "Stock descontado correctamente." });
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning("Datos inválidos al descontar stock del comprobante {Id}: {Mensaje}", id, ex.Message);
+            return BadRequest(new { mensaje = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al descontar stock del comprobante {Id}", id);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al descontar el stock.",
+                detalle = ex.Message
+            });
+        }
+    }
 
     private static (DateTime? desde, DateTime? hasta) NormalizarFechas(DateTime? fechaDesde, DateTime? fechaHasta)
     {
