@@ -551,7 +551,7 @@ public Task<byte[]> ExportarListadoReportesAsync(
         var tc2 = (item.TipoMoneda == "USD" && item.TipoCambio > 0) ? item.TipoCambio : 1m;
         bool esUsd2 = tc2 != 1m;
         static decimal Conv2(decimal v, decimal t, bool usd) =>
-            usd ? Math.Round(v * t, 0) : Math.Round(v * t, 2);
+            Math.Round(v * t, 2);
         var valorVenta = Conv2((item.TipoComprobante == "07" ? -item.ValorVenta   : item.ValorVenta),   tc2, esUsd2);
         var igv        = Conv2((item.TipoComprobante == "07" ? -item.TotalIGV     : item.TotalIGV),     tc2, esUsd2);
         var importe    = Conv2((item.TipoComprobante == "07" ? -item.ImporteTotal : item.ImporteTotal), tc2, esUsd2);
@@ -661,7 +661,7 @@ private static void EscribirFila(IXLWorksheet ws, int fila, ListarComprobanteDTO
     var tc = (item.TipoMoneda == "USD" && item.TipoCambio > 0) ? item.TipoCambio : 1m;
     bool esUsd = tc != 1m;
     static decimal Conv(decimal v, decimal t, bool usd) =>
-        usd ? Math.Round(v * t, 0) : Math.Round(v * t, 2);
+        Math.Round(v * t, 2);
     var valorVenta = Conv((!esRechazado && item.TipoComprobante == "07") ? -item.ValorVenta   : item.ValorVenta,   tc, esUsd);
     var igv        = Conv((!esRechazado && item.TipoComprobante == "07") ? -item.TotalIGV     : item.TotalIGV,     tc, esUsd);
     var importe    = Conv((!esRechazado && item.TipoComprobante == "07") ? -item.ImporteTotal : item.ImporteTotal, tc, esUsd);
