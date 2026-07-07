@@ -307,7 +307,8 @@ public class ReportesPdfService : IReportesPdfService
         bool par = false;
         foreach (var d in lista)
         {
-            var bg = par ? Blanco : GrisClaro; par = !par;
+            bool esRechazado = d.EstadoSunat == "RECHAZADO";
+            var bg = esRechazado ? "#F2F2F2" : (par ? Blanco : GrisClaro); par = !par;
             bool esNC = d.TipoComprobante == "07";
             var tipo = d.TipoComprobante switch
             {
@@ -709,7 +710,8 @@ public class ReportesPdfService : IReportesPdfService
             bool par = false; int n = 1;
             foreach (var d in lista)
             {
-                var bg    = par ? Blanco : colorGris; par = !par;
+                bool esRechazado = d.EstadoSunat == "RECHAZADO";
+                var bg    = esRechazado ? "#F2F2F2" : (par ? Blanco : colorGris); par = !par;
                 bool esNC = d.TipoComprobante == "07";
                 decimal monto = esNC ? -d.ImporteTotal : d.ImporteTotal;
 

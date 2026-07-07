@@ -644,9 +644,10 @@ public class ReportesRepository : IReportesRepository
         string? clienteNumDoc = null,
         int? limit = null)
     {
+        // Nota: se incluyen los RECHAZADOS a propósito (visibilidad de correlativo).
+        // Sus montos se ponen en cero en la capa de servicio/presentación, no aquí.
         var sql = BaseSelectReportes + @"
             WHERE c.empresaRuc = @Ruc
-            AND c.estadoSunat NOT IN ('RECHAZADO')
             AND (@CodEstablecimiento IS NULL OR c.establecimientoAnexo = @CodEstablecimiento)
             AND (@FechaDesde IS NULL OR c.fechaEmision >= @FechaDesde)
             AND (@FechaHasta IS NULL OR c.fechaEmision <= @FechaHasta)

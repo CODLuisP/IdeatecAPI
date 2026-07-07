@@ -339,7 +339,7 @@ public class ReportesService : IReportesService
             ruc, codEstablecimiento, desde, hasta,
             usuarioCreacion, clienteNumDoc, limit);
 
-        var dtos = datos.Select(MapToListarDto);
+        var dtos = datos.Select(MapToListarDto).Select(ZerarMontosSiRechazado);
 
         return await _excelService.ExportarControlCajaAsync(
             titulo, dtos, ruc, codEstablecimiento,
@@ -401,7 +401,7 @@ public class ReportesService : IReportesService
 
         var datos = await _unitOfWork.Reportes.GetListadoControlCajaAsync(
             ruc, codEstablecimiento, desde, hasta, usuarioCreacion, clienteNumDoc, limit);
-        var dtos = datos.Select(MapToListarDto);
+        var dtos = datos.Select(MapToListarDto).Select(ZerarMontosSiRechazado);
 
         return await _pdfService.ExportarControlCajaPdfAsync(
             titulo, dtos, ruc, codEstablecimiento, fechaDesde, fechaHasta, usuarioCreacion, clienteNumDoc);
@@ -441,22 +441,26 @@ public class ReportesService : IReportesService
                 g => g.Select(p => new PagoResumenDto { MedioPago = p.MedioPago, Monto = p.Monto }).ToList());
 
         // 3. Unir
-        var items = comprobantes.Select(c => new ControlCajaTicketItemDto
+        var items = comprobantes.Select(c =>
         {
-            ComprobanteId         = c.ComprobanteId,
-            TipoComprobante       = c.TipoComprobante,
-            Serie                 = c.Serie ?? "",
-            Correlativo           = c.Correlativo,
-            NumeroCompleto        = c.NumeroCompleto ?? "",
-            FechaEmision          = c.FechaEmision,
-            ImporteTotal          = c.ImporteTotal ?? 0,
-            ValorVenta            = c.ValorVenta ?? 0,
-            TotalIGV              = c.TotalIGV ?? 0,
-            TipoMoneda            = c.TipoMoneda ?? "PEN",
-            EstadoSunat           = c.EstadoSunat,
-            ComprobanteAfectadoId = c.ComprobanteAfectadoId,
-            NumDocAfectado        = c.NumDocAfectado,
-            Pagos                 = pagosPorId.TryGetValue(c.ComprobanteId, out var p) ? p : new()
+            var esRechazado = c.EstadoSunat == "RECHAZADO";
+            return new ControlCajaTicketItemDto
+            {
+                ComprobanteId         = c.ComprobanteId,
+                TipoComprobante       = c.TipoComprobante,
+                Serie                 = c.Serie ?? "",
+                Correlativo           = c.Correlativo,
+                NumeroCompleto        = c.NumeroCompleto ?? "",
+                FechaEmision          = c.FechaEmision,
+                ImporteTotal          = esRechazado ? 0 : c.ImporteTotal ?? 0,
+                ValorVenta            = esRechazado ? 0 : c.ValorVenta ?? 0,
+                TotalIGV              = esRechazado ? 0 : c.TotalIGV ?? 0,
+                TipoMoneda            = c.TipoMoneda ?? "PEN",
+                EstadoSunat           = c.EstadoSunat,
+                ComprobanteAfectadoId = c.ComprobanteAfectadoId,
+                NumDocAfectado        = c.NumDocAfectado,
+                Pagos                 = esRechazado ? new() : (pagosPorId.TryGetValue(c.ComprobanteId, out var p) ? p : new())
+            };
         });
 
         return await _ticketHtmlService.GenerarHtmlAsync(
@@ -495,22 +499,26 @@ public class ReportesService : IReportesService
                 .ToDictionary(g => g.Key,
                     g => g.Select(p => new PagoResumenDto { MedioPago = p.MedioPago, Monto = p.Monto }).ToList());
 
-            items = comprobantes.Select(c => new ControlCajaTicketItemDto
+            items = comprobantes.Select(c =>
             {
-                ComprobanteId         = c.ComprobanteId,
-                TipoComprobante       = c.TipoComprobante,
-                Serie                 = c.Serie ?? "",
-                Correlativo           = c.Correlativo,
-                NumeroCompleto        = c.NumeroCompleto ?? "",
-                FechaEmision          = c.FechaEmision,
-                ImporteTotal          = c.ImporteTotal ?? 0,
-                ValorVenta            = c.ValorVenta ?? 0,
-                TotalIGV              = c.TotalIGV ?? 0,
-                TipoMoneda            = c.TipoMoneda ?? "PEN",
-                EstadoSunat           = c.EstadoSunat,
-                ComprobanteAfectadoId = c.ComprobanteAfectadoId,
-                NumDocAfectado        = c.NumDocAfectado,
-                Pagos                 = pagosPorId.TryGetValue(c.ComprobanteId, out var p) ? p : new()
+                var esRechazado = c.EstadoSunat == "RECHAZADO";
+                return new ControlCajaTicketItemDto
+                {
+                    ComprobanteId         = c.ComprobanteId,
+                    TipoComprobante       = c.TipoComprobante,
+                    Serie                 = c.Serie ?? "",
+                    Correlativo           = c.Correlativo,
+                    NumeroCompleto        = c.NumeroCompleto ?? "",
+                    FechaEmision          = c.FechaEmision,
+                    ImporteTotal          = esRechazado ? 0 : c.ImporteTotal ?? 0,
+                    ValorVenta            = esRechazado ? 0 : c.ValorVenta ?? 0,
+                    TotalIGV              = esRechazado ? 0 : c.TotalIGV ?? 0,
+                    TipoMoneda            = c.TipoMoneda ?? "PEN",
+                    EstadoSunat           = c.EstadoSunat,
+                    ComprobanteAfectadoId = c.ComprobanteAfectadoId,
+                    NumDocAfectado        = c.NumDocAfectado,
+                    Pagos                 = esRechazado ? new() : (pagosPorId.TryGetValue(c.ComprobanteId, out var p) ? p : new())
+                };
             });
         }
 
@@ -548,4 +556,18 @@ public class ReportesService : IReportesService
             NumeroDocumento = c.ClienteNumDoc
         }
     };
+
+    // Para Control de Caja: los RECHAZADOS se muestran (visibilidad de correlativo)
+    // pero con todos sus montos en cero, ya que no tienen efecto contable.
+    private static ListarComprobanteDTO ZerarMontosSiRechazado(ListarComprobanteDTO d)
+    {
+        if (d.EstadoSunat != "RECHAZADO") return d;
+
+        d.TipoCambio   = 0;
+        d.ValorVenta   = 0;
+        d.TotalIGV     = 0;
+        d.ImporteTotal = 0;
+        d.MontoCredito = 0;
+        return d;
+    }
 }

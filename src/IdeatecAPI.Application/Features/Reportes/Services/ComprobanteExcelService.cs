@@ -540,7 +540,10 @@ public Task<byte[]> ExportarListadoReportesAsync(
         };
 
         // Estados con color especial
-        if (item.EstadoSunat == "ANULADO")
+        var esRechazado2 = item.EstadoSunat == "RECHAZADO";
+        if (esRechazado2)
+            bgColor = XLColor.FromHtml("#F2F2F2");
+        else if (item.EstadoSunat == "ANULADO")
             bgColor = XLColor.FromHtml("#D9D9D9");
         else if (item.EstadoSunat == "PENDIENTE")
             bgColor = XLColor.FromHtml("#FFF9C4");
@@ -602,6 +605,9 @@ public Task<byte[]> ExportarListadoReportesAsync(
             ws.Cell(fila, 7).Style.Font.SetFontColor(XLColor.Red);
             ws.Cell(fila, 8).Style.Font.SetFontColor(XLColor.Red);
         }
+
+        if (esRechazado2)
+            ws.Range(fila, 1, fila, 13).Style.Font.SetFontColor(XLColor.Gray);
 
         ws.Range(fila, 1, fila, 13).Style
             .Fill.SetBackgroundColor(bgColor)
