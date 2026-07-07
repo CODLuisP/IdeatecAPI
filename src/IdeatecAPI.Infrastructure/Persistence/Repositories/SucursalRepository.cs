@@ -171,7 +171,8 @@ public class SucursalRepository : DapperRepository<Sucursal>, ISucursalRepositor
     public async Task<Sucursal?> GetByIdSinFiltroAsync(int sucursalId)
     {
         var sql = @"
-        SELECT sucursalID AS SucursalId
+        SELECT sucursalID AS SucursalId,
+               empresaRuc AS EmpresaRuc
         FROM sucursal
         WHERE sucursalID = @SucursalId";
 
