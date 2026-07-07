@@ -9,4 +9,6 @@ public class ActualizarStockDTO
 {
     public int SucursalProductoId { get; set; }
     public int Cantidad { get; set; }
+    public string? ReferenciaTipo { get; set; }
+    public int? ReferenciaId { get; set; }
 }

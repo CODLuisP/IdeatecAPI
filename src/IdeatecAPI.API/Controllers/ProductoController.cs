@@ -255,7 +255,10 @@ public class ProductoController : ControllerBase
     {
         try
         {
-            await _productoService.ActualizarStockAsync(dtos);
+            // Este endpoint (a diferencia de comprobantes/{id}/descontar-stock) lo usan las
+            // notas de crédito/débito para descontar stock (p.ej. bonificaciones), de ahí el
+            // tipo de movimiento SALIDA_NOTA en el Kardex.
+            await _productoService.ActualizarStockAsync(dtos, "SALIDA_NOTA");
             return Ok(new { mensaje = "Stock actualizado correctamente." });
         }
         catch (ArgumentException ex)

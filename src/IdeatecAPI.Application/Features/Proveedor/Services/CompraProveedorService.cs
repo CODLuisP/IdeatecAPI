@@ -1,4 +1,5 @@
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
+using IdeatecAPI.Application.Features.Inventario.Services;
 using IdeatecAPI.Application.Features.Proveedor.DTOs;
 using IdeatecAPI.Domain.Entities;
 
@@ -16,10 +17,12 @@ public interface ICompraProveedorService
 public class CompraProveedorService : ICompraProveedorService
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IInventarioPepsService _inventarioPepsService;
 
-    public CompraProveedorService(IUnitOfWork unitOfWork)
+    public CompraProveedorService(IUnitOfWork unitOfWork, IInventarioPepsService inventarioPepsService)
     {
         _unitOfWork = unitOfWork;
+        _inventarioPepsService = inventarioPepsService;
     }
 
     public async Task<IEnumerable<ObtenerCompraProveedorDTO>> GetAllBySucursalAsync(int sucursalId)
@@ -106,6 +109,24 @@ public class CompraProveedorService : ICompraProveedorService
                 // Paquete: el stock sube en el producto base, el costo se queda en el paquete.
                 await _unitOfWork.Productos.IncrementarStockSinCostoAsync(baseId, dto.SucursalId.Value, cantidadStockBase);
                 await _unitOfWork.Productos.ActualizarCostoSinStockAsync(dto.ProductoId.Value, dto.SucursalId.Value, dto.PrecioCompra.Value);
+
+                // El lote PEPS se registra en el producto base (que es quien tiene el stock real),
+                // con el costo unitario convertido a la unidad base (precio del paquete / factor).
+                var factorLote = producto!.FactorConversion!.Value;
+                var productoBase = await _unitOfWork.Productos.GetProductoByIdAsync(baseId, dto.SucursalId.Value);
+                if (productoBase?.SucursalProducto != null)
+                {
+                    await _inventarioPepsService.RegistrarEntradaLoteAsync(
+                        productoBase.SucursalProducto.SucursalProductoId,
+                        creada.CompraProveedorId,
+                        "COMPRA",
+                        cantidadStockBase,
+                        dto.PrecioCompra.Value / factorLote,
+                        compra.FechaCreacion!.Value,
+                        dto.IdUsuario,
+                        referenciaTipo: "COMPRAPROVEEDOR",
+                        referenciaId: creada.CompraProveedorId);
+                }
             }
             else
             {
@@ -115,6 +136,20 @@ public class CompraProveedorService : ICompraProveedorService
                     dto.SucursalId.Value,
                     dto.Cantidad.Value,
                     dto.PrecioCompra.Value);
+
+                if (producto?.SucursalProducto != null)
+                {
+                    await _inventarioPepsService.RegistrarEntradaLoteAsync(
+                        producto.SucursalProducto.SucursalProductoId,
+                        creada.CompraProveedorId,
+                        "COMPRA",
+                        dto.Cantidad.Value,
+                        dto.PrecioCompra.Value,
+                        compra.FechaCreacion!.Value,
+                        dto.IdUsuario,
+                        referenciaTipo: "COMPRAPROVEEDOR",
+                        referenciaId: creada.CompraProveedorId);
+                }
             }
 
             _unitOfWork.Commit();

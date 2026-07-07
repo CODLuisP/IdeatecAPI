@@ -354,7 +354,15 @@ public class ComprobantesController : ControllerBase
             if (itemsList == null || itemsList.Count == 0)
                 return BadRequest(new { mensaje = "No hay ítems de stock que descontar." });
 
-            await _productoService.ActualizarStockAsync(itemsList);
+            // Se traza cada consumo PEPS al comprobante que lo origina, para poder
+            // reconstruir el costo exacto en una eventual devolución (nota de crédito/débito).
+            foreach (var item in itemsList)
+            {
+                item.ReferenciaTipo = "COMPROBANTE";
+                item.ReferenciaId = id;
+            }
+
+            await _productoService.ActualizarStockAsync(itemsList, "SALIDA_VENTA");
             return Ok(new { mensaje = "Stock descontado correctamente." });
         }
         catch (ArgumentException ex)
