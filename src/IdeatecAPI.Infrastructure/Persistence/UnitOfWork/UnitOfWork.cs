@@ -46,6 +46,7 @@ public class UnitOfWork : IUnitOfWork
     private IConfiguracionRepository? _configuracion;
     private IProveedorRepository? _proveedores;
     private ICompraProveedorRepository? _comprasProveedor;
+    private IInventarioLoteRepository? _inventarioLotes;
 
     public UnitOfWork(IConfiguration configuration, ICurrentUserService currentUserService)
     {
@@ -229,6 +230,11 @@ public class UnitOfWork : IUnitOfWork
         get { _comprasProveedor ??= new CompraProveedorRepository(CurrentConnection, _transaction); return _comprasProveedor; }
     }
 
+    public IInventarioLoteRepository InventarioLotes
+    {
+        get { _inventarioLotes ??= new InventarioLoteRepository(CurrentConnection, _transaction); return _inventarioLotes; }
+    }
+
     public void BeginTransaction()
     {
         _transaction = CurrentConnection.BeginTransaction();
@@ -285,6 +291,7 @@ public class UnitOfWork : IUnitOfWork
         _configuracion = null;
         _proveedores = null;
         _comprasProveedor = null;
+        _inventarioLotes = null;
     }
 
     public IRepository<T> Repository<T>() where T : class

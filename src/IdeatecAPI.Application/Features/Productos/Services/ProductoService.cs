@@ -1,4 +1,5 @@
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
+using IdeatecAPI.Application.Features.Inventario.Services;
 using IdeatecAPI.Application.Features.Productos.DTO;
 using IdeatecAPI.Domain.Entities;
 using ClosedXML.Excel;
@@ -17,7 +18,7 @@ public interface IProductoService
     Task<IEnumerable<ObtenerProductoDTO>> SearchByRucAsync(string empresaRuc, string palabra);
     Task<ObtenerProductoDTO> RegistrarProductoAsync(RegistrarProductoDTO dto);
     Task<bool> EditarProductoAsync(EditarProductoDTO dto);
-    Task<bool> ActualizarStockAsync(IEnumerable<ActualizarStockDTO> dtos);
+    Task<bool> ActualizarStockAsync(IEnumerable<ActualizarStockDTO> dtos, string tipoMovimiento = "SALIDA_VENTA");
     Task<bool> DevolverStockAsync(IEnumerable<DevolverStockDTO> dtos);
     Task<bool> EliminarSucursalProductoAsync(int sucursalProductoId);
     Task<byte[]> GenerarReporteExcelAsync(ReporteProductoFiltroDTO filtro);
@@ -27,11 +28,13 @@ public class ProductoService : IProductoService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IProductoExcelService _excelService;
+    private readonly IInventarioPepsService _inventarioPepsService;
 
-    public ProductoService(IUnitOfWork unitOfWork, IProductoExcelService excelService)
+    public ProductoService(IUnitOfWork unitOfWork, IProductoExcelService excelService, IInventarioPepsService inventarioPepsService)
     {
         _unitOfWork = unitOfWork;
         _excelService = excelService;
+        _inventarioPepsService = inventarioPepsService;
     }
 
     public async Task<IEnumerable<ObtenerProductoDTO>> GetAllProductosAsync(int sucursalId)
@@ -198,7 +201,7 @@ public class ProductoService : IProductoService
         }
     }
 
-    public async Task<bool> ActualizarStockAsync(IEnumerable<ActualizarStockDTO> dtos)
+    public async Task<bool> ActualizarStockAsync(IEnumerable<ActualizarStockDTO> dtos, string tipoMovimiento = "SALIDA_VENTA")
     {
         if (!dtos.Any())
             throw new ArgumentException("La lista no puede estar vacía.");
@@ -230,12 +233,33 @@ public class ProductoService : IProductoService
                     var resultadoBase = await _unitOfWork.Productos.DescontarStockBaseAsync(productoBaseId, sucursalId, cantidadStockBase);
                     if (!resultadoBase)
                         throw new InvalidOperationException($"Stock insuficiente en el producto base para cubrir la venta del paquete (SucursalProductoId {dto.SucursalProductoId}).");
+
+                    // El consumo PEPS ocurre sobre los lotes del producto BASE (que es quien tiene costo/lotes reales).
+                    var productoBase = await _unitOfWork.Productos.GetProductoByIdAsync(productoBaseId, sucursalId);
+                    if (productoBase?.SucursalProducto != null)
+                    {
+                        await _inventarioPepsService.ConsumirFifoAsync(
+                            productoBase.SucursalProducto.SucursalProductoId,
+                            cantidadStockBase,
+                            tipoMovimiento,
+                            dto.ReferenciaTipo,
+                            dto.ReferenciaId,
+                            idUsuario: null);
+                    }
                 }
                 else
                 {
                     var resultado = await _unitOfWork.Productos.ActualizarStockAsync(dto.SucursalProductoId, dto.Cantidad);
                     if (!resultado)
                         throw new InvalidOperationException($"Stock insuficiente o producto no encontrado para SucursalProductoId {dto.SucursalProductoId}.");
+
+                    await _inventarioPepsService.ConsumirFifoAsync(
+                        dto.SucursalProductoId,
+                        dto.Cantidad,
+                        tipoMovimiento,
+                        dto.ReferenciaTipo,
+                        dto.ReferenciaId,
+                        idUsuario: null);
                 }
             }
 
@@ -280,12 +304,36 @@ public class ProductoService : IProductoService
                     var resultadoBase = await _unitOfWork.Productos.IncrementarStockSinCostoAsync(productoBaseId, dto.SucursalId, cantidadStockBase);
                     if (!resultadoBase)
                         throw new InvalidOperationException($"Producto base no encontrado para la devolución del paquete (ProductoId {dto.ProductoId}) en SucursalId {dto.SucursalId}.");
+
+                    // El lote de devolución PEPS se reingresa en el producto BASE (donde viven los lotes reales).
+                    var productoBase = await _unitOfWork.Productos.GetProductoByIdAsync(productoBaseId, dto.SucursalId);
+                    if (productoBase?.SucursalProducto != null)
+                    {
+                        await _inventarioPepsService.DevolverAFifoAsync(
+                            productoBase.SucursalProducto.SucursalProductoId,
+                            cantidadStockBase,
+                            productoBase.SucursalProducto.UltimoPrecioCompra,
+                            dto.ReferenciaTipo,
+                            dto.ReferenciaId,
+                            idUsuario: null);
+                    }
                 }
                 else
                 {
                     var resultado = await _unitOfWork.Productos.DevolverStockAsync(dto.ProductoId, dto.SucursalId, dto.Cantidad);
                     if (!resultado)
                         throw new InvalidOperationException($"Producto no encontrado para ProductoId {dto.ProductoId} en SucursalId {dto.SucursalId}.");
+
+                    if (producto?.SucursalProducto != null)
+                    {
+                        await _inventarioPepsService.DevolverAFifoAsync(
+                            producto.SucursalProducto.SucursalProductoId,
+                            dto.Cantidad,
+                            producto.SucursalProducto.UltimoPrecioCompra,
+                            dto.ReferenciaTipo,
+                            dto.ReferenciaId,
+                            idUsuario: null);
+                    }
                 }
             }
 
