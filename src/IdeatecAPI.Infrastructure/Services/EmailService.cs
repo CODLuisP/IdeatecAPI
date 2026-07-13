@@ -34,11 +34,20 @@ public class EmailService : IEmailService
         var smtpConfig = _config.GetSection("Smtp");
         var apiKey = smtpConfig["ApiKey"] ?? throw new InvalidOperationException("MailerSend ApiKey no configurado.");
 
+        // Soporta múltiples destinatarios separados por coma en un solo campo
+        var destinatarios = toEmail
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (destinatarios.Length == 0)
+            throw new InvalidOperationException("No se proporcionó ningún destinatario válido.");
+
         // Construir payload
         var payload = new Dictionary<string, object>
         {
             ["from"] = new { email = smtpConfig["FromEmail"], name = smtpConfig["FromName"] },
-            ["to"]   = new[] { new { email = toEmail, name = toName } },
+            ["to"]   = destinatarios.Select(email => new { email, name = toName }).ToArray(),
             ["subject"] = subject,
             ["html"] = htmlBody,
         };
