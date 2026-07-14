@@ -18,4 +18,5 @@ public class EditarConfiguracionDto
     public bool? AfectacionIgv { get; set; }
     public bool? DescUnitario { get; set; }
     public bool? IsStock { get; set; }
+    public string? NumeroStockBajo { get; set; }
 }

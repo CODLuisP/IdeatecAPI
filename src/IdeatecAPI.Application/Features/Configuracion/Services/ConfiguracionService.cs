@@ -44,7 +44,8 @@ public class ConfiguracionService : IConfiguracionService
             CargaComprobantes = configuracion.CargaComprobantes,
             AfectacionIgv     = configuracion.AfectacionIgv,
             DescUnitario      = configuracion.DescUnitario,
-            IsStock           = configuracion.IsStock
+            IsStock           = configuracion.IsStock,
+            NumeroStockBajo   = configuracion.NumeroStockBajo
         };
     }
 
@@ -72,7 +73,8 @@ public class ConfiguracionService : IConfiguracionService
                 CargaComprobantes = dto.CargaComprobantes,
                 AfectacionIgv     = dto.AfectacionIgv,
                 DescUnitario      = dto.DescUnitario,
-                IsStock           = dto.IsStock
+                IsStock           = dto.IsStock,
+                NumeroStockBajo   = dto.NumeroStockBajo
             };
 
             var result = await _unitOfWork.Configuracion.RegistrarConfiguracionAsync(configuracion);
@@ -113,7 +115,8 @@ public class ConfiguracionService : IConfiguracionService
                 CargaComprobantes = dto.CargaComprobantes,
                 AfectacionIgv     = dto.AfectacionIgv,
                 DescUnitario      = dto.DescUnitario,
-                IsStock           = dto.IsStock
+                IsStock           = dto.IsStock,
+                NumeroStockBajo   = dto.NumeroStockBajo
             };
 
             var result = await _unitOfWork.Configuracion.EditarConfiguracionAsync(ruc, configuracion);
