@@ -49,4 +49,5 @@ public interface IComprobanteRepository : IRepository<Comprobante>
     Task<IEnumerable<Vale>> GetValesFullByComprobanteIdAsync(int comprobanteId);
     Task<int> ObtenerYIncrementarCorrelativoAsync(int sucursalId, string tipoComprobante, string serie);
     Task<IEnumerable<Comprobante>> GetNotasByComprobanteAfectadoIdAsync(int comprobanteAfectadoId, string tipoComprobante);
+    Task<IEnumerable<Comprobante>> GetNotasVentaBySucursalAsync(string empresaRuc, string codEstablecimiento, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null);
 }

@@ -50,8 +50,8 @@ public class ComprobanteHtmlService : IComprobanteHtmlService
         string margenMm = es58 ? "1mm"  : "2mm";
         string moneda   = comprobante.TipoMoneda ?? "PEN";
 
-        // ── QR ──────────────────────────────────────────────────────────────
-        string qrBase64 = GenerarQrBase64(comprobante);
+        // ── QR (no aplica para Nota de Venta) ───────────────────────────────
+        string qrBase64 = comprobante.TipoComprobante == "NV" ? "" : GenerarQrBase64(comprobante);
 
         // ── Logo ─────────────────────────────────────────────────────────────
         string logoHtml = "";
@@ -70,6 +70,7 @@ public class ComprobanteHtmlService : IComprobanteHtmlService
             "03" => "BOLETA ELECTRÓNICA",
             "07" => "NOTA DE CRÉDITO",
             "08" => "NOTA DE DÉBITO",
+            "NV" => "NOTA DE VENTA",
             _    => "COMPROBANTE ELECTRÓNICO"
         };
 
@@ -271,6 +272,7 @@ public class ComprobanteHtmlService : IComprobanteHtmlService
             <p class=""center bold"" style=""font-size:12px;"">RUC: {HE(empresa.Ruc ?? "")}</p>
             <div class=""badge"">{HE(tipoNombre)}</div>
             <p class=""numero-doc"">N° {HE(comprobante.Serie ?? "")}-{comprobante.Correlativo:D8}</p>
+            {(comprobante.TipoComprobante == "NV" ? "<p class=\"center\" style=\"font-size:9px;font-weight:bold;\">CONTROL INTERNO</p>" : "")}
 
             <hr>
 
@@ -307,11 +309,14 @@ public class ComprobanteHtmlService : IComprobanteHtmlService
 
             <hr>
 
+            {(string.IsNullOrEmpty(qrBase64) ? "" : $@"
             <div class=""qr"">
             <img src=""data:image/png;base64,{qrBase64}"" alt=""QR"">
-            </div>
+            </div>")}
 
-            <p class=""footer"">Representación impresa de {HE(tipoNombre)}<br>Consulte en www.sunat.gob.pe</p>
+            {(comprobante.TipoComprobante == "NV"
+                ? "<p class=\"footer\"><strong>DOCUMENTO DE CONTROL INTERNO</strong><br>NO VÁLIDO ANTE SUNAT</p>"
+                : $"<p class=\"footer\">Representación impresa de {HE(tipoNombre)}<br>Consulte en www.sunat.gob.pe</p>")}
 
             {valesHtml}
 

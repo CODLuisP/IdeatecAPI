@@ -169,12 +169,13 @@ public class ReportesController : ControllerBase
         [FromQuery] DateTime? fechaHasta = null,
         [FromQuery] int? usuarioCreacion = null,
         [FromQuery] string? clienteNumDoc = null,
-        [FromQuery] int? limit = null)
+        [FromQuery] int? limit = null,
+        [FromQuery] string filtroNV = "excluir")
     {
         try
         {
             var result = await _reportesService.GetListadoParaReportesAsync(
-                ruc, codEstablecimiento, fechaDesde, fechaHasta, usuarioCreacion, clienteNumDoc, limit);
+                ruc, codEstablecimiento, fechaDesde, fechaHasta, usuarioCreacion, clienteNumDoc, limit, filtroNV);
             return Ok(result);
         }
         catch (Exception ex)
@@ -197,7 +198,8 @@ public class ReportesController : ControllerBase
         [FromQuery] int? usuarioCreacion = null,
         [FromQuery] string? clienteNumDoc = null,
         [FromQuery] int? limit = null,
-        [FromQuery] string formato = "excel")
+        [FromQuery] string formato = "excel",
+        [FromQuery] string filtroNV = "excluir")
     {
         try
         {
@@ -205,13 +207,13 @@ public class ReportesController : ControllerBase
             {
                 var pdf = await _reportesService.ExportarListadoPdfAsync(
                     titulo, ruc, codEstablecimiento, fechaDesde, fechaHasta,
-                    usuarioCreacion, clienteNumDoc, limit);
+                    usuarioCreacion, clienteNumDoc, limit, filtroNV);
                 return File(pdf, "application/pdf", $"comprobantes-{ruc}-{DateTime.Now:yyyyMMdd}.pdf");
             }
 
             var bytes = await _reportesService.ExportarListadoReportesExcelAsync(
                 titulo, ruc, codEstablecimiento, fechaDesde, fechaHasta,
-                usuarioCreacion, clienteNumDoc, limit);
+                usuarioCreacion, clienteNumDoc, limit, filtroNV);
             return File(bytes,
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 $"comprobantes-{ruc}-{DateTime.Now:yyyyMMdd}.xlsx");
@@ -372,7 +374,8 @@ public class ReportesController : ControllerBase
         [FromQuery] int? usuarioCreacion = null,
         [FromQuery] string? clienteNumDoc = null,
         [FromQuery] int? limit = null,
-        [FromQuery] string formato = "excel")
+        [FromQuery] string formato = "excel",
+        [FromQuery] string filtroNV = "excluir")
     {
         try
         {
@@ -380,13 +383,13 @@ public class ReportesController : ControllerBase
             {
                 var pdf = await _reportesService.ExportarControlCajaPdfAsync(
                     titulo, ruc, codEstablecimiento, fechaDesde, fechaHasta,
-                    usuarioCreacion, clienteNumDoc, limit);
+                    usuarioCreacion, clienteNumDoc, limit, filtroNV);
                 return File(pdf, "application/pdf", $"control-caja-{ruc}-{DateTime.Now:yyyyMMdd}.pdf");
             }
 
             var bytes = await _reportesService.ExportarControlCajaExcelAsync(
                 titulo, ruc, codEstablecimiento, fechaDesde, fechaHasta,
-                usuarioCreacion, clienteNumDoc, limit);
+                usuarioCreacion, clienteNumDoc, limit, filtroNV);
             return File(bytes,
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 $"control-caja-{ruc}-{DateTime.Now:yyyyMMdd}.xlsx");
@@ -411,13 +414,14 @@ public class ReportesController : ControllerBase
         [FromQuery] int? usuarioCreacion = null,
         [FromQuery] string? clienteNumDoc = null,
         [FromQuery] int? limit = null,
-        [FromQuery] string? nombreUsuario = null)
+        [FromQuery] string? nombreUsuario = null,
+        [FromQuery] string filtroNV = "excluir")
     {
         try
         {
             var bytes = await _reportesService.ExportarControlCajaTicketPdfAsync(
                 titulo, ruc, nombreResponsable, codEstablecimiento,
-                fechaDesde, fechaHasta, usuarioCreacion, clienteNumDoc, limit, nombreUsuario);
+                fechaDesde, fechaHasta, usuarioCreacion, clienteNumDoc, limit, nombreUsuario, filtroNV);
 
             return File(bytes, "application/pdf",
                 $"ticket-caja-{ruc}-{DateTime.Now:yyyyMMddHHmm}.pdf");
@@ -443,13 +447,14 @@ public class ReportesController : ControllerBase
         [FromQuery] int? usuarioCreacion = null,
         [FromQuery] string? clienteNumDoc = null,
         [FromQuery] int? limit = null,
-        [FromQuery] string? nombreUsuario = null)
+        [FromQuery] string? nombreUsuario = null,
+        [FromQuery] string filtroNV = "excluir")
     {
         try
         {
             var html = await _reportesService.ExportarControlCajaTicketHtmlAsync(
                 titulo, ruc, nombreResponsable, codEstablecimiento,
-                fechaDesde, fechaHasta, usuarioCreacion, clienteNumDoc, limit, nombreUsuario);
+                fechaDesde, fechaHasta, usuarioCreacion, clienteNumDoc, limit, nombreUsuario, filtroNV);
 
             return Content(html, "text/html; charset=utf-8");
         }

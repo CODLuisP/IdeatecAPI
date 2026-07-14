@@ -87,6 +87,16 @@ public class DashboardRepository : IDashboardRepository
                 SUM(CASE WHEN c.tipoComprobante = '03' THEN 1 ELSE 0 END) AS BoletasEmitidas,
                 SUM(CASE WHEN c.tipoComprobante = '07' THEN 1 ELSE 0 END) AS NotasCreditoEmitidas,
                 SUM(CASE WHEN c.tipoComprobante = '08' THEN 1 ELSE 0 END) AS NotasDebitoEmitidas,
+                SUM(CASE WHEN c.tipoComprobante = 'NV' THEN 1 ELSE 0 END) AS NotasVentaEmitidas,
+
+                -- Notas de Venta totales del día
+                COALESCE(SUM(
+                    CASE WHEN c.tipoComprobante = 'NV'
+                        THEN CASE WHEN c.tipoMoneda = 'USD'
+                                THEN c.importeTotal * c.tipoCambio
+                                ELSE c.importeTotal END
+                        ELSE 0 END
+                ), 0) AS TotalNotasVentaDelDia,
 
                 -- Notas de Crédito separadas por fecha del doc afectado
                 COALESCE(SUM(
@@ -185,6 +195,8 @@ public class DashboardRepository : IDashboardRepository
             BoletasEmitidas              = kpiDia.BoletasEmitidas,
             NotasCreditoEmitidas         = kpiDia.NotasCreditoEmitidas,
             NotasDebitoEmitidas          = kpiDia.NotasDebitoEmitidas,
+            NotasVentaEmitidas           = kpiDia.NotasVentaEmitidas,
+            TotalNotasVentaDelDia        = kpiDia.TotalNotasVentaDelDia,
             TotalNotasCreditoDelDia      = kpiDia.TotalNotasCreditoDelDia,
             TotalNotasCreditoOtrasFechas = kpiDia.TotalNotasCreditoOtrasFechas,
             TotalNotasDebitoDelDia       = kpiDia.TotalNotasDebitoDelDia,
@@ -207,4 +219,6 @@ internal class KpiDiaDto
     public decimal TotalNotasCreditoOtrasFechas { get; set; }
     public decimal TotalNotasDebitoDelDia { get; set; }
     public decimal TotalNotasDebitoOtrasFechas { get; set; }
+    public int     NotasVentaEmitidas { get; set; }
+    public decimal TotalNotasVentaDelDia { get; set; }
 }

@@ -32,7 +32,8 @@ public interface IReportesService
         DateTime? fechaHasta = null,
         int? usuarioCreacion = null,
         string? clienteNumDoc = null,
-        int? limit = null);
+        int? limit = null,
+        string filtroNV = "excluir");
 
     // ── Productos top ─────────────────────────────────────────────────────────
     Task<IEnumerable<ProductoTopDTO>> GetProductosTopAsync(
@@ -54,7 +55,8 @@ public interface IReportesService
         DateTime? fechaHasta = null,
         int? usuarioCreacion = null,
         string? clienteNumDoc = null,
-        int? limit = null);
+        int? limit = null,
+        string filtroNV = "excluir");
 
     Task<byte[]> ExportarProductosTopExcelAsync(
         string titulo,
@@ -95,14 +97,16 @@ public interface IReportesService
         DateTime? fechaHasta = null,
         int? usuarioCreacion = null,
         string? clienteNumDoc = null,
-        int? limit = null);
+        int? limit = null,
+        string filtroNV = "excluir");
 
     // ── PDF versions ──────────────────────────────────────────────────────────
     Task<byte[]> ExportarListadoPdfAsync(
         string titulo, string ruc,
         string? codEstablecimiento = null, DateTime? fechaDesde = null,
         DateTime? fechaHasta = null, int? usuarioCreacion = null,
-        string? clienteNumDoc = null, int? limit = null);
+        string? clienteNumDoc = null, int? limit = null,
+        string filtroNV = "excluir");
 
     Task<byte[]> ExportarProductosTopPdfAsync(
         string titulo, string ruc,
@@ -121,7 +125,8 @@ public interface IReportesService
         string titulo, string ruc,
         string? codEstablecimiento = null, DateTime? fechaDesde = null,
         DateTime? fechaHasta = null, int? usuarioCreacion = null,
-        string? clienteNumDoc = null, int? limit = null);
+        string? clienteNumDoc = null, int? limit = null,
+        string filtroNV = "excluir");
 
     // ── Ticket ────────────────────────────────────────────────────────────────
     Task<string> ExportarControlCajaTicketHtmlAsync(
@@ -130,7 +135,8 @@ public interface IReportesService
         string? codEstablecimiento = null, DateTime? fechaDesde = null,
         DateTime? fechaHasta = null, int? usuarioCreacion = null,
         string? clienteNumDoc = null, int? limit = null,
-        string? nombreUsuario = null);
+        string? nombreUsuario = null,
+        string filtroNV = "excluir");
 
     Task<byte[]> ExportarControlCajaTicketPdfAsync(
         string titulo, string ruc,
@@ -138,7 +144,8 @@ public interface IReportesService
         string? codEstablecimiento = null, DateTime? fechaDesde = null,
         DateTime? fechaHasta = null, int? usuarioCreacion = null,
         string? clienteNumDoc = null, int? limit = null,
-        string? nombreUsuario = null);
+        string? nombreUsuario = null,
+        string filtroNV = "excluir");
 }
 
 public class ReportesService : IReportesService
@@ -200,7 +207,8 @@ public class ReportesService : IReportesService
         DateTime? fechaHasta = null,
         int? usuarioCreacion = null,
         string? clienteNumDoc = null,
-        int? limit = null)
+        int? limit = null,
+        string filtroNV = "excluir")
     {
         DateTime? desde = fechaDesde?.Date;
         DateTime? hasta = fechaDesde.HasValue
@@ -210,7 +218,7 @@ public class ReportesService : IReportesService
             : null;
 
         var comprobantes = await _unitOfWork.Reportes.GetListadoParaReportesAsync(
-            ruc, codEstablecimiento, desde, hasta, usuarioCreacion, clienteNumDoc, limit);
+            ruc, codEstablecimiento, desde, hasta, usuarioCreacion, clienteNumDoc, limit, filtroNV);
 
         return comprobantes.Select(MapToListarDto);
     }
@@ -247,11 +255,12 @@ public class ReportesService : IReportesService
         DateTime? fechaHasta = null,
         int? usuarioCreacion = null,
         string? clienteNumDoc = null,
-        int? limit = null)
+        int? limit = null,
+        string filtroNV = "excluir")
     {
         var datos = await GetListadoParaReportesAsync(
             ruc, codEstablecimiento, fechaDesde, fechaHasta,
-            usuarioCreacion, clienteNumDoc, limit);
+            usuarioCreacion, clienteNumDoc, limit, filtroNV);
 
         return await _excelService.ExportarListadoReportesAsync(
             titulo, datos, ruc, codEstablecimiento,
@@ -326,7 +335,8 @@ public class ReportesService : IReportesService
         DateTime? fechaHasta = null,
         int? usuarioCreacion = null,
         string? clienteNumDoc = null,
-        int? limit = null)
+        int? limit = null,
+        string filtroNV = "excluir")
     {
         DateTime? desde = fechaDesde?.Date;
         DateTime? hasta = fechaDesde.HasValue
@@ -337,7 +347,7 @@ public class ReportesService : IReportesService
 
         var datos = await _unitOfWork.Reportes.GetListadoControlCajaAsync(
             ruc, codEstablecimiento, desde, hasta,
-            usuarioCreacion, clienteNumDoc, limit);
+            usuarioCreacion, clienteNumDoc, limit, filtroNV);
 
         var dtos = datos.Select(MapToListarDto).Select(ZerarMontosSiRechazado);
 
@@ -351,10 +361,11 @@ public class ReportesService : IReportesService
         string titulo, string ruc,
         string? codEstablecimiento = null, DateTime? fechaDesde = null,
         DateTime? fechaHasta = null, int? usuarioCreacion = null,
-        string? clienteNumDoc = null, int? limit = null)
+        string? clienteNumDoc = null, int? limit = null,
+        string filtroNV = "excluir")
     {
         var datos = await GetListadoParaReportesAsync(
-            ruc, codEstablecimiento, fechaDesde, fechaHasta, usuarioCreacion, clienteNumDoc, limit);
+            ruc, codEstablecimiento, fechaDesde, fechaHasta, usuarioCreacion, clienteNumDoc, limit, filtroNV);
         return await _pdfService.ExportarListadoPdfAsync(
             titulo, datos, ruc, codEstablecimiento, fechaDesde, fechaHasta, usuarioCreacion, clienteNumDoc);
     }
@@ -390,7 +401,8 @@ public class ReportesService : IReportesService
         string titulo, string ruc,
         string? codEstablecimiento = null, DateTime? fechaDesde = null,
         DateTime? fechaHasta = null, int? usuarioCreacion = null,
-        string? clienteNumDoc = null, int? limit = null)
+        string? clienteNumDoc = null, int? limit = null,
+        string filtroNV = "excluir")
     {
         DateTime? desde = fechaDesde?.Date;
         DateTime? hasta = fechaDesde.HasValue
@@ -400,7 +412,7 @@ public class ReportesService : IReportesService
             : null;
 
         var datos = await _unitOfWork.Reportes.GetListadoControlCajaAsync(
-            ruc, codEstablecimiento, desde, hasta, usuarioCreacion, clienteNumDoc, limit);
+            ruc, codEstablecimiento, desde, hasta, usuarioCreacion, clienteNumDoc, limit, filtroNV);
         var dtos = datos.Select(MapToListarDto).Select(ZerarMontosSiRechazado);
 
         return await _pdfService.ExportarControlCajaPdfAsync(
@@ -414,7 +426,8 @@ public class ReportesService : IReportesService
         string? codEstablecimiento = null, DateTime? fechaDesde = null,
         DateTime? fechaHasta = null, int? usuarioCreacion = null,
         string? clienteNumDoc = null, int? limit = null,
-        string? nombreUsuario = null)
+        string? nombreUsuario = null,
+        string filtroNV = "excluir")
     {
         DateTime? desde = fechaDesde?.Date;
         DateTime? hasta = fechaDesde.HasValue
@@ -425,7 +438,7 @@ public class ReportesService : IReportesService
 
         // 1. Comprobantes
         var comprobantes = (await _unitOfWork.Reportes.GetListadoControlCajaAsync(
-            ruc, codEstablecimiento, desde, hasta, usuarioCreacion, clienteNumDoc, limit)).ToList();
+            ruc, codEstablecimiento, desde, hasta, usuarioCreacion, clienteNumDoc, limit, filtroNV)).ToList();
 
         if (!comprobantes.Any())
             return await _ticketHtmlService.GenerarHtmlAsync(
@@ -474,7 +487,8 @@ public class ReportesService : IReportesService
         string? codEstablecimiento = null, DateTime? fechaDesde = null,
         DateTime? fechaHasta = null, int? usuarioCreacion = null,
         string? clienteNumDoc = null, int? limit = null,
-        string? nombreUsuario = null)
+        string? nombreUsuario = null,
+        string filtroNV = "excluir")
     {
         DateTime? desde = fechaDesde?.Date;
         DateTime? hasta = fechaDesde.HasValue
@@ -486,7 +500,7 @@ public class ReportesService : IReportesService
         var empresa = await _unitOfWork.Empresas.GetEmpresaByRucAsync(ruc);
 
         var comprobantes = (await _unitOfWork.Reportes.GetListadoControlCajaAsync(
-            ruc, codEstablecimiento, desde, hasta, usuarioCreacion, clienteNumDoc, limit)).ToList();
+            ruc, codEstablecimiento, desde, hasta, usuarioCreacion, clienteNumDoc, limit, filtroNV)).ToList();
 
         var items = Enumerable.Empty<ControlCajaTicketItemDto>();
 

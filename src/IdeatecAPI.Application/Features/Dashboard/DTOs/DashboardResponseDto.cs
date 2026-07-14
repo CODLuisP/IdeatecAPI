@@ -11,6 +11,10 @@ public class DashboardResponseDto
     public int BoletasEmitidas { get; set; }
     public int NotasCreditoEmitidas { get; set; }
     public int NotasDebitoEmitidas { get; set; }
+    public int NotasVentaEmitidas { get; set; }
+
+    // ── Notas de Venta (NV) ───────────────────────────────────────────────────
+    public decimal TotalNotasVentaDelDia { get; set; }
 
     // ── Notas de Crédito (07) ─────────────────────────────────────────────────
     public decimal TotalNotasCreditoDelDia { get; set; }       // doc afectado es de hoy

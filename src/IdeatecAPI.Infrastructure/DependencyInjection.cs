@@ -33,6 +33,7 @@ using IdeatecAPI.Application.Features.Configuracion.Services;
 using IdeatecAPI.Application.Features.Proveedor.Services;
 using IdeatecAPI.Application.Features.Inventario.Services;
 using IdeatecAPI.Application.Common.Interfaces.Persistence.Reportes;
+using IdeatecAPI.Application.Features.NotaVenta.Services;
 
 namespace IdeatecAPI.Infrastructure;
 
@@ -146,6 +147,9 @@ public static class DependencyInjection
 
         // Inventario PEPS/FIFO
         services.AddScoped<IInventarioPepsService, InventarioPepsService>();
+
+        // Nota de Venta (control interno, sin envío a SUNAT)
+        services.AddScoped<INotaVentaService, NotaVentaService>();
 
         //Notificaciones WebSocket
         services.AddHttpClient<IWebSocketNotifier, WebSocketNotifier>();

@@ -245,8 +245,9 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         // Bloquea la fila hasta que la transacción haga Commit — ninguna otra transacción puede leer FOR UPDATE hasta entonces
         string sqlSelect = tipoComprobante switch
         {
-            "01" => "SELECT correlativoFactura FROM sucursal WHERE sucursalID = @SucursalId FOR UPDATE",
-            "03" => "SELECT correlativoBoleta  FROM sucursal WHERE sucursalID = @SucursalId FOR UPDATE",
+            "01" => "SELECT correlativoFactura    FROM sucursal WHERE sucursalID = @SucursalId FOR UPDATE",
+            "03" => "SELECT correlativoBoleta     FROM sucursal WHERE sucursalID = @SucursalId FOR UPDATE",
+            "NV" => "SELECT correlativoNotaVenta  FROM sucursal WHERE sucursalID = @SucursalId FOR UPDATE",
             _    => throw new InvalidOperationException($"Tipo de comprobante '{tipoComprobante}' no soportado.")
         };
 
@@ -254,8 +255,9 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
 
         string sqlUpdate = tipoComprobante switch
         {
-            "01" => "UPDATE sucursal SET serieFactura = @Serie, correlativoFactura = correlativoFactura + 1 WHERE sucursalID = @SucursalId",
-            "03" => "UPDATE sucursal SET serieBoleta  = @Serie, correlativoBoleta  = correlativoBoleta  + 1 WHERE sucursalID = @SucursalId",
+            "01" => "UPDATE sucursal SET serieFactura   = @Serie, correlativoFactura   = correlativoFactura   + 1 WHERE sucursalID = @SucursalId",
+            "03" => "UPDATE sucursal SET serieBoleta    = @Serie, correlativoBoleta    = correlativoBoleta    + 1 WHERE sucursalID = @SucursalId",
+            "NV" => "UPDATE sucursal SET serieNotaVenta = @Serie, correlativoNotaVenta = correlativoNotaVenta + 1 WHERE sucursalID = @SucursalId",
             _    => throw new InvalidOperationException($"Tipo de comprobante '{tipoComprobante}' no soportado.")
         };
 
@@ -829,6 +831,32 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         {
             ComprobanteAfectadoId = comprobanteAfectadoId,
             TipoComprobante       = tipoComprobante
+        }, _transaction);
+    }
+
+    public async Task<IEnumerable<Comprobante>> GetNotasVentaBySucursalAsync(
+        string empresaRuc, string codEstablecimiento,
+        DateTime? fechaDesde, DateTime? fechaHasta,
+        int? limit = null, int? offset = null)
+    {
+        var sql = BaseSelect + @"
+            WHERE empresaRuc            = @EmpresaRuc
+            AND establecimientoAnexo    = @CodEstablecimiento
+            AND tipoComprobante         = 'NV'
+            AND (@FechaDesde IS NULL OR fechaEmision >= @FechaDesde)
+            AND (@FechaHasta IS NULL OR fechaEmision <= @FechaHasta)
+            ORDER BY fechaEmision DESC"
+        + (limit.HasValue ? " LIMIT @Limit" : "")
+        + (limit.HasValue && offset.HasValue ? " OFFSET @Offset" : "");
+
+        return await _connection.QueryAsync<Comprobante>(sql, new
+        {
+            EmpresaRuc          = empresaRuc,
+            CodEstablecimiento  = codEstablecimiento,
+            FechaDesde          = fechaDesde,
+            FechaHasta          = fechaHasta,
+            Limit               = limit,
+            Offset              = offset
         }, _transaction);
     }
 }

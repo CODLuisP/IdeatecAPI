@@ -43,7 +43,8 @@ public interface IReportesRepository
         DateTime? fechaHasta = null,
         int? usuarioCreacion = null,
         string? clienteNumDoc = null,
-        int? limit = null);
+        int? limit = null,
+        string filtroNV = "excluir");
 
     Task<IEnumerable<ProductoTopDTO>> GetProductosTopAsync(
         string ruc,
@@ -70,7 +71,8 @@ public interface IReportesRepository
         DateTime? fechaHasta = null,
         int? usuarioCreacion = null,
         string? clienteNumDoc = null,
-        int? limit = null);
+        int? limit = null,
+        string filtroNV = "excluir");
 
     /// Devuelve (ComprobanteId, MedioPago, Monto) para un conjunto de comprobantes.
     Task<IEnumerable<(int ComprobanteId, string? MedioPago, decimal Monto)>>

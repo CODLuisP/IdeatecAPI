@@ -563,6 +563,7 @@ public Task<byte[]> ExportarListadoReportesAsync(
             "03" => "Boleta",
             "07" => "N. Credito",
             "08" => "N. Debito",
+            "NV" => "Nota de Venta",
             _    => item.TipoComprobante
         };
         ws.Cell(fila, 3).Value  = item.FechaEmision.ToString("dd/MM/yyyy");
@@ -673,6 +674,7 @@ private static void EscribirFila(IXLWorksheet ws, int fila, ListarComprobanteDTO
         "03" => "Boleta",
         "07" => "N. Credito",
         "08" => "N. Debito",
+        "NV" => "Nota de Venta",
         _    => item.TipoComprobante
     };
     ws.Cell(fila, 3).Value  = item.FechaEmision.ToString("dd/MM/yyyy");

@@ -34,6 +34,8 @@ public class SucursalRepository : DapperRepository<Sucursal>, ISucursalRepositor
                correlativoGuiaRemision           AS CorrelativoGuiaRemision,
                serieGuiaTransportista            AS SerieGuiaTransportista,
                correlativoGuiaTransportista      AS CorrelativoGuiaTransportista,
+               serieNotaVenta                    AS SerieNotaVenta,
+               correlativoNotaVenta              AS CorrelativoNotaVenta,
                estado                            AS Estado
         FROM sucursal
         WHERE estado = 1";
@@ -74,7 +76,8 @@ public class SucursalRepository : DapperRepository<Sucursal>, ISucursalRepositor
                 serieNotaDebitoFactura, correlativoNotaDebitoFactura,
                 serieNotaDebitoBoleta, correlativoNotaDebitoBoleta,
                 serieGuiaRemision, correlativoGuiaRemision,
-                serieGuiaTransportista, correlativoGuiaTransportista
+                serieGuiaTransportista, correlativoGuiaTransportista,
+                serieNotaVenta, correlativoNotaVenta
             ) VALUES (
                 @EmpresaRuc, @CodEstablecimiento, @Nombre, @Direccion, @Telefono,
                 @SerieFactura, @CorrelativoFactura,
@@ -84,7 +87,8 @@ public class SucursalRepository : DapperRepository<Sucursal>, ISucursalRepositor
                 @SerieNotaDebitoFactura, @CorrelativoNotaDebitoFactura,
                 @SerieNotaDebitoBoleta, @CorrelativoNotaDebitoBoleta,
                 @SerieGuiaRemision, @CorrelativoGuiaRemision,
-                @SerieGuiaTransportista, @CorrelativoGuiaTransportista
+                @SerieGuiaTransportista, @CorrelativoGuiaTransportista,
+                @SerieNotaVenta, @CorrelativoNotaVenta
             );
             SELECT LAST_INSERT_ID();";
 
@@ -115,7 +119,9 @@ public class SucursalRepository : DapperRepository<Sucursal>, ISucursalRepositor
                 serieGuiaRemision                 = @SerieGuiaRemision,
                 correlativoGuiaRemision           = @CorrelativoGuiaRemision,
                 serieGuiaTransportista            = @SerieGuiaTransportista,
-                correlativoGuiaTransportista      = @CorrelativoGuiaTransportista
+                correlativoGuiaTransportista      = @CorrelativoGuiaTransportista,
+                serieNotaVenta                    = @SerieNotaVenta,
+                correlativoNotaVenta              = @CorrelativoNotaVenta
             WHERE sucursalID = @SucursalId AND estado = 1";
 
         var filas = await _connection.ExecuteAsync(sql, sucursal, _transaction);
@@ -161,6 +167,8 @@ public class SucursalRepository : DapperRepository<Sucursal>, ISucursalRepositor
                correlativoGuiaRemision           AS CorrelativoGuiaRemision,
                serieGuiaTransportista            AS SerieGuiaTransportista,
                correlativoGuiaTransportista      AS CorrelativoGuiaTransportista,
+               serieNotaVenta                    AS SerieNotaVenta,
+               correlativoNotaVenta              AS CorrelativoNotaVenta,
                estado                            AS Estado
         FROM sucursal
         WHERE empresaRuc = @EmpresaRuc";

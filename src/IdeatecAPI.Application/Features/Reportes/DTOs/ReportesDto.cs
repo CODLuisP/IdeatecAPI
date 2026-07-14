@@ -40,6 +40,7 @@ public class GraficoBarraDto
     public string Etiqueta { get; set; } = string.Empty; // "Lun", "01", "Ene", etc.
     public decimal Ventas { get; set; }
     public decimal Igv { get; set; }
+    public decimal VentasNV { get; set; }
 }
 
 // ── Distribución donut ────────────────────────────────────────────────────────
@@ -49,6 +50,8 @@ public class DistribucionDocumentosDto
     public int Boletas { get; set; }
     public int NotasCredito { get; set; }
     public int NotasDebito { get; set; }
+    public int NotasVenta { get; set; }
+    public decimal TotalNotasVenta { get; set; }
 }
 
 // ── Tabla clientes ────────────────────────────────────────────────────────────

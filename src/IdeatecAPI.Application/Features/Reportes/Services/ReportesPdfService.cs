@@ -608,11 +608,14 @@ public class ReportesPdfService : IReportesPdfService
                                               r.ConstantItem(80).AlignRight().Text(val).FontSize(8).FontColor(bold ? ColorAzul : "#1A1A1A");
                                           });
 
+                                     var countNV = movimientos.Count(x => x.TipoComprobante == "NV");
                                      FilaTot("Total comprobantes",   movimientos.Count.ToString());
                                      FilaTot("  Facturas",           movimientos.Count(x => x.TipoComprobante == "01").ToString());
                                      FilaTot("  Boletas",            movimientos.Count(x => x.TipoComprobante == "03").ToString());
                                      FilaTot("  Notas de crédito",   movimientos.Count(x => x.TipoComprobante == "07").ToString());
                                      FilaTot("  Notas de débito",    movimientos.Count(x => x.TipoComprobante == "08").ToString());
+                                     if (countNV > 0)
+                                         FilaTot("  Notas de venta", countNV.ToString());
 
                                      // Fila total PEN
                                      if (totalPen != 0)
@@ -637,6 +640,16 @@ public class ReportesPdfService : IReportesPdfService
                                               .Text($"$ {totalUsd:N2}")
                                               .Bold().FontSize(10).FontColor(ColorBlanco);
                                          });
+
+                                     // Nota de inclusión de NV
+                                     if (countNV > 0)
+                                         t.Item().Background("#FEF3C7").BorderBottom(1).BorderColor("#F59E0B")
+                                          .Padding(4).Text(txt =>
+                                          {
+                                              txt.Span("★ ").FontSize(7).FontColor("#D97706");
+                                              txt.Span("Incluye notas de venta")
+                                                 .FontSize(7).FontColor("#92400E").Italic();
+                                          });
                                  });
                         });
                     });

@@ -162,7 +162,14 @@ public class ReportesRepository : IReportesRepository
                 SUM(CASE WHEN c.tipoComprobante = '01' THEN 1 ELSE 0 END) AS Facturas,
                 SUM(CASE WHEN c.tipoComprobante = '03' THEN 1 ELSE 0 END) AS Boletas,
                 SUM(CASE WHEN c.tipoComprobante = '07' THEN 1 ELSE 0 END) AS NotasCredito,
-                SUM(CASE WHEN c.tipoComprobante = '08' THEN 1 ELSE 0 END) AS NotasDebito
+                SUM(CASE WHEN c.tipoComprobante = '08' THEN 1 ELSE 0 END) AS NotasDebito,
+                SUM(CASE WHEN c.tipoComprobante = 'NV' THEN 1 ELSE 0 END) AS NotasVenta,
+                COALESCE(SUM(
+                    CASE WHEN c.tipoComprobante = 'NV'
+                        THEN CASE WHEN c.tipoMoneda = 'USD' THEN c.importeTotal * c.tipoCambio
+                                  ELSE c.importeTotal END
+                        ELSE 0 END
+                ), 0) AS TotalNotasVenta
             FROM comprobante c
             WHERE {whereBase}
               AND c.estadoSunat NOT IN ('RECHAZADO')
@@ -268,17 +275,24 @@ public class ReportesRepository : IReportesRepository
             SELECT
                 {labelExpr} AS Etiqueta,
                 COALESCE(SUM(
-                    CASE WHEN c.tipoMoneda = 'USD' THEN c.importeTotal * c.tipoCambio
-                        ELSE c.importeTotal END
+                    CASE WHEN c.tipoComprobante IN ('01','03') AND c.tipoMoneda = 'USD' THEN c.importeTotal * c.tipoCambio
+                         WHEN c.tipoComprobante IN ('01','03') THEN c.importeTotal
+                         ELSE 0 END
                 ), 0) AS Ventas,
                 COALESCE(SUM(
-                    CASE WHEN c.tipoMoneda = 'USD' THEN c.totalIGV * c.tipoCambio
-                        ELSE c.totalIGV END
-                ), 0) AS Igv
+                    CASE WHEN c.tipoComprobante IN ('01','03') AND c.tipoMoneda = 'USD' THEN c.totalIGV * c.tipoCambio
+                         WHEN c.tipoComprobante IN ('01','03') THEN c.totalIGV
+                         ELSE 0 END
+                ), 0) AS Igv,
+                COALESCE(SUM(
+                    CASE WHEN c.tipoComprobante = 'NV' AND c.tipoMoneda = 'USD' THEN c.importeTotal * c.tipoCambio
+                         WHEN c.tipoComprobante = 'NV' THEN c.importeTotal
+                         ELSE 0 END
+                ), 0) AS VentasNV
             FROM comprobante c
             WHERE {whereBase}
             AND {whereEstados}
-            AND c.tipoComprobante IN ('01','03')
+            AND c.tipoComprobante IN ('01','03','NV')
             AND c.fechaEmision >= @Desde
             AND c.fechaEmision <= @Hasta
             {whereUsuario}
@@ -311,8 +325,9 @@ public class ReportesRepository : IReportesRepository
             resultado.Add(new GraficoBarraDto
             {
                 Etiqueta = etiqueta,
-                Ventas   = existe?.Ventas ?? 0,
-                Igv      = existe?.Igv    ?? 0,
+                Ventas   = existe?.Ventas   ?? 0,
+                Igv      = existe?.Igv      ?? 0,
+                VentasNV = existe?.VentasNV ?? 0,
             });
         }
         return resultado;
@@ -331,8 +346,9 @@ public class ReportesRepository : IReportesRepository
             resultado.Add(new GraficoBarraDto
             {
                 Etiqueta = etiqueta,
-                Ventas   = existe?.Ventas ?? 0,
-                Igv      = existe?.Igv    ?? 0,
+                Ventas   = existe?.Ventas   ?? 0,
+                Igv      = existe?.Igv      ?? 0,
+                VentasNV = existe?.VentasNV ?? 0,
             });
         }
         return resultado;
@@ -357,8 +373,9 @@ public class ReportesRepository : IReportesRepository
             resultado.Add(new GraficoBarraDto
             {
                 Etiqueta = etiqueta,
-                Ventas   = existe?.Ventas ?? 0,
-                Igv      = existe?.Igv    ?? 0,
+                Ventas   = existe?.Ventas   ?? 0,
+                Igv      = existe?.Igv      ?? 0,
+                VentasNV = existe?.VentasNV ?? 0,
             });
         }
         return resultado;
@@ -416,6 +433,13 @@ public class ReportesRepository : IReportesRepository
     // ─────────────────────────────────────────────────────────────────────────
     // HELPERS
     // ─────────────────────────────────────────────────────────────────────────
+
+    private static string BuildFiltroNV(string filtroNV) => filtroNV switch
+    {
+        "solo"    => "AND c.tipoComprobante = 'NV'",
+        "incluir" => "",
+        _         => "AND c.tipoComprobante != 'NV'"
+    };
 
     private async Task<(string Ruc, string Cod)> ObtenerDatosSucursal(int sucursalId)
     {
@@ -476,14 +500,16 @@ public class ReportesRepository : IReportesRepository
         DateTime? fechaHasta = null,
         int? usuarioCreacion = null,
         string? clienteNumDoc = null,
-        int? limit = null)
+        int? limit = null,
+        string filtroNV = "excluir")
         {
-        var sql = BaseSelectReportes + @"
+        var sql = BaseSelectReportes + $@"
             WHERE c.empresaRuc = @Ruc
             AND c.estadoSunat NOT IN ('PENDIENTE')
             AND (@CodEstablecimiento IS NULL OR c.establecimientoAnexo = @CodEstablecimiento)
             AND (@UsuarioCreacion IS NULL OR c.usuarioCreacion = @UsuarioCreacion)
             AND (@ClienteNumDoc IS NULL OR c.clienteNumDoc = @ClienteNumDoc)
+            {BuildFiltroNV(filtroNV)}
             AND (
                 -- Facturas y boletas: filtrar por su propia fecha
                 (c.tipoComprobante NOT IN ('07','08')
@@ -642,17 +668,19 @@ public class ReportesRepository : IReportesRepository
         DateTime? fechaHasta = null,
         int? usuarioCreacion = null,
         string? clienteNumDoc = null,
-        int? limit = null)
+        int? limit = null,
+        string filtroNV = "excluir")
     {
         // Nota: se incluyen los RECHAZADOS a propósito (visibilidad de correlativo).
         // Sus montos se ponen en cero en la capa de servicio/presentación, no aquí.
-        var sql = BaseSelectReportes + @"
+        var sql = BaseSelectReportes + $@"
             WHERE c.empresaRuc = @Ruc
             AND (@CodEstablecimiento IS NULL OR c.establecimientoAnexo = @CodEstablecimiento)
             AND (@FechaDesde IS NULL OR c.fechaEmision >= @FechaDesde)
             AND (@FechaHasta IS NULL OR c.fechaEmision <= @FechaHasta)
             AND (@UsuarioCreacion IS NULL OR c.usuarioCreacion = @UsuarioCreacion)
             AND (@ClienteNumDoc IS NULL OR c.clienteNumDoc = @ClienteNumDoc)
+            {BuildFiltroNV(filtroNV)}
             ORDER BY c.fechaEmision DESC"
             + (limit.HasValue ? " LIMIT @Limit" : "");
 

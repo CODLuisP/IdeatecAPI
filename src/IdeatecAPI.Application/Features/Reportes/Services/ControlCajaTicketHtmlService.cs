@@ -82,12 +82,16 @@ public class ControlCajaTicketHtmlService : IControlCajaTicketHtmlService
         // ── Tabla detalle movimientos ────────────────────────────────────────
         var detalle = BuildTablaDetalle(movimientos, "#1A2B4A");
 
+        int countNV = movimientos.Count(x => x.TipoComprobante == "NV");
+
         // ── Totales ──────────────────────────────────────────────────────────
         var totalesHtml = new StringBuilder();
         if (totalPen != 0)
             totalesHtml.Append($"<tr class=\"total-row\"><td>TOTAL (PEN)</td><td class=\"tr\">S/ {totalPen:N2}</td></tr>");
         if (totalUsd != 0)
             totalesHtml.Append($"<tr class=\"total-row\"><td>TOTAL (USD)</td><td class=\"tr\">$ {totalUsd:N2}</td></tr>");
+        if (countNV > 0)
+            totalesHtml.Append($"<tr><td colspan=\"2\" style=\"font-size:8px;color:#92400E;background:#FEF3C7;padding:2px 4px;\">&#9733; Incluye notas de venta ({countNV})</td></tr>");
 
         // ── Resumen por medio de pago ────────────────────────────────────────
         var resumenHtml = new StringBuilder();

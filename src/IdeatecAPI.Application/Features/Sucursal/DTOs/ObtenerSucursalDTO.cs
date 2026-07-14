@@ -23,5 +23,7 @@ public class ObtenerSucursalDTO
     public int? CorrelativoGuiaRemision { get; set; }
     public string? SerieGuiaTransportista { get; set; }
     public int? CorrelativoGuiaTransportista { get; set; }
+    public string? SerieNotaVenta { get; set; }
+    public int? CorrelativoNotaVenta { get; set; }
     public bool? Estado { get; set; }
 }

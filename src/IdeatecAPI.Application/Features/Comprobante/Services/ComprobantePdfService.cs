@@ -464,8 +464,8 @@ public class ComprobantePdfService : IComprobantePdfService
 
             }
 
-            // 10. QR
-            if (!string.IsNullOrEmpty(empresa.Ruc))
+            // 10. QR (solo para comprobantes electrónicos SUNAT)
+            if (c.TipoComprobante != "NV" && !string.IsNullOrEmpty(empresa.Ruc))
             {
                 var qrContent = BuildQrContent(c);
                 var qrBytes = GenerateQrCode(qrContent);
@@ -477,9 +477,18 @@ public class ComprobantePdfService : IComprobantePdfService
                 }
             }
 
-            col.Item().PaddingTop(3).AlignCenter()
-                .Text($"Representación impresa de {ObtenerNombreTipoComprobante(c.TipoComprobante)}")
-                .FontSize(5).FontColor(ColorTextoSuave);
+            if (c.TipoComprobante == "NV")
+            {
+                col.Item().PaddingTop(3).AlignCenter()
+                    .Text("DOCUMENTO DE CONTROL INTERNO - NO VÁLIDO ANTE SUNAT")
+                    .FontSize(5).Bold().FontColor(ColorTextoSuave);
+            }
+            else
+            {
+                col.Item().PaddingTop(3).AlignCenter()
+                    .Text($"Representación impresa de {ObtenerNombreTipoComprobante(c.TipoComprobante)}")
+                    .FontSize(5).FontColor(ColorTextoSuave);
+            }
         });
     }
 
@@ -949,8 +958,8 @@ public class ComprobantePdfService : IComprobantePdfService
                         });
                     }
 
-                    // QR
-                    if (!string.IsNullOrEmpty(empresa.Ruc))
+                    // QR (solo para comprobantes electrónicos SUNAT)
+                    if (c.TipoComprobante != "NV" && !string.IsNullOrEmpty(empresa.Ruc))
                     {
                         var qrContent = BuildQrContent(c);
                         var qrBytes = GenerateQrCode(qrContent);
@@ -976,8 +985,11 @@ public class ComprobantePdfService : IComprobantePdfService
             col.Item().PaddingTop(8).LineHorizontal(1).LineColor(ColorAzulMarino);
             col.Item().PaddingTop(3).Row(row =>
             {
+                var pieTxt = c.TipoComprobante == "NV"
+                    ? "DOCUMENTO DE CONTROL INTERNO - NO VÁLIDO ANTE SUNAT"
+                    : $"Representación Impresa de {ObtenerNombreTipoComprobante(c.TipoComprobante)} - Autorizado por SUNAT";
                 row.RelativeItem()
-                    .Text($"Representación Impresa de {ObtenerNombreTipoComprobante(c.TipoComprobante)} - Autorizado por SUNAT")
+                    .Text(pieTxt)
                     .FontSize(7).FontColor(ColorTextoSuave);
                 row.AutoItem().AlignRight().Text(txt =>
                 {
@@ -1346,6 +1358,7 @@ public class ComprobantePdfService : IComprobantePdfService
             "03" => "BOLETA ELECTRÓNICA",
             "07" => "NOTA DE CRÉDITO",
             "08" => "NOTA DE DÉBITO",
+            "NV" => "NOTA DE VENTA",
             _ => "COMPROBANTE ELECTRÓNICO"
         };
 

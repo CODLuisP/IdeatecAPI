@@ -227,6 +227,8 @@ public class SucursalService : ISucursalService
         CorrelativoGuiaRemision = s.CorrelativoGuiaRemision,
         SerieGuiaTransportista = s.SerieGuiaTransportista,
         CorrelativoGuiaTransportista = s.CorrelativoGuiaTransportista,
+        SerieNotaVenta = s.SerieNotaVenta,
+        CorrelativoNotaVenta = s.CorrelativoNotaVenta,
         Estado = s.Estado
     };
 
