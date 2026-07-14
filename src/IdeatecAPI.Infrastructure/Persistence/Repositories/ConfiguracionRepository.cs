@@ -25,12 +25,12 @@ public class ConfiguracionRepository : DapperRepository<Configuracion>, IConfigu
                 (ruc, isimprime, tamañoimpresion, igv, isconsumo, guiaremision,
                  iscredito, itemsdefecto, isboletaorfactura, isenvioresumen,
                  isvale, deudascobrar, trabajadores, cargacomprobantes,
-                 afectacionigv, descunitario, isstock, numerostockbajo)
+                 afectacionigv, descunitario, isstock, numerostockbajo, usenotaventa)
             VALUES
                 (@Ruc, @IsImprime, @TamañoImpresion, @Igv, @IsConsumo, @GuiaRemision,
                  @IsCredito, @ItemsDefecto, @IsBoletaOrFactura, @IsEnvioResumen,
                  @IsVale, @DeudasCobrar, @Trabajadores, @CargaComprobantes,
-                 @AfectacionIgv, @DescUnitario, @IsStock, @NumeroStockBajo);";
+                 @AfectacionIgv, @DescUnitario, @IsStock, @NumeroStockBajo, @UseNotaVenta);";
 
         var result = await _connection.ExecuteAsync(sql, configuracion, _transaction);
         return result > 0;
@@ -57,7 +57,8 @@ public class ConfiguracionRepository : DapperRepository<Configuracion>, IConfigu
                 afectacionigv     = @AfectacionIgv,
                 descunitario      = @DescUnitario,
                 isstock           = @IsStock,
-                numerostockbajo   = @NumeroStockBajo
+                numerostockbajo   = @NumeroStockBajo,
+                usenotaventa      = @UseNotaVenta
             WHERE ruc = @Ruc;";
 
         var result = await _connection.ExecuteAsync(sql, new
@@ -79,6 +80,7 @@ public class ConfiguracionRepository : DapperRepository<Configuracion>, IConfigu
             configuracion.DescUnitario,
             configuracion.IsStock,
             configuracion.NumeroStockBajo,
+            configuracion.UseNotaVenta,
             Ruc = ruc
         }, _transaction);
 

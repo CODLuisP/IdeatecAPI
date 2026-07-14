@@ -45,7 +45,8 @@ public class ConfiguracionService : IConfiguracionService
             AfectacionIgv     = configuracion.AfectacionIgv,
             DescUnitario      = configuracion.DescUnitario,
             IsStock           = configuracion.IsStock,
-            NumeroStockBajo   = configuracion.NumeroStockBajo
+            NumeroStockBajo   = configuracion.NumeroStockBajo,
+            UseNotaVenta      = configuracion.UseNotaVenta
         };
     }
 
@@ -74,7 +75,8 @@ public class ConfiguracionService : IConfiguracionService
                 AfectacionIgv     = dto.AfectacionIgv,
                 DescUnitario      = dto.DescUnitario,
                 IsStock           = dto.IsStock,
-                NumeroStockBajo   = dto.NumeroStockBajo
+                NumeroStockBajo   = dto.NumeroStockBajo,
+                UseNotaVenta      = dto.UseNotaVenta
             };
 
             var result = await _unitOfWork.Configuracion.RegistrarConfiguracionAsync(configuracion);
@@ -116,7 +118,8 @@ public class ConfiguracionService : IConfiguracionService
                 AfectacionIgv     = dto.AfectacionIgv,
                 DescUnitario      = dto.DescUnitario,
                 IsStock           = dto.IsStock,
-                NumeroStockBajo   = dto.NumeroStockBajo
+                NumeroStockBajo   = dto.NumeroStockBajo,
+                UseNotaVenta      = dto.UseNotaVenta
             };
 
             var result = await _unitOfWork.Configuracion.EditarConfiguracionAsync(ruc, configuracion);

@@ -44,7 +44,7 @@ public class EmpresaRepository : DapperRepository<Empresa>, IEmpresaRepository
         provincia, departamento, distrito,
         solUsuario, solClave, activo, creadoEn, telefono, email, logoBase64,
         certificadoPem, certificadoPassword, clientId, clientSecret, plan, environment)
-        VALUES 
+        VALUES
         (@Ruc, @Igv, @TipoEmision, @RazonSocial, @NombreComercial, @Direccion, @Ubigeo, @Urbanizacion,
         @Provincia, @Departamento, @Distrito,
         @SolUsuario, @SolClave, @Activo, @CreadoEn, @Telefono, @Email, @LogoBase64,
