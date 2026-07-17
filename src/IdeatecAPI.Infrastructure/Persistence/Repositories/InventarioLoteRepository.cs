@@ -225,7 +225,10 @@ public class InventarioLoteRepository : DapperRepository<InventarioLote>, IInven
     public async Task<IEnumerable<RentabilidadProductoDTO>> GetRentabilidadPorProductoAsync(int sucursalId, DateTime? desde, DateTime? hasta)
     {
         // Costo (COGS) sale del Kardex PEPS de las salidas por venta; el ingreso se toma de
-        // comprobantedetalle (sin IGV, vía valorVenta) cruzando por comprobante+producto.
+        // comprobantedetalle (con IGV incluido, vía totalVentaItem) cruzando por comprobante+producto.
+        // Se incluyen comprobantes tributarios aceptados/pendientes y Notas de Venta (tipoComprobante
+        // 'NV', estadoSunat 'NO_APLICA' porque no tributan ante SUNAT) para que toda venta real
+        // (facture o no) cuente como ingreso.
         // Nota: en productos tipo paquete, el costo PEPS queda registrado en el producto BASE
         // (por diseño, el stock/lotes viven ahí), mientras que la venta se registra sobre el
         // productoId del paquete — para esos casos el cruce de ingreso no calza con el costo,
@@ -242,10 +245,13 @@ public class InventarioLoteRepository : DapperRepository<InventarioLote>, IInven
             INNER JOIN sucursalproducto sp ON sp.sucursalProductoID = km.sucursalProductoID
             INNER JOIN producto p ON p.productoID = sp.productoID
             LEFT JOIN (
-                SELECT cd.comprobanteId, cd.productoId, SUM(cd.valorVenta) AS ingreso
+                SELECT cd.comprobanteId, cd.productoId, SUM(cd.totalVentaItem) AS ingreso
                 FROM comprobantedetalle cd
                 INNER JOIN comprobante c ON c.comprobanteID = cd.comprobanteId
-                WHERE c.estadoSunat IN ('ACEPTADO', 'ACEPTADO_CON_OBSERVACIONES', 'PENDIENTE')
+                WHERE (
+                    (c.tipoComprobante <> 'NV' AND c.estadoSunat IN ('ACEPTADO', 'ACEPTADO_CON_OBSERVACIONES', 'PENDIENTE'))
+                    OR (c.tipoComprobante = 'NV' AND c.estadoSunat = 'NO_APLICA')
+                )
                 GROUP BY cd.comprobanteId, cd.productoId
             ) ventas ON ventas.comprobanteId = km.referenciaID AND ventas.productoId = sp.productoID
             WHERE km.tipoMovimiento = 'SALIDA_VENTA'
