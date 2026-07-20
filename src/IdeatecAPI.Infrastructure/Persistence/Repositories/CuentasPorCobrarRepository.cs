@@ -51,15 +51,15 @@ public class CuentasPorCobrarRepository : ICuentasPorCobrarRepository
             FROM comprobante c
             WHERE c.empresaRuc = @EmpresaRuc
             AND c.tipoPago = 'CREDITO'
-            AND c.estadoSunat = 'ACEPTADO'
-            AND c.tipoComprobante IN ('01', '03')
+            AND c.estadoSunat IN ('ACEPTADO', 'NO_APLICA')
+            AND c.tipoComprobante IN ('01', '03', 'NV')
             AND (@EstablecimientoAnexo IS NULL OR c.establecimientoAnexo = @EstablecimientoAnexo)
             AND (@FechaInicio IS NULL OR c.fechaEmision >= @FechaInicio)
             AND (@FechaFin    IS NULL OR c.fechaEmision <= @FechaFin)
             AND (@ClienteNumDoc IS NULL OR c.clienteNumDoc = @ClienteNumDoc)
             AND EXISTS (
-                SELECT 1 FROM cuota cu 
-                WHERE cu.comprobanteID = c.comprobanteID 
+                SELECT 1 FROM cuota cu
+                WHERE cu.comprobanteID = c.comprobanteID
                 AND (cu.estado != 'PAGADO' OR cu.estado IS NULL)
             )
             ORDER BY c.fechaEmision DESC"
@@ -221,8 +221,8 @@ public class CuentasPorCobrarRepository : ICuentasPorCobrarRepository
             INNER JOIN cuota cu ON cu.comprobanteID = c.comprobanteID
             WHERE c.empresaRuc = @EmpresaRuc
             AND c.tipoPago = 'CREDITO'
-            AND c.estadoSunat = 'ACEPTADO'
-            AND c.tipoComprobante IN ('01', '03')
+            AND c.estadoSunat IN ('ACEPTADO', 'NO_APLICA')
+            AND c.tipoComprobante IN ('01', '03', 'NV')
             AND (@EstablecimientoAnexo IS NULL OR c.establecimientoAnexo = @EstablecimientoAnexo)
             AND (@FechaInicio IS NULL OR c.fechaEmision >= @FechaInicio)
             AND (@FechaFin    IS NULL OR c.fechaEmision <= @FechaFin)
