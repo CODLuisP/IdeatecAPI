@@ -264,4 +264,45 @@ public class InventarioLoteRepository : DapperRepository<InventarioLote>, IInven
 
         return await _connection.QueryAsync<RentabilidadProductoDTO>(sql, new { SucursalId = sucursalId, Desde = desde, Hasta = hasta }, _transaction);
     }
+
+    public async Task<IEnumerable<InventarioLote>> GetByCompraProveedorIdAsync(int compraProveedorId)
+    {
+        // FOR UPDATE: al usarse dentro de una transacción (ver CompraProveedorService.EliminarAsync),
+        // bloquea la fila contra ConsumirFifoAsync (que también lockea con FOR UPDATE), evitando que
+        // una venta concurrente consuma el lote justo entre el chequeo de "¿ya se vendió?" y el borrado.
+        var sql = $@"{SelectLoteBase}
+            WHERE il.compraProveedorID = @CompraProveedorId
+            FOR UPDATE;";
+
+        return await _connection.QueryAsync<InventarioLote>(sql, new { CompraProveedorId = compraProveedorId }, _transaction);
+    }
+
+    /// <summary>
+    /// Deshace la entrada PEPS de una compra (kardex_movimiento_lote → kardex_movimiento → inventario_lote,
+    /// en ese orden por las FK). Solo debe invocarse cuando saldoCantidad == cantidadOriginal, es decir,
+    /// nada se vendió todavía de ese lote (si algo se vendió, el consumo generó otro kardex_movimiento_lote
+    /// sobre el mismo lote, y este método lo dejaría huérfano).
+    /// </summary>
+    public async Task EliminarEntradaLoteAsync(int inventarioLoteId)
+    {
+        var kardexMovimientoIds = await _connection.QueryAsync<int>(
+            "SELECT DISTINCT kardexMovimientoID FROM kardex_movimiento_lote WHERE inventarioLoteID = @InventarioLoteId;",
+            new { InventarioLoteId = inventarioLoteId }, _transaction);
+
+        await _connection.ExecuteAsync(
+            "DELETE FROM kardex_movimiento_lote WHERE inventarioLoteID = @InventarioLoteId;",
+            new { InventarioLoteId = inventarioLoteId }, _transaction);
+
+        var ids = kardexMovimientoIds.ToList();
+        if (ids.Count > 0)
+        {
+            await _connection.ExecuteAsync(
+                "DELETE FROM kardex_movimiento WHERE kardexMovimientoID IN @Ids;",
+                new { Ids = ids }, _transaction);
+        }
+
+        await _connection.ExecuteAsync(
+            "DELETE FROM inventario_lote WHERE inventarioLoteID = @InventarioLoteId;",
+            new { InventarioLoteId = inventarioLoteId }, _transaction);
+    }
 }

@@ -307,6 +307,7 @@ public class ProveedorController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> EliminarCompraAsync(int compraProveedorId)
     {
@@ -322,6 +323,10 @@ public class ProveedorController : ControllerBase
         catch (ArgumentException ex)
         {
             return BadRequest(new { mensaje = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { mensaje = ex.Message });
         }
         catch (Exception ex)
         {

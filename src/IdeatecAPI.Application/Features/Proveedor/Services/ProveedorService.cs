@@ -40,21 +40,25 @@ public class ProveedorService : IProveedorService
 
     public async Task<ObtenerProveedorDTO> RegistrarAsync(RegistrarProveedorDTO dto)
     {
-        if (string.IsNullOrWhiteSpace(dto.NumDocumento))
-            throw new ArgumentException("NumDocumento es obligatorio");
         if (string.IsNullOrWhiteSpace(dto.RucEmpresa))
             throw new ArgumentException("RucEmpresa es obligatorio");
 
-        var existente = await _unitOfWork.Proveedores.GetByNumDocRucEmpresaAsync(dto.RucEmpresa, dto.NumDocumento);
-        if (existente != null)
-            throw new InvalidOperationException($"Ya existe un proveedor con el documento '{dto.NumDocumento}' en este RUC.");
+        // NumDocumento es opcional: permite registrar proveedores informales (mercado, tienda sin RUC/DNI).
+        var numDocumento = string.IsNullOrWhiteSpace(dto.NumDocumento) ? null : dto.NumDocumento.Trim();
+
+        if (numDocumento != null)
+        {
+            var existente = await _unitOfWork.Proveedores.GetByNumDocRucEmpresaAsync(dto.RucEmpresa, numDocumento);
+            if (existente != null)
+                throw new InvalidOperationException($"Ya existe un proveedor con el documento '{numDocumento}' en este RUC.");
+        }
 
         _unitOfWork.BeginTransaction();
         try
         {
             var proveedor = new Domain.Entities.Proveedor
             {
-                NumDocumento = dto.NumDocumento,
+                NumDocumento = numDocumento,
                 RazonSocial = dto.RazonSocial,
                 NombreComercial = dto.NombreComercial,
                 Direccion = dto.Direccion,

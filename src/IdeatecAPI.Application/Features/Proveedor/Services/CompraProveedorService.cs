@@ -172,6 +172,22 @@ public class CompraProveedorService : ICompraProveedorService
         _unitOfWork.BeginTransaction();
         try
         {
+            // La compra generó un lote PEPS al registrarse (ver RegistrarAsync). Si ya se vendió algo
+            // de ese lote (saldoCantidad < cantidadOriginal), no se puede deshacer sin romper el costeo
+            // PEPS histórico, así que se bloquea con un mensaje claro en vez de dejar que MySQL rechace
+            // el DELETE por la FK inventario_lote -> compraproveedor (sin ON DELETE CASCADE).
+            // Se verifica dentro de la transacción (con FOR UPDATE) para no dejar ventana de carrera
+            // con una venta concurrente que consuma el lote justo antes del borrado.
+            var lotes = (await _unitOfWork.InventarioLotes.GetByCompraProveedorIdAsync(compraProveedorId)).ToList();
+            if (lotes.Any(l => l.SaldoCantidad != l.CantidadOriginal))
+                throw new InvalidOperationException("No se puede eliminar esta compra: el producto ya fue vendido (total o parcialmente).");
+
+            foreach (var lote in lotes)
+            {
+                await _unitOfWork.InventarioLotes.EliminarEntradaLoteAsync(lote.InventarioLoteId);
+                await _unitOfWork.Productos.ActualizarStockAsync(lote.SucursalProductoId, (int)lote.CantidadOriginal);
+            }
+
             var result = await _unitOfWork.ComprasProveedor.EliminarAsync(compraProveedorId);
 
             _unitOfWork.Commit();
