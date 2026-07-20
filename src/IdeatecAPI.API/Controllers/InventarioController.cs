@@ -107,6 +107,28 @@ public class InventarioController : ControllerBase
         }
     }
 
+    // GET api/inventario/rentabilidad/producto/{sucursalProductoId}/detalle?desde=&hasta=
+    [HttpGet("rentabilidad/producto/{sucursalProductoId:int}/detalle")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetRentabilidadDiariaAsync(int sucursalProductoId, [FromQuery] DateTime? desde, [FromQuery] DateTime? hasta)
+    {
+        try
+        {
+            var detalle = await _inventarioPepsService.GetRentabilidadDiariaAsync(sucursalProductoId, desde, hasta);
+            return Ok(detalle ?? []);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener el detalle diario de rentabilidad del SucursalProductoId {SucursalProductoId}", sucursalProductoId);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al obtener el detalle de rentabilidad.",
+                detalle = ex.Message
+            });
+        }
+    }
+
     // POST api/inventario/saldo-inicial
     // Backfill de un único uso: crea el lote inicial PEPS para productos con stock existente
     // (usa Último costo de compra como costo de referencia). Omite productos que ya tengan
