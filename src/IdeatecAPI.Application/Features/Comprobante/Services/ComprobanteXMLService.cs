@@ -631,6 +631,7 @@ public class ComprobanteService : IComprobanteService
                 Item = d.Item,
                 ProductoId = d.ProductoId ?? 0,
                 TrabajadorID = d.TrabajadorID ?? 0,
+                CodigoSunat = d.CodigoSunat,
                 Codigo = d.Codigo,
                 Descripcion = d.Descripcion,
                 Cantidad = d.Cantidad,

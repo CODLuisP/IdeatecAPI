@@ -584,17 +584,18 @@ private static XElement BuildInvoiceLine(DetalleFacturaDTO d, int item, string m
     invoiceLine.Add(taxTotal);
 
     // ✅ 4. Item
-    invoiceLine.Add(
-        new XElement(Cac + "Item",
-            new XElement(Cbc + "Description", d.Descripcion),
-            new XElement(Cac + "SellersItemIdentification",
-                new XElement(Cbc + "ID", d.Codigo)),
-            new XElement(Cac + "CommodityClassification",
-                new XElement(Cbc + "ItemClassificationCode",
-                    new XAttribute("listID", "UNSPSC"),
-                    new XAttribute("listAgencyName", "GS1 US"),
-                    "10191509")))
+    var itemElement = new XElement(Cac + "Item",
+        new XElement(Cbc + "Description", d.Descripcion),
+        new XElement(Cac + "SellersItemIdentification",
+            new XElement(Cbc + "ID", d.Codigo))
     );
+    if (!string.IsNullOrEmpty(d.CodigoSunat))
+        itemElement.Add(new XElement(Cac + "CommodityClassification",
+            new XElement(Cbc + "ItemClassificationCode",
+                new XAttribute("listID", "UNSPSC"),
+                new XAttribute("listAgencyName", "GS1 US"),
+                d.CodigoSunat)));
+    invoiceLine.Add(itemElement);
 
     invoiceLine.Add(
         new XElement(Cac + "Price",

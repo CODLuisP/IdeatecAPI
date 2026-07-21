@@ -7,6 +7,7 @@ public class ComprobanteDetalle
     public string? NombreTrabajador { get; set; }
     public int? Item { get; set; }
     public int? ProductoId { get; set; }
+    public string? CodigoSunat { get; set; }
     public string? Codigo { get; set; }
     public string? Descripcion { get; set; }
     public decimal Cantidad { get; set; } // Cantidad de productos a vender   
