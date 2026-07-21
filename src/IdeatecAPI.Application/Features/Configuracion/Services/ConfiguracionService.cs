@@ -47,7 +47,8 @@ public class ConfiguracionService : IConfiguracionService
             IsStock           = configuracion.IsStock,
             NumeroStockBajo   = configuracion.NumeroStockBajo,
             UseNotaVenta      = configuracion.UseNotaVenta,
-            IsCajaAutopago    = configuracion.IsCajaAutopago
+            IsCajaAutopago    = configuracion.IsCajaAutopago,
+            UsaSire           = configuracion.UsaSire
         };
     }
 
@@ -78,7 +79,8 @@ public class ConfiguracionService : IConfiguracionService
                 IsStock           = dto.IsStock,
                 NumeroStockBajo   = dto.NumeroStockBajo,
                 UseNotaVenta      = dto.UseNotaVenta,
-                IsCajaAutopago    = dto.IsCajaAutopago
+                IsCajaAutopago    = dto.IsCajaAutopago,
+                UsaSire           = dto.UsaSire
             };
 
             var result = await _unitOfWork.Configuracion.RegistrarConfiguracionAsync(configuracion);
@@ -122,7 +124,8 @@ public class ConfiguracionService : IConfiguracionService
                 IsStock           = dto.IsStock,
                 NumeroStockBajo   = dto.NumeroStockBajo,
                 UseNotaVenta      = dto.UseNotaVenta,
-                IsCajaAutopago    = dto.IsCajaAutopago
+                IsCajaAutopago    = dto.IsCajaAutopago,
+                UsaSire           = dto.UsaSire
             };
 
             var result = await _unitOfWork.Configuracion.EditarConfiguracionAsync(ruc, configuracion);

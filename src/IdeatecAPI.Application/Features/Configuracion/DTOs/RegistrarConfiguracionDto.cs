@@ -22,4 +22,5 @@ public class RegistrarConfiguracionDto
     public string? NumeroStockBajo { get; set; }
     public bool? UseNotaVenta { get; set; }
     public bool? IsCajaAutopago { get; set; }
+    public bool? UsaSire { get; set; }
 }

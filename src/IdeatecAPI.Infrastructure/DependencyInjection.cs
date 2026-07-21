@@ -28,6 +28,7 @@ using IdeatecAPI.Application.Features.PlantillaVelsat.Services;
 using IdeatecAPI.Application.Features.NotificacionesEnviadas.Services;
 using IdeatecAPI.Application.Features.NotificacionDias.Services;
 using IdeatecAPI.Application.Features.Vales.Services;
+using IdeatecAPI.Application.Features.Sire.Services;
 using IdeatecAPI.Application.Common.Interfaces;
 using IdeatecAPI.Application.Features.Configuracion.Services;
 using IdeatecAPI.Application.Features.Proveedor.Services;
@@ -99,6 +100,9 @@ public static class DependencyInjection
         services.AddScoped<IXmlGuiaBuilderService, XmlGuiaBuilderService>();
         services.AddScoped<ISunatGuiaService, SunatGuiaService>();
         services.AddScoped<IGuiaPdfService, GuiaPdfService>();
+
+        // ── SIRE (Registro de Ventas - RVIE) ──
+        services.AddScoped<ISireService, SireService>();
 
         // ── Servicios de Email ──
         services.AddHttpClient("mailersend");

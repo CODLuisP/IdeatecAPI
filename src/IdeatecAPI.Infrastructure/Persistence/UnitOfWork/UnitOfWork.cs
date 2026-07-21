@@ -47,6 +47,7 @@ public class UnitOfWork : IUnitOfWork
     private IProveedorRepository? _proveedores;
     private ICompraProveedorRepository? _comprasProveedor;
     private IInventarioLoteRepository? _inventarioLotes;
+    private ISireRegistroRepository? _sireRegistros;
 
     public UnitOfWork(IConfiguration configuration, ICurrentUserService currentUserService)
     {
@@ -235,6 +236,11 @@ public class UnitOfWork : IUnitOfWork
         get { _inventarioLotes ??= new InventarioLoteRepository(CurrentConnection, _transaction); return _inventarioLotes; }
     }
 
+    public ISireRegistroRepository SireRegistros
+    {
+        get { _sireRegistros ??= new SireRegistroRepository(CurrentConnection, _transaction); return _sireRegistros; }
+    }
+
     public void BeginTransaction()
     {
         _transaction = CurrentConnection.BeginTransaction();
@@ -292,6 +298,7 @@ public class UnitOfWork : IUnitOfWork
         _proveedores = null;
         _comprasProveedor = null;
         _inventarioLotes = null;
+        _sireRegistros = null;
     }
 
     public IRepository<T> Repository<T>() where T : class
