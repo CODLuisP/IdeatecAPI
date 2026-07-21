@@ -20,4 +20,5 @@ public class EditarConfiguracionDto
     public bool? IsStock { get; set; }
     public string? NumeroStockBajo { get; set; }
     public bool? UseNotaVenta { get; set; }
+    public bool? IsCajaAutopago { get; set; }
 }
