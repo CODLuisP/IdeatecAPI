@@ -22,6 +22,7 @@ public interface IInventarioPepsService
     Task<bool> ExisteLoteSaldoInicialAsync(int sucursalProductoId);
     Task<int> RegistrarSaldoInicialAsync(IEnumerable<RegistrarSaldoInicialDTO> items);
     Task<IEnumerable<RentabilidadProductoDTO>> GetRentabilidadPorProductoAsync(int sucursalId, DateTime? desde, DateTime? hasta);
+    Task<IEnumerable<RentabilidadDiariaDTO>> GetRentabilidadDiariaAsync(int sucursalProductoId, DateTime? desde, DateTime? hasta);
 }
 
 public class InventarioPepsService : IInventarioPepsService
@@ -263,6 +264,11 @@ public class InventarioPepsService : IInventarioPepsService
     public async Task<IEnumerable<RentabilidadProductoDTO>> GetRentabilidadPorProductoAsync(int sucursalId, DateTime? desde, DateTime? hasta)
     {
         return await _unitOfWork.InventarioLotes.GetRentabilidadPorProductoAsync(sucursalId, desde, hasta);
+    }
+
+    public async Task<IEnumerable<RentabilidadDiariaDTO>> GetRentabilidadDiariaAsync(int sucursalProductoId, DateTime? desde, DateTime? hasta)
+    {
+        return await _unitOfWork.InventarioLotes.GetRentabilidadDiariaAsync(sucursalProductoId, desde, hasta);
     }
 
     public async Task<int> RegistrarSaldoInicialAsync(IEnumerable<RegistrarSaldoInicialDTO> items)

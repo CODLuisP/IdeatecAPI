@@ -73,7 +73,7 @@ public class InventarioLoteRepository : DapperRepository<InventarioLote>, IInven
             AND (@Hasta IS NULL OR il.fechaLote <= @Hasta)
             ORDER BY il.fechaLote ASC, il.inventarioLoteID ASC;";
 
-        return await _connection.QueryAsync<InventarioLote>(sql, new { SucursalProductoId = sucursalProductoId, Desde = desde, Hasta = hasta }, _transaction);
+        return await _connection.QueryAsync<InventarioLote>(sql, new { SucursalProductoId = sucursalProductoId, Desde = desde, Hasta = FinDeDia(hasta) }, _transaction);
     }
 
     public async Task<decimal> GetSaldoValorizadoAsync(int sucursalProductoId)
@@ -180,7 +180,7 @@ public class InventarioLoteRepository : DapperRepository<InventarioLote>, IInven
             AND (@Hasta IS NULL OR km.fechaMovimiento <= @Hasta)
             ORDER BY km.fechaMovimiento ASC, km.kardexMovimientoID ASC;";
 
-        return await _connection.QueryAsync<KardexMovimiento>(sql, new { SucursalProductoId = sucursalProductoId, Desde = desde, Hasta = hasta }, _transaction);
+        return await _connection.QueryAsync<KardexMovimiento>(sql, new { SucursalProductoId = sucursalProductoId, Desde = desde, Hasta = FinDeDia(hasta) }, _transaction);
     }
 
     public async Task<bool> ExisteLoteSaldoInicialAsync(int sucursalProductoId)
@@ -236,6 +236,7 @@ public class InventarioLoteRepository : DapperRepository<InventarioLote>, IInven
         var sql = @"
             SELECT
                 sp.productoID                    AS ProductoId,
+                MAX(sp.sucursalProductoID)        AS SucursalProductoId,
                 p.nomProducto                     AS NomProducto,
                 p.codigo                          AS Codigo,
                 SUM(km.cantidad)                  AS CantidadVendida,
@@ -262,8 +263,46 @@ public class InventarioLoteRepository : DapperRepository<InventarioLote>, IInven
             GROUP BY sp.productoID, p.nomProducto, p.codigo
             ORDER BY p.nomProducto ASC;";
 
-        return await _connection.QueryAsync<RentabilidadProductoDTO>(sql, new { SucursalId = sucursalId, Desde = desde, Hasta = hasta }, _transaction);
+        return await _connection.QueryAsync<RentabilidadProductoDTO>(sql, new { SucursalId = sucursalId, Desde = desde, Hasta = FinDeDia(hasta) }, _transaction);
     }
+
+    public async Task<IEnumerable<RentabilidadDiariaDTO>> GetRentabilidadDiariaAsync(int sucursalProductoId, DateTime? desde, DateTime? hasta)
+    {
+        // Misma lógica de costo/ingreso que GetRentabilidadPorProductoAsync, pero agrupada por día
+        // y acotada a un único sucursalProductoId, para graficar la evolución de costo/utilidad.
+        var sql = @"
+            SELECT
+                DATE(km.fechaMovimiento)          AS Fecha,
+                SUM(km.cantidad)                  AS CantidadVendida,
+                COALESCE(SUM(ventas.ingreso), 0)   AS IngresoVentas,
+                SUM(km.costoTotal)                AS CostoVentas
+            FROM kardex_movimiento km
+            LEFT JOIN (
+                SELECT cd.comprobanteId, cd.productoId, SUM(cd.totalVentaItem) AS ingreso
+                FROM comprobantedetalle cd
+                INNER JOIN comprobante c ON c.comprobanteID = cd.comprobanteId
+                WHERE (
+                    (c.tipoComprobante <> 'NV' AND c.estadoSunat IN ('ACEPTADO', 'ACEPTADO_CON_OBSERVACIONES', 'PENDIENTE'))
+                    OR (c.tipoComprobante = 'NV' AND c.estadoSunat = 'NO_APLICA')
+                )
+                GROUP BY cd.comprobanteId, cd.productoId
+            ) ventas ON ventas.comprobanteId = km.referenciaID
+                AND ventas.productoId = (SELECT sp.productoID FROM sucursalproducto sp WHERE sp.sucursalProductoID = km.sucursalProductoID)
+            WHERE km.tipoMovimiento = 'SALIDA_VENTA'
+            AND km.referenciaTipo = 'COMPROBANTE'
+            AND km.sucursalProductoID = @SucursalProductoId
+            AND (@Desde IS NULL OR km.fechaMovimiento >= @Desde)
+            AND (@Hasta IS NULL OR km.fechaMovimiento <= @Hasta)
+            GROUP BY DATE(km.fechaMovimiento)
+            ORDER BY DATE(km.fechaMovimiento) ASC;";
+
+        return await _connection.QueryAsync<RentabilidadDiariaDTO>(sql, new { SucursalProductoId = sucursalProductoId, Desde = desde, Hasta = FinDeDia(hasta) }, _transaction);
+    }
+
+    // Normaliza el filtro "hasta" para que incluya todo el día seleccionado (23:59:59.999...),
+    // ya que el input de fecha llega sin hora (medianoche) y de lo contrario excluiría los
+    // movimientos del propio día "hasta" (incluido el caso desde == hasta).
+    private static DateTime? FinDeDia(DateTime? hasta) => hasta?.Date.AddDays(1).AddTicks(-1);
 
     public async Task<IEnumerable<InventarioLote>> GetByCompraProveedorIdAsync(int compraProveedorId)
     {

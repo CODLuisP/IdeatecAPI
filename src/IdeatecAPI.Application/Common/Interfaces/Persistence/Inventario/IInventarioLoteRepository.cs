@@ -17,6 +17,7 @@ public interface IInventarioLoteRepository : IRepository<InventarioLote>
     Task<bool> ExisteLoteSaldoInicialAsync(int sucursalProductoId);
     Task<KardexMovimiento?> GetUltimoMovimientoSalidaPorReferenciaAsync(string referenciaTipo, int referenciaId, int sucursalProductoId);
     Task<IEnumerable<RentabilidadProductoDTO>> GetRentabilidadPorProductoAsync(int sucursalId, DateTime? desde, DateTime? hasta);
+    Task<IEnumerable<RentabilidadDiariaDTO>> GetRentabilidadDiariaAsync(int sucursalProductoId, DateTime? desde, DateTime? hasta);
     Task<IEnumerable<InventarioLote>> GetByCompraProveedorIdAsync(int compraProveedorId);
     Task EliminarEntradaLoteAsync(int inventarioLoteId);
 }

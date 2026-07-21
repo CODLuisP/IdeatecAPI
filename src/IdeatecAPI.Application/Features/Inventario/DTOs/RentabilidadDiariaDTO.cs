@@ -1,11 +1,8 @@
 namespace IdeatecAPI.Application.Features.Inventario.DTOs;
 
-public class RentabilidadProductoDTO
+public class RentabilidadDiariaDTO
 {
-    public int ProductoId { get; set; }
-    public int SucursalProductoId { get; set; }
-    public string? NomProducto { get; set; }
-    public string? Codigo { get; set; }
+    public DateTime Fecha { get; set; }
     public decimal CantidadVendida { get; set; }
     public decimal IngresoVentas { get; set; }
     public decimal CostoVentas { get; set; }
