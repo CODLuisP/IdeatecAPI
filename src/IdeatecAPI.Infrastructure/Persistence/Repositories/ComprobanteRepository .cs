@@ -507,9 +507,11 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
                    cd.unidadMedida, cd.precioUnitario, cd.tipoAfectacionIGV, cd.porcentajeIGV,
                    cd.montoIGV, cd.baseIgv, cd.codigoTipoDescuento, cd.descuentoUnitario, cd.descuentoTotal,
                    cd.valorVenta, cd.precioVenta, cd.totalVentaItem, cd.icbper, cd.factorIcbper,
-                   CONCAT(COALESCE(t.nombres, ''), ' ', COALESCE(t.apellidos, '')) AS NombreTrabajador
+                   CONCAT(COALESCE(t.nombres, ''), ' ', COALESCE(t.apellidos, '')) AS NombreTrabajador,
+                   p.codigoSunat AS CodigoSunat
             FROM comprobantedetalle cd
             LEFT JOIN trabajador t ON t.id = cd.trabajadorID
+            LEFT JOIN producto p ON p.productoId = cd.productoId
             WHERE cd.comprobanteId = @Id;
 
             SELECT pagoID AS PagoId, comprobanteID AS ComprobanteId, medioPago AS MedioPago,
