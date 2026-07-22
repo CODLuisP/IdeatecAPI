@@ -23,6 +23,7 @@ public interface IInventarioPepsService
     Task<int> RegistrarSaldoInicialAsync(IEnumerable<RegistrarSaldoInicialDTO> items);
     Task<IEnumerable<RentabilidadProductoDTO>> GetRentabilidadPorProductoAsync(int sucursalId, DateTime? desde, DateTime? hasta);
     Task<IEnumerable<RentabilidadDiariaDTO>> GetRentabilidadDiariaAsync(int sucursalProductoId, DateTime? desde, DateTime? hasta);
+    Task<RetirarVencidosResultDTO> RetirarLotesVencidosAsync(int? sucursalProductoId = null, int? idUsuario = null);
 }
 
 public class InventarioPepsService : IInventarioPepsService
@@ -308,6 +309,95 @@ public class InventarioPepsService : IInventarioPepsService
 
             _unitOfWork.Commit();
             return creados;
+        }
+        catch
+        {
+            _unitOfWork.Rollback();
+            throw;
+        }
+    }
+
+    public async Task<RetirarVencidosResultDTO> RetirarLotesVencidosAsync(int? sucursalProductoId = null, int? idUsuario = null)
+    {
+        _unitOfWork.BeginTransaction();
+        try
+        {
+            var lotesVencidos = await _unitOfWork.InventarioLotes.GetLotesVencidosAsync(sucursalProductoId);
+            var lista = lotesVencidos.ToList();
+
+            if (lista.Count == 0)
+            {
+                _unitOfWork.Commit();
+                return new RetirarVencidosResultDTO();
+            }
+
+            var porProducto = lista.GroupBy(l => l.SucursalProductoId);
+            var totalLotes = 0;
+            var totalCantidad = 0m;
+            var totalCosto = 0m;
+
+            foreach (var grupo in porProducto)
+            {
+                var spId = grupo.Key;
+                var cantidadProducto = grupo.Sum(l => l.SaldoCantidad);
+                var costoProducto = grupo.Sum(l => l.SaldoCantidad * l.CostoUnitario);
+
+                var detalle = new List<KardexMovimientoLote>();
+
+                foreach (var lote in grupo)
+                {
+                    var ok = await _unitOfWork.InventarioLotes.DesactivarLoteAsync(lote.InventarioLoteId);
+                    if (!ok)
+                        throw new InvalidOperationException(
+                            $"No se pudo desactivar el lote vencido {lote.InventarioLoteId}, ya fue procesado.");
+
+                    detalle.Add(new KardexMovimientoLote
+                    {
+                        InventarioLoteId = lote.InventarioLoteId,
+                        Cantidad = lote.SaldoCantidad,
+                        CostoUnitario = lote.CostoUnitario
+                    });
+
+                    totalLotes++;
+                    totalCantidad += lote.SaldoCantidad;
+                    totalCosto += lote.SaldoCantidad * lote.CostoUnitario;
+                }
+
+                var saldoCantidadPost = await _unitOfWork.InventarioLotes.GetSaldoCantidadLotesAsync(spId);
+                var saldoValorPost = await _unitOfWork.InventarioLotes.GetSaldoValorizadoAsync(spId);
+
+                var movimiento = new KardexMovimiento
+                {
+                    SucursalProductoId = spId,
+                    TipoMovimiento = "SALIDA_VENCIMIENTO",
+                    ReferenciaTipo = null,
+                    ReferenciaId = null,
+                    Cantidad = cantidadProducto,
+                    CostoUnitarioPromedio = costoProducto / cantidadProducto,
+                    CostoTotal = costoProducto,
+                    SaldoCantidadPost = saldoCantidadPost,
+                    SaldoValorPost = saldoValorPost,
+                    FechaMovimiento = DateTime.Now,
+                    IdUsuario = idUsuario
+                };
+
+                await _unitOfWork.InventarioLotes.RegistrarMovimientoAsync(movimiento, detalle);
+
+                var stockOk = await _unitOfWork.Productos.ActualizarStockAsync(spId, (int)cantidadProducto);
+                if (!stockOk)
+                    throw new InvalidOperationException(
+                        $"Stock insuficiente para descontar productos vencidos del SucursalProductoId {spId}.");
+            }
+
+            _unitOfWork.Commit();
+
+            return new RetirarVencidosResultDTO
+            {
+                TotalLotesRetirados = totalLotes,
+                TotalProductosAfectados = porProducto.Count(),
+                TotalCantidadRetirada = totalCantidad,
+                TotalCostoRetirado = totalCosto
+            };
         }
         catch
         {
