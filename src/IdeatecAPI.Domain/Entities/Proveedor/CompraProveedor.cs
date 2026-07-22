@@ -16,4 +16,5 @@ public class CompraProveedor
     public string? RazonSocialProveedor { get; set; }
     public string? NomProducto { get; set; }
     public string? NomSucursal { get; set; }
+    public DateTime? FechaVencimiento { get; set; }
 }

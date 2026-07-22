@@ -25,11 +25,13 @@ public class CompraProveedorRepository : DapperRepository<CompraProveedor>, ICom
             cp.unidadMedida      AS UnidadMedida,
             cp.docReferencia     AS DocReferencia,
             cp.fechaCreacion     AS FechaCreacion,
-            cp.idUsuario         AS IdUsuario
+            cp.idUsuario         AS IdUsuario,
+            il.fechaVencimiento  AS FechaVencimiento
         FROM compraproveedor cp
         INNER JOIN proveedor pr ON pr.idProveedor = cp.idProveedor
         INNER JOIN sucursal s ON s.sucursalID = cp.idSucursal
-        INNER JOIN producto p ON p.productoID = cp.idProducto";
+        INNER JOIN producto p ON p.productoID = cp.idProducto
+        LEFT JOIN inventario_lote il ON il.compraProveedorID = cp.idCompraProveedor";
 
     public async Task<IEnumerable<CompraProveedor>> GetAllBySucursalAsync(int sucursalId)
     {

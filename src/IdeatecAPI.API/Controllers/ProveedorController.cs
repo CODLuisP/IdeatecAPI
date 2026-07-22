@@ -302,6 +302,39 @@ public class ProveedorController : ControllerBase
         }
     }
 
+    // PUT api/proveedor/compra/{id}
+    [HttpPut("compra/{compraProveedorId:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> EditarCompraAsync(int compraProveedorId, [FromBody] RegistrarCompraProveedorDTO dto)
+    {
+        try
+        {
+            var compraEditada = await _compraProveedorService.EditarAsync(compraProveedorId, dto);
+            return Ok(compraEditada);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { mensaje = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { mensaje = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al editar compra con ID {CompraProveedorId}", compraProveedorId);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al editar la compra.",
+                detalle = ex.Message
+            });
+        }
+    }
+
     // DELETE api/proveedor/compra/{id}
     [HttpDelete("compra/{compraProveedorId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK)]

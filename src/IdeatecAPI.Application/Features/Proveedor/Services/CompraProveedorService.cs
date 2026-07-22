@@ -11,6 +11,7 @@ public interface ICompraProveedorService
     Task<IEnumerable<ObtenerCompraProveedorDTO>> GetAllByProveedorAsync(int proveedorId);
     Task<IEnumerable<ObtenerCompraProveedorDTO>> GetByDocReferenciaAsync(string docReferencia, int sucursalId);
     Task<ObtenerCompraProveedorDTO> RegistrarAsync(RegistrarCompraProveedorDTO dto);
+    Task<ObtenerCompraProveedorDTO> EditarAsync(int compraProveedorId, RegistrarCompraProveedorDTO dto);
     Task<bool> EliminarAsync(int compraProveedorId);
 }
 
@@ -44,6 +45,62 @@ public class CompraProveedorService : ICompraProveedorService
     }
 
     public async Task<ObtenerCompraProveedorDTO> RegistrarAsync(RegistrarCompraProveedorDTO dto)
+    {
+        _unitOfWork.BeginTransaction();
+        try
+        {
+            var result = await RegistrarCoreAsync(dto, DateTime.Now);
+            _unitOfWork.Commit();
+            return result;
+        }
+        catch
+        {
+            _unitOfWork.Rollback();
+            throw;
+        }
+    }
+
+    public async Task<ObtenerCompraProveedorDTO> EditarAsync(int compraProveedorId, RegistrarCompraProveedorDTO dto)
+    {
+        if (compraProveedorId <= 0)
+            throw new ArgumentException("CompraProveedorId inválido");
+
+        var compraOriginal = await _unitOfWork.ComprasProveedor.GetByIdAsync(compraProveedorId);
+        if (compraOriginal == null)
+            throw new ArgumentException($"No se encontró la compra con ID {compraProveedorId}");
+
+        // La sucursal no se cambia al editar: siempre hereda la original.
+        dto.SucursalId = compraOriginal.SucursalId;
+        dto.IdUsuario ??= compraOriginal.IdUsuario;
+
+        _unitOfWork.BeginTransaction();
+        try
+        {
+            var lotes = (await _unitOfWork.InventarioLotes.GetByCompraProveedorIdAsync(compraProveedorId)).ToList();
+            if (lotes.Any(l => l.SaldoCantidad != l.CantidadOriginal))
+                throw new InvalidOperationException("No se puede editar esta compra: el producto ya fue vendido (total o parcialmente).");
+
+            foreach (var lote in lotes)
+            {
+                await _unitOfWork.InventarioLotes.EliminarEntradaLoteAsync(lote.InventarioLoteId);
+                await _unitOfWork.Productos.ActualizarStockAsync(lote.SucursalProductoId, (int)lote.CantidadOriginal);
+            }
+
+            await _unitOfWork.ComprasProveedor.EliminarAsync(compraProveedorId);
+
+            var nueva = await RegistrarCoreAsync(dto, compraOriginal.FechaCreacion ?? DateTime.Now);
+
+            _unitOfWork.Commit();
+            return nueva;
+        }
+        catch
+        {
+            _unitOfWork.Rollback();
+            throw;
+        }
+    }
+
+    private async Task<ObtenerCompraProveedorDTO> RegistrarCoreAsync(RegistrarCompraProveedorDTO dto, DateTime fechaCreacion)
     {
         if (dto.ProveedorId == null || dto.ProveedorId <= 0)
             throw new ArgumentException("ProveedorId es obligatorio");
@@ -86,84 +143,73 @@ public class CompraProveedorService : ICompraProveedorService
             cantidadStockBase = (int)Math.Round(dto.Cantidad.Value * factor, MidpointRounding.AwayFromZero);
         }
 
-        _unitOfWork.BeginTransaction();
-        try
+        var compra = new CompraProveedor
         {
-            var compra = new CompraProveedor
+            ProveedorId = dto.ProveedorId.Value,
+            SucursalId = dto.SucursalId.Value,
+            ProductoId = dto.ProductoId.Value,
+            PrecioCompra = dto.PrecioCompra,
+            Cantidad = dto.Cantidad,
+            UnidadMedida = dto.UnidadMedida,
+            DocReferencia = dto.DocReferencia,
+            IdUsuario = dto.IdUsuario,
+            FechaCreacion = fechaCreacion
+        };
+
+        var creada = await _unitOfWork.ComprasProveedor.RegistrarAsync(compra);
+
+        if (productoBaseId is int baseId)
+        {
+            // Paquete: el stock sube en el producto base, el costo se queda en el paquete.
+            await _unitOfWork.Productos.IncrementarStockSinCostoAsync(baseId, dto.SucursalId.Value, cantidadStockBase);
+            await _unitOfWork.Productos.ActualizarCostoSinStockAsync(dto.ProductoId.Value, dto.SucursalId.Value, dto.PrecioCompra.Value);
+
+            // El lote PEPS se registra en el producto base (que es quien tiene el stock real),
+            // con el costo unitario convertido a la unidad base (precio del paquete / factor).
+            var factorLote = producto!.FactorConversion!.Value;
+            var productoBase = await _unitOfWork.Productos.GetProductoByIdAsync(baseId, dto.SucursalId.Value);
+            if (productoBase?.SucursalProducto != null)
             {
-                ProveedorId = dto.ProveedorId.Value,
-                SucursalId = dto.SucursalId.Value,
-                ProductoId = dto.ProductoId.Value,
-                PrecioCompra = dto.PrecioCompra,
-                Cantidad = dto.Cantidad,
-                UnidadMedida = dto.UnidadMedida,
-                DocReferencia = dto.DocReferencia,
-                IdUsuario = dto.IdUsuario,
-                FechaCreacion = DateTime.Now
-            };
-
-            var creada = await _unitOfWork.ComprasProveedor.RegistrarAsync(compra);
-
-            if (productoBaseId is int baseId)
-            {
-                // Paquete: el stock sube en el producto base, el costo se queda en el paquete.
-                await _unitOfWork.Productos.IncrementarStockSinCostoAsync(baseId, dto.SucursalId.Value, cantidadStockBase);
-                await _unitOfWork.Productos.ActualizarCostoSinStockAsync(dto.ProductoId.Value, dto.SucursalId.Value, dto.PrecioCompra.Value);
-
-                // El lote PEPS se registra en el producto base (que es quien tiene el stock real),
-                // con el costo unitario convertido a la unidad base (precio del paquete / factor).
-                var factorLote = producto!.FactorConversion!.Value;
-                var productoBase = await _unitOfWork.Productos.GetProductoByIdAsync(baseId, dto.SucursalId.Value);
-                if (productoBase?.SucursalProducto != null)
-                {
-                    await _inventarioPepsService.RegistrarEntradaLoteAsync(
-                        productoBase.SucursalProducto.SucursalProductoId,
-                        creada.CompraProveedorId,
-                        "COMPRA",
-                        cantidadStockBase,
-                        dto.PrecioCompra.Value / factorLote,
-                        compra.FechaCreacion!.Value,
-                        dto.IdUsuario,
-                        referenciaTipo: "COMPRAPROVEEDOR",
-                        referenciaId: creada.CompraProveedorId,
-                        fechaVencimiento: dto.FechaVencimiento);
-                }
+                await _inventarioPepsService.RegistrarEntradaLoteAsync(
+                    productoBase.SucursalProducto.SucursalProductoId,
+                    creada.CompraProveedorId,
+                    "COMPRA",
+                    cantidadStockBase,
+                    dto.PrecioCompra.Value / factorLote,
+                    fechaCreacion,
+                    dto.IdUsuario,
+                    referenciaTipo: "COMPRAPROVEEDOR",
+                    referenciaId: creada.CompraProveedorId,
+                    fechaVencimiento: dto.FechaVencimiento);
             }
-            else
+        }
+        else
+        {
+            // Producto normal: stock y costo juntos, en su propia fila.
+            await _unitOfWork.Productos.RegistrarCompraStockAsync(
+                dto.ProductoId.Value,
+                dto.SucursalId.Value,
+                dto.Cantidad.Value,
+                dto.PrecioCompra.Value);
+
+            if (producto?.SucursalProducto != null)
             {
-                // Producto normal: stock y costo juntos, en su propia fila.
-                await _unitOfWork.Productos.RegistrarCompraStockAsync(
-                    dto.ProductoId.Value,
-                    dto.SucursalId.Value,
+                await _inventarioPepsService.RegistrarEntradaLoteAsync(
+                    producto.SucursalProducto.SucursalProductoId,
+                    creada.CompraProveedorId,
+                    "COMPRA",
                     dto.Cantidad.Value,
-                    dto.PrecioCompra.Value);
-
-                if (producto?.SucursalProducto != null)
-                {
-                    await _inventarioPepsService.RegistrarEntradaLoteAsync(
-                        producto.SucursalProducto.SucursalProductoId,
-                        creada.CompraProveedorId,
-                        "COMPRA",
-                        dto.Cantidad.Value,
-                        dto.PrecioCompra.Value,
-                        compra.FechaCreacion!.Value,
-                        dto.IdUsuario,
-                        referenciaTipo: "COMPRAPROVEEDOR",
-                        referenciaId: creada.CompraProveedorId,
-                        fechaVencimiento: dto.FechaVencimiento);
-                }
+                    dto.PrecioCompra.Value,
+                    fechaCreacion,
+                    dto.IdUsuario,
+                    referenciaTipo: "COMPRAPROVEEDOR",
+                    referenciaId: creada.CompraProveedorId,
+                    fechaVencimiento: dto.FechaVencimiento);
             }
-
-            _unitOfWork.Commit();
-
-            var creadaCompleta = await _unitOfWork.ComprasProveedor.GetByIdAsync(creada.CompraProveedorId);
-            return MapToDTO(creadaCompleta!);
         }
-        catch
-        {
-            _unitOfWork.Rollback();
-            throw;
-        }
+
+        var creadaCompleta = await _unitOfWork.ComprasProveedor.GetByIdAsync(creada.CompraProveedorId);
+        return MapToDTO(creadaCompleta!);
     }
 
     public async Task<bool> EliminarAsync(int compraProveedorId)
@@ -217,7 +263,8 @@ public class CompraProveedorService : ICompraProveedorService
             Cantidad = c.Cantidad,
             UnidadMedida = c.UnidadMedida,
             DocReferencia = c.DocReferencia,
-            FechaCreacion = c.FechaCreacion
+            FechaCreacion = c.FechaCreacion,
+            FechaVencimiento = c.FechaVencimiento
         };
     }
 }
