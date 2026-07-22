@@ -113,6 +113,7 @@ public class InventarioLoteRepository : DapperRepository<InventarioLote>, IInven
                 il.saldoCantidad      AS SaldoCantidad,
                 il.estado             AS Estado,
                 il.fechaCreacion      AS FechaCreacion,
+                il.fechaVencimiento   AS FechaVencimiento,
                 p.nomProducto         AS NomProducto,
                 p.codigo              AS Codigo
             FROM inventario_lote il
@@ -328,6 +329,50 @@ public class InventarioLoteRepository : DapperRepository<InventarioLote>, IInven
 
         return await _connection.QueryAsync<InventarioLote>(sql,
             new { SucursalProductoId = sucursalProductoId }, _transaction);
+    }
+
+    // Vista previa de solo lectura (no descuenta ni desactiva nada) para mostrar en el frontend
+    // antes de confirmar el retiro real vía RetirarLotesVencidosAsync.
+    public async Task<IEnumerable<LoteVencidoDTO>> GetLotesVencidosReporteAsync(int? sucursalId = null)
+    {
+        var sql = @"
+            SELECT
+                il.inventarioLoteID   AS InventarioLoteId,
+                il.sucursalProductoID AS SucursalProductoId,
+                p.nomProducto         AS NomProducto,
+                p.codigo              AS Codigo,
+                il.origen             AS Origen,
+                il.fechaLote          AS FechaLote,
+                il.fechaVencimiento   AS FechaVencimiento,
+                il.saldoCantidad      AS SaldoCantidad,
+                il.costoUnitario      AS CostoUnitario
+            FROM inventario_lote il
+            INNER JOIN sucursalproducto sp ON sp.sucursalProductoID = il.sucursalProductoID
+            INNER JOIN producto p ON p.productoID = sp.productoID
+            WHERE il.fechaVencimiento < CURDATE()
+            AND il.estado = 1
+            AND il.saldoCantidad > 0
+            AND (@SucursalId IS NULL OR sp.sucursalID = @SucursalId)
+            ORDER BY il.fechaVencimiento ASC, p.nomProducto ASC;";
+
+        return await _connection.QueryAsync<LoteVencidoDTO>(sql, new { SucursalId = sucursalId }, _transaction);
+    }
+
+    // Corrige la fecha de vencimiento de un lote ya registrado (p.ej. error de tipeo al comprar).
+    // No afecta cantidad/costo ni ningún movimiento de Kardex ya registrado, solo el dato del lote
+    // en sí (usado para el orden FEFO y para mostrarlo). Solo se permite sobre lotes activos:
+    // uno ya dado de baja (estado = 0) es historia cerrada.
+    public async Task<bool> ActualizarFechaVencimientoAsync(int inventarioLoteId, DateTime? fechaVencimiento)
+    {
+        var sql = @"
+            UPDATE inventario_lote
+            SET fechaVencimiento = @FechaVencimiento
+            WHERE inventarioLoteID = @InventarioLoteId
+            AND estado = 1;";
+
+        var result = await _connection.ExecuteAsync(sql,
+            new { InventarioLoteId = inventarioLoteId, FechaVencimiento = fechaVencimiento }, _transaction);
+        return result > 0;
     }
 
     public async Task<bool> DesactivarLoteAsync(int inventarioLoteId)

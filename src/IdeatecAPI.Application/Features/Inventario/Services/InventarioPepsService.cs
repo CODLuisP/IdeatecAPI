@@ -24,6 +24,8 @@ public interface IInventarioPepsService
     Task<IEnumerable<RentabilidadProductoDTO>> GetRentabilidadPorProductoAsync(int sucursalId, DateTime? desde, DateTime? hasta);
     Task<IEnumerable<RentabilidadDiariaDTO>> GetRentabilidadDiariaAsync(int sucursalProductoId, DateTime? desde, DateTime? hasta);
     Task<RetirarVencidosResultDTO> RetirarLotesVencidosAsync(int? sucursalProductoId = null, int? idUsuario = null);
+    Task<IEnumerable<LoteVencidoDTO>> GetLotesVencidosReporteAsync(int? sucursalId = null);
+    Task<bool> ActualizarFechaVencimientoLoteAsync(int inventarioLoteId, DateTime? fechaVencimiento);
 }
 
 public class InventarioPepsService : IInventarioPepsService
@@ -228,7 +230,8 @@ public class InventarioPepsService : IInventarioPepsService
                 FechaLote = l.FechaLote,
                 CantidadOriginal = l.CantidadOriginal,
                 CostoUnitario = l.CostoUnitario,
-                SaldoCantidad = l.SaldoCantidad
+                SaldoCantidad = l.SaldoCantidad,
+                FechaVencimiento = l.FechaVencimiento
             })
         };
     }
@@ -253,7 +256,8 @@ public class InventarioPepsService : IInventarioPepsService
                     FechaLote = l.FechaLote,
                     CantidadOriginal = l.CantidadOriginal,
                     CostoUnitario = l.CostoUnitario,
-                    SaldoCantidad = l.SaldoCantidad
+                    SaldoCantidad = l.SaldoCantidad,
+                    FechaVencimiento = l.FechaVencimiento
                 })
             });
     }
@@ -404,5 +408,15 @@ public class InventarioPepsService : IInventarioPepsService
             _unitOfWork.Rollback();
             throw;
         }
+    }
+
+    public async Task<IEnumerable<LoteVencidoDTO>> GetLotesVencidosReporteAsync(int? sucursalId = null)
+    {
+        return await _unitOfWork.InventarioLotes.GetLotesVencidosReporteAsync(sucursalId);
+    }
+
+    public async Task<bool> ActualizarFechaVencimientoLoteAsync(int inventarioLoteId, DateTime? fechaVencimiento)
+    {
+        return await _unitOfWork.InventarioLotes.ActualizarFechaVencimientoAsync(inventarioLoteId, fechaVencimiento);
     }
 }

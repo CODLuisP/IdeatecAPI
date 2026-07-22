@@ -9,4 +9,5 @@ public class LoteReporteDTO
     public decimal CostoUnitario { get; set; }
     public decimal SaldoCantidad { get; set; }
     public decimal SaldoValor => SaldoCantidad * CostoUnitario;
+    public DateTime? FechaVencimiento { get; set; }
 }

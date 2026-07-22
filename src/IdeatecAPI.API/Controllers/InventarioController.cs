@@ -129,6 +129,59 @@ public class InventarioController : ControllerBase
         }
     }
 
+    // GET api/inventario/vencidos/sucursal/{sucursalId}
+    // Vista previa de solo lectura de los lotes vencidos (no descuenta stock ni desactiva nada).
+    // Se usa para mostrar al usuario qué se va a retirar antes de confirmar con retirar-vencidos.
+    [HttpGet("vencidos/sucursal/{sucursalId:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetLotesVencidosSucursalAsync(int sucursalId)
+    {
+        try
+        {
+            var lotesVencidos = await _inventarioPepsService.GetLotesVencidosReporteAsync(sucursalId);
+            return Ok(lotesVencidos ?? []);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener los lotes vencidos de la sucursal {SucursalId}", sucursalId);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al obtener los productos vencidos.",
+                detalle = ex.Message
+            });
+        }
+    }
+
+    // PUT api/inventario/lote/{inventarioLoteId}/fecha-vencimiento
+    // Corrige la fecha de vencimiento de un lote ya registrado (p.ej. error al registrar la compra).
+    // No afecta cantidad, costo ni Kardex. Solo aplica sobre lotes activos (estado = 1);
+    // uno ya dado de baja por vencimiento se considera historia cerrada y no se puede editar.
+    [HttpPut("lote/{inventarioLoteId:int}/fecha-vencimiento")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> ActualizarFechaVencimientoLoteAsync(int inventarioLoteId, [FromBody] ActualizarFechaVencimientoDTO dto)
+    {
+        try
+        {
+            var actualizado = await _inventarioPepsService.ActualizarFechaVencimientoLoteAsync(inventarioLoteId, dto.FechaVencimiento);
+            if (!actualizado)
+                return NotFound(new { mensaje = "No se encontró el lote o ya no está activo." });
+
+            return Ok(new { mensaje = "Fecha de vencimiento actualizada correctamente." });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al actualizar la fecha de vencimiento del lote {InventarioLoteId}", inventarioLoteId);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al actualizar la fecha de vencimiento.",
+                detalle = ex.Message
+            });
+        }
+    }
+
     // POST api/inventario/retirar-vencidos
     // Retira lotes cuya fecha de vencimiento ya pasó: pone saldoCantidad = 0, estado = 0,
     // registra Kardex SALIDA_VENCIMIENTO y descuenta el stock del producto.
