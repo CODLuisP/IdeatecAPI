@@ -29,4 +29,8 @@ public class RegistrarProductoDTO
     public int? CantidadMinimaMayorista { get; set; }
     public bool? EnPromocion { get; set; }
     public decimal? PorcentajeDescuento { get; set; }
+
+    // Datos informativos opcionales
+    public int? UsuarioId { get; set; }
+    public string? UbicacionTienda { get; set; }
 }

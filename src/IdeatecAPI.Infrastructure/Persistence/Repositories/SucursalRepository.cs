@@ -18,6 +18,7 @@ public class SucursalRepository : DapperRepository<Sucursal>, ISucursalRepositor
                nombre                            AS Nombre,
                direccion                         AS Direccion,
                telefono                          AS Telefono,
+               numerostockbajo                   AS NumeroStockBajo,
                serieFactura                      AS SerieFactura,
                correlativoFactura                AS CorrelativoFactura,
                serieBoleta                       AS SerieBoleta,
@@ -128,17 +129,18 @@ public class SucursalRepository : DapperRepository<Sucursal>, ISucursalRepositor
         return filas > 0;
     }
 
-    public async Task<bool> EditarInfoAsync(int sucursalId, string? nombre, string? direccion, string? telefono)
+    public async Task<bool> EditarInfoAsync(int sucursalId, string? nombre, string? direccion, string? telefono, string? numeroStockBajo)
     {
         var sql = @"
         UPDATE sucursal SET
-            nombre    = COALESCE(@Nombre,    nombre),
-            direccion = COALESCE(@Direccion, direccion),
-            telefono  = COALESCE(@Telefono,  telefono)
+            nombre          = COALESCE(@Nombre,          nombre),
+            direccion       = COALESCE(@Direccion,       direccion),
+            telefono        = COALESCE(@Telefono,        telefono),
+            numerostockbajo = @NumeroStockBajo
         WHERE sucursalID = @SucursalId";
 
         var filas = await _connection.ExecuteAsync(sql,
-            new { Nombre = nombre, Direccion = direccion, Telefono = telefono, SucursalId = sucursalId }, _transaction);
+            new { Nombre = nombre, Direccion = direccion, Telefono = telefono, NumeroStockBajo = numeroStockBajo, SucursalId = sucursalId }, _transaction);
         return filas > 0;
     }
 
@@ -151,6 +153,7 @@ public class SucursalRepository : DapperRepository<Sucursal>, ISucursalRepositor
                nombre                            AS Nombre,
                direccion                         AS Direccion,
                telefono                          AS Telefono,
+               numerostockbajo                   AS NumeroStockBajo,
                serieFactura                      AS SerieFactura,
                correlativoFactura                AS CorrelativoFactura,
                serieBoleta                       AS SerieBoleta,

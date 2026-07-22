@@ -11,6 +11,7 @@ public class InventarioLote
     public decimal SaldoCantidad { get; set; }
     public bool Estado { get; set; } = true;
     public DateTime? FechaCreacion { get; set; }
+    public DateTime? FechaVencimiento { get; set; }
 
     // Datos enriquecidos para reportes (no se persisten)
     public string? NomProducto { get; set; }

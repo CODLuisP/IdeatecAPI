@@ -125,7 +125,8 @@ public class CompraProveedorService : ICompraProveedorService
                         compra.FechaCreacion!.Value,
                         dto.IdUsuario,
                         referenciaTipo: "COMPRAPROVEEDOR",
-                        referenciaId: creada.CompraProveedorId);
+                        referenciaId: creada.CompraProveedorId,
+                        fechaVencimiento: dto.FechaVencimiento);
                 }
             }
             else
@@ -148,7 +149,8 @@ public class CompraProveedorService : ICompraProveedorService
                         compra.FechaCreacion!.Value,
                         dto.IdUsuario,
                         referenciaTipo: "COMPRAPROVEEDOR",
-                        referenciaId: creada.CompraProveedorId);
+                        referenciaId: creada.CompraProveedorId,
+                        fechaVencimiento: dto.FechaVencimiento);
                 }
             }
 

@@ -114,6 +114,8 @@ public class ProductoService : IProductoService
                 CantidadMinimaMayorista = dto.CantidadMinimaMayorista,
                 EnPromocion = dto.EnPromocion ?? false,
                 PorcentajeDescuento = dto.PorcentajeDescuento,
+                UsuarioId = dto.UsuarioId,
+                UbicacionTienda = dto.UbicacionTienda,
                 Estado = true,
                 FechaCreacion = DateTime.Now
             };
@@ -186,7 +188,9 @@ public class ProductoService : IProductoService
                 PrecioMayorista = dto.PrecioMayorista,
                 CantidadMinimaMayorista = dto.CantidadMinimaMayorista,
                 EnPromocion = dto.EnPromocion ?? false,
-                PorcentajeDescuento = dto.PorcentajeDescuento
+                PorcentajeDescuento = dto.PorcentajeDescuento,
+                UsuarioId = dto.UsuarioId,
+                UbicacionTienda = dto.UbicacionTienda
             };
 
             await _unitOfWork.Productos.EditarSucursalProductoAsync(sucursalProducto);
@@ -388,7 +392,10 @@ public class ProductoService : IProductoService
             PrecioMayorista = p.SucursalProducto.PrecioMayorista,
             CantidadMinimaMayorista = p.SucursalProducto.CantidadMinimaMayorista,
             EnPromocion = p.SucursalProducto.EnPromocion,
-            PorcentajeDescuento = p.SucursalProducto.PorcentajeDescuento
+            PorcentajeDescuento = p.SucursalProducto.PorcentajeDescuento,
+            UsuarioId = p.SucursalProducto.UsuarioId,
+            UbicacionTienda = p.SucursalProducto.UbicacionTienda,
+            ProximoVencimiento = p.SucursalProducto.ProximoVencimiento
         }
     };
 

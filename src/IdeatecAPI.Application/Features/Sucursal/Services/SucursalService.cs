@@ -11,7 +11,7 @@ public interface ISucursalService
     Task<ObtenerSucursalDTO> RegistrarSucursalAsync(AgregarSucursalDTO agregarSucursalDTO);
     Task<bool> EditarSucursalAsync(EditarSucursalDTO editarSucursalDTO);
     Task<bool> InhabilitarSucursalAsync(int SucursalId);
-    Task<bool> EditarInfoSucursalAsync(int sucursalId, string? nombre, string? direccion, string? telefono);
+    Task<bool> EditarInfoSucursalAsync(int sucursalId, string? nombre, string? direccion, string? telefono, string? numeroStockBajo);
     Task<IEnumerable<ObtenerSucursalDTO>> GetByRucTodasAsync(string empresaRuc);
     Task<bool> HabilitarSucursalAsync(int sucursalId);
     Task<ObtenerSucursalDTO?> GetSucursalByRucYCodAsync(string empresaRuc, string codEstablecimiento);
@@ -211,6 +211,7 @@ public class SucursalService : ISucursalService
         Nombre = s.Nombre,
         Direccion = s.Direccion,
         Telefono = s.Telefono,
+        NumeroStockBajo = s.NumeroStockBajo,
         SerieFactura = s.SerieFactura,
         CorrelativoFactura = s.CorrelativoFactura,
         SerieBoleta = s.SerieBoleta,
@@ -232,9 +233,9 @@ public class SucursalService : ISucursalService
         Estado = s.Estado
     };
 
-    public async Task<bool> EditarInfoSucursalAsync(int sucursalId, string? nombre, string? direccion, string? telefono)
+    public async Task<bool> EditarInfoSucursalAsync(int sucursalId, string? nombre, string? direccion, string? telefono, string? numeroStockBajo)
     {
-        return await _unitOfWork.Sucursal.EditarInfoAsync(sucursalId, nombre, direccion, telefono);
+        return await _unitOfWork.Sucursal.EditarInfoAsync(sucursalId, nombre, direccion, telefono, numeroStockBajo);
     }
 
     public async Task<ObtenerSucursalDTO?> GetSucursalByRucYCodAsync(string empresaRuc, string codEstablecimiento)

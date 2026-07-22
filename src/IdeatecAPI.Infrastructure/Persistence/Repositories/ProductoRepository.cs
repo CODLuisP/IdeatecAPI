@@ -42,7 +42,14 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
             sp.precioMayorista           AS PrecioMayorista,
             sp.cantidadMinimaMayorista   AS CantidadMinimaMayorista,
             sp.enPromocion               AS EnPromocion,
-            sp.porcentajeDescuento       AS PorcentajeDescuento
+            sp.porcentajeDescuento       AS PorcentajeDescuento,
+            sp.usuarioId                 AS UsuarioId,
+            sp.ubicacionTienda           AS UbicacionTienda,
+            (SELECT MIN(il.fechaVencimiento) FROM inventario_lote il
+                WHERE il.sucursalProductoID = sp.sucursalProductoID
+                AND il.saldoCantidad > 0
+                AND il.fechaVencimiento IS NOT NULL
+                AND il.estado = 1) AS ProximoVencimiento
         FROM producto p
         INNER JOIN categoria c
             ON c.categoriaID = p.categoriaID
@@ -149,6 +156,13 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
                 sp.cantidadMinimaMayorista   AS CantidadMinimaMayorista,
                 sp.enPromocion               AS EnPromocion,
                 sp.porcentajeDescuento       AS PorcentajeDescuento,
+                sp.usuarioId                 AS UsuarioId,
+                sp.ubicacionTienda           AS UbicacionTienda,
+                (SELECT MIN(il.fechaVencimiento) FROM inventario_lote il
+                    WHERE il.sucursalProductoID = sp.sucursalProductoID
+                    AND il.saldoCantidad > 0
+                    AND il.fechaVencimiento IS NOT NULL
+                    AND il.estado = 1) AS ProximoVencimiento,
                 s.nombre              AS NomSucursal
             FROM producto p
             INNER JOIN categoria c ON c.categoriaID = p.categoriaID
@@ -230,7 +244,14 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
             sp.precioMayorista           AS PrecioMayorista,
             sp.cantidadMinimaMayorista   AS CantidadMinimaMayorista,
             sp.enPromocion               AS EnPromocion,
-            sp.porcentajeDescuento       AS PorcentajeDescuento
+            sp.porcentajeDescuento       AS PorcentajeDescuento,
+            sp.usuarioId                 AS UsuarioId,
+            sp.ubicacionTienda           AS UbicacionTienda,
+            (SELECT MIN(il.fechaVencimiento) FROM inventario_lote il
+                WHERE il.sucursalProductoID = sp.sucursalProductoID
+                AND il.saldoCantidad > 0
+                AND il.fechaVencimiento IS NOT NULL
+                AND il.estado = 1) AS ProximoVencimiento
         FROM producto p
         INNER JOIN categoria c ON c.categoriaID = p.categoriaID
         INNER JOIN sucursalproducto sp ON sp.productoID = p.productoID
@@ -306,10 +327,12 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
             INSERT INTO sucursalproducto (
                 productoID, sucursalID, precioUnitario, stock,
                 precioMayorista, cantidadMinimaMayorista, enPromocion, porcentajeDescuento,
+                usuarioId, ubicacionTienda,
                 estado, fechaCreacion
             ) VALUES (
                 @ProductoId, @SucursalId, @PrecioUnitario, @Stock,
                 @PrecioMayorista, @CantidadMinimaMayorista, @EnPromocion, @PorcentajeDescuento,
+                @UsuarioId, @UbicacionTienda,
                 @Estado, @FechaCreacion
             );
             SELECT LAST_INSERT_ID();";
@@ -351,7 +374,9 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
                 precioMayorista         = @PrecioMayorista,
                 cantidadMinimaMayorista = @CantidadMinimaMayorista,
                 enPromocion             = @EnPromocion,
-                porcentajeDescuento     = @PorcentajeDescuento
+                porcentajeDescuento     = @PorcentajeDescuento,
+                usuarioId               = @UsuarioId,
+                ubicacionTienda         = @UbicacionTienda
             WHERE sucursalProductoID = @SucursalProductoId AND estado = 1";
 
         var filas = await _connection.ExecuteAsync(sql, sucursalProducto, _transaction);
@@ -635,6 +660,13 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
                 sp.cantidadMinimaMayorista   AS CantidadMinimaMayorista,
                 sp.enPromocion               AS EnPromocion,
                 sp.porcentajeDescuento       AS PorcentajeDescuento,
+                sp.usuarioId                 AS UsuarioId,
+                sp.ubicacionTienda           AS UbicacionTienda,
+                (SELECT MIN(il.fechaVencimiento) FROM inventario_lote il
+                    WHERE il.sucursalProductoID = sp.sucursalProductoID
+                    AND il.saldoCantidad > 0
+                    AND il.fechaVencimiento IS NOT NULL
+                    AND il.estado = 1) AS ProximoVencimiento,
 
                 s.nombre            AS NomSucursal
             FROM producto p

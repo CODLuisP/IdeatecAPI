@@ -7,6 +7,7 @@ public class ObtenerSucursalDTO
     public string? Nombre { get; set; }
     public string? Direccion { get; set; }
     public string? Telefono { get; set; }
+    public string? NumeroStockBajo { get; set; }
     public string? SerieFactura { get; set; }
     public int? CorrelativoFactura { get; set; }
     public string? SerieBoleta { get; set; }

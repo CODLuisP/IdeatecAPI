@@ -8,7 +8,7 @@ public interface IInventarioPepsService
 {
     Task<InventarioLote> RegistrarEntradaLoteAsync(int sucursalProductoId, int? compraProveedorId, string origen,
         decimal cantidad, decimal costoUnitario, DateTime fecha, int? idUsuario,
-        string? referenciaTipo = null, int? referenciaId = null);
+        string? referenciaTipo = null, int? referenciaId = null, DateTime? fechaVencimiento = null);
 
     Task<ConsumoPepsResultDTO> ConsumirFifoAsync(int sucursalProductoId, decimal cantidad, string tipoMovimiento,
         string? referenciaTipo, int? referenciaId, int? idUsuario);
@@ -36,7 +36,7 @@ public class InventarioPepsService : IInventarioPepsService
 
     public async Task<InventarioLote> RegistrarEntradaLoteAsync(int sucursalProductoId, int? compraProveedorId, string origen,
         decimal cantidad, decimal costoUnitario, DateTime fecha, int? idUsuario,
-        string? referenciaTipo = null, int? referenciaId = null)
+        string? referenciaTipo = null, int? referenciaId = null, DateTime? fechaVencimiento = null)
     {
         if (cantidad <= 0)
             throw new ArgumentException("La cantidad del lote debe ser mayor a 0.");
@@ -52,7 +52,8 @@ public class InventarioPepsService : IInventarioPepsService
             CantidadOriginal = cantidad,
             CostoUnitario = costoUnitario,
             SaldoCantidad = cantidad,
-            Estado = true
+            Estado = true,
+            FechaVencimiento = fechaVencimiento
         };
 
         var loteCreado = await _unitOfWork.InventarioLotes.CrearLoteAsync(lote);

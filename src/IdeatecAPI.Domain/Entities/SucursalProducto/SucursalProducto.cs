@@ -13,6 +13,12 @@ public class SucursalProducto
     public int? CantidadMinimaMayorista { get; set; }
     public bool? EnPromocion { get; set; }
     public decimal? PorcentajeDescuento { get; set; }
+    public int? UsuarioId { get; set; }
+    public string? UbicacionTienda { get; set; }
     public bool? Estado { get; set; }
     public DateTime? FechaCreacion { get; set; }
+
+    // Dato enriquecido para listados: fecha de vencimiento más próxima entre los
+    // lotes de inventario con saldo (no se persiste en esta tabla, ver inventario_lote).
+    public DateTime? ProximoVencimiento { get; set; }
 }

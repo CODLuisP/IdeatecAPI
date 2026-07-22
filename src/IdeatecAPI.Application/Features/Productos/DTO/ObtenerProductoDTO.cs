@@ -38,6 +38,9 @@ public class ObtenerSucursalProductoDTO
     public int? CantidadMinimaMayorista { get; set; }
     public bool? EnPromocion { get; set; }
     public decimal? PorcentajeDescuento { get; set; }
+    public int? UsuarioId { get; set; }
+    public string? UbicacionTienda { get; set; }
+    public DateTime? ProximoVencimiento { get; set; }
 }
 
 public class ObtenerCategoriaDTO

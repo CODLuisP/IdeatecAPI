@@ -10,4 +10,5 @@ public class RegistrarCompraProveedorDTO
     public string? UnidadMedida { get; set; }
     public string? DocReferencia { get; set; }
     public int? IdUsuario { get; set; }
+    public DateTime? FechaVencimiento { get; set; }
 }
