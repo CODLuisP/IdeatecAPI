@@ -46,6 +46,7 @@ public class ConfiguracionService : IConfiguracionService
             DescUnitario      = configuracion.DescUnitario,
             IsStock           = configuracion.IsStock,
             NumeroStockBajo   = configuracion.NumeroStockBajo,
+            UmbralStockBajo   = configuracion.UmbralStockBajo,
             UseNotaVenta      = configuracion.UseNotaVenta,
             IsCajaAutopago    = configuracion.IsCajaAutopago,
             UsaSire           = configuracion.UsaSire
@@ -78,6 +79,7 @@ public class ConfiguracionService : IConfiguracionService
                 DescUnitario      = dto.DescUnitario,
                 IsStock           = dto.IsStock,
                 NumeroStockBajo   = dto.NumeroStockBajo,
+                UmbralStockBajo   = dto.UmbralStockBajo,
                 UseNotaVenta      = dto.UseNotaVenta,
                 IsCajaAutopago    = dto.IsCajaAutopago,
                 UsaSire           = dto.UsaSire
@@ -123,6 +125,7 @@ public class ConfiguracionService : IConfiguracionService
                 DescUnitario      = dto.DescUnitario,
                 IsStock           = dto.IsStock,
                 NumeroStockBajo   = dto.NumeroStockBajo,
+                UmbralStockBajo   = dto.UmbralStockBajo,
                 UseNotaVenta      = dto.UseNotaVenta,
                 IsCajaAutopago    = dto.IsCajaAutopago,
                 UsaSire           = dto.UsaSire
