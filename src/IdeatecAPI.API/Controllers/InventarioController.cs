@@ -129,6 +129,45 @@ public class InventarioController : ControllerBase
         }
     }
 
+    // POST api/inventario/retirar-vencidos
+    // Retira lotes cuya fecha de vencimiento ya pasó: pone saldoCantidad = 0, estado = 0,
+    // registra Kardex SALIDA_VENCIMIENTO y descuenta el stock del producto.
+    // Si se omite sucursalProductoId, procesa todos los productos de todas las sucursales.
+    [HttpPost("retirar-vencidos")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> RetirarVencidosAsync([FromQuery] int? sucursalProductoId)
+    {
+        try
+        {
+            var resultado = await _inventarioPepsService.RetirarLotesVencidosAsync(sucursalProductoId);
+            return Ok(new
+            {
+                mensaje = resultado.TotalLotesRetirados > 0
+                    ? "Productos vencidos retirados correctamente."
+                    : "No se encontraron lotes vencidos para retirar.",
+                resultado.TotalLotesRetirados,
+                resultado.TotalProductosAfectados,
+                resultado.TotalCantidadRetirada,
+                resultado.TotalCostoRetirado
+            });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { mensaje = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al retirar productos vencidos");
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al retirar productos vencidos.",
+                detalle = ex.Message
+            });
+        }
+    }
+
     // POST api/inventario/saldo-inicial
     // Backfill de un único uso: crea el lote inicial PEPS para productos con stock existente
     // (usa Último costo de compra como costo de referencia). Omite productos que ya tengan

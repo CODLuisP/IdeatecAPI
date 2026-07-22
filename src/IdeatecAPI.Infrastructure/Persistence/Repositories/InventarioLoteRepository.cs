@@ -47,7 +47,7 @@ public class InventarioLoteRepository : DapperRepository<InventarioLote>, IInven
             WHERE il.sucursalProductoID = @SucursalProductoId
             AND il.estado = 1
             AND il.saldoCantidad > 0
-            ORDER BY il.fechaLote ASC, il.inventarioLoteID ASC
+            ORDER BY (il.fechaVencimiento IS NULL), il.fechaVencimiento ASC, il.fechaLote ASC, il.inventarioLoteID ASC
             FOR UPDATE;";
 
         return await _connection.QueryAsync<InventarioLote>(sql, new { SucursalProductoId = sucursalProductoId }, _transaction);
@@ -315,6 +315,32 @@ public class InventarioLoteRepository : DapperRepository<InventarioLote>, IInven
             FOR UPDATE;";
 
         return await _connection.QueryAsync<InventarioLote>(sql, new { CompraProveedorId = compraProveedorId }, _transaction);
+    }
+
+    public async Task<IEnumerable<InventarioLote>> GetLotesVencidosAsync(int? sucursalProductoId = null)
+    {
+        var sql = $@"{SelectLoteBase}
+            WHERE il.fechaVencimiento < CURDATE()
+            AND il.estado = 1
+            AND il.saldoCantidad > 0
+            AND (@SucursalProductoId IS NULL OR il.sucursalProductoID = @SucursalProductoId)
+            ORDER BY il.sucursalProductoID ASC, il.fechaVencimiento ASC;";
+
+        return await _connection.QueryAsync<InventarioLote>(sql,
+            new { SucursalProductoId = sucursalProductoId }, _transaction);
+    }
+
+    public async Task<bool> DesactivarLoteAsync(int inventarioLoteId)
+    {
+        var sql = @"
+            UPDATE inventario_lote
+            SET saldoCantidad = 0, estado = 0
+            WHERE inventarioLoteID = @InventarioLoteId
+            AND estado = 1";
+
+        var filas = await _connection.ExecuteAsync(sql,
+            new { InventarioLoteId = inventarioLoteId }, _transaction);
+        return filas > 0;
     }
 
     /// <summary>
