@@ -26,7 +26,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
                 codigoTipoDescGlobal, descuentoGlobal, totalOperacionesGravadas, totalOperacionesExoneradas, 
                 totalOperacionesInafectas, totalOperacionesGratuitas, totalIgvGratuitas, totalIGV, totalDescuentos, totalOtrosCargos,
                 totalIcbper, totalImpuestos, valorVenta, subTotal, importeTotal, montoCredito,
-                estadoSunat, enviadoEnResumen, xmlGenerado, usuarioCreacion, fechaCreacion, codigoHashCPE
+                estadoSunat, enviadoEnResumen, xmlGenerado, usuarioCreacion, fechaCreacion, codigoHashCPE, observaciones
             ) VALUES (
                 @TipoOperacion, @TipoComprobante, @Serie, @Correlativo,
                 @FechaEmision, @HoraEmision, @FechaVencimiento, @TipoMoneda,
@@ -40,7 +40,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
                 @codigoTipoDescGlobal,  @DescuentoGlobal, @TotalOperacionesGravadas, @TotalOperacionesExoneradas, 
                 @TotalOperacionesInafectas, @TotalOperacionesGratuitas, @TotalIgvGratuitas, @TotalIGV, @TotalDescuentos, @TotalOtrosCargos,
                 @TotalIcbper, @TotalImpuestos, @ValorVenta, @SubTotal, @ImporteTotal, @MontoCredito,
-                @EstadoSunat,  @EnviadoEnResumen, @XmlGenerado, @UsuarioCreacion, @FechaCreacion, @CodigoHashCPE
+                @EstadoSunat,  @EnviadoEnResumen, @XmlGenerado, @UsuarioCreacion, @FechaCreacion, @CodigoHashCPE, @Observaciones
             );
             SELECT LAST_INSERT_ID();";
 
@@ -100,7 +100,8 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
             comprobante.EnviadoEnResumen,
             comprobante.UsuarioCreacion,
             comprobante.FechaCreacion,
-            comprobante.CodigoHashCPE
+            comprobante.CodigoHashCPE,
+            comprobante.Observaciones
         };
 
         int comprobanteId = await _connection.ExecuteScalarAsync<int>(sql, parameters, _transaction);
