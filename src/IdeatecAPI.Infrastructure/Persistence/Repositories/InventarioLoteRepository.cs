@@ -23,16 +23,17 @@ public class InventarioLoteRepository : DapperRepository<InventarioLote>, IInven
             il.costoUnitario      AS CostoUnitario,
             il.saldoCantidad      AS SaldoCantidad,
             il.estado             AS Estado,
-            il.fechaCreacion      AS FechaCreacion
+            il.fechaCreacion      AS FechaCreacion,
+            il.fechaVencimiento   AS FechaVencimiento
         FROM inventario_lote il";
 
     public async Task<InventarioLote> CrearLoteAsync(InventarioLote lote)
     {
         var sql = @"
             INSERT INTO inventario_lote
-                (sucursalProductoID, compraProveedorID, origen, fechaLote, cantidadOriginal, costoUnitario, saldoCantidad, estado, fechaCreacion)
+                (sucursalProductoID, compraProveedorID, origen, fechaLote, cantidadOriginal, costoUnitario, saldoCantidad, estado, fechaCreacion, fechaVencimiento)
             VALUES
-                (@SucursalProductoId, @CompraProveedorId, @Origen, @FechaLote, @CantidadOriginal, @CostoUnitario, @SaldoCantidad, @Estado, NOW());
+                (@SucursalProductoId, @CompraProveedorId, @Origen, @FechaLote, @CantidadOriginal, @CostoUnitario, @SaldoCantidad, @Estado, NOW(), @FechaVencimiento);
             SELECT LAST_INSERT_ID();";
 
         var newId = await _connection.ExecuteScalarAsync<int>(sql, lote, _transaction);
