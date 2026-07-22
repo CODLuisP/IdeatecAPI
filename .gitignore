@@ -48,3 +48,10 @@ AssemblyInfo.*
 # Razor/Blazor
 *.dwsa.cache.json
 rpswa.dswa.cache.json
+
+# Excepcion: mantener trackeado el dll principal de la API
+!/src/IdeatecAPI.API/bin/
+!/src/IdeatecAPI.API/bin/Debug/
+!/src/IdeatecAPI.API/bin/Debug/net10.0/
+/src/IdeatecAPI.API/bin/Debug/net10.0/*
+!/src/IdeatecAPI.API/bin/Debug/net10.0/IdeatecAPI.API.dll
