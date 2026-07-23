@@ -156,11 +156,14 @@ public class SunatResumenService : ISunatResumenService
             var fault = xDoc.Descendants("faultstring").FirstOrDefault();
             if (fault != null)
             {
+                var faultCode = xDoc.Descendants("faultcode").FirstOrDefault()?.Value ?? "";
+                var esErrorServidor = faultCode.Contains("Server", StringComparison.OrdinalIgnoreCase);
+
                 return new SunatResumenResponse
                 {
                     Success         = false,
                     Ticket          = ticket,
-                    CodigoRespuesta = "SOAP_FAULT",
+                    CodigoRespuesta = esErrorServidor ? "SOAP_FAULT" : "SOAP_CLIENT_ERROR",
                     Descripcion     = fault.Value
                 };
             }
@@ -220,12 +223,15 @@ public class SunatResumenService : ISunatResumenService
             XNamespace cbc = "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2";
             XNamespace cac = "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2";
 
-            var responseNode = xCdr.Descendants(cac + "Response").FirstOrDefault();
+            var docResponse  = xCdr.Descendants(cac + "DocumentResponse").FirstOrDefault();
+            var responseNode = docResponse?.Element(cac + "Response")
+                            ?? xCdr.Descendants(cac + "Response").FirstOrDefault();
             var responseCode = responseNode?.Element(cbc + "ResponseCode")?.Value ?? "???";
             var description  = responseNode?.Element(cbc + "Description")?.Value ?? "Sin descripción";
 
-            var tieneObservaciones = xCdr.Descendants(cbc + "ID")
-                .Any(e => int.TryParse(e.Value, out var cod) && cod >= 4000);
+            var tieneObservaciones = xCdr.Descendants(cac + "LineResponse")
+                .SelectMany(lr => lr.Descendants(cbc + "ResponseCode"))
+                .Any(rc => int.TryParse(rc.Value, out var cod) && cod >= 4000);
 
             return (responseCode, description, tieneObservaciones);
         }

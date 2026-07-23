@@ -841,20 +841,25 @@ public class ComprobanteService : IComprobanteService
 
         switch (sunatResponse.CodigoRespuesta)
         {
-            // SUNAT no llegó a procesar el documento: falla de comunicación/infraestructura,
-            // no un veredicto sobre el comprobante. Debe poder reintentarse.
+            // SUNAT procesó el documento y lo rechazó por error de contenido (soap:Client
+            // o código numérico de validación). El documento tiene datos incorrectos;
+            // reintentarlo con el mismo XML no cambiará el resultado.
+            case "SOAP_CLIENT_ERROR":
+                return "RECHAZADO";
+
+            // SUNAT no llegó a procesar el documento: falla de infraestructura/comunicación.
+            // Puede reintentarse.
             case "SOAP_FAULT":
             case "SUNAT_ERROR_HTML":
             case "ERROR_RED":
             case "SIN_RESPUESTA":
             case "ERROR_PARSE":
-            case "CDR_ERROR":
                 return "PENDIENTE";
 
+            // CDR_ERROR: SUNAT devolvió un CDR (CdrBase64 siempre viene con datos en este
+            // caso) pero no se pudo parsear. Cae al default → RECHAZADO porque hay CDR.
+            // Cualquier código numérico de SUNAT también cae aquí.
             default:
-                // Solo es un rechazo real si SUNAT devolvió un CDR (código de rechazo de
-                // validación). Un código futuro no contemplado, si no viene con CDR,
-                // tampoco se considera un rechazo real.
                 return !string.IsNullOrEmpty(sunatResponse.CdrBase64) ? "RECHAZADO" : "PENDIENTE";
         }
     }

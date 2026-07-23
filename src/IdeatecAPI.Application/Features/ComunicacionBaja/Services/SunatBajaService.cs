@@ -132,11 +132,14 @@ public class SunatBajaService : ISunatBajaService
             var fault = xDoc.Descendants("faultstring").FirstOrDefault();
             if (fault != null)
             {
+                var faultCode = xDoc.Descendants("faultcode").FirstOrDefault()?.Value ?? "";
+                var esErrorServidor = faultCode.Contains("Server", StringComparison.OrdinalIgnoreCase);
+
                 return new SunatBajaResponse
                 {
                     Success         = false,
                     Ticket          = ticket,
-                    CodigoRespuesta = "SOAP_FAULT",
+                    CodigoRespuesta = esErrorServidor ? "SOAP_FAULT" : "SOAP_CLIENT_ERROR",
                     Descripcion     = fault.Value
                 };
             }
