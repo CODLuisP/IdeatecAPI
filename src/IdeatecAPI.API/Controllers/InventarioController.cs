@@ -153,6 +153,30 @@ public class InventarioController : ControllerBase
         }
     }
 
+    // GET api/inventario/vencidos/historial/sucursal/{sucursalId}?desde=&hasta=
+    // Devuelve los movimientos SALIDA_VENCIMIENTO registrados al retirar lotes vencidos.
+    // Solo lectura — no modifica stock ni Kardex.
+    [HttpGet("vencidos/historial/sucursal/{sucursalId:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetHistorialVencidosRetiradosAsync(int sucursalId, [FromQuery] DateTime? desde, [FromQuery] DateTime? hasta)
+    {
+        try
+        {
+            var historial = await _inventarioPepsService.GetHistorialVencidosRetiradosAsync(sucursalId, desde, hasta);
+            return Ok(historial ?? []);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener el historial de vencidos retirados de la sucursal {SucursalId}", sucursalId);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                mensaje = "Ocurrió un error al obtener el historial de vencidos retirados.",
+                detalle = ex.Message
+            });
+        }
+    }
+
     // PUT api/inventario/lote/{inventarioLoteId}/fecha-vencimiento
     // Corrige la fecha de vencimiento de un lote ya registrado (p.ej. error al registrar la compra).
     // No afecta cantidad, costo ni Kardex. Solo aplica sobre lotes activos (estado = 1);

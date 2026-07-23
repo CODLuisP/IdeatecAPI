@@ -26,6 +26,7 @@ public interface IInventarioPepsService
     Task<RetirarVencidosResultDTO> RetirarLotesVencidosAsync(int? sucursalProductoId = null, int? idUsuario = null);
     Task<IEnumerable<LoteVencidoDTO>> GetLotesVencidosReporteAsync(int? sucursalId = null);
     Task<bool> ActualizarFechaVencimientoLoteAsync(int inventarioLoteId, DateTime? fechaVencimiento);
+    Task<IEnumerable<HistorialVencidoDTO>> GetHistorialVencidosRetiradosAsync(int sucursalId, DateTime? desde, DateTime? hasta);
 }
 
 public class InventarioPepsService : IInventarioPepsService
@@ -418,5 +419,10 @@ public class InventarioPepsService : IInventarioPepsService
     public async Task<bool> ActualizarFechaVencimientoLoteAsync(int inventarioLoteId, DateTime? fechaVencimiento)
     {
         return await _unitOfWork.InventarioLotes.ActualizarFechaVencimientoAsync(inventarioLoteId, fechaVencimiento);
+    }
+
+    public async Task<IEnumerable<HistorialVencidoDTO>> GetHistorialVencidosRetiradosAsync(int sucursalId, DateTime? desde, DateTime? hasta)
+    {
+        return await _unitOfWork.InventarioLotes.GetHistorialVencidosRetiradosAsync(sucursalId, desde, hasta);
     }
 }

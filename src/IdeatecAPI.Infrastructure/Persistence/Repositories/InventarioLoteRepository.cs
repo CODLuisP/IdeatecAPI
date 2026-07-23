@@ -362,6 +362,31 @@ public class InventarioLoteRepository : DapperRepository<InventarioLote>, IInven
     // No afecta cantidad/costo ni ningún movimiento de Kardex ya registrado, solo el dato del lote
     // en sí (usado para el orden FEFO y para mostrarlo). Solo se permite sobre lotes activos:
     // uno ya dado de baja (estado = 0) es historia cerrada.
+    public async Task<IEnumerable<HistorialVencidoDTO>> GetHistorialVencidosRetiradosAsync(int sucursalId, DateTime? desde, DateTime? hasta)
+    {
+        var sql = @"
+            SELECT
+                km.kardexMovimientoID    AS KardexMovimientoId,
+                km.sucursalProductoID    AS SucursalProductoId,
+                p.nomProducto            AS NomProducto,
+                p.codigo                 AS Codigo,
+                km.cantidad              AS Cantidad,
+                km.costoUnitarioPromedio AS CostoUnitarioPromedio,
+                km.costoTotal            AS CostoTotal,
+                km.fechaMovimiento       AS FechaMovimiento
+            FROM kardex_movimiento km
+            INNER JOIN sucursalproducto sp ON sp.sucursalProductoID = km.sucursalProductoID
+            INNER JOIN producto p ON p.productoID = sp.productoID
+            WHERE km.tipoMovimiento = 'SALIDA_VENCIMIENTO'
+            AND sp.sucursalID = @SucursalId
+            AND (@Desde IS NULL OR km.fechaMovimiento >= @Desde)
+            AND (@Hasta IS NULL OR km.fechaMovimiento <= @Hasta)
+            ORDER BY km.fechaMovimiento DESC, km.kardexMovimientoID DESC;";
+
+        return await _connection.QueryAsync<HistorialVencidoDTO>(sql,
+            new { SucursalId = sucursalId, Desde = desde, Hasta = FinDeDia(hasta) }, _transaction);
+    }
+
     public async Task<bool> ActualizarFechaVencimientoAsync(int inventarioLoteId, DateTime? fechaVencimiento)
     {
         var sql = @"

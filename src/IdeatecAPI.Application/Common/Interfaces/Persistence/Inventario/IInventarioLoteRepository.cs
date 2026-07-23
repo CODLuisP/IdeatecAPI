@@ -24,4 +24,5 @@ public interface IInventarioLoteRepository : IRepository<InventarioLote>
     Task<bool> DesactivarLoteAsync(int inventarioLoteId);
     Task<IEnumerable<LoteVencidoDTO>> GetLotesVencidosReporteAsync(int? sucursalId = null);
     Task<bool> ActualizarFechaVencimientoAsync(int inventarioLoteId, DateTime? fechaVencimiento);
+    Task<IEnumerable<HistorialVencidoDTO>> GetHistorialVencidosRetiradosAsync(int sucursalId, DateTime? desde, DateTime? hasta);
 }
