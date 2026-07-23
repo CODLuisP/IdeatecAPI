@@ -349,6 +349,15 @@ public class NoteService : INoteService
         }
         catch (HttpRequestException ex)
         {
+            // Un fallo de red transitorio NO debe degradar un veredicto ya emitido por SUNAT.
+            // Si la nota ya estaba RECHAZADA, se deja intacta (no se toca la BD) para conservar
+            // el código y mensaje de rechazo originales. (ACEPTADO ya se bloquea al inicio.)
+            if (note.EstadoSunat == "RECHAZADO")
+            {
+                return await GetNoteByIdAsync(comprobanteId)
+                    ?? throw new InvalidOperationException("Error al recuperar la nota actualizada");
+            }
+
             // SUNAT no responde / caída de red — no es un rechazo real, queda PENDIENTE para reintento
             await _unitOfWork.Notes.UpdateEstadoSunatAsync(
                 comprobanteId,
@@ -489,8 +498,22 @@ public class NoteService : INoteService
         if (sunatResponse.Success)
             return sunatResponse.TieneObservaciones ? "ACEPTADO_CON_OBSERVACIONES" : "ACEPTADO";
 
+        // Fault de SUNAT (sin CDR) con código numérico: el RANGO define el veredicto, según
+        // el catálogo oficial de códigos de error de SUNAT:
+        //   1000–3999 = rechazo real de la nota (datos incorrectos, permanente).
+        //   0100–0999 = excepción de sistema/comunicación de SUNAT (transitoria, reintentable).
+        // Se limita a los casos SIN CDR para no alterar el flujo de CDR ya existente.
+        if (string.IsNullOrEmpty(sunatResponse.CdrBase64)
+            && int.TryParse(sunatResponse.CodigoRespuesta, out var codSunat))
+            return codSunat is >= 1000 and < 4000 ? "RECHAZADO" : "PENDIENTE";
+
         switch (sunatResponse.CodigoRespuesta)
         {
+            // Fault de cliente SIN código numérico: SUNAT rechazó la petición pero no adjuntó
+            // un código clasificable. Se trata como rechazo (no es reintentable).
+            case "SOAP_CLIENT_ERROR":
+                return "RECHAZADO";
+
             // SUNAT no llegó a procesar el documento: falla de comunicación/infraestructura,
             // no un veredicto sobre la nota. Debe poder reintentarse.
             case "SOAP_FAULT":
@@ -498,13 +521,11 @@ public class NoteService : INoteService
             case "ERROR_RED":
             case "SIN_RESPUESTA":
             case "ERROR_PARSE":
-            case "CDR_ERROR":
                 return "PENDIENTE";
 
+            // CDR_ERROR: SUNAT devolvió un CDR (CdrBase64 con datos) pero no se pudo parsear.
+            // Cae al default → RECHAZADO porque hay CDR.
             default:
-                // Solo es un rechazo real si SUNAT devolvió un CDR (código de rechazo de
-                // validación). Un código futuro no contemplado, si no viene con CDR,
-                // tampoco se considera un rechazo real.
                 return !string.IsNullOrEmpty(sunatResponse.CdrBase64) ? "RECHAZADO" : "PENDIENTE";
         }
     }

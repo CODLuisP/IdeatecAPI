@@ -139,13 +139,23 @@ public class SunatSenderService : ISunatSenderService
             var fault = xDoc.Descendants("faultstring").FirstOrDefault();
             if (fault != null)
             {
-                var faultCode = xDoc.Descendants("faultcode").FirstOrDefault()?.Value ?? "";
-                var esErrorServidor = faultCode.Contains("Server", StringComparison.OrdinalIgnoreCase);
+                // SUNAT adjunta el código numérico al faultcode: "soap-env:Client.2329".
+                // Se preserva ese código para que el llamador decida el estado por rango
+                // (1000–3999 = rechazo real, 0100–0999 = excepción de sistema reintentable).
+                // Si no viene código numérico, se cae al criterio Server/Client anterior.
+                var faultCode  = xDoc.Descendants("faultcode").FirstOrDefault()?.Value ?? "";
+                var codigoSunat = faultCode.Split('.').LastOrDefault()?.Trim() ?? "";
+
+                var codigoRespuesta = int.TryParse(codigoSunat, out _)
+                    ? codigoSunat
+                    : faultCode.Contains("Server", StringComparison.OrdinalIgnoreCase)
+                        ? "SOAP_FAULT"
+                        : "SOAP_CLIENT_ERROR";
 
                 return new SunatResponse
                 {
                     Success = false,
-                    CodigoRespuesta = esErrorServidor ? "SOAP_FAULT" : "SOAP_CLIENT_ERROR",
+                    CodigoRespuesta = codigoRespuesta,
                     Descripcion = fault.Value
                 };
             }

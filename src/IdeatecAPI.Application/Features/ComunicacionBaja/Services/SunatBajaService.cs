@@ -132,14 +132,22 @@ public class SunatBajaService : ISunatBajaService
             var fault = xDoc.Descendants("faultstring").FirstOrDefault();
             if (fault != null)
             {
-                var faultCode = xDoc.Descendants("faultcode").FirstOrDefault()?.Value ?? "";
-                var esErrorServidor = faultCode.Contains("Server", StringComparison.OrdinalIgnoreCase);
+                // SUNAT adjunta el código numérico al faultcode: "soap-env:Client.2329".
+                // Se preserva para diagnóstico (el estado de la baja sigue derivándose de Success).
+                var faultCode   = xDoc.Descendants("faultcode").FirstOrDefault()?.Value ?? "";
+                var codigoSunat = faultCode.Split('.').LastOrDefault()?.Trim() ?? "";
+
+                var codigoRespuesta = int.TryParse(codigoSunat, out _)
+                    ? codigoSunat
+                    : faultCode.Contains("Server", StringComparison.OrdinalIgnoreCase)
+                        ? "SOAP_FAULT"
+                        : "SOAP_CLIENT_ERROR";
 
                 return new SunatBajaResponse
                 {
                     Success         = false,
                     Ticket          = ticket,
-                    CodigoRespuesta = esErrorServidor ? "SOAP_FAULT" : "SOAP_CLIENT_ERROR",
+                    CodigoRespuesta = codigoRespuesta,
                     Descripcion     = fault.Value
                 };
             }

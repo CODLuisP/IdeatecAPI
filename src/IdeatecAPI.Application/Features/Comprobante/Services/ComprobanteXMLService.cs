@@ -742,6 +742,24 @@ public class ComprobanteService : IComprobanteService
         }
         catch (HttpRequestException ex)
         {
+            // Un fallo de red transitorio NO debe degradar un veredicto ya emitido por SUNAT.
+            // Si el comprobante ya estaba RECHAZADO, se deja intacto (no se toca la BD) para
+            // conservar el código y mensaje de rechazo originales y evitar reintentos sobre
+            // un rechazo real. (ACEPTADO ya se bloquea al inicio del método.)
+            if (comprobante.EstadoSunat == "RECHAZADO")
+            {
+                return new ComprobanteResponse
+                {
+                    Exitoso          = false,
+                    Mensaje          = "El comprobante ya había sido rechazado por SUNAT; su estado no se modificó.",
+                    ComprobanteId    = comprobanteId,
+                    EstadoSunat      = "RECHAZADO",
+                    CodigoRespuesta  = comprobante.CodigoRespuestaSunat,
+                    MensajeRespuesta = comprobante.MensajeRespuestaSunat,
+                    CdrBase64        = null
+                };
+            }
+
             await _unitOfWork.Comprobantes.UpdateEstadoSunatAsync(
                 comprobanteId,
                 "PENDIENTE",
@@ -839,11 +857,20 @@ public class ComprobanteService : IComprobanteService
         if (sunatResponse.Success)
             return sunatResponse.TieneObservaciones ? "ACEPTADO_CON_OBSERVACIONES" : "ACEPTADO";
 
+        // Fault de SUNAT (sin CDR) con código numérico: el RANGO define el veredicto, según
+        // el catálogo oficial de códigos de error de SUNAT:
+        //   1000–3999 = rechazo real del comprobante (datos incorrectos, permanente).
+        //   0100–0999 = excepción de sistema/comunicación de SUNAT (transitoria, reintentable,
+        //               p. ej. 0109 "intente nuevamente", 0130 "límite de accesos").
+        // Se limita a los casos SIN CDR para no alterar el flujo de CDR ya existente.
+        if (string.IsNullOrEmpty(sunatResponse.CdrBase64)
+            && int.TryParse(sunatResponse.CodigoRespuesta, out var codSunat))
+            return codSunat is >= 1000 and < 4000 ? "RECHAZADO" : "PENDIENTE";
+
         switch (sunatResponse.CodigoRespuesta)
         {
-            // SUNAT procesó el documento y lo rechazó por error de contenido (soap:Client
-            // o código numérico de validación). El documento tiene datos incorrectos;
-            // reintentarlo con el mismo XML no cambiará el resultado.
+            // Fault de cliente SIN código numérico: SUNAT rechazó la petición pero no adjuntó
+            // un código clasificable. Se trata como rechazo (no es reintentable).
             case "SOAP_CLIENT_ERROR":
                 return "RECHAZADO";
 
