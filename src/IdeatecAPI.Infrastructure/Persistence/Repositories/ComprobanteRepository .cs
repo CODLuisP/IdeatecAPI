@@ -862,4 +862,5 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
             Offset              = offset
         }, _transaction);
     }
+
 }

@@ -32,6 +32,7 @@ public interface IUnitOfWork : IDisposable
     ICompraProveedorRepository ComprasProveedor { get; }
     IInventarioLoteRepository InventarioLotes { get; }
     ISireRegistroRepository SireRegistros { get; }
+    IRetryRobotRepository RetryRobot { get; }
 
     void SetEnvironment(string env);
 

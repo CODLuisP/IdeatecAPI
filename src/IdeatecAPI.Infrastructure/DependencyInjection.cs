@@ -161,6 +161,9 @@ public static class DependencyInjection
         // Storage microservicio
         services.AddScoped<IStorageService, StorageService>();
 
+        // Robot de reintentos SUNAT
+        services.AddSingleton<RetryLogStore>();
+
         var jwtSecret = configuration["JwtSettings:Secret"]
             ?? throw new InvalidOperationException("JWT Secret not configured in appsettings.json");
 
