@@ -24,7 +24,7 @@ public class RegistrarProductoDTO
     // Datos iniciales de precio y stock por sucursal
     public int SucursalId { get; set; }
     public decimal PrecioUnitario { get; set; }
-    public int? Stock { get; set; }
+    public decimal? Stock { get; set; }
     public decimal? PrecioMayorista { get; set; }
     public int? CantidadMinimaMayorista { get; set; }
     public bool? EnPromocion { get; set; }

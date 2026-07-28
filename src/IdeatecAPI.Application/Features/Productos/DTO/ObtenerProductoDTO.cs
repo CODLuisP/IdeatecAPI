@@ -31,7 +31,7 @@ public class ObtenerSucursalProductoDTO
     public int SucursalProductoId { get; set; }
     public string? NomSucursal { get; set; }
     public decimal? PrecioUnitario { get; set; }
-    public int? Stock { get; set; }
+    public decimal? Stock { get; set; }
     public decimal? UltimoPrecioCompra { get; set; }
     public DateTime? FechaUltimaCompra { get; set; }
     public decimal? PrecioMayorista { get; set; }

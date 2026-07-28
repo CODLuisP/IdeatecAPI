@@ -388,7 +388,7 @@ public class InventarioPepsService : IInventarioPepsService
 
                 await _unitOfWork.InventarioLotes.RegistrarMovimientoAsync(movimiento, detalle);
 
-                var stockOk = await _unitOfWork.Productos.ActualizarStockAsync(spId, (int)cantidadProducto);
+                var stockOk = await _unitOfWork.Productos.ActualizarStockAsync(spId, cantidadProducto);
                 if (!stockOk)
                     throw new InvalidOperationException(
                         $"Stock insuficiente para descontar productos vencidos del SucursalProductoId {spId}.");

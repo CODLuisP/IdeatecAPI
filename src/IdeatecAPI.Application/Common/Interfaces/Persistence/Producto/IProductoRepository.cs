@@ -18,16 +18,17 @@ public interface IProductoRepository : IRepository<Producto>
     Task<Producto> RegistrarProductoAsync(Producto producto);
     Task<SucursalProducto> RegistrarSucursalProductoAsync(SucursalProducto sucursalProducto);
     Task<bool> EditarProductoAsync(Producto producto);
-    Task<bool> ActualizarStockAsync(int sucursalProductoId, int cantidad);
-    Task<bool> DevolverStockAsync(int ProductoId, int SucursalId, int cantidad);
+    // Las cantidades son decimales: hay productos que se venden por peso o volumen.
+    Task<bool> ActualizarStockAsync(int sucursalProductoId, decimal cantidad);
+    Task<bool> DevolverStockAsync(int ProductoId, int SucursalId, decimal cantidad);
     Task<bool> EditarSucursalProductoAsync(SucursalProducto sucursalProducto);
     Task<bool> EliminarSucursalProductoAsync(int sucursalProductoId); 
     Task<Producto?> ObtenerProductoPorCodigoAsync(string codigo);
     Task<bool> ExisteEnSucursalAsync(int productoId, int sucursalId);
-    Task<bool> RegistrarCompraStockAsync(int productoId, int sucursalId, int cantidad, decimal precioCompra);
-    Task<bool> IncrementarStockSinCostoAsync(int productoId, int sucursalId, int cantidad);
+    Task<bool> RegistrarCompraStockAsync(int productoId, int sucursalId, decimal cantidad, decimal precioCompra);
+    Task<bool> IncrementarStockSinCostoAsync(int productoId, int sucursalId, decimal cantidad);
     Task<bool> ActualizarCostoSinStockAsync(int productoId, int sucursalId, decimal precioCompra);
     Task<Producto?> GetInfoConversionBySucursalProductoIdAsync(int sucursalProductoId);
-    Task<bool> DescontarStockBaseAsync(int productoBaseId, int sucursalId, int cantidad);
+    Task<bool> DescontarStockBaseAsync(int productoBaseId, int sucursalId, decimal cantidad);
     Task<bool> ExisteCodigoBarrasAsync(string codigoBarras);
 }

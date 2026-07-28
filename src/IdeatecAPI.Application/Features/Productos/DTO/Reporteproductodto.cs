@@ -30,5 +30,5 @@ public class ReporteProductoItemDTO
     public bool? IncluirIGV { get; set; }
     public string? NomSucursal { get; set; }
     public decimal? PrecioUnitario { get; set; }
-    public int? Stock { get; set; }
+    public decimal? Stock { get; set; }
 }

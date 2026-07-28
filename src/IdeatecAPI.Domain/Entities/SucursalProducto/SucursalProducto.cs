@@ -6,7 +6,8 @@ public class SucursalProducto
     public int SucursalId { get; set; }
     public string? NomSucursal { get; set; }
     public decimal? PrecioUnitario { get; set; }
-    public int? Stock { get; set; }
+    // Decimal: los productos a granel se venden por peso/volumen (7.7 kg, 0.5 L).
+    public decimal? Stock { get; set; }
     public decimal? UltimoPrecioCompra { get; set; }
     public DateTime? FechaUltimaCompra { get; set; }
     public decimal? PrecioMayorista { get; set; }

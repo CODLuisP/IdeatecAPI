@@ -383,7 +383,7 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
         return filas > 0;
     }
 
-    public async Task<bool> ActualizarStockAsync(int sucursalProductoId, int cantidad)
+    public async Task<bool> ActualizarStockAsync(int sucursalProductoId, decimal cantidad)
     {
         var sql = @"UPDATE sucursalproducto 
                     SET stock = stock - @Cantidad
@@ -395,7 +395,7 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
         return filas > 0;
     }
 
-    public async Task<bool> DevolverStockAsync(int productoId, int sucursalId, int cantidad)
+    public async Task<bool> DevolverStockAsync(int productoId, int sucursalId, decimal cantidad)
     {
         var sql = @"
             UPDATE sucursalproducto
@@ -417,7 +417,7 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
         return filas > 0;
     }
 
-    public async Task<bool> RegistrarCompraStockAsync(int productoId, int sucursalId, int cantidad, decimal precioCompra)
+    public async Task<bool> RegistrarCompraStockAsync(int productoId, int sucursalId, decimal cantidad, decimal precioCompra)
     {
         var sql = @"
             UPDATE sucursalproducto
@@ -432,7 +432,7 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
         return filas > 0;
     }
 
-    public async Task<bool> IncrementarStockSinCostoAsync(int productoId, int sucursalId, int cantidad)
+    public async Task<bool> IncrementarStockSinCostoAsync(int productoId, int sucursalId, decimal cantidad)
     {
         var sql = @"
             UPDATE sucursalproducto
@@ -492,7 +492,7 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
         return result.FirstOrDefault();
     }
 
-    public async Task<bool> DescontarStockBaseAsync(int productoBaseId, int sucursalId, int cantidad)
+    public async Task<bool> DescontarStockBaseAsync(int productoBaseId, int sucursalId, decimal cantidad)
     {
         var sql = @"
             UPDATE sucursalproducto
