@@ -240,13 +240,14 @@ public class ReportesController : ControllerBase
         [FromQuery] int? usuarioCreacion = null,
         [FromQuery] string? clienteNumDoc = null,
         [FromQuery] int? limit = null,
-        [FromQuery] string orderBy = "monto")
+        [FromQuery] string orderBy = "monto",
+        [FromQuery] string filtroNV = "excluir")
     {
         try
         {
             var result = await _reportesService.GetProductosTopAsync(
                 ruc, codEstablecimiento, fechaDesde, fechaHasta,
-                usuarioCreacion, clienteNumDoc, limit, orderBy);
+                usuarioCreacion, clienteNumDoc, limit, orderBy, filtroNV);
             return Ok(result);
         }
         catch (Exception ex)
@@ -270,7 +271,8 @@ public class ReportesController : ControllerBase
         [FromQuery] string? clienteNumDoc = null,
         [FromQuery] int? limit = null,
         [FromQuery] string orderBy = "monto",
-        [FromQuery] string formato = "excel")
+        [FromQuery] string formato = "excel",
+        [FromQuery] string filtroNV = "excluir")
     {
         try
         {
@@ -278,13 +280,13 @@ public class ReportesController : ControllerBase
             {
                 var pdf = await _reportesService.ExportarProductosTopPdfAsync(
                     titulo, ruc, codEstablecimiento, fechaDesde, fechaHasta,
-                    usuarioCreacion, clienteNumDoc, limit, orderBy);
+                    usuarioCreacion, clienteNumDoc, limit, orderBy, filtroNV);
                 return File(pdf, "application/pdf", $"productos-top-{ruc}-{DateTime.Now:yyyyMMdd}.pdf");
             }
 
             var bytes = await _reportesService.ExportarProductosTopExcelAsync(
                 titulo, ruc, codEstablecimiento, fechaDesde, fechaHasta,
-                usuarioCreacion, clienteNumDoc, limit, orderBy);
+                usuarioCreacion, clienteNumDoc, limit, orderBy, filtroNV);
             return File(bytes,
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 $"productos-top-{ruc}-{DateTime.Now:yyyyMMdd}.xlsx");

@@ -554,7 +554,8 @@ public class ReportesRepository : IReportesRepository
         int? usuarioCreacion = null,
         string? clienteNumDoc = null,
         int? limit = null,
-        string orderBy = "monto")
+        string orderBy = "monto",
+        string filtroNV = "excluir")
     {
         var orden = orderBy.ToLower() switch
         {
@@ -564,7 +565,7 @@ public class ReportesRepository : IReportesRepository
         };
 
         var sql = @"
-            SELECT 
+            SELECT
                 cd.codigo                           AS Codigo,
                 cd.descripcion                      AS Descripcion,
                 SUM(cd.cantidad)                    AS TotalCantidad,
@@ -575,12 +576,13 @@ public class ReportesRepository : IReportesRepository
             FROM comprobantedetalle cd
             INNER JOIN comprobante c ON c.comprobanteID = cd.comprobanteId
             WHERE c.empresaRuc = @Ruc
-            AND c.estadoSunat IN ('ACEPTADO', 'ACEPTADO_CON_OBSERVACIONES', 'PENDIENTE')
+            AND c.estadoSunat IN ('ACEPTADO', 'ACEPTADO_CON_OBSERVACIONES', 'PENDIENTE', 'NO_APLICA')
             AND (@CodEstablecimiento IS NULL OR c.establecimientoAnexo = @CodEstablecimiento)
             AND (@FechaDesde IS NULL OR c.fechaEmision >= @FechaDesde)
             AND (@FechaHasta IS NULL OR c.fechaEmision <= @FechaHasta)
             AND (@UsuarioCreacion IS NULL OR c.usuarioCreacion = @UsuarioCreacion)
             AND (@ClienteNumDoc IS NULL OR c.clienteNumDoc = @ClienteNumDoc)
+            " + BuildFiltroNV(filtroNV) + @"
             GROUP BY cd.codigo, cd.descripcion
             ORDER BY " + orden
             + (limit.HasValue ? " LIMIT @Limit" : "");

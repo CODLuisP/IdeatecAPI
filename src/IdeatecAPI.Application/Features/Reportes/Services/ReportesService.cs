@@ -44,7 +44,8 @@ public interface IReportesService
         int? usuarioCreacion = null,
         string? clienteNumDoc = null,
         int? limit = null,
-        string orderBy = "monto");
+        string orderBy = "monto",
+        string filtroNV = "excluir");
 
     // ── Excel ─────────────────────────────────────────────────────────────────
     Task<byte[]> ExportarListadoReportesExcelAsync(
@@ -67,7 +68,8 @@ public interface IReportesService
         int? usuarioCreacion = null,
         string? clienteNumDoc = null,
         int? limit = null,
-        string orderBy = "monto");
+        string orderBy = "monto",
+        string filtroNV = "excluir");
 
     Task<IEnumerable<MedioPagoTopDTO>> GetMediosPagoTopAsync(
         string ruc,
@@ -112,7 +114,8 @@ public interface IReportesService
         string titulo, string ruc,
         string? codEstablecimiento = null, DateTime? fechaDesde = null,
         DateTime? fechaHasta = null, int? usuarioCreacion = null,
-        string? clienteNumDoc = null, int? limit = null, string orderBy = "monto");
+        string? clienteNumDoc = null, int? limit = null, string orderBy = "monto",
+        string filtroNV = "excluir");
 
     Task<byte[]> ExportarMediosPagoPdfAsync(
         string titulo, string ruc,
@@ -232,7 +235,8 @@ public class ReportesService : IReportesService
         int? usuarioCreacion = null,
         string? clienteNumDoc = null,
         int? limit = null,
-        string orderBy = "monto")
+        string orderBy = "monto",
+        string filtroNV = "excluir")
     {
         DateTime? desde = fechaDesde?.Date;
         DateTime? hasta = fechaDesde.HasValue
@@ -243,7 +247,7 @@ public class ReportesService : IReportesService
 
         return await _unitOfWork.Reportes.GetProductosTopAsync(
             ruc, codEstablecimiento, desde, hasta,
-            usuarioCreacion, clienteNumDoc, limit, orderBy);
+            usuarioCreacion, clienteNumDoc, limit, orderBy, filtroNV);
     }
 
     // ── Excel Listado ─────────────────────────────────────────────────────────
@@ -277,11 +281,12 @@ public class ReportesService : IReportesService
         int? usuarioCreacion = null,
         string? clienteNumDoc = null,
         int? limit = null,
-        string orderBy = "monto")
+        string orderBy = "monto",
+        string filtroNV = "excluir")
     {
         var datos = await GetProductosTopAsync(
             ruc, codEstablecimiento, fechaDesde, fechaHasta,
-            usuarioCreacion, clienteNumDoc, limit, orderBy);
+            usuarioCreacion, clienteNumDoc, limit, orderBy, filtroNV);
 
         return await _excelService.ExportarProductosTopAsync(
             titulo, datos, ruc, codEstablecimiento,
@@ -375,10 +380,11 @@ public class ReportesService : IReportesService
         string titulo, string ruc,
         string? codEstablecimiento = null, DateTime? fechaDesde = null,
         DateTime? fechaHasta = null, int? usuarioCreacion = null,
-        string? clienteNumDoc = null, int? limit = null, string orderBy = "monto")
+        string? clienteNumDoc = null, int? limit = null, string orderBy = "monto",
+        string filtroNV = "excluir")
     {
         var datos = await GetProductosTopAsync(
-            ruc, codEstablecimiento, fechaDesde, fechaHasta, usuarioCreacion, clienteNumDoc, limit, orderBy);
+            ruc, codEstablecimiento, fechaDesde, fechaHasta, usuarioCreacion, clienteNumDoc, limit, orderBy, filtroNV);
         return await _pdfService.ExportarProductosTopPdfAsync(
             titulo, datos, ruc, codEstablecimiento, fechaDesde, fechaHasta, usuarioCreacion, clienteNumDoc);
     }

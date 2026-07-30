@@ -54,7 +54,8 @@ public interface IReportesRepository
         int? usuarioCreacion = null,
         string? clienteNumDoc = null,
         int? limit = null,
-        string orderBy = "monto");
+        string orderBy = "monto",
+        string filtroNV = "excluir");
     Task<IEnumerable<MedioPagoTopDTO>> GetMediosPagoTopAsync(
         string ruc,
         string? codEstablecimiento = null,
