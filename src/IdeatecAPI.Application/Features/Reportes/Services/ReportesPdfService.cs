@@ -277,16 +277,16 @@ public class ReportesPdfService : IReportesPdfService
         table.ColumnsDefinition(cols =>
         {
             cols.ConstantColumn(74);  // N° Comprobante
-            cols.ConstantColumn(40);  // Tipo
+            cols.ConstantColumn(34);  // Tipo
             cols.ConstantColumn(46);  // F. Emisión
             cols.RelativeColumn();    // Cliente
-            cols.ConstantColumn(48);  // Doc. Cliente
+            cols.ConstantColumn(51);  // Doc. Cliente
             cols.ConstantColumn(44);  // Val. Venta
             cols.ConstantColumn(38);  // IGV
             cols.ConstantColumn(50);  // Importe Total
-            cols.ConstantColumn(20);  // Mon
+            cols.ConstantColumn(32);  // Mon
             cols.ConstantColumn(50);  // Estado
-            cols.ConstantColumn(40);  // T.Pago
+            cols.ConstantColumn(34);  // T.Pago
         });
 
         table.Header(h =>
@@ -315,9 +315,12 @@ public class ReportesPdfService : IReportesPdfService
                 "01" => "Factura", "03" => "Boleta",
                 "07" => "N.Cred",  "08" => "N.Deb", _ => d.TipoComprobante
             };
-            var vv  = esNC ? -d.ValorVenta   : d.ValorVenta;
-            var igv = esNC ? -d.TotalIGV     : d.TotalIGV;
-            var tot = esNC ? -d.ImporteTotal  : d.ImporteTotal;
+            var tcCC  = (d.TipoMoneda == "USD" && d.TipoCambio > 0) ? d.TipoCambio : 1m;
+            var vv  = Math.Round((esNC ? -d.ValorVenta   : d.ValorVenta)   * tcCC, 2);
+            var igv = Math.Round((esNC ? -d.TotalIGV     : d.TotalIGV)     * tcCC, 2);
+            var tot = Math.Round((esNC ? -d.ImporteTotal : d.ImporteTotal) * tcCC, 2);
+            var monCC = (d.TipoMoneda == "USD" && d.TipoCambio > 0)
+                ? $"USD ({d.TipoCambio:F3})" : (d.TipoMoneda ?? "PEN");
 
             table.Cell().Element(c => TD(c, d.NumeroCompleto ?? "-",               bg, fontSize: fontSize, pad: pad));
             table.Cell().Element(c => TD(c, tipo ?? "",                             bg, fontSize: fontSize, pad: pad));
@@ -327,15 +330,17 @@ public class ReportesPdfService : IReportesPdfService
             table.Cell().Element(c => TD(c, $"{(vv  < 0 ? "-" : "")}{Math.Abs(vv):N2}",  bg, right: true, red: esNC, fontSize: fontSize, pad: pad));
             table.Cell().Element(c => TD(c, $"{(igv < 0 ? "-" : "")}{Math.Abs(igv):N2}", bg, right: true, red: esNC, fontSize: fontSize, pad: pad));
             table.Cell().Element(c => TD(c, $"{(tot < 0 ? "-" : "")}{Math.Abs(tot):N2}", bg, right: true, red: esNC, fontSize: fontSize, pad: pad));
-            table.Cell().Element(c => TD(c, d.TipoMoneda ?? "PEN",                bg, fontSize: fontSize, pad: pad));
+            table.Cell().Element(c => TD(c, monCC,                                 bg, fontSize: fontSize, pad: pad));
             table.Cell().Element(c => TD(c, d.EstadoSunat ?? "-",                 bg, fontSize: fontSize, pad: pad));
             table.Cell().Element(c => TD(c, d.TipoPago ?? "-",                    bg, fontSize: fontSize, pad: pad));
         }
 
         // ── Fila TOTAL ───────────────────────────────────────────────────────
-        var tvv  = lista.Sum(x => x.TipoComprobante == "07" ? -x.ValorVenta   : x.ValorVenta);
-        var tigv = lista.Sum(x => x.TipoComprobante == "07" ? -x.TotalIGV     : x.TotalIGV);
-        var timp = lista.Sum(x => x.TipoComprobante == "07" ? -x.ImporteTotal : x.ImporteTotal);
+        static decimal TcCC(ListarComprobanteDTO x) =>
+            (x.TipoMoneda == "USD" && x.TipoCambio > 0) ? x.TipoCambio : 1m;
+        var tvv  = lista.Sum(x => Math.Round((x.TipoComprobante == "07" ? -x.ValorVenta   : x.ValorVenta)   * TcCC(x), 2));
+        var tigv = lista.Sum(x => Math.Round((x.TipoComprobante == "07" ? -x.TotalIGV     : x.TotalIGV)     * TcCC(x), 2));
+        var timp = lista.Sum(x => Math.Round((x.TipoComprobante == "07" ? -x.ImporteTotal : x.ImporteTotal) * TcCC(x), 2));
 
         void TotalCell(IContainer c, string txt, bool right = false) =>
             c.Background(totalBg).BorderTop(1.5f).BorderColor(totalBorder).Padding(pad)
@@ -697,7 +702,7 @@ public class ReportesPdfService : IReportesPdfService
                 cols.ConstantColumn(44);  // Tipo            "N.Crédito"
                 cols.ConstantColumn(62);  // F. Emisión      "01/06/2026" sin cortar
                 cols.ConstantColumn(64);  // Importe         "S/ 1,550.00"
-                cols.ConstantColumn(30);  // Mon.            "PEN"
+                cols.ConstantColumn(62);  // Mon.            "USD (3.394)" en 1 línea
                 cols.RelativeColumn();    // Medios de Pago
             });
 
@@ -726,7 +731,10 @@ public class ReportesPdfService : IReportesPdfService
                 bool esRechazado = d.EstadoSunat == "RECHAZADO";
                 var bg    = esRechazado ? "#F2F2F2" : (par ? Blanco : colorGris); par = !par;
                 bool esNC = d.TipoComprobante == "07";
-                decimal monto = esNC ? -d.ImporteTotal : d.ImporteTotal;
+                var tcT   = (d.TipoMoneda == "USD" && d.TipoCambio > 0) ? d.TipoCambio : 1m;
+                decimal monto = Math.Round((esNC ? -d.ImporteTotal : d.ImporteTotal) * tcT, 2);
+                var monT  = (d.TipoMoneda == "USD" && d.TipoCambio > 0)
+                    ? $"USD ({d.TipoCambio:F3})" : (d.TipoMoneda ?? "PEN");
 
                 var tipo = d.TipoComprobante switch
                 {
@@ -752,10 +760,8 @@ public class ReportesPdfService : IReportesPdfService
                 table.Cell().Element(c => TD(c, d.NumeroCompleto));
                 table.Cell().Element(c => TD(c, tipo, red: esNC));
                 table.Cell().Element(c => TD(c, d.FechaEmision.ToString("dd/MM/yyyy")));
-                table.Cell().Element(c => TD(c,
-                    d.TipoMoneda == "USD" ? $"$ {monto:N2}" : $"S/ {monto:N2}",
-                    right: true, red: esNC));
-                table.Cell().Element(c => TD(c, d.TipoMoneda ?? "PEN"));
+                table.Cell().Element(c => TD(c, $"S/ {monto:N2}", right: true, red: esNC));
+                table.Cell().Element(c => TD(c, monT));
                 table.Cell().Element(c => TD(c, medios));
             }
         });

@@ -12,6 +12,7 @@ public class ControlCajaTicketItemDto
     public decimal  ValorVenta        { get; set; }
     public decimal  TotalIGV          { get; set; }
     public string   TipoMoneda        { get; set; } = "PEN";
+    public decimal  TipoCambio        { get; set; }
     public string?  EstadoSunat       { get; set; }
     public int?     ComprobanteAfectadoId { get; set; }
     public string?  NumDocAfectado    { get; set; }

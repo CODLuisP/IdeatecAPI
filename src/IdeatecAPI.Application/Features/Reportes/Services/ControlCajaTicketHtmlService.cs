@@ -42,11 +42,17 @@ public class ControlCajaTicketHtmlService : IControlCajaTicketHtmlService
             .OrderBy(x => x.Moneda).ThenBy(x => x.Medio)
             .ToList();
 
+        // PEN + USD con TC heredado (convertidos a soles)
         var totalPen = movimientos
-            .Where(x => x.TipoMoneda == "PEN")
-            .Sum(x => x.TipoComprobante == "07" ? -x.ImporteTotal : x.ImporteTotal);
+            .Where(x => x.TipoMoneda == "PEN" || (x.TipoMoneda == "USD" && x.TipoCambio > 0))
+            .Sum(x =>
+            {
+                var tc  = (x.TipoMoneda == "USD" && x.TipoCambio > 0) ? x.TipoCambio : 1m;
+                return Math.Round((x.TipoComprobante == "07" ? -x.ImporteTotal : x.ImporteTotal) * tc, 2);
+            });
+        // USD sin TC (sin tipo de cambio disponible, se muestra crudo)
         var totalUsd = movimientos
-            .Where(x => x.TipoMoneda == "USD")
+            .Where(x => x.TipoMoneda == "USD" && x.TipoCambio == 0)
             .Sum(x => x.TipoComprobante == "07" ? -x.ImporteTotal : x.ImporteTotal);
 
         var fechaReporte = DateTime.Now;
@@ -209,7 +215,10 @@ public class ControlCajaTicketHtmlService : IControlCajaTicketHtmlService
         foreach (var d in items)
         {
             bool esNC   = d.TipoComprobante == "07";
-            decimal monto = esNC ? -d.ImporteTotal : d.ImporteTotal;
+            var tcH     = (d.TipoMoneda == "USD" && d.TipoCambio > 0) ? d.TipoCambio : 1m;
+            decimal monto = Math.Round((esNC ? -d.ImporteTotal : d.ImporteTotal) * tcH, 2);
+            var monH    = (d.TipoMoneda == "USD" && d.TipoCambio > 0)
+                ? $"USD ({d.TipoCambio:F3})" : (d.TipoMoneda == "USD" ? "USD" : "PEN");
             string medios = d.Pagos.Any()
                 ? string.Join("/", d.Pagos.Select(p => AbreviarMedio(p.MedioPago)))
                 : "-";
@@ -219,8 +228,8 @@ public class ControlCajaTicketHtmlService : IControlCajaTicketHtmlService
             sb.Append($"<td>{n++}</td>");
             sb.Append($"<td>{HE(d.Serie)}</td>");
             sb.Append($"<td>{d.Correlativo ?? 0}</td>");
-            sb.Append($"<td class=\"tr{redClass}\">{FmtTicket(monto, d.TipoMoneda)}</td>");
-            sb.Append($"<td>{HE(d.TipoMoneda == "USD" ? "USD" : "PEN")}</td>");
+            sb.Append($"<td class=\"tr{redClass}\">S/ {monto:N2}</td>");
+            sb.Append($"<td>{HE(monH)}</td>");
             sb.Append($"<td>{HE(medios)}</td>");
             sb.Append("</tr>");
         }

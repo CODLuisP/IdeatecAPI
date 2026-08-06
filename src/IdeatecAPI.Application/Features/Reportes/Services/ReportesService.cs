@@ -354,7 +354,7 @@ public class ReportesService : IReportesService
             ruc, codEstablecimiento, desde, hasta,
             usuarioCreacion, clienteNumDoc, limit, filtroNV);
 
-        var dtos = datos.Select(MapToListarDto).Select(ZerarMontosSiRechazado);
+        var dtos = PrepararDtosControlCaja(datos);
 
         return await _excelService.ExportarControlCajaAsync(
             titulo, dtos, ruc, codEstablecimiento,
@@ -419,7 +419,7 @@ public class ReportesService : IReportesService
 
         var datos = await _unitOfWork.Reportes.GetListadoControlCajaAsync(
             ruc, codEstablecimiento, desde, hasta, usuarioCreacion, clienteNumDoc, limit, filtroNV);
-        var dtos = datos.Select(MapToListarDto).Select(ZerarMontosSiRechazado);
+        var dtos = PrepararDtosControlCaja(datos);
 
         return await _pdfService.ExportarControlCajaPdfAsync(
             titulo, dtos, ruc, codEstablecimiento, fechaDesde, fechaHasta, usuarioCreacion, clienteNumDoc);
@@ -460,7 +460,7 @@ public class ReportesService : IReportesService
                 g => g.Select(p => new PagoResumenDto { MedioPago = p.MedioPago, Monto = p.Monto }).ToList());
 
         // 3. Unir
-        var items = comprobantes.Select(c =>
+        var itemsTicket = comprobantes.Select(c =>
         {
             var esRechazado = c.EstadoSunat == "RECHAZADO";
             return new ControlCajaTicketItemDto
@@ -475,15 +475,18 @@ public class ReportesService : IReportesService
                 ValorVenta            = esRechazado ? 0 : c.ValorVenta ?? 0,
                 TotalIGV              = esRechazado ? 0 : c.TotalIGV ?? 0,
                 TipoMoneda            = c.TipoMoneda ?? "PEN",
+                TipoCambio            = esRechazado ? 0 : c.TipoCambio ?? 0,
                 EstadoSunat           = c.EstadoSunat,
                 ComprobanteAfectadoId = c.ComprobanteAfectadoId,
                 NumDocAfectado        = c.NumDocAfectado,
                 Pagos                 = esRechazado ? new() : (pagosPorId.TryGetValue(c.ComprobanteId, out var p) ? p : new())
             };
-        });
+        }).ToList();
+
+        HeredarTipoCambioTicket(itemsTicket);
 
         return await _ticketHtmlService.GenerarHtmlAsync(
-            titulo, items, ruc, codEstablecimiento, fechaDesde, fechaHasta, nombreResponsable, nombreUsuario);
+            titulo, itemsTicket, ruc, codEstablecimiento, fechaDesde, fechaHasta, nombreResponsable, nombreUsuario);
     }
 
     // ── Ticket PDF Control de Caja ────────────────────────────────────────────
@@ -519,7 +522,7 @@ public class ReportesService : IReportesService
                 .ToDictionary(g => g.Key,
                     g => g.Select(p => new PagoResumenDto { MedioPago = p.MedioPago, Monto = p.Monto }).ToList());
 
-            items = comprobantes.Select(c =>
+            var itemsPdf = comprobantes.Select(c =>
             {
                 var esRechazado = c.EstadoSunat == "RECHAZADO";
                 return new ControlCajaTicketItemDto
@@ -534,12 +537,16 @@ public class ReportesService : IReportesService
                     ValorVenta            = esRechazado ? 0 : c.ValorVenta ?? 0,
                     TotalIGV              = esRechazado ? 0 : c.TotalIGV ?? 0,
                     TipoMoneda            = c.TipoMoneda ?? "PEN",
+                    TipoCambio            = esRechazado ? 0 : c.TipoCambio ?? 0,
                     EstadoSunat           = c.EstadoSunat,
                     ComprobanteAfectadoId = c.ComprobanteAfectadoId,
                     NumDocAfectado        = c.NumDocAfectado,
                     Pagos                 = esRechazado ? new() : (pagosPorId.TryGetValue(c.ComprobanteId, out var p) ? p : new())
                 };
-            });
+            }).ToList();
+
+            HeredarTipoCambioTicket(itemsPdf);
+            items = itemsPdf;
         }
 
         return await _pdfService.ExportarControlCajaTicketPdfAsync(
@@ -589,5 +596,52 @@ public class ReportesService : IReportesService
         d.ImporteTotal = 0;
         d.MontoCredito = 0;
         return d;
+    }
+
+    // Hereda TipoCambio del doc afectado para notas de ticket en USD sin TC propio.
+    private static void HeredarTipoCambioTicket(List<ControlCajaTicketItemDto> lista)
+    {
+        var tcPorNumero = lista
+            .Where(x => x.TipoMoneda == "USD" && x.TipoCambio > 0 && !string.IsNullOrEmpty(x.NumeroCompleto))
+            .ToDictionary(x => x.NumeroCompleto.Trim().ToUpper(), x => x.TipoCambio);
+
+        foreach (var dto in lista)
+        {
+            if ((dto.TipoComprobante == "07" || dto.TipoComprobante == "08")
+                && dto.TipoMoneda == "USD"
+                && dto.TipoCambio == 0
+                && !string.IsNullOrEmpty(dto.NumDocAfectado)
+                && tcPorNumero.TryGetValue(dto.NumDocAfectado.Trim().ToUpper(), out var tc))
+            {
+                dto.TipoCambio = tc;
+            }
+        }
+    }
+
+    // Mapea, zera rechazados y hereda TipoCambio del doc afectado en notas USD sin TC.
+    private static List<ListarComprobanteDTO> PrepararDtosControlCaja(
+        IEnumerable<Domain.Entities.Comprobante> datos)
+    {
+        var lista = datos.Select(MapToListarDto).Select(ZerarMontosSiRechazado).ToList();
+
+        // Índice de TC por número de comprobante (solo documentos USD con TC válido)
+        var tcPorNumero = lista
+            .Where(x => x.TipoMoneda == "USD" && x.TipoCambio > 0 && !string.IsNullOrEmpty(x.NumeroCompleto))
+            .ToDictionary(x => x.NumeroCompleto.Trim().ToUpper(), x => x.TipoCambio);
+
+        // Notas en USD sin TC propio: hereda el TC del documento afectado
+        foreach (var dto in lista)
+        {
+            if ((dto.TipoComprobante == "07" || dto.TipoComprobante == "08")
+                && dto.TipoMoneda == "USD"
+                && dto.TipoCambio == 0
+                && !string.IsNullOrEmpty(dto.NumDocAfectado)
+                && tcPorNumero.TryGetValue(dto.NumDocAfectado.Trim().ToUpper(), out var tc))
+            {
+                dto.TipoCambio = tc;
+            }
+        }
+
+        return lista;
     }
 }
