@@ -12,12 +12,12 @@ public class SireService : ISireService
     private readonly ILogger<SireService> _logger;
 
     private const string UrlToken = "https://api-seguridad.sunat.gob.pe/v1/clientessol/{0}/oauth2/token/";
-    private const string UrlPeriodos = "https://apisire.sunat.gob.pe/v1/contribuyente/migeigv/libros/rvierce/padron/web/omisos/140000/periodos";
-    private const string UrlExportaPropuesta = "https://apisire.sunat.gob.pe/v1/contribuyente/migeigv/libros/rvie/propuesta/web/propuesta/{0}/exportapropuesta?codTipoArchivo=0";
-    private const string UrlConsultaEstadoTicket = "https://apisire.sunat.gob.pe/v1/contribuyente/migeigv/libros/rvierce/gestionprocesosmasivos/web/masivo/consultaestadotickets?perIni={0}&perFin={0}&page=1&perPage=20&numTicket={1}";
-    private const string UrlArchivoReporte = "https://apisire.sunat.gob.pe/v1/contribuyente/migeigv/libros/rvierce/gestionprocesosmasivos/web/masivo/archivoreporte?nomArchivoReporte={0}&codTipoArchivoReporte=01&codLibro=140000&perTributario={1}&codProceso={2}&numTicket={3}";
-    private const string UrlAceptaPropuesta = "https://apisire.sunat.gob.pe/v1/contribuyente/migeigv/libros/rvie/propuesta/web/propuesta/{0}/aceptapropuesta";
-    private const string UrlRegistraPreliminar = "https://apisire.sunat.gob.pe/v1/contribuyente/migeigv/libros/rvierce/gestionlibro/web/registroslibros/{0}/registrapreliminar";
+    private const string UrlPeriodos = "https://api-sire.sunat.gob.pe/v1/contribuyente/migeigv/libros/rvierce/padron/web/omisos/140000/periodos";
+    private const string UrlExportaPropuesta = "https://api-sire.sunat.gob.pe/v1/contribuyente/migeigv/libros/rvie/propuesta/web/propuesta/{0}/exportapropuesta?codTipoArchivo=0";
+    private const string UrlConsultaEstadoTicket = "https://api-sire.sunat.gob.pe/v1/contribuyente/migeigv/libros/rvierce/gestionprocesosmasivos/web/masivo/consultaestadotickets?perIni={0}&perFin={0}&page=1&perPage=20&numTicket={1}";
+    private const string UrlArchivoReporte = "https://api-sire.sunat.gob.pe/v1/contribuyente/migeigv/libros/rvierce/gestionprocesosmasivos/web/masivo/archivoreporte?nomArchivoReporte={0}&codTipoArchivoReporte=01&codLibro=140000&perTributario={1}&codProceso={2}&numTicket={3}";
+    private const string UrlAceptaPropuesta = "https://api-sire.sunat.gob.pe/v1/contribuyente/migeigv/libros/rvie/propuesta/web/propuesta/{0}/aceptapropuesta";
+    private const string UrlRegistraPreliminar = "https://api-sire.sunat.gob.pe/v1/contribuyente/migeigv/libros/rvierce/gestionlibro/web/registroslibros/{0}/registrapreliminar";
 
     // SUNAT no documenta explícitamente el codProceso para "exportar propuesta RVIE";
     // "01" es el valor observado en integraciones de este flujo junto a codLibro=140000.
