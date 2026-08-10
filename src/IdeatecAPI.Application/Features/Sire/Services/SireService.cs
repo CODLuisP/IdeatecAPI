@@ -23,6 +23,9 @@ public class SireService : ISireService
 
     private static readonly int[] TicketRetryDelays = { 2000, 3000, 5000, 5000, 8000, 8000, 10000, 10000 };
 
+    // HttpClient no envía User-Agent por defecto; el WAF de SUNAT devuelve 401 (página nginx) sin esta cabecera
+    private const string UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) IdeatecAPI-SIRE/1.0";
+
     public SireService(IHttpClientFactory httpClientFactory, ILogger<SireService> logger)
     {
         _httpClientFactory = httpClientFactory;
@@ -41,6 +44,7 @@ public class SireService : ISireService
             var client = _httpClientFactory.CreateClient();
             var request = new HttpRequestMessage(HttpMethod.Get, UrlPeriodos);
             request.Headers.Add("Authorization", $"Bearer {token}");
+            request.Headers.Add("User-Agent", UserAgent);
             request.Headers.Add("Accept", "application/json");
 
             var response = await client.SendAsync(request);
@@ -124,6 +128,7 @@ public class SireService : ISireService
         var client = _httpClientFactory.CreateClient();
         var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Headers.Add("Authorization", $"Bearer {token}");
+        request.Headers.Add("User-Agent", UserAgent);
         request.Headers.Add("Accept", "application/json");
 
         var response = await client.SendAsync(request);
@@ -155,6 +160,7 @@ public class SireService : ISireService
 
             var request = new HttpRequestMessage(HttpMethod.Get, url);
             request.Headers.Add("Authorization", $"Bearer {token}");
+            request.Headers.Add("User-Agent", UserAgent);
             request.Headers.Add("Accept", "application/json");
 
             var response = await client.SendAsync(request);
@@ -230,6 +236,7 @@ public class SireService : ISireService
         var client = _httpClientFactory.CreateClient();
         var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Headers.Add("Authorization", $"Bearer {token}");
+        request.Headers.Add("User-Agent", UserAgent);
 
         var response = await client.SendAsync(request);
         if (!response.IsSuccessStatusCode)
@@ -308,6 +315,7 @@ public class SireService : ISireService
             var client = _httpClientFactory.CreateClient();
             var request = new HttpRequestMessage(HttpMethod.Post, url);
             request.Headers.Add("Authorization", $"Bearer {token}");
+            request.Headers.Add("User-Agent", UserAgent);
             request.Headers.Add("Accept", "application/json");
 
             var response = await client.SendAsync(request);
@@ -345,6 +353,7 @@ public class SireService : ISireService
             var client = _httpClientFactory.CreateClient();
             var request = new HttpRequestMessage(HttpMethod.Post, url);
             request.Headers.Add("Authorization", $"Bearer {token}");
+            request.Headers.Add("User-Agent", UserAgent);
             request.Headers.Add("Accept", "application/json");
 
             var response = await client.SendAsync(request);
@@ -409,7 +418,13 @@ public class SireService : ISireService
                 { "password", solClave }
             };
 
-            var response = await client.PostAsync(url, new FormUrlEncodedContent(payload));
+            var request = new HttpRequestMessage(HttpMethod.Post, url)
+            {
+                Content = new FormUrlEncodedContent(payload)
+            };
+            request.Headers.Add("User-Agent", UserAgent);
+
+            var response = await client.SendAsync(request);
             var content = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
