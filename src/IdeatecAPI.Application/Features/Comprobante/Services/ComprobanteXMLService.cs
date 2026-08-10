@@ -491,32 +491,12 @@ public class ComprobanteService : IComprobanteService
 
             int newComprobanteId;
 
-            // ── NUEVO FLUJO: Generar XML -> Firmar (para obtener Hash) -> Incrementar -> Guardar ──
-            
-            // 1. Generar XML base
+            // Validar que el XML se pueda generar (sin firmar — la firma se hace una sola vez en SendToSunatAsync)
             var xmlResultado = _xmlService.GenerarXml(dto);
             if (!xmlResultado.Exitoso)
                 throw new InvalidOperationException($"Error al generar XML base: {xmlResultado.Error}");
 
-            // 2. Firmar XML (para obtener el Hash inmediatamente para el PDF/QR)
-            if (!string.IsNullOrEmpty(empresa.CertificadoPem))
-            {
-                try
-                {
-                    var firmaRes = _xmlSigner.SignXmlFull(
-                        xmlResultado.XmlString!,
-                        empresa.CertificadoPem,
-                        empresa.CertificadoPassword ?? ""
-                    );
-                    comprobante.CodigoHashCPE = firmaRes.DigestValue;
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[AVISO] No se pudo firmar en la creación: {ex.Message}");
-                }
-            }
-
-            // 3 e 4. Incrementar correlativo y Guardar Comprobante en la DB
+            // Guardar Comprobante en la DB (el hash se asignará al firmar en SendToSunatAsync)
             newComprobanteId = await _unitOfWork.Comprobantes
                 .GenerarComprobanteAsync(comprobante);
 
@@ -701,33 +681,40 @@ public class ComprobanteService : IComprobanteService
         var xmlFirmadoString = Encoding.UTF8.GetString(xmlFirmadoBytes);
         var nombreArchivo = $"{empresa.Ruc}-{comprobante.TipoComprobante}-{comprobante.Serie}-{comprobante.Correlativo:D8}";
 
-        // 5. Subir ZIP firmado al microservicio (hilo principal)
-        using var memStream = new MemoryStream();
-        using (var zip = new System.IO.Compression.ZipArchive(memStream, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
+        // 5. Crear ZIP en memoria (operación rápida, no I/O de red)
+        byte[] zipBytes;
+        using (var memStream = new MemoryStream())
         {
-            var entry = zip.CreateEntry($"{nombreArchivo}.xml");
-            using var entryStream = entry.Open();
-            await entryStream.WriteAsync(xmlFirmadoBytes);
-        }
-        try
-        {
-            var rutaXml = await _storageService.SubirZipAsync(
-                empresa.Ruc,
-                comprobante.TipoComprobante!,
-                nombreArchivo,
-                memStream.ToArray(),
-                empresa.Environment
-            );
-            await _unitOfWork.Comprobantes.UpdateXmlGeneradoAsync(comprobanteId, rutaXml);
-            Console.WriteLine($"[STORAGE ✅] xmlGenerado guardado: {rutaXml}");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[STORAGE ❌] Error subiendo ZIP: {ex.Message}");
-            // No bloquea el flujo — SUNAT continúa igual
+            using (var zip = new ZipArchive(memStream, ZipArchiveMode.Create, leaveOpen: true))
+            {
+                var entry = zip.CreateEntry($"{nombreArchivo}.xml");
+                using var entryStream = entry.Open();
+                await entryStream.WriteAsync(xmlFirmadoBytes);
+            }
+            zipBytes = memStream.ToArray();
         }
 
-        // 6. Enviar a SUNAT
+        // 6. Subir ZIP al storage en background (no bloquea envío a SUNAT)
+        var zipBytesCapture = zipBytes;
+        var storageUploadTask = Task.Run(async () =>
+        {
+            try
+            {
+                return await _storageService.SubirZipAsync(
+                    empresa.Ruc,
+                    comprobante.TipoComprobante!,
+                    nombreArchivo,
+                    zipBytesCapture,
+                    empresa.Environment
+                );
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[STORAGE ❌] Error subiendo ZIP: {ex.Message}");
+                return null;
+            }
+        });
+
         SunatResponse sunatResponse;
         try
         {
@@ -742,10 +729,11 @@ public class ComprobanteService : IComprobanteService
         }
         catch (HttpRequestException ex)
         {
-            // Un fallo de red transitorio NO debe degradar un veredicto ya emitido por SUNAT.
-            // Si el comprobante ya estaba RECHAZADO, se deja intacto (no se toca la BD) para
-            // conservar el código y mensaje de rechazo originales y evitar reintentos sobre
-            // un rechazo real. (ACEPTADO ya se bloquea al inicio del método.)
+            // Esperar que el storage termine (corrió en paralelo, tiene su propio catch)
+            var rutaXmlFallback = await storageUploadTask;
+            if (rutaXmlFallback != null)
+                await _unitOfWork.Comprobantes.UpdateXmlGeneradoAsync(comprobanteId, rutaXmlFallback);
+
             if (comprobante.EstadoSunat == "RECHAZADO")
             {
                 return new ComprobanteResponse
@@ -825,14 +813,22 @@ public class ComprobanteService : IComprobanteService
             firmaResultado.DigestValue
         );
 
-        // 9. Guardar ruta CDR en BD (hilo principal, conexión libre)
+        // 9. Guardar ruta del XML subido al storage (el upload corrió en paralelo con SUNAT)
+        var rutaXml = await storageUploadTask;
+        if (rutaXml != null)
+        {
+            await _unitOfWork.Comprobantes.UpdateXmlGeneradoAsync(comprobanteId, rutaXml);
+            Console.WriteLine($"[STORAGE ✅] xmlGenerado guardado: {rutaXml}");
+        }
+
+        // 10. Guardar ruta CDR en BD
         if (!string.IsNullOrEmpty(sunatResponse.CdrBase64))
         {
             var rutaCdr = $"/{empresa.Environment}/{empresa.Ruc}/{ObtenerTipoCarpeta(comprobante.TipoComprobante!)}/R-{nombreArchivo}.zip";
             await _unitOfWork.Comprobantes.UpdateXmlRespuestaSunatAsync(comprobanteId, rutaCdr);
         }
 
-        // 10. Notificar WebSocket
+        // 11. Notificar WebSocket
         var sucursalId = await _unitOfWork.Comprobantes.GetSucursalIdByRucAndAnexoAsync(
             comprobante.EmpresaRuc!,
             comprobante.EmpresaEstablecimientoAnexo!

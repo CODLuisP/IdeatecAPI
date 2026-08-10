@@ -106,41 +106,23 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
 
         int comprobanteId = await _connection.ExecuteScalarAsync<int>(sql, parameters, _transaction);
 
-        foreach (var detalle in comprobante.Detalles)
-        {
-            detalle.ComprobanteId = comprobanteId;
-            await RegistrarDetalleAsync(detalle);
-        }
+        if (comprobante.Detalles.Count > 0)
+            await RegistrarDetallesBatchAsync(comprobanteId, comprobante.Detalles);
 
-        foreach (var leyenda in comprobante.Leyendas)
-        {
-            leyenda.ComprobanteId = comprobanteId;
-            await RegistrarLeyendaAsync(leyenda);
-        }
+        if (comprobante.Leyendas.Count > 0)
+            await RegistrarLeyendasBatchAsync(comprobanteId, comprobante.Leyendas);
 
-        foreach (var pago in comprobante.Pagos)
-        {
-            pago.ComprobanteId = comprobanteId;
-            await RegistrarPagoAsync(pago);
-        }
+        if (comprobante.Pagos.Count > 0)
+            await RegistrarPagosBatchAsync(comprobanteId, comprobante.Pagos);
 
-        foreach (var cuota in comprobante.Cuotas)
-        {
-            cuota.ComprobanteId = comprobanteId;
-            await RegistrarCuotaAsync(cuota);
-        }
+        if (comprobante.Cuotas.Count > 0)
+            await RegistrarCuotasBatchAsync(comprobanteId, comprobante.Cuotas);
 
-        foreach (var guia in comprobante.Guias)
-        {
-            guia.ComprobanteId = comprobanteId;
-            await RegistrarGuiaAsync(guia);
-        }
+        if (comprobante.Guias.Count > 0)
+            await RegistrarGuiasBatchAsync(comprobanteId, comprobante.Guias);
 
-        foreach (var detraccion in comprobante.Detracciones)
-        {
-            detraccion.ComprobanteID = comprobanteId;
-            await RegistrarDetraccionAsync(detraccion);
-        }
+        if (comprobante.Detracciones.Count > 0)
+            await RegistrarDetraccionesBatchAsync(comprobanteId, comprobante.Detracciones);
 
         return comprobanteId;
     }
@@ -223,6 +205,115 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
             );";
 
         await _connection.ExecuteAsync(sql, d, _transaction);
+    }
+
+    private async Task RegistrarDetallesBatchAsync(int comprobanteId, ICollection<ComprobanteDetalle> detalles)
+    {
+        var sql = @"
+            INSERT INTO comprobantedetalle (
+                comprobanteId, trabajadorID, item, productoId, codigo, descripcion, cantidad,
+                unidadMedida, precioUnitario, tipoAfectacionIGV, porcentajeIGV,
+                montoIGV, baseIgv, codigoTipoDescuento, descuentoUnitario, descuentoTotal,
+                valorVenta, precioVenta, totalVentaItem, icbper, factorIcbper
+            ) VALUES (
+                @ComprobanteId, @TrabajadorID, @Item, @ProductoId, @Codigo, @Descripcion, @Cantidad,
+                @UnidadMedida, @PrecioUnitario, @TipoAfectacionIGV, @PorcentajeIGV,
+                @MontoIGV, @BaseIgv, @codigoTipoDescuento, @DescuentoUnitario, @DescuentoTotal,
+                @ValorVenta, @PrecioVenta, @TotalVentaItem, @Icbper, @FactorIcbper
+            );";
+
+        var batch = detalles.Select(d => new
+        {
+            ComprobanteId = comprobanteId,
+            d.TrabajadorID, d.Item, d.ProductoId, d.Codigo, d.Descripcion, d.Cantidad,
+            d.UnidadMedida, d.PrecioUnitario, d.TipoAfectacionIGV, d.PorcentajeIGV,
+            d.MontoIGV, d.BaseIgv, d.CodigoTipoDescuento, d.DescuentoUnitario, d.DescuentoTotal,
+            d.ValorVenta, d.PrecioVenta, d.TotalVentaItem, d.Icbper, d.FactorIcbper
+        });
+        await _connection.ExecuteAsync(sql, batch, _transaction);
+    }
+
+    private async Task RegistrarLeyendasBatchAsync(int comprobanteId, ICollection<NoteLegend> leyendas)
+    {
+        var sql = @"
+            INSERT INTO notelegend (comprobanteId, code, value)
+            VALUES (@ComprobanteId, @Code, @Value);";
+
+        var batch = leyendas.Select(l => new { ComprobanteId = comprobanteId, l.Code, l.Value });
+        await _connection.ExecuteAsync(sql, batch, _transaction);
+    }
+
+    private async Task RegistrarPagosBatchAsync(int comprobanteId, ICollection<Pago> pagos)
+    {
+        var sql = @"
+            INSERT INTO pago (
+                comprobanteId, medioPago, monto, fechaPago,
+                numeroOperacion, entidadFinanciera, observaciones
+            ) VALUES (
+                @ComprobanteId, @MedioPago, @Monto, @FechaPago,
+                @NumeroOperacion, @EntidadFinanciera, @Observaciones
+            );";
+
+        var batch = pagos.Select(p => new
+        {
+            ComprobanteId = comprobanteId,
+            p.MedioPago, p.Monto, p.FechaPago,
+            p.NumeroOperacion, p.EntidadFinanciera, p.Observaciones
+        });
+        await _connection.ExecuteAsync(sql, batch, _transaction);
+    }
+
+    private async Task RegistrarCuotasBatchAsync(int comprobanteId, ICollection<Cuota> cuotas)
+    {
+        var sql = @"
+            INSERT INTO cuota (
+                comprobanteId, numeroCuota, monto, fechaVencimiento,
+                montoPagado, fechaPago, estado
+            ) VALUES (
+                @ComprobanteId, @NumeroCuota, @Monto, @FechaVencimiento,
+                @MontoPagado, @FechaPago, @Estado
+            );";
+
+        var batch = cuotas.Select(c => new
+        {
+            ComprobanteId = comprobanteId,
+            c.NumeroCuota, c.Monto, c.FechaVencimiento,
+            c.MontoPagado, c.FechaPago, c.Estado
+        });
+        await _connection.ExecuteAsync(sql, batch, _transaction);
+    }
+
+    private async Task RegistrarGuiasBatchAsync(int comprobanteId, ICollection<GuiaComprobante> guias)
+    {
+        var sql = @"
+            INSERT INTO guiacomprobante (
+                comprobanteID, guiaTipoDoc, guiaNumeroCompleto
+            ) VALUES (
+                @ComprobanteId, @GuiaTipoDoc, @GuiaNumeroCompleto
+            );";
+
+        var batch = guias.Select(g => new { ComprobanteId = comprobanteId, g.GuiaTipoDoc, g.GuiaNumeroCompleto });
+        await _connection.ExecuteAsync(sql, batch, _transaction);
+    }
+
+    private async Task RegistrarDetraccionesBatchAsync(int comprobanteId, ICollection<Detraccion> detracciones)
+    {
+        var sql = @"
+            INSERT INTO detraccion (
+                comprobanteID, codigoBienDetraccion, codigoMedioPago,
+                cuentaBancoDetraccion, porcentajeDetraccion, montoDetraccion, observacion
+            ) VALUES (
+                @ComprobanteID, @CodigoBienDetraccion, @CodigoMedioPago,
+                @CuentaBancoDetraccion, @PorcentajeDetraccion, @MontoDetraccion, @Observacion
+            );";
+
+        var batch = detracciones.Select(d => new
+        {
+            ComprobanteID = comprobanteId,
+            d.CodigoBienDetraccion, d.CodigoMedioPago,
+            d.CuentaBancoDetraccion, d.PorcentajeDetraccion, d.MontoDetraccion, d.Observacion
+        });
+        await _connection.ExecuteAsync(sql, batch, _transaction);
     }
 
     private async Task ActualizarSerieCorrelativoAsync(Comprobante comprobante)
@@ -668,8 +759,8 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
             INSERT IGNORE INTO comprobantevale (comprobanteId, valeId)
             VALUES (@ComprobanteId, @ValeId);";
 
-        foreach (var valeId in valeIds)
-            await _connection.ExecuteAsync(sql, new { ComprobanteId = comprobanteId, ValeId = valeId }, _transaction);
+        var batch = valeIds.Select(valeId => new { ComprobanteId = comprobanteId, ValeId = valeId });
+        await _connection.ExecuteAsync(sql, batch, _transaction);
     }
 
     public async Task<IEnumerable<int>> GetValesByComprobanteIdAsync(int comprobanteId)
