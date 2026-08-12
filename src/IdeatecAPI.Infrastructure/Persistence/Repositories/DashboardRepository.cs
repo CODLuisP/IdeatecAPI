@@ -82,6 +82,17 @@ public class DashboardRepository : IDashboardRepository
                         ELSE 0 END
                 ), 0) AS VentasDelDia,
 
+                -- Comisión por pago con tarjeta: control interno, incluye facturas, boletas y notas de venta
+                -- (ayuda a cuadrar caja sin importar si el documento es fiscal o no)
+                COALESCE(SUM(
+                    CASE WHEN c.tipoComprobante IN ('01','03','NV')
+                            AND c.estadoSunat NOT IN ('RECHAZADO')
+                        THEN CASE WHEN c.tipoMoneda = 'USD'
+                                THEN c.totalComisionPagoTarjeta * c.tipoCambio
+                                ELSE c.totalComisionPagoTarjeta END
+                        ELSE 0 END
+                ), 0) AS TotalComisionTarjetaDelDia,
+
                 -- Conteos (todos los estados)
                 SUM(CASE WHEN c.tipoComprobante = '01' THEN 1 ELSE 0 END) AS FacturasEmitidas,
                 SUM(CASE WHEN c.tipoComprobante = '03' THEN 1 ELSE 0 END) AS BoletasEmitidas,
@@ -191,6 +202,7 @@ public class DashboardRepository : IDashboardRepository
         return new DashboardResponseDto
         {
             VentasDelDia                 = kpiDia.VentasDelDia,
+            TotalComisionTarjetaDelDia   = kpiDia.TotalComisionTarjetaDelDia,
             FacturasEmitidas             = kpiDia.FacturasEmitidas,
             BoletasEmitidas              = kpiDia.BoletasEmitidas,
             NotasCreditoEmitidas         = kpiDia.NotasCreditoEmitidas,
@@ -211,6 +223,7 @@ public class DashboardRepository : IDashboardRepository
 internal class KpiDiaDto
 {
     public decimal VentasDelDia { get; set; }
+    public decimal TotalComisionTarjetaDelDia { get; set; }
     public int     FacturasEmitidas { get; set; }
     public int     BoletasEmitidas { get; set; }
     public int     NotasCreditoEmitidas { get; set; }

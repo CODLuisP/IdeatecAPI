@@ -66,6 +66,7 @@ public class Comprobante
     public decimal? SubTotal { get; set; }                 
     public decimal? ImporteTotal { get; set; }
     public decimal? MontoCredito { get; set; }
+    public decimal? TotalComisionPagoTarjeta { get; set; }
 
     //Campos extras para notas y sus PDF
     public int? ComprobanteAfectadoId { get; set; }

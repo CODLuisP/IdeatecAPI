@@ -37,6 +37,7 @@ public class ListarComprobanteDTO
     public decimal SubTotal { get; set; }
     public decimal ImporteTotal { get; set; }
     public decimal MontoCredito { get; set; }
+    public decimal? TotalComisionPagoTarjeta { get; set; }
 
     // Notas
     public int? ComprobanteAfectadoId { get; set; }

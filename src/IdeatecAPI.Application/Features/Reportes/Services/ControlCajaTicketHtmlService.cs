@@ -55,6 +55,9 @@ public class ControlCajaTicketHtmlService : IControlCajaTicketHtmlService
             .Where(x => x.TipoMoneda == "USD" && x.TipoCambio == 0)
             .Sum(x => x.TipoComprobante == "07" ? -x.ImporteTotal : x.ImporteTotal);
 
+        // Total de comisiones por pago con tarjeta (ayuda a cuadrar caja)
+        var totalComision = movimientos.Sum(x => x.TotalComisionPagoTarjeta ?? 0);
+
         var fechaReporte = DateTime.Now;
 
         // ── Logo ────────────────────────────────────────────────────────────
@@ -98,6 +101,8 @@ public class ControlCajaTicketHtmlService : IControlCajaTicketHtmlService
             totalesHtml.Append($"<tr class=\"total-row\"><td>TOTAL (USD)</td><td class=\"tr\">$ {totalUsd:N2}</td></tr>");
         if (countNV > 0)
             totalesHtml.Append($"<tr><td colspan=\"2\" style=\"font-size:8px;color:#92400E;background:#FEF3C7;padding:2px 4px;\">&#9733; Incluye notas de venta ({countNV})</td></tr>");
+        if (totalComision > 0)
+            totalesHtml.Append($"<tr class=\"total-row\"><td>TOTAL COMISIÓN TARJETA</td><td class=\"tr\">S/ {totalComision:N2}</td></tr>");
 
         // ── Resumen por medio de pago ────────────────────────────────────────
         var resumenHtml = new StringBuilder();

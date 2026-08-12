@@ -16,6 +16,7 @@ public class ControlCajaTicketItemDto
     public string?  EstadoSunat       { get; set; }
     public int?     ComprobanteAfectadoId { get; set; }
     public string?  NumDocAfectado    { get; set; }
+    public decimal? TotalComisionPagoTarjeta { get; set; }
     public List<PagoResumenDto> Pagos { get; set; } = new();
 }
 

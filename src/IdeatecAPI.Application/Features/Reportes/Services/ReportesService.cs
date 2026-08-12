@@ -479,6 +479,7 @@ public class ReportesService : IReportesService
                 EstadoSunat           = c.EstadoSunat,
                 ComprobanteAfectadoId = c.ComprobanteAfectadoId,
                 NumDocAfectado        = c.NumDocAfectado,
+                TotalComisionPagoTarjeta = esRechazado ? null : c.TotalComisionPagoTarjeta,
                 Pagos                 = esRechazado ? new() : (pagosPorId.TryGetValue(c.ComprobanteId, out var p) ? p : new())
             };
         }).ToList();
@@ -573,6 +574,7 @@ public class ReportesService : IReportesService
         ValorVenta      = c.ValorVenta ?? 0,
         TotalIGV        = c.TotalIGV ?? 0,
         ImporteTotal    = c.ImporteTotal ?? 0,
+        TotalComisionPagoTarjeta = c.TotalComisionPagoTarjeta,
         EstadoSunat          = c.EstadoSunat,
         NumDocAfectado       = c.NumDocAfectado,
         ComprobanteAfectadoId = c.ComprobanteAfectadoId,
@@ -595,6 +597,7 @@ public class ReportesService : IReportesService
         d.TotalIGV     = 0;
         d.ImporteTotal = 0;
         d.MontoCredito = 0;
+        d.TotalComisionPagoTarjeta = null;
         return d;
     }
 

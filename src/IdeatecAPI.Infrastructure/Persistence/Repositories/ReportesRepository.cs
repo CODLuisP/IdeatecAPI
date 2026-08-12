@@ -145,6 +145,26 @@ public class ReportesRepository : IReportesRepository
         var kpiActual = await _connection.QueryFirstOrDefaultAsync<KpiRawDto>(
             sqlKpiActual, dpActual, _transaction) ?? new KpiRawDto();
 
+        // Comisión por pago con tarjeta (POS) — control interno, incluye 01/03/NV.
+        // Solo período actual, sin comparación de tendencia.
+        var sqlComisionTarjeta = $@"
+            SELECT COALESCE(SUM(
+                CASE WHEN c.tipoComprobante IN ('01','03','NV')
+                        AND c.estadoSunat NOT IN ('RECHAZADO')
+                    THEN CASE WHEN c.tipoMoneda = 'USD'
+                            THEN c.totalComisionPagoTarjeta * c.tipoCambio
+                            ELSE c.totalComisionPagoTarjeta END
+                    ELSE 0 END
+            ), 0)
+            FROM comprobante c
+            WHERE {whereBase}
+            AND c.fechaEmision >= @Desde
+            AND c.fechaEmision <= @Hasta
+            {whereUsuario};";
+
+        var totalComisionTarjeta = await _connection.QueryFirstOrDefaultAsync<decimal>(
+            sqlComisionTarjeta, dpActual, _transaction);
+
         // ═════════════════════════════════════════════════════════════════════
         // 2. KPI — período anterior (para tendencia)
         // ═════════════════════════════════════════════════════════════════════
@@ -240,6 +260,7 @@ public class ReportesRepository : IReportesRepository
                 TotalVentasAnterior    = kpiAnterior.TotalVentas,
                 TotalIGVAnterior       = kpiAnterior.TotalIGV,
                 TotalDocumentosAnterior = totalDocsAnterior,
+                TotalComisionTarjeta   = totalComisionTarjeta,
             },
             Grafico      = grafico,
             Distribucion = distribucion,
@@ -758,8 +779,9 @@ public class ReportesRepository : IReportesRepository
             c.valorVenta              AS ValorVenta,
             c.subTotal                AS SubTotal,
             c.importeTotal            AS ImporteTotal,
-            c.montoCredito            AS MontoCredito,
-            c.tipDocAfectado          AS TipDocAfectado,
+            c.montoCredito                AS MontoCredito,
+            c.totalComisionPagoTarjeta    AS TotalComisionPagoTarjeta,
+            c.tipDocAfectado              AS TipDocAfectado,
             c.numDocAfectado          AS NumDocAfectado,
             c.tipoNotaCreditoDebito   AS TipoNotaCreditoDebito,
             c.motivoNota              AS MotivoNota,

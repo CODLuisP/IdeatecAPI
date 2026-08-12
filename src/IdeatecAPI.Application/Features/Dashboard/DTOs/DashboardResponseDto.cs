@@ -5,6 +5,7 @@ public class DashboardResponseDto
     // ── Ventas ────────────────────────────────────────────────────────────────
     public decimal VentasDelDia { get; set; }              // 01 + 03 del día
     public decimal VentasNetas { get; set; }               // VentasDelDia + NDDelDia - NCDelDia
+    public decimal TotalComisionTarjetaDelDia { get; set; } // Comisión por pago con tarjeta del día (01 + 03)
 
     // ── Conteos ───────────────────────────────────────────────────────────────
     public int FacturasEmitidas { get; set; }

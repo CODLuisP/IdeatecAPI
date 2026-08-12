@@ -23,4 +23,5 @@ public class Configuracion
     public bool? UseNotaVenta { get; set; }
     public bool? IsCajaAutopago { get; set; }
     public bool? UsaSire { get; set; }
+    public string? ComisionPagoTarjeta { get; set; }
 }

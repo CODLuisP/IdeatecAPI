@@ -43,6 +43,7 @@ public class ObtenerComprobanteDTO
     public decimal SubTotal { get; set; }                 
     public decimal ImporteTotal { get; set; }
     public decimal MontoCredito { get; set; }
+    public decimal? TotalComisionPagoTarjeta { get; set; }
 
     //Para notas Y su PDF
     public string? TipDocAfectado { get; set; }

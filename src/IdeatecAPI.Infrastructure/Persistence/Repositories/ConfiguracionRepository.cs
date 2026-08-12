@@ -26,13 +26,13 @@ public class ConfiguracionRepository : DapperRepository<Configuracion>, IConfigu
                  iscredito, itemsdefecto, isboletaorfactura, isenvioresumen,
                  isvale, deudascobrar, trabajadores, cargacomprobantes,
                  afectacionigv, descunitario, isstock, umbralstockbajo, usenotaventa,
-                 iscajaautopago, usasire)
+                 iscajaautopago, usasire, comisionPagoTarjeta)
             VALUES
                 (@Ruc, @IsImprime, @TamañoImpresion, @Igv, @IsConsumo, @GuiaRemision,
                  @IsCredito, @ItemsDefecto, @IsBoletaOrFactura, @IsEnvioResumen,
                  @IsVale, @DeudasCobrar, @Trabajadores, @CargaComprobantes,
                  @AfectacionIgv, @DescUnitario, @IsStock, @UmbralStockBajo, @UseNotaVenta,
-                 @IsCajaAutopago, @UsaSire);";
+                 @IsCajaAutopago, @UsaSire, @ComisionPagoTarjeta);";
 
         var result = await _connection.ExecuteAsync(sql, configuracion, _transaction);
         return result > 0;
@@ -61,8 +61,9 @@ public class ConfiguracionRepository : DapperRepository<Configuracion>, IConfigu
                 isstock           = @IsStock,
                 umbralstockbajo   = @UmbralStockBajo,
                 usenotaventa      = @UseNotaVenta,
-                iscajaautopago    = @IsCajaAutopago,
-                usasire           = @UsaSire
+                iscajaautopago       = @IsCajaAutopago,
+                usasire              = @UsaSire,
+                comisionPagoTarjeta  = @ComisionPagoTarjeta
             WHERE ruc = @Ruc;";
 
         var result = await _connection.ExecuteAsync(sql, new
@@ -87,6 +88,7 @@ public class ConfiguracionRepository : DapperRepository<Configuracion>, IConfigu
             configuracion.UseNotaVenta,
             configuracion.IsCajaAutopago,
             configuracion.UsaSire,
+            configuracion.ComisionPagoTarjeta,
             Ruc = ruc
         }, _transaction);
 

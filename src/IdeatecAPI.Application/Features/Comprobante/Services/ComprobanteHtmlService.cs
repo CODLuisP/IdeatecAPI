@@ -128,7 +128,10 @@ public class ComprobanteHtmlService : IComprobanteHtmlService
         if ((comprobante.DescuentoGlobal ?? 0) > 0)
             FilaTot(totales, "Dscto. Global", $"-{Fmt(comprobante.DescuentoGlobal ?? 0, moneda)}");
         totales.Append($"<tr class=\"total-final\"><td>IMPORTE TOTAL</td><td>{Fmt(comprobante.ImporteTotal ?? 0, moneda)}</td></tr>");
+        if ((comprobante.TotalComisionPagoTarjeta ?? 0) > 0)
+            FilaTot(totales, "Comisión por pago con tarjeta", $"({Fmt(comprobante.TotalComisionPagoTarjeta ?? 0, moneda)})");
         totales.Append("</table>");
+
 
         // ── Leyendas ─────────────────────────────────────────────────────────
         var leyendasHtml = new StringBuilder();
@@ -136,7 +139,7 @@ public class ComprobanteHtmlService : IComprobanteHtmlService
             leyendasHtml.Append($"<p class=\"leyenda\">{HE(l.Value?.ToUpper() ?? "")}</p>");
 
         // ── Forma de pago ────────────────────────────────────────────────────
-        var pagosHtml  = BuildPagosHtml(comprobante, pagos, cuotas, moneda);
+        var pagosHtml  = BuildPagosHtml(comprobante, pagos, cuotas, moneda, comprobante.TotalComisionPagoTarjeta);
 
         // ── Detracción ───────────────────────────────────────────────────────
         var detracHtml = BuildDetraccionHtml(detracciones, moneda, comprobante.TipoComprobante);
@@ -329,7 +332,8 @@ public class ComprobanteHtmlService : IComprobanteHtmlService
         Domain.Entities.Comprobante c,
         List<Domain.Entities.Pago> pagos,
         List<Domain.Entities.Cuota> cuotas,
-        string moneda)
+        string moneda,
+        decimal? totalComisionPagoTarjeta = null)
     {
         bool esCredito     = (c.TipoPago?.ToLower() ?? "") is "credito" or "crédito";
         bool tieneInicial  = pagos.Any() && cuotas.Any();
@@ -343,7 +347,12 @@ public class ComprobanteHtmlService : IComprobanteHtmlService
             sb.Append($"<tr><td>Tipo</td><td>Contado</td></tr>");
             if (pagos.Any())
                 foreach (var p in pagos)
-                    sb.Append($"<tr><td>{HE(p.MedioPago ?? "Efectivo")}</td><td>{Fmt(p.Monto ?? 0, moneda)}</td></tr>");
+                {
+                    var montoMedio = p.Monto ?? 0;
+                    if ((p.MedioPago ?? "").Equals("Tarjeta", StringComparison.OrdinalIgnoreCase) && (totalComisionPagoTarjeta ?? 0) > 0)
+                        montoMedio += totalComisionPagoTarjeta!.Value;
+                    sb.Append($"<tr><td>{HE(p.MedioPago ?? "Efectivo")}</td><td>{Fmt(montoMedio, moneda)}</td></tr>");
+                }
             else
                 sb.Append($"<tr><td>Efectivo</td><td>{Fmt(c.ImporteTotal ?? 0, moneda)}</td></tr>");
         }

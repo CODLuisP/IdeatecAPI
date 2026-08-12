@@ -24,6 +24,7 @@ public class GenerarNotaVentaDTO
     public decimal SubTotal { get; set; }
     public decimal ImporteTotal { get; set; }
     public decimal MontoCredito { get; set; }
+    public decimal? TotalComisionPagoTarjeta { get; set; }
 
     public List<DetalleNotaVentaDTO> Detalles { get; set; } = [];
     public List<DetallePagosDTO>? Pagos { get; set; } = [];

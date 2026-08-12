@@ -82,6 +82,7 @@ public class ReportesPdfService : IReportesPdfService
 
         var ventas  = lista.Where(x => !AfectaOtro(x)).ToList();
         var ajustes = lista.Where(AfectaOtro).ToList();
+        bool tieneComision = lista.Any(x => (x.TotalComisionPagoTarjeta ?? 0) > 0);
 
         var doc = Document.Create(container =>
         {
@@ -124,6 +125,11 @@ public class ReportesPdfService : IReportesPdfService
                             .Text("Estas notas afectan comprobantes emitidos en otros períodos y no se incluyen en el total del período.")
                             .Italic().FontSize(7).FontColor("#7030A0");
                     }
+
+                    if (tieneComision)
+                        col.Item().PaddingTop(6)
+                            .Text("* Este comprobante incluye comisión por pago con tarjeta.")
+                            .Italic().FontSize(7).FontColor("#92400E");
                 });
 
                 page.Footer().AlignRight().Text(txt =>
@@ -149,6 +155,7 @@ public class ReportesPdfService : IReportesPdfService
     {
         var movimientos = datos.ToList();
         var filtros = Filtros(ruc, codEstablecimiento, fechaDesde, fechaHasta, usuarioCreacion, clienteNumDoc);
+        bool tieneComisionCC = movimientos.Any(x => (x.TotalComisionPagoTarjeta ?? 0) > 0);
 
         var doc = Document.Create(container =>
         {
@@ -169,6 +176,11 @@ public class ReportesPdfService : IReportesPdfService
                         .Text("MOVIMIENTOS DEL PERÍODO").Bold().FontSize(8).FontColor(Blanco);
                     col.Item().Table(table => BuildTablaCC(table, movimientos,
                         "TOTAL NETO DEL PERÍODO", "#C6EFCE", Azul, fontSize: 7, pad: 2));
+
+                    if (tieneComisionCC)
+                        col.Item().PaddingTop(6)
+                            .Text("* Este comprobante incluye comisión por pago con tarjeta.")
+                            .Italic().FontSize(7).FontColor("#92400E");
                 });
 
                 page.Footer().AlignRight().Text(txt =>
@@ -240,9 +252,12 @@ public class ReportesPdfService : IReportesPdfService
             table.Cell().Element(c => TD(c, d.FechaEmision.ToString("dd/MM/yy"), bg, fontSize: fontSize, pad: pad));
             table.Cell().Element(c => TD(c, d.Cliente?.RazonSocial ?? "-",       bg, fontSize: fontSize, pad: pad));
             table.Cell().Element(c => TD(c, d.Cliente?.NumeroDocumento ?? "-",   bg, fontSize: fontSize, pad: pad));
+            bool tieneComisionFila = (d.TotalComisionPagoTarjeta ?? 0) > 0;
+            var totTxt = $"{Math.Abs(tot):N2}" + (tieneComisionFila ? " *" : "");
+
             table.Cell().Element(c => TD(c, $"{Math.Abs(vv):N2}",  bg, right: true, red: esNC, fontSize: fontSize, pad: pad));
             table.Cell().Element(c => TD(c, $"{Math.Abs(igv):N2}", bg, right: true, red: esNC, fontSize: fontSize, pad: pad));
-            table.Cell().Element(c => TD(c, $"{Math.Abs(tot):N2}", bg, right: true, red: esNC, fontSize: fontSize, pad: pad));
+            table.Cell().Element(c => TD(c, totTxt, bg, right: true, red: esNC, fontSize: fontSize, pad: pad));
             table.Cell().Element(c => TD(c, d.TipoMoneda ?? "PEN",               bg, fontSize: fontSize, pad: pad));
             table.Cell().Element(c => TD(c, d.EstadoSunat ?? "-",                bg, fontSize: fontSize, pad: pad));
             table.Cell().Element(c => TD(c, d.TipoPago ?? "-",                   bg, fontSize: fontSize, pad: pad));
@@ -327,9 +342,12 @@ public class ReportesPdfService : IReportesPdfService
             table.Cell().Element(c => TD(c, d.FechaEmision.ToString("dd/MM/yyyy"), bg, fontSize: fontSize, pad: pad));
             table.Cell().Element(c => TD(c, d.Cliente?.RazonSocial ?? "-",         bg, fontSize: fontSize, pad: pad));
             table.Cell().Element(c => TD(c, d.Cliente?.NumeroDocumento ?? "-",     bg, fontSize: fontSize, pad: pad));
+            bool tieneComisionFilaCC = (d.TotalComisionPagoTarjeta ?? 0) > 0;
+            var totTxtCC = $"{(tot < 0 ? "-" : "")}{Math.Abs(tot):N2}" + (tieneComisionFilaCC ? " *" : "");
+
             table.Cell().Element(c => TD(c, $"{(vv  < 0 ? "-" : "")}{Math.Abs(vv):N2}",  bg, right: true, red: esNC, fontSize: fontSize, pad: pad));
             table.Cell().Element(c => TD(c, $"{(igv < 0 ? "-" : "")}{Math.Abs(igv):N2}", bg, right: true, red: esNC, fontSize: fontSize, pad: pad));
-            table.Cell().Element(c => TD(c, $"{(tot < 0 ? "-" : "")}{Math.Abs(tot):N2}", bg, right: true, red: esNC, fontSize: fontSize, pad: pad));
+            table.Cell().Element(c => TD(c, totTxtCC, bg, right: true, red: esNC, fontSize: fontSize, pad: pad));
             table.Cell().Element(c => TD(c, monCC,                                 bg, fontSize: fontSize, pad: pad));
             table.Cell().Element(c => TD(c, d.EstadoSunat ?? "-",                 bg, fontSize: fontSize, pad: pad));
             table.Cell().Element(c => TD(c, d.TipoPago ?? "-",                    bg, fontSize: fontSize, pad: pad));
@@ -390,6 +408,7 @@ public class ReportesPdfService : IReportesPdfService
             .Sum(x => x.TipoComprobante == "07" ? -x.ImporteTotal : x.ImporteTotal);
         var totalUsd = movimientos.Where(x => x.TipoMoneda == "USD")
             .Sum(x => x.TipoComprobante == "07" ? -x.ImporteTotal : x.ImporteTotal);
+        var totalComision = movimientos.Sum(x => x.TotalComisionPagoTarjeta ?? 0);
 
         // ── Resumen por medio de pago ────────────────────────────────────────
         var resumenPago = movimientos
@@ -645,6 +664,19 @@ public class ReportesPdfService : IReportesPdfService
                                               .Text($"$ {totalUsd:N2}")
                                               .Bold().FontSize(10).FontColor(ColorBlanco);
                                          });
+
+                                     // Fila total comisión por pago con tarjeta
+                                     if (totalComision > 0)
+                                         t.Item().Background("#FEF3C7").BorderBottom(1).BorderColor("#F59E0B")
+                                          .Padding(4).Row(r =>
+                                          {
+                                              r.RelativeItem()
+                                               .Text("TOTAL COMISIÓN TARJETA")
+                                               .Bold().FontSize(8).FontColor("#92400E");
+                                              r.ConstantItem(80).AlignRight()
+                                               .Text($"S/ {totalComision:N2}")
+                                               .Bold().FontSize(8).FontColor("#92400E");
+                                          });
 
                                      // Nota de inclusión de NV
                                      if (countNV > 0)

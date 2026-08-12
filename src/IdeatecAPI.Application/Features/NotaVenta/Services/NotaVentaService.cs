@@ -100,6 +100,7 @@ public class NotaVentaService : INotaVentaService
                 SubTotal        = dto.SubTotal,
                 ImporteTotal    = dto.ImporteTotal,
                 MontoCredito    = dto.MontoCredito,
+                TotalComisionPagoTarjeta = dto.TotalComisionPagoTarjeta,
 
                 // Campos SUNAT — no aplica para NV
                 EstadoSunat    = "NO_APLICA",
@@ -247,6 +248,7 @@ public class NotaVentaService : INotaVentaService
         SubTotal         = c.SubTotal ?? 0,
         ImporteTotal     = c.ImporteTotal ?? 0,
         MontoCredito     = c.MontoCredito ?? 0,
+        TotalComisionPagoTarjeta = c.TotalComisionPagoTarjeta,
         EstadoSunat      = c.EstadoSunat,
         UsuarioCreacion  = c.UsuarioCreacion,
         FechaCreacion    = c.FechaCreacion,

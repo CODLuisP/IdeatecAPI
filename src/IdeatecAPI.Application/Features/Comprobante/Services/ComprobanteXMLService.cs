@@ -416,6 +416,7 @@ public class ComprobanteService : IComprobanteService
                 TotalIcbper = dto.TotalIcbper,
                 ImporteTotal = dto.ImporteTotal,
                 MontoCredito = dto.MontoCredito,
+                TotalComisionPagoTarjeta = dto.TotalComisionPagoTarjeta,
                 EstadoSunat = "PENDIENTE",
                 XmlGenerado = null,
                 EnviadoEnResumen = dto.EnviadoEnResumen,
@@ -578,6 +579,7 @@ public class ComprobanteService : IComprobanteService
             TotalIcbper = comprobante.TotalIcbper ?? 0,
             ImporteTotal = comprobante.ImporteTotal ?? 0,
             MontoCredito = comprobante.MontoCredito ?? 0,
+            TotalComisionPagoTarjeta = comprobante.TotalComisionPagoTarjeta,
 
             Company = new EmpresaDTO
             {
@@ -1225,6 +1227,7 @@ public class ComprobanteService : IComprobanteService
         SubTotal = c.SubTotal ?? 0,
         ImporteTotal = c.ImporteTotal ?? 0,
         MontoCredito = c.MontoCredito ?? 0,
+        TotalComisionPagoTarjeta = c.TotalComisionPagoTarjeta,
         ComprobanteAfectadoId = c.ComprobanteAfectadoId,
         TipDocAfectado = c.TipDocAfectado,
         NumDocAfectado = c.NumDocAfectado,

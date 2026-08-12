@@ -27,6 +27,7 @@ public class KpiDto
     public decimal TotalVentas { get; set; }      // importeTotal facturas+boletas
     public decimal TotalIGV { get; set; }          // totalIGV facturas+boletas
     public int TotalDocumentos { get; set; }       // todos los tipos
+    public decimal TotalComisionTarjeta { get; set; } // comisión POS del período (01+03+NV), control interno
 
     // Período anterior (para calcular tendencia en front)
     public decimal TotalVentasAnterior { get; set; }

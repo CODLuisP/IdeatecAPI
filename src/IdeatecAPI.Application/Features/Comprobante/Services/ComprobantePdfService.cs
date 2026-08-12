@@ -425,6 +425,9 @@ public class ComprobantePdfService : IComprobantePdfService
                         .Text(FormatearMoneda(c.ImporteTotal ?? 0, moneda))
                         .Bold().FontSize(8).FontColor(ColorBlanco);
                 });
+
+                if ((c.TotalComisionPagoTarjeta ?? 0) > 0)
+                    TicketFilaTotal(tot, "Comisión por pago con tarjeta", $"({FormatearMoneda(c.TotalComisionPagoTarjeta ?? 0, moneda)})");
             });
 
             //col.Item().PaddingTop(3).LineHorizontal(0.5f).LineColor(ColorAzulMarino);
@@ -448,7 +451,7 @@ public class ComprobantePdfService : IComprobantePdfService
 
             // 8. TIPO DE PAGO
             col.Item().PaddingTop(3)
-                .Element(pc => BuildSeccionPagosTicket(pc, c, pagos, cuotas, moneda));
+                .Element(pc => BuildSeccionPagosTicket(pc, c, pagos, cuotas, moneda, c.TotalComisionPagoTarjeta));
 
             col.Item().PaddingTop(2).LineHorizontal(0.5f).LineColor(ColorAzulMarino);
             col.Item().Height(6);
@@ -496,7 +499,8 @@ public class ComprobantePdfService : IComprobantePdfService
         Domain.Entities.Comprobante c,
         List<Domain.Entities.Pago> pagos,
         List<Domain.Entities.Cuota> cuotas,
-        string moneda)
+        string moneda,
+        decimal? totalComisionPagoTarjeta = null)
     {
         container.Column(col =>
         {
@@ -511,7 +515,12 @@ public class ComprobantePdfService : IComprobantePdfService
                 TicketFilaTotal(col, "Tipo", "Contado");
                 if (pagos.Any())
                     foreach (var p in pagos)
-                        TicketFilaTotal(col, p.MedioPago ?? "Efectivo", FormatearMoneda(p.Monto ?? 0, moneda));
+                    {
+                        var montoMedio = p.Monto ?? 0;
+                        if ((p.MedioPago ?? "").Equals("Tarjeta", StringComparison.OrdinalIgnoreCase) && (totalComisionPagoTarjeta ?? 0) > 0)
+                            montoMedio += totalComisionPagoTarjeta!.Value;
+                        TicketFilaTotal(col, p.MedioPago ?? "Efectivo", FormatearMoneda(montoMedio, moneda));
+                    }
                 else
                     TicketFilaTotal(col, "Efectivo", FormatearMoneda(c.ImporteTotal ?? 0, moneda));
             }
@@ -547,6 +556,7 @@ public class ComprobantePdfService : IComprobantePdfService
                         });
                 }
             }
+
         });
     }
 
@@ -1168,7 +1178,12 @@ public class ComprobantePdfService : IComprobantePdfService
                         {
                             if (pagos.Any())
                                 foreach (var p in pagos)
-                                    FilaMedio(d, p.MedioPago ?? "Efectivo", FormatearMoneda(p.Monto ?? 0, moneda));
+                                {
+                                    var montoMedio = p.Monto ?? 0;
+                                    if ((p.MedioPago ?? "").Equals("Tarjeta", StringComparison.OrdinalIgnoreCase) && (c.TotalComisionPagoTarjeta ?? 0) > 0)
+                                        montoMedio += c.TotalComisionPagoTarjeta!.Value;
+                                    FilaMedio(d, p.MedioPago ?? "Efectivo", FormatearMoneda(montoMedio, moneda));
+                                }
                             else
                                 FilaMedio(d, "Efectivo", FormatearMoneda(c.ImporteTotal ?? 0, moneda));
                         }
@@ -1232,6 +1247,9 @@ public class ComprobantePdfService : IComprobantePdfService
                         .Text(FormatearMoneda(c.ImporteTotal ?? 0, moneda))
                         .Bold().FontSize(9).FontColor(ColorBlanco);
                 });
+
+                if ((c.TotalComisionPagoTarjeta ?? 0) > 0)
+                    FilaTotal(t, "Comisión por pago con tarjeta", $"({FormatearMoneda(c.TotalComisionPagoTarjeta ?? 0, moneda)})");
             });
         });
     }

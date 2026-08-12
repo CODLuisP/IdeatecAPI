@@ -50,12 +50,15 @@ public Task<byte[]> ExportarListadoReportesAsync(
         )
     ).ToList();
 
+    bool tieneComision = lista.Any(x => (x.TotalComisionPagoTarjeta ?? 0) > 0);
+    int totalCols = tieneComision ? 13 : 12;
+
     using var wb = new XLWorkbook();
     var ws = wb.Worksheets.Add("Comprobantes");
 
     // ── Título ────────────────────────────────────────────────────────────────
     ws.Cell(1, 1).Value = titulo;
-    ws.Range(1, 1, 1, 12).Merge();
+    ws.Range(1, 1, 1, totalCols).Merge();
     ws.Cell(1, 1).Style
         .Font.SetBold(true)
         .Font.SetFontSize(14)
@@ -66,19 +69,16 @@ public Task<byte[]> ExportarListadoReportesAsync(
 
     // ── Subtítulo filtros ─────────────────────────────────────────────────────
     ws.Cell(2, 1).Value = BuildFiltros(ruc, codEstablecimiento, fechaDesde, fechaHasta, usuarioCreacion, clienteNumDoc);
-    ws.Range(2, 1, 2, 12).Merge();
+    ws.Range(2, 1, 2, totalCols).Merge();
     ws.Cell(2, 1).Style
         .Font.SetItalic(true)
         .Font.SetFontSize(9)
         .Font.SetFontColor(XLColor.Gray)
         .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
 
-    var headers = new[]
-    {
-        "N° Comprobante", "Tipo", "F. Emisión", "Cliente", "Doc. Cliente",
-        "Val. Venta", "IGV", "Importe Total", "Moneda", "Estado SUNAT",
-        "Doc. Afectado", "Tipo Pago"
-    };
+    var headers = tieneComision
+        ? new[] { "N° Comprobante", "Tipo", "F. Emisión", "Cliente", "Doc. Cliente", "Val. Venta", "IGV", "Importe Total", "Moneda", "Estado SUNAT", "Doc. Afectado", "Tipo Pago", "Comisión Tarjeta" }
+        : new[] { "N° Comprobante", "Tipo", "F. Emisión", "Cliente", "Doc. Cliente", "Val. Venta", "IGV", "Importe Total", "Moneda", "Estado SUNAT", "Doc. Afectado", "Tipo Pago" };
 
     int filaActual = 4;
 
@@ -86,7 +86,7 @@ public Task<byte[]> ExportarListadoReportesAsync(
     // SECCIÓN 1 — Ventas del período (aceptados + anulados)
     // ═════════════════════════════════════════════════════════════════════════
     ws.Cell(filaActual, 1).Value = "VENTAS DEL PERÍODO";
-    ws.Range(filaActual, 1, filaActual, 12).Merge();
+    ws.Range(filaActual, 1, filaActual, totalCols).Merge();
     ws.Cell(filaActual, 1).Style
         .Font.SetBold(true)
         .Font.SetFontSize(10)
@@ -102,7 +102,7 @@ public Task<byte[]> ExportarListadoReportesAsync(
 
     foreach (var item in listaPeriodo)
     {
-        EscribirFila(ws, filaActual, item, listaPeriodo.IndexOf(item));
+        EscribirFila(ws, filaActual, item, listaPeriodo.IndexOf(item), tieneComision);
         filaActual++;
     }
 
@@ -113,7 +113,7 @@ public Task<byte[]> ExportarListadoReportesAsync(
     ws.Cell(filaActual, 6).FormulaA1 = $"=SUM(F{primeraFilaSeccion1}:F{ultimaFilaSeccion1})";
     ws.Cell(filaActual, 7).FormulaA1 = $"=SUM(G{primeraFilaSeccion1}:G{ultimaFilaSeccion1})";
     ws.Cell(filaActual, 8).FormulaA1 = $"=SUM(H{primeraFilaSeccion1}:H{ultimaFilaSeccion1})";
-    ws.Range(filaActual, 1, filaActual, 12).Style
+    ws.Range(filaActual, 1, filaActual, totalCols).Style
         .Font.SetBold(true)
         .Fill.SetBackgroundColor(XLColor.FromHtml("#BDD7EE"))
         .NumberFormat.SetFormat("#,##0.00")
@@ -130,7 +130,7 @@ public Task<byte[]> ExportarListadoReportesAsync(
         .Fill.SetBackgroundColor(XLColor.FromHtml("#FFF2CC"));
 
     ws.Cell(filaActual, 7).Value = "N. Debito (suma al total)";
-    ws.Range(filaActual, 7, filaActual, 12).Merge();
+    ws.Range(filaActual, 7, filaActual, totalCols).Merge();
     ws.Cell(filaActual, 7).Style
         .Font.SetItalic(true)
         .Font.SetFontSize(8)
@@ -144,7 +144,7 @@ public Task<byte[]> ExportarListadoReportesAsync(
     if (listaFueraPeriodo.Any())
     {
         ws.Cell(filaActual, 1).Value = "AJUSTES DE OTROS PERÍODOS (no afectan el total anterior)";
-        ws.Range(filaActual, 1, filaActual, 12).Merge();
+        ws.Range(filaActual, 1, filaActual, totalCols).Merge();
         ws.Cell(filaActual, 1).Style
             .Font.SetBold(true)
             .Font.SetFontSize(10)
@@ -160,7 +160,7 @@ public Task<byte[]> ExportarListadoReportesAsync(
 
         foreach (var item in listaFueraPeriodo)
         {
-            EscribirFila(ws, filaActual, item, listaFueraPeriodo.IndexOf(item));
+            EscribirFila(ws, filaActual, item, listaFueraPeriodo.IndexOf(item), tieneComision);
             filaActual++;
         }
 
@@ -170,7 +170,7 @@ public Task<byte[]> ExportarListadoReportesAsync(
         ws.Cell(filaActual, 6).FormulaA1 = $"=SUM(F{primeraFilaSeccion2}:F{ultimaFilaSeccion2})";
         ws.Cell(filaActual, 7).FormulaA1 = $"=SUM(G{primeraFilaSeccion2}:G{ultimaFilaSeccion2})";
         ws.Cell(filaActual, 8).FormulaA1 = $"=SUM(H{primeraFilaSeccion2}:H{ultimaFilaSeccion2})";
-        ws.Range(filaActual, 1, filaActual, 12).Style
+        ws.Range(filaActual, 1, filaActual, totalCols).Style
             .Font.SetBold(true)
             .Fill.SetBackgroundColor(XLColor.FromHtml("#E2CFED"))
             .NumberFormat.SetFormat("#,##0.00")
@@ -178,7 +178,7 @@ public Task<byte[]> ExportarListadoReportesAsync(
         filaActual++;
 
         ws.Cell(filaActual, 1).Value = "Estas notas afectan comprobantes emitidos en otros períodos y no se incluyen en el total del período.";
-        ws.Range(filaActual, 1, filaActual, 12).Merge();
+        ws.Range(filaActual, 1, filaActual, totalCols).Merge();
         ws.Cell(filaActual, 1).Style
             .Font.SetItalic(true)
             .Font.SetFontSize(8)
@@ -192,7 +192,7 @@ public Task<byte[]> ExportarListadoReportesAsync(
     if (listaRechazados.Any())
     {
         ws.Cell(filaActual, 1).Value = "RECHAZADOS (solo informativo, no afectan totales)";
-        ws.Range(filaActual, 1, filaActual, 12).Merge();
+        ws.Range(filaActual, 1, filaActual, totalCols).Merge();
         ws.Cell(filaActual, 1).Style
             .Font.SetBold(true)
             .Font.SetFontSize(10)
@@ -206,12 +206,12 @@ public Task<byte[]> ExportarListadoReportesAsync(
 
         foreach (var item in listaRechazados)
         {
-            EscribirFila(ws, filaActual, item, listaRechazados.IndexOf(item));
+            EscribirFila(ws, filaActual, item, listaRechazados.IndexOf(item), tieneComision);
             filaActual++;
         }
 
         ws.Cell(filaActual, 1).Value = "Estos comprobantes fueron rechazados por SUNAT y no tienen efecto contable.";
-        ws.Range(filaActual, 1, filaActual, 12).Merge();
+        ws.Range(filaActual, 1, filaActual, totalCols).Merge();
         ws.Cell(filaActual, 1).Style
             .Font.SetItalic(true)
             .Font.SetFontSize(8)
@@ -225,6 +225,7 @@ public Task<byte[]> ExportarListadoReportesAsync(
     ws.Column(7).Width = 14; ws.Column(8).Width = 14;
     ws.Column(9).Width = 10; ws.Column(10).Width = 20;
     ws.Column(11).Width = 20; ws.Column(12).Width = 12;
+    if (tieneComision) ws.Column(13).Width = 18;
 
     return Task.FromResult(ToBytes(wb));
 }
@@ -427,13 +428,15 @@ public Task<byte[]> ExportarListadoReportesAsync(
         string? clienteNumDoc = null)
     {
         var movimientos = datos.ToList();
+        bool tieneComisionCaja = movimientos.Any(x => (x.TotalComisionPagoTarjeta ?? 0) > 0);
+        int totalColsCaja = tieneComisionCaja ? 14 : 13;
 
         using var wb = new XLWorkbook();
         var ws = wb.Worksheets.Add("Control de Caja");
 
         // ── Título ────────────────────────────────────────────────────────────────
         ws.Cell(1, 1).Value = titulo;
-        ws.Range(1, 1, 1, 13).Merge();
+        ws.Range(1, 1, 1, totalColsCaja).Merge();
         ws.Cell(1, 1).Style
             .Font.SetBold(true)
             .Font.SetFontSize(14)
@@ -444,19 +447,16 @@ public Task<byte[]> ExportarListadoReportesAsync(
 
         // ── Subtítulo filtros ─────────────────────────────────────────────────────
         ws.Cell(2, 1).Value = BuildFiltros(ruc, codEstablecimiento, fechaDesde, fechaHasta, usuarioCreacion, clienteNumDoc);
-        ws.Range(2, 1, 2, 13).Merge();
+        ws.Range(2, 1, 2, totalColsCaja).Merge();
         ws.Cell(2, 1).Style
             .Font.SetItalic(true)
             .Font.SetFontSize(9)
             .Font.SetFontColor(XLColor.Gray)
             .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
 
-        var headers = new[]
-        {
-            "N° Comprobante", "Tipo", "F. Emisión", "Cliente", "Doc. Cliente",
-            "Val. Venta", "IGV", "Importe Total", "Moneda", "Estado SUNAT",
-            "Doc. Afectado", "Tipo Pago", "Monto Crédito"
-        };
+        var headers = tieneComisionCaja
+            ? new[] { "N° Comprobante", "Tipo", "F. Emisión", "Cliente", "Doc. Cliente", "Val. Venta", "IGV", "Importe Total", "Moneda", "Estado SUNAT", "Doc. Afectado", "Tipo Pago", "Monto Crédito", "Comisión Tarjeta" }
+            : new[] { "N° Comprobante", "Tipo", "F. Emisión", "Cliente", "Doc. Cliente", "Val. Venta", "IGV", "Importe Total", "Moneda", "Estado SUNAT", "Doc. Afectado", "Tipo Pago", "Monto Crédito" };
 
         int filaActual = 4;
 
@@ -464,7 +464,7 @@ public Task<byte[]> ExportarListadoReportesAsync(
         // SECCIÓN — Movimientos del período
         // ═════════════════════════════════════════════════════════════════════════
         ws.Cell(filaActual, 1).Value = "MOVIMIENTOS DEL PERÍODO";
-        ws.Range(filaActual, 1, filaActual, 13).Merge();
+        ws.Range(filaActual, 1, filaActual, totalColsCaja).Merge();
         ws.Cell(filaActual, 1).Style
             .Font.SetBold(true)
             .Font.SetFontSize(10)
@@ -480,7 +480,7 @@ public Task<byte[]> ExportarListadoReportesAsync(
 
         foreach (var item in movimientos)
         {
-            EscribirFilaControlCaja(ws, filaActual, item, movimientos.IndexOf(item));
+            EscribirFilaControlCaja(ws, filaActual, item, movimientos.IndexOf(item), tieneComisionCaja);
             filaActual++;
         }
 
@@ -491,7 +491,7 @@ public Task<byte[]> ExportarListadoReportesAsync(
         ws.Cell(filaActual, 6).FormulaA1 = $"=SUM(F{primeraFila}:F{ultimaFila})";
         ws.Cell(filaActual, 7).FormulaA1 = $"=SUM(G{primeraFila}:G{ultimaFila})";
         ws.Cell(filaActual, 8).FormulaA1 = $"=SUM(H{primeraFila}:H{ultimaFila})";
-        ws.Range(filaActual, 1, filaActual, 13).Style
+        ws.Range(filaActual, 1, filaActual, totalColsCaja).Style
             .Font.SetBold(true)
             .Fill.SetBackgroundColor(XLColor.FromHtml("#C6EFCE"))
             .NumberFormat.SetFormat("#,##0.00")
@@ -509,7 +509,7 @@ public Task<byte[]> ExportarListadoReportesAsync(
         {
             filaActual += 2;
             ws.Cell(filaActual, 1).Value = "⚠ SALDO NEGATIVO — Revisar notas de crédito del período";
-            ws.Range(filaActual, 1, filaActual, 13).Merge();
+            ws.Range(filaActual, 1, filaActual, totalColsCaja).Merge();
             ws.Cell(filaActual, 1).Style
                 .Font.SetBold(true)
                 .Font.SetFontSize(10)
@@ -526,11 +526,12 @@ public Task<byte[]> ExportarListadoReportesAsync(
         ws.Column(9).Width = 10; ws.Column(10).Width = 20;
         ws.Column(11).Width = 20; ws.Column(12).Width = 12;
         ws.Column(13).Width = 14;
+        if (tieneComisionCaja) ws.Column(14).Width = 18;
 
         return Task.FromResult(ToBytes(wb));
     }
 
-    private static void EscribirFilaControlCaja(IXLWorksheet ws, int fila, ListarComprobanteDTO item, int index)
+    private static void EscribirFilaControlCaja(IXLWorksheet ws, int fila, ListarComprobanteDTO item, int index, bool mostrarComision = false)
     {
         var bgColor = item.TipoComprobante switch
         {
@@ -600,6 +601,19 @@ public Task<byte[]> ExportarListadoReportesAsync(
         ws.Cell(fila, 8).Style.NumberFormat.Format = "#,##0.00";
         ws.Cell(fila, 13).Style.NumberFormat.Format = "#,##0.00";
 
+        if (mostrarComision)
+        {
+            if ((item.TotalComisionPagoTarjeta ?? 0) > 0)
+            {
+                ws.Cell(fila, 14).Value = item.TotalComisionPagoTarjeta;
+                ws.Cell(fila, 14).Style.NumberFormat.Format = "#,##0.00";
+            }
+            else
+            {
+                ws.Cell(fila, 14).Value = "-";
+            }
+        }
+
         if (item.TipoComprobante == "07")
         {
             ws.Cell(fila, 6).Style.Font.SetFontColor(XLColor.Red);
@@ -607,10 +621,11 @@ public Task<byte[]> ExportarListadoReportesAsync(
             ws.Cell(fila, 8).Style.Font.SetFontColor(XLColor.Red);
         }
 
+        int cols = mostrarComision ? 14 : 13;
         if (esRechazado2)
-            ws.Range(fila, 1, fila, 13).Style.Font.SetFontColor(XLColor.Gray);
+            ws.Range(fila, 1, fila, cols).Style.Font.SetFontColor(XLColor.Gray);
 
-        ws.Range(fila, 1, fila, 13).Style
+        ws.Range(fila, 1, fila, cols).Style
             .Fill.SetBackgroundColor(bgColor)
             .Border.SetOutsideBorder(XLBorderStyleValues.Thin)
             .Border.SetInsideBorder(XLBorderStyleValues.Hair);
@@ -644,7 +659,7 @@ public Task<byte[]> ExportarListadoReportesAsync(
         return filtros;
     }
 
-private static void EscribirFila(IXLWorksheet ws, int fila, ListarComprobanteDTO item, int index)
+private static void EscribirFila(IXLWorksheet ws, int fila, ListarComprobanteDTO item, int index, bool mostrarComision = false)
 {
     var esRechazado = item.EstadoSunat == "RECHAZADO";
 
@@ -700,6 +715,19 @@ private static void EscribirFila(IXLWorksheet ws, int fila, ListarComprobanteDTO
     ws.Cell(fila, 7).Style.NumberFormat.Format = "#,##0.00";
     ws.Cell(fila, 8).Style.NumberFormat.Format = "#,##0.00";
 
+    if (mostrarComision)
+    {
+        if ((item.TotalComisionPagoTarjeta ?? 0) > 0)
+        {
+            ws.Cell(fila, 13).Value = item.TotalComisionPagoTarjeta;
+            ws.Cell(fila, 13).Style.NumberFormat.Format = "#,##0.00";
+        }
+        else
+        {
+            ws.Cell(fila, 13).Value = "-";
+        }
+    }
+
     if (!esRechazado && item.TipoComprobante == "07")
     {
         ws.Cell(fila, 6).Style.Font.SetFontColor(XLColor.Red);
@@ -707,10 +735,11 @@ private static void EscribirFila(IXLWorksheet ws, int fila, ListarComprobanteDTO
         ws.Cell(fila, 8).Style.Font.SetFontColor(XLColor.Red);
     }
 
+    int cols = mostrarComision ? 13 : 12;
     if (esRechazado)
-        ws.Range(fila, 1, fila, 12).Style.Font.SetFontColor(XLColor.Gray);
+        ws.Range(fila, 1, fila, cols).Style.Font.SetFontColor(XLColor.Gray);
 
-    ws.Range(fila, 1, fila, 12).Style
+    ws.Range(fila, 1, fila, cols).Style
         .Fill.SetBackgroundColor(bgColor)
         .Border.SetOutsideBorder(XLBorderStyleValues.Thin)
         .Border.SetInsideBorder(XLBorderStyleValues.Hair);

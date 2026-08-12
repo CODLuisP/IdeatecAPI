@@ -48,7 +48,8 @@ public class ConfiguracionService : IConfiguracionService
             UmbralStockBajo   = configuracion.UmbralStockBajo,
             UseNotaVenta      = configuracion.UseNotaVenta,
             IsCajaAutopago    = configuracion.IsCajaAutopago,
-            UsaSire           = configuracion.UsaSire
+            UsaSire           = configuracion.UsaSire,
+            ComisionPagoTarjeta = configuracion.ComisionPagoTarjeta
         };
     }
 
@@ -80,7 +81,8 @@ public class ConfiguracionService : IConfiguracionService
                 UmbralStockBajo   = dto.UmbralStockBajo,
                 UseNotaVenta      = dto.UseNotaVenta,
                 IsCajaAutopago    = dto.IsCajaAutopago,
-                UsaSire           = dto.UsaSire
+                UsaSire           = dto.UsaSire,
+                ComisionPagoTarjeta = dto.ComisionPagoTarjeta
             };
 
             var result = await _unitOfWork.Configuracion.RegistrarConfiguracionAsync(configuracion);
@@ -125,7 +127,8 @@ public class ConfiguracionService : IConfiguracionService
                 UmbralStockBajo   = dto.UmbralStockBajo,
                 UseNotaVenta      = dto.UseNotaVenta,
                 IsCajaAutopago    = dto.IsCajaAutopago,
-                UsaSire           = dto.UsaSire
+                UsaSire           = dto.UsaSire,
+                ComisionPagoTarjeta = dto.ComisionPagoTarjeta
             };
 
             var result = await _unitOfWork.Configuracion.EditarConfiguracionAsync(ruc, configuracion);

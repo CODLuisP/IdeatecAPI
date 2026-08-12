@@ -25,7 +25,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
                 clienteDistrito, clienteUbigeo, clienteCorreo, enviadoPorCorreo, clienteWhatsApp, enviadoPorWhatsApp,
                 codigoTipoDescGlobal, descuentoGlobal, totalOperacionesGravadas, totalOperacionesExoneradas, 
                 totalOperacionesInafectas, totalOperacionesGratuitas, totalIgvGratuitas, totalIGV, totalDescuentos, totalOtrosCargos,
-                totalIcbper, totalImpuestos, valorVenta, subTotal, importeTotal, montoCredito,
+                totalIcbper, totalImpuestos, valorVenta, subTotal, importeTotal, montoCredito, totalComisionPagoTarjeta,
                 estadoSunat, enviadoEnResumen, xmlGenerado, usuarioCreacion, fechaCreacion, codigoHashCPE, observaciones
             ) VALUES (
                 @TipoOperacion, @TipoComprobante, @Serie, @Correlativo,
@@ -39,7 +39,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
                 @ClienteDistrito, @ClienteUbigeo, @ClienteCorreo, @EnviadoPorCorreo, @ClienteWhatsApp, @EnviadoPorWhatsApp,
                 @codigoTipoDescGlobal,  @DescuentoGlobal, @TotalOperacionesGravadas, @TotalOperacionesExoneradas, 
                 @TotalOperacionesInafectas, @TotalOperacionesGratuitas, @TotalIgvGratuitas, @TotalIGV, @TotalDescuentos, @TotalOtrosCargos,
-                @TotalIcbper, @TotalImpuestos, @ValorVenta, @SubTotal, @ImporteTotal, @MontoCredito,
+                @TotalIcbper, @TotalImpuestos, @ValorVenta, @SubTotal, @ImporteTotal, @MontoCredito, @TotalComisionPagoTarjeta,
                 @EstadoSunat,  @EnviadoEnResumen, @XmlGenerado, @UsuarioCreacion, @FechaCreacion, @CodigoHashCPE, @Observaciones
             );
             SELECT LAST_INSERT_ID();";
@@ -95,6 +95,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
             comprobante.SubTotal,
             comprobante.ImporteTotal,
             comprobante.MontoCredito,
+            comprobante.TotalComisionPagoTarjeta,
             comprobante.EstadoSunat,
             comprobante.XmlGenerado,
             comprobante.EnviadoEnResumen,
@@ -873,8 +874,9 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         comprobante.valorVenta              AS ValorVenta,
         comprobante.subTotal                AS SubTotal,
         comprobante.importeTotal            AS ImporteTotal,
-        comprobante.montoCredito            AS MontoCredito,
-        comprobante.tipDocAfectado          AS TipDocAfectado,
+        comprobante.montoCredito                AS MontoCredito,
+        comprobante.totalComisionPagoTarjeta    AS TotalComisionPagoTarjeta,
+        comprobante.tipDocAfectado              AS TipDocAfectado,
         comprobante.numDocAfectado          AS NumDocAfectado,
         comprobante.tipoNotaCreditoDebito   AS TipoNotaCreditoDebito,
         comprobante.motivoNota              AS MotivoNota,
