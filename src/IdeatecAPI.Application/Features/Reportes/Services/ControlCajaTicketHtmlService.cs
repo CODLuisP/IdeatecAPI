@@ -102,7 +102,11 @@ public class ControlCajaTicketHtmlService : IControlCajaTicketHtmlService
         if (countNV > 0)
             totalesHtml.Append($"<tr><td colspan=\"2\" style=\"font-size:8px;color:#92400E;background:#FEF3C7;padding:2px 4px;\">&#9733; Incluye notas de venta ({countNV})</td></tr>");
         if (totalComision > 0)
-            totalesHtml.Append($"<tr class=\"total-row\"><td>TOTAL COMISIÓN TARJETA</td><td class=\"tr\">S/ {totalComision:N2}</td></tr>");
+        {
+            totalesHtml.Append($"<tr><td style=\"font-size:8px;color:#666;padding:2px 1px;\">Comisión tarjeta</td><td style=\"font-size:8px;color:#666;text-align:right;padding:2px 1px;\">S/ {totalComision:N2}</td></tr>");
+            var ingresosTotales = totalPen + totalComision;
+            totalesHtml.Append($"<tr class=\"total-row\"><td>INGRESOS TOTALES</td><td class=\"tr\">S/ {ingresosTotales:N2}</td></tr>");
+        }
 
         // ── Resumen por medio de pago ────────────────────────────────────────
         var resumenHtml = new StringBuilder();

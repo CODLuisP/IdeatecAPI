@@ -127,9 +127,28 @@ public class ReportesPdfService : IReportesPdfService
                     }
 
                     if (tieneComision)
-                        col.Item().PaddingTop(6)
-                            .Text("* Este comprobante incluye comisión por pago con tarjeta.")
-                            .Italic().FontSize(7).FontColor("#92400E");
+                    {
+                        var totalComisionListado = lista.Sum(x => x.TotalComisionPagoTarjeta ?? 0);
+                        col.Item().PaddingTop(4).Row(r =>
+                        {
+                            r.RelativeItem()
+                                .Text("* Este comprobante incluye comisión por pago con tarjeta.")
+                                .Italic().FontSize(6).FontColor("#999999");
+                            r.AutoItem().AlignRight()
+                                .Text($"Total comisiones: S/ {totalComisionListado:N2}")
+                                .FontSize(7).FontColor("#666666");
+                        });
+
+                        var timpListado = ventas.Sum(x => x.TipoComprobante == "07" ? -x.ImporteTotal : x.ImporteTotal);
+                        var ingresosListado = timpListado + totalComisionListado;
+                        col.Item().PaddingTop(2).Row(r =>
+                        {
+                            r.RelativeItem();
+                            r.AutoItem().AlignRight()
+                                .Text($"Ingresos totales: S/ {ingresosListado:N2}")
+                                .Bold().FontSize(7).FontColor(Azul);
+                        });
+                    }
                 });
 
                 page.Footer().AlignRight().Text(txt =>
@@ -178,9 +197,28 @@ public class ReportesPdfService : IReportesPdfService
                         "TOTAL NETO DEL PERÍODO", "#C6EFCE", Azul, fontSize: 7, pad: 2));
 
                     if (tieneComisionCC)
-                        col.Item().PaddingTop(6)
-                            .Text("* Este comprobante incluye comisión por pago con tarjeta.")
-                            .Italic().FontSize(7).FontColor("#92400E");
+                    {
+                        var totalComisionCC = movimientos.Sum(x => x.TotalComisionPagoTarjeta ?? 0);
+                        col.Item().PaddingTop(4).Row(r =>
+                        {
+                            r.RelativeItem()
+                                .Text("* Este comprobante incluye comisión por pago con tarjeta.")
+                                .Italic().FontSize(6).FontColor("#999999");
+                            r.AutoItem().AlignRight()
+                                .Text($"Total comisiones: S/ {totalComisionCC:N2}")
+                                .FontSize(7).FontColor("#666666");
+                        });
+
+                        var timpCC = movimientos.Sum(x => x.TipoComprobante == "07" ? -x.ImporteTotal : x.ImporteTotal);
+                        var ingresosCC = timpCC + totalComisionCC;
+                        col.Item().PaddingTop(2).Row(r =>
+                        {
+                            r.RelativeItem();
+                            r.AutoItem().AlignRight()
+                                .Text($"Ingresos totales: S/ {ingresosCC:N2}")
+                                .Bold().FontSize(7).FontColor(Azul);
+                        });
+                    }
                 });
 
                 page.Footer().AlignRight().Text(txt =>
@@ -665,18 +703,29 @@ public class ReportesPdfService : IReportesPdfService
                                               .Bold().FontSize(10).FontColor(ColorBlanco);
                                          });
 
-                                     // Fila total comisión por pago con tarjeta
+                                     // Fila comisión por pago con tarjeta
                                      if (totalComision > 0)
-                                         t.Item().Background("#FEF3C7").BorderBottom(1).BorderColor("#F59E0B")
+                                     {
+                                         t.Item().Background(ColorGris).BorderBottom(1).BorderColor(ColorBorde)
                                           .Padding(4).Row(r =>
                                           {
                                               r.RelativeItem()
-                                               .Text("TOTAL COMISIÓN TARJETA")
-                                               .Bold().FontSize(8).FontColor("#92400E");
+                                               .Text("Comisión tarjeta").FontSize(8).FontColor("#666666");
                                               r.ConstantItem(80).AlignRight()
-                                               .Text($"S/ {totalComision:N2}")
-                                               .Bold().FontSize(8).FontColor("#92400E");
+                                               .Text($"S/ {totalComision:N2}").FontSize(8).FontColor("#666666");
                                           });
+
+                                         var ingresosTotales = totalPen + totalComision;
+                                         t.Item().Background(ColorAzul).Padding(5).Row(r =>
+                                         {
+                                             r.RelativeItem()
+                                              .Text("INGRESOS TOTALES")
+                                              .Bold().FontSize(10).FontColor(ColorBlanco);
+                                             r.ConstantItem(90).AlignRight()
+                                              .Text($"S/ {ingresosTotales:N2}")
+                                              .Bold().FontSize(10).FontColor(ColorBlanco);
+                                         });
+                                     }
 
                                      // Nota de inclusión de NV
                                      if (countNV > 0)

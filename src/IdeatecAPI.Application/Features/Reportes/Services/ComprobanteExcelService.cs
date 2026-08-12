@@ -109,15 +109,39 @@ public Task<byte[]> ExportarListadoReportesAsync(
     int ultimaFilaSeccion1 = filaActual - 1;
 
     // Total sección 1
+    int filaTotalListado = filaActual;
     ws.Cell(filaActual, 1).Value = "TOTAL NETO DEL PERÍODO";
     ws.Cell(filaActual, 6).FormulaA1 = $"=SUM(F{primeraFilaSeccion1}:F{ultimaFilaSeccion1})";
     ws.Cell(filaActual, 7).FormulaA1 = $"=SUM(G{primeraFilaSeccion1}:G{ultimaFilaSeccion1})";
     ws.Cell(filaActual, 8).FormulaA1 = $"=SUM(H{primeraFilaSeccion1}:H{ultimaFilaSeccion1})";
+    if (tieneComision)
+    {
+        ws.Cell(filaActual, 13).FormulaA1 = $"=SUM(M{primeraFilaSeccion1}:M{ultimaFilaSeccion1})";
+        ws.Cell(filaActual, 13).Style.NumberFormat.Format = "#,##0.00";
+    }
     ws.Range(filaActual, 1, filaActual, totalCols).Style
         .Font.SetBold(true)
         .Fill.SetBackgroundColor(XLColor.FromHtml("#BDD7EE"))
         .NumberFormat.SetFormat("#,##0.00")
         .Border.SetOutsideBorder(XLBorderStyleValues.Medium);
+
+    if (tieneComision)
+    {
+        filaActual++;
+        var celdaLbl = ws.Cell(filaActual, totalCols - 1);
+        celdaLbl.Value = "INGRESOS TOTALES:";
+        celdaLbl.Style.Font.Bold = true;
+        celdaLbl.Style.Font.FontSize = 10;
+        celdaLbl.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+
+        var celdaVal = ws.Cell(filaActual, totalCols);
+        celdaVal.FormulaA1 = $"=H{filaTotalListado}+M{filaTotalListado}";
+        celdaVal.Style.Font.Bold = true;
+        celdaVal.Style.Font.FontSize = 10;
+        celdaVal.Style.NumberFormat.Format = "#,##0.00";
+        celdaVal.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+    }
+
     filaActual++;
 
     // Leyenda sección 1
@@ -170,6 +194,11 @@ public Task<byte[]> ExportarListadoReportesAsync(
         ws.Cell(filaActual, 6).FormulaA1 = $"=SUM(F{primeraFilaSeccion2}:F{ultimaFilaSeccion2})";
         ws.Cell(filaActual, 7).FormulaA1 = $"=SUM(G{primeraFilaSeccion2}:G{ultimaFilaSeccion2})";
         ws.Cell(filaActual, 8).FormulaA1 = $"=SUM(H{primeraFilaSeccion2}:H{ultimaFilaSeccion2})";
+        if (tieneComision)
+        {
+            ws.Cell(filaActual, 13).FormulaA1 = $"=SUM(M{primeraFilaSeccion2}:M{ultimaFilaSeccion2})";
+            ws.Cell(filaActual, 13).Style.NumberFormat.Format = "#,##0.00";
+        }
         ws.Range(filaActual, 1, filaActual, totalCols).Style
             .Font.SetBold(true)
             .Fill.SetBackgroundColor(XLColor.FromHtml("#E2CFED"))
@@ -487,15 +516,38 @@ public Task<byte[]> ExportarListadoReportesAsync(
         int ultimaFila = filaActual - 1;
 
         // ── Total del período ─────────────────────────────────────────────────────
+        int filaTotalCaja = filaActual;
         ws.Cell(filaActual, 1).Value = "TOTAL";
         ws.Cell(filaActual, 6).FormulaA1 = $"=SUM(F{primeraFila}:F{ultimaFila})";
         ws.Cell(filaActual, 7).FormulaA1 = $"=SUM(G{primeraFila}:G{ultimaFila})";
         ws.Cell(filaActual, 8).FormulaA1 = $"=SUM(H{primeraFila}:H{ultimaFila})";
+        if (tieneComisionCaja)
+        {
+            ws.Cell(filaActual, 14).FormulaA1 = $"=SUM(N{primeraFila}:N{ultimaFila})";
+            ws.Cell(filaActual, 14).Style.NumberFormat.Format = "#,##0.00";
+        }
         ws.Range(filaActual, 1, filaActual, totalColsCaja).Style
             .Font.SetBold(true)
             .Fill.SetBackgroundColor(XLColor.FromHtml("#C6EFCE"))
             .NumberFormat.SetFormat("#,##0.00")
             .Border.SetOutsideBorder(XLBorderStyleValues.Medium);
+
+        if (tieneComisionCaja)
+        {
+            filaActual++;
+            var celdaLbl = ws.Cell(filaActual, totalColsCaja - 1);
+            celdaLbl.Value = "INGRESOS TOTALES:";
+            celdaLbl.Style.Font.Bold = true;
+            celdaLbl.Style.Font.FontSize = 10;
+            celdaLbl.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+
+            var celdaVal = ws.Cell(filaActual, totalColsCaja);
+            celdaVal.FormulaA1 = $"=H{filaTotalCaja}+N{filaTotalCaja}";
+            celdaVal.Style.Font.Bold = true;
+            celdaVal.Style.Font.FontSize = 10;
+            celdaVal.Style.NumberFormat.Format = "#,##0.00";
+            celdaVal.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+        }
 
         // ── Aviso saldo negativo (solo considera movimientos del período) ─────────
         var totalImporte = movimientos

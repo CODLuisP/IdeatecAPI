@@ -542,6 +542,7 @@ public class ReportesService : IReportesService
                     EstadoSunat           = c.EstadoSunat,
                     ComprobanteAfectadoId = c.ComprobanteAfectadoId,
                     NumDocAfectado        = c.NumDocAfectado,
+                    TotalComisionPagoTarjeta = esRechazado ? null : c.TotalComisionPagoTarjeta,
                     Pagos                 = esRechazado ? new() : (pagosPorId.TryGetValue(c.ComprobanteId, out var p) ? p : new())
                 };
             }).ToList();
