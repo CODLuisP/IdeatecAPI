@@ -30,5 +30,5 @@ public interface IProductoRepository : IRepository<Producto>
     Task<bool> ActualizarCostoSinStockAsync(int productoId, int sucursalId, decimal precioCompra);
     Task<Producto?> GetInfoConversionBySucursalProductoIdAsync(int sucursalProductoId);
     Task<bool> DescontarStockBaseAsync(int productoBaseId, int sucursalId, decimal cantidad);
-    Task<bool> ExisteCodigoBarrasAsync(string codigoBarras);
+    Task<bool> ExisteCodigoBarrasAsync(string codigoBarras, int sucursalId);
 }

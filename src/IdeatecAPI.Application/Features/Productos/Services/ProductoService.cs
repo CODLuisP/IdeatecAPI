@@ -72,7 +72,7 @@ public class ProductoService : IProductoService
                 // Valida unicidad de código de barras antes de crear
                 if (!string.IsNullOrWhiteSpace(dto.CodigoBarras))
                 {
-                    var barrasOcupado = await _unitOfWork.Productos.ExisteCodigoBarrasAsync(dto.CodigoBarras);
+                    var barrasOcupado = await _unitOfWork.Productos.ExisteCodigoBarrasAsync(dto.CodigoBarras, dto.SucursalId);
                     if (barrasOcupado)
                         throw new InvalidOperationException($"El código de barras '{dto.CodigoBarras}' ya está asignado a otro producto.");
                 }

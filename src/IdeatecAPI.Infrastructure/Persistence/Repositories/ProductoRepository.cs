@@ -773,13 +773,18 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
         );
     }
 
-    public async Task<bool> ExisteCodigoBarrasAsync(string codigoBarras)
+    public async Task<bool> ExisteCodigoBarrasAsync(string codigoBarras, int sucursalId)
     {
-        var sql = @"SELECT COUNT(1) FROM producto
-                    WHERE codigoBarras = @CodigoBarras
-                    AND codigoBarras != ''
-                    AND estado = 1";
-        var count = await _connection.ExecuteScalarAsync<int>(sql, new { CodigoBarras = codigoBarras }, _transaction);
+        var sql = @"SELECT COUNT(1) FROM producto p
+                    INNER JOIN sucursalproducto sp ON sp.productoID = p.productoID AND sp.estado = 1
+                    INNER JOIN sucursal s ON s.sucursalID = sp.sucursalID AND s.estado = 1
+                    WHERE p.codigoBarras = @CodigoBarras
+                    AND p.codigoBarras != ''
+                    AND p.estado = 1
+                    AND s.empresaRuc = (
+                        SELECT empresaRuc FROM sucursal WHERE sucursalID = @SucursalId AND estado = 1
+                    )";
+        var count = await _connection.ExecuteScalarAsync<int>(sql, new { CodigoBarras = codigoBarras, SucursalId = sucursalId }, _transaction);
         return count > 0;
     }
 
