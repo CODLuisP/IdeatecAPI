@@ -45,6 +45,9 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
             sp.porcentajeDescuento       AS PorcentajeDescuento,
             sp.usuarioId                 AS UsuarioId,
             sp.ubicacionTienda           AS UbicacionTienda,
+            sp.alertaVencimientoActiva   AS AlertaVencimientoActiva,
+            sp.alertaStockBajoActiva     AS AlertaStockBajoActiva,
+            sp.stockMinimoAlerta         AS StockMinimoAlerta,
             (SELECT MIN(il.fechaVencimiento) FROM inventario_lote il
                 WHERE il.sucursalProductoID = sp.sucursalProductoID
                 AND il.saldoCantidad > 0
@@ -158,6 +161,9 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
                 sp.porcentajeDescuento       AS PorcentajeDescuento,
                 sp.usuarioId                 AS UsuarioId,
                 sp.ubicacionTienda           AS UbicacionTienda,
+            sp.alertaVencimientoActiva   AS AlertaVencimientoActiva,
+            sp.alertaStockBajoActiva     AS AlertaStockBajoActiva,
+            sp.stockMinimoAlerta         AS StockMinimoAlerta,
                 (SELECT MIN(il.fechaVencimiento) FROM inventario_lote il
                     WHERE il.sucursalProductoID = sp.sucursalProductoID
                     AND il.saldoCantidad > 0
@@ -247,6 +253,9 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
             sp.porcentajeDescuento       AS PorcentajeDescuento,
             sp.usuarioId                 AS UsuarioId,
             sp.ubicacionTienda           AS UbicacionTienda,
+            sp.alertaVencimientoActiva   AS AlertaVencimientoActiva,
+            sp.alertaStockBajoActiva     AS AlertaStockBajoActiva,
+            sp.stockMinimoAlerta         AS StockMinimoAlerta,
             (SELECT MIN(il.fechaVencimiento) FROM inventario_lote il
                 WHERE il.sucursalProductoID = sp.sucursalProductoID
                 AND il.saldoCantidad > 0
@@ -328,11 +337,13 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
                 productoID, sucursalID, precioUnitario, stock,
                 precioMayorista, cantidadMinimaMayorista, enPromocion, porcentajeDescuento,
                 usuarioId, ubicacionTienda,
+                alertaVencimientoActiva, alertaStockBajoActiva, stockMinimoAlerta,
                 estado, fechaCreacion
             ) VALUES (
                 @ProductoId, @SucursalId, @PrecioUnitario, @Stock,
                 @PrecioMayorista, @CantidadMinimaMayorista, @EnPromocion, @PorcentajeDescuento,
                 @UsuarioId, @UbicacionTienda,
+                @AlertaVencimientoActiva, @AlertaStockBajoActiva, @StockMinimoAlerta,
                 @Estado, @FechaCreacion
             );
             SELECT LAST_INSERT_ID();";
@@ -376,7 +387,10 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
                 enPromocion             = @EnPromocion,
                 porcentajeDescuento     = @PorcentajeDescuento,
                 usuarioId               = @UsuarioId,
-                ubicacionTienda         = @UbicacionTienda
+                ubicacionTienda         = @UbicacionTienda,
+                alertaVencimientoActiva = @AlertaVencimientoActiva,
+                alertaStockBajoActiva   = @AlertaStockBajoActiva,
+                stockMinimoAlerta       = @StockMinimoAlerta
             WHERE sucursalProductoID = @SucursalProductoId AND estado = 1";
 
         var filas = await _connection.ExecuteAsync(sql, sucursalProducto, _transaction);
@@ -662,6 +676,9 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
                 sp.porcentajeDescuento       AS PorcentajeDescuento,
                 sp.usuarioId                 AS UsuarioId,
                 sp.ubicacionTienda           AS UbicacionTienda,
+            sp.alertaVencimientoActiva   AS AlertaVencimientoActiva,
+            sp.alertaStockBajoActiva     AS AlertaStockBajoActiva,
+            sp.stockMinimoAlerta         AS StockMinimoAlerta,
                 (SELECT MIN(il.fechaVencimiento) FROM inventario_lote il
                     WHERE il.sucursalProductoID = sp.sucursalProductoID
                     AND il.saldoCantidad > 0

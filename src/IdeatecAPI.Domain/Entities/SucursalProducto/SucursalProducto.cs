@@ -19,6 +19,11 @@ public class SucursalProducto
     public bool? Estado { get; set; }
     public DateTime? FechaCreacion { get; set; }
 
+    // Alertas configurables por producto (null = comportamiento por defecto, alerta activa).
+    public bool? AlertaVencimientoActiva { get; set; }
+    public bool? AlertaStockBajoActiva { get; set; }
+    public decimal? StockMinimoAlerta { get; set; }
+
     // Dato enriquecido para listados: fecha de vencimiento más próxima entre los
     // lotes de inventario con saldo (no se persiste en esta tabla, ver inventario_lote).
     public DateTime? ProximoVencimiento { get; set; }

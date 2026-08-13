@@ -25,6 +25,10 @@ public class RegistrarProductoDTO
     public int SucursalId { get; set; }
     public decimal PrecioUnitario { get; set; }
     public decimal? Stock { get; set; }
+    // Costo de compra del stock inicial: si se informa junto con Stock, se registra
+    // como lote PEPS (origen SALDO_INICIAL) para que kardex/valorizado/rentabilidad lo reconozcan.
+    public decimal? CostoUnitario { get; set; }
+    public DateTime? FechaVencimiento { get; set; }
     public decimal? PrecioMayorista { get; set; }
     public int? CantidadMinimaMayorista { get; set; }
     public bool? EnPromocion { get; set; }
@@ -33,4 +37,9 @@ public class RegistrarProductoDTO
     // Datos informativos opcionales
     public int? UsuarioId { get; set; }
     public string? UbicacionTienda { get; set; }
+
+    // Alertas configurables por producto (null = queda como alerta activa por defecto).
+    public bool? AlertaVencimientoActiva { get; set; }
+    public bool? AlertaStockBajoActiva { get; set; }
+    public decimal? StockMinimoAlerta { get; set; }
 }

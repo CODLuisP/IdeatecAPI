@@ -70,6 +70,7 @@ public class InventarioPepsService : IInventarioPepsService
         {
             "SALDO_INICIAL" => "ENTRADA_SALDO_INICIAL",
             "DEVOLUCION_VENTA" => "ENTRADA_DEVOLUCION",
+            "AJUSTE_INVENTARIO" => "ENTRADA_AJUSTE",
             _ => "ENTRADA_COMPRA",
         };
 

@@ -20,6 +20,8 @@ public class Configuracion
     public bool? DescUnitario { get; set; }
     public bool? IsStock { get; set; }
     public int? UmbralStockBajo { get; set; }
+    // Días de anticipación antes del vencimiento para marcar un lote como "próximo a vencer".
+    public int? DiasAlertaVencimiento { get; set; }
     public bool? UseNotaVenta { get; set; }
     public bool? IsCajaAutopago { get; set; }
     public bool? UsaSire { get; set; }
