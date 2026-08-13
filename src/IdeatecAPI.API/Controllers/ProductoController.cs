@@ -336,6 +336,11 @@ public class ProductoController : ControllerBase
             _logger.LogWarning("Argumento inválido al editar producto ID {ProductoId}", productoId);
             return BadRequest(new { mensaje = ex.Message });
         }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning("Error al ajustar stock al editar producto ID {ProductoId}: {Mensaje}", productoId, ex.Message);
+            return BadRequest(new { mensaje = ex.Message });
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error al editar producto con ID {ProductoId}", productoId);

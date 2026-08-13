@@ -19,6 +19,7 @@ public class EditarConfiguracionDto
     public bool? DescUnitario { get; set; }
     public bool? IsStock { get; set; }
     public int? UmbralStockBajo { get; set; }
+    public int? DiasAlertaVencimiento { get; set; }
     public bool? UseNotaVenta { get; set; }
     public bool? IsCajaAutopago { get; set; }
     public bool? UsaSire { get; set; }

@@ -25,13 +25,13 @@ public class ConfiguracionRepository : DapperRepository<Configuracion>, IConfigu
                 (ruc, isimprime, tamañoimpresion, igv, isconsumo, guiaremision,
                  iscredito, itemsdefecto, isboletaorfactura, isenvioresumen,
                  isvale, deudascobrar, trabajadores, cargacomprobantes,
-                 afectacionigv, descunitario, isstock, umbralstockbajo, usenotaventa,
+                 afectacionigv, descunitario, isstock, umbralstockbajo, diasalertavencimiento, usenotaventa,
                  iscajaautopago, usasire, comisionPagoTarjeta)
             VALUES
                 (@Ruc, @IsImprime, @TamañoImpresion, @Igv, @IsConsumo, @GuiaRemision,
                  @IsCredito, @ItemsDefecto, @IsBoletaOrFactura, @IsEnvioResumen,
                  @IsVale, @DeudasCobrar, @Trabajadores, @CargaComprobantes,
-                 @AfectacionIgv, @DescUnitario, @IsStock, @UmbralStockBajo, @UseNotaVenta,
+                 @AfectacionIgv, @DescUnitario, @IsStock, @UmbralStockBajo, @DiasAlertaVencimiento, @UseNotaVenta,
                  @IsCajaAutopago, @UsaSire, @ComisionPagoTarjeta);";
 
         var result = await _connection.ExecuteAsync(sql, configuracion, _transaction);
@@ -60,6 +60,7 @@ public class ConfiguracionRepository : DapperRepository<Configuracion>, IConfigu
                 descunitario      = @DescUnitario,
                 isstock           = @IsStock,
                 umbralstockbajo   = @UmbralStockBajo,
+                diasalertavencimiento = @DiasAlertaVencimiento,
                 usenotaventa      = @UseNotaVenta,
                 iscajaautopago       = @IsCajaAutopago,
                 usasire              = @UsaSire,
@@ -85,6 +86,7 @@ public class ConfiguracionRepository : DapperRepository<Configuracion>, IConfigu
             configuracion.DescUnitario,
             configuracion.IsStock,
             configuracion.UmbralStockBajo,
+            configuracion.DiasAlertaVencimiento,
             configuracion.UseNotaVenta,
             configuracion.IsCajaAutopago,
             configuracion.UsaSire,

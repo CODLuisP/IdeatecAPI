@@ -116,11 +116,31 @@ public class ProductoService : IProductoService
                 PorcentajeDescuento = dto.PorcentajeDescuento,
                 UsuarioId = dto.UsuarioId,
                 UbicacionTienda = dto.UbicacionTienda,
+                AlertaVencimientoActiva = dto.AlertaVencimientoActiva,
+                AlertaStockBajoActiva = dto.AlertaStockBajoActiva,
+                StockMinimoAlerta = dto.StockMinimoAlerta,
                 Estado = true,
                 FechaCreacion = DateTime.Now
             };
 
             await _unitOfWork.Productos.RegistrarSucursalProductoAsync(sucursalProducto);
+
+            // Si se informó stock inicial, se registra también como lote PEPS (origen SALDO_INICIAL)
+            // para que kardex, stock valorizado y rentabilidad lo reconozcan desde la creación.
+            // RegistrarSaldoInicialAsync omite duplicados por SucursalProductoId, así que es seguro
+            // si luego alguien vuelve a correr el backfill manual de saldo inicial.
+            if (dto.Stock is decimal stockInicial && stockInicial > 0)
+            {
+                await _inventarioPepsService.RegistrarEntradaLoteAsync(
+                    sucursalProducto.SucursalProductoId,
+                    compraProveedorId: null,
+                    origen: "SALDO_INICIAL",
+                    cantidad: stockInicial,
+                    costoUnitario: dto.CostoUnitario ?? 0m,
+                    fecha: DateTime.Now,
+                    idUsuario: dto.UsuarioId,
+                    fechaVencimiento: dto.FechaVencimiento);
+            }
 
             _unitOfWork.Commit();
 
@@ -180,6 +200,38 @@ public class ProductoService : IProductoService
 
             await _unitOfWork.Productos.EditarProductoAsync(producto);
 
+            // Si el stock cambió, la diferencia se registra como movimiento PEPS (ajuste)
+            // para que kardex/valorizado/rentabilidad reflejen el nuevo stock, en vez de
+            // solo sobrescribir el número en sucursalproducto.
+            if (dto.Stock is decimal stockNuevo)
+            {
+                var infoActual = await _unitOfWork.Productos.GetInfoConversionBySucursalProductoIdAsync(dto.SucursalProductoId);
+                var stockActual = infoActual?.SucursalProducto?.Stock ?? 0m;
+                var delta = stockNuevo - stockActual;
+
+                if (delta > 0)
+                {
+                    await _inventarioPepsService.RegistrarEntradaLoteAsync(
+                        dto.SucursalProductoId,
+                        compraProveedorId: null,
+                        origen: "AJUSTE_INVENTARIO",
+                        cantidad: delta,
+                        costoUnitario: dto.CostoUnitario ?? 0m,
+                        fecha: DateTime.Now,
+                        idUsuario: dto.UsuarioId);
+                }
+                else if (delta < 0)
+                {
+                    await _inventarioPepsService.ConsumirFifoAsync(
+                        dto.SucursalProductoId,
+                        Math.Abs(delta),
+                        "SALIDA_AJUSTE",
+                        referenciaTipo: null,
+                        referenciaId: null,
+                        idUsuario: dto.UsuarioId);
+                }
+            }
+
             var sucursalProducto = new SucursalProducto
             {
                 SucursalProductoId = dto.SucursalProductoId,
@@ -190,7 +242,10 @@ public class ProductoService : IProductoService
                 EnPromocion = dto.EnPromocion ?? false,
                 PorcentajeDescuento = dto.PorcentajeDescuento,
                 UsuarioId = dto.UsuarioId,
-                UbicacionTienda = dto.UbicacionTienda
+                UbicacionTienda = dto.UbicacionTienda,
+                AlertaVencimientoActiva = dto.AlertaVencimientoActiva,
+                AlertaStockBajoActiva = dto.AlertaStockBajoActiva,
+                StockMinimoAlerta = dto.StockMinimoAlerta
             };
 
             await _unitOfWork.Productos.EditarSucursalProductoAsync(sucursalProducto);
@@ -395,7 +450,10 @@ public class ProductoService : IProductoService
             PorcentajeDescuento = p.SucursalProducto.PorcentajeDescuento,
             UsuarioId = p.SucursalProducto.UsuarioId,
             UbicacionTienda = p.SucursalProducto.UbicacionTienda,
-            ProximoVencimiento = p.SucursalProducto.ProximoVencimiento
+            ProximoVencimiento = p.SucursalProducto.ProximoVencimiento,
+            AlertaVencimientoActiva = p.SucursalProducto.AlertaVencimientoActiva,
+            AlertaStockBajoActiva = p.SucursalProducto.AlertaStockBajoActiva,
+            StockMinimoAlerta = p.SucursalProducto.StockMinimoAlerta
         }
     };
 

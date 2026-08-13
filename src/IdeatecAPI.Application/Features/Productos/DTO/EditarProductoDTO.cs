@@ -25,6 +25,8 @@ public class EditarProductoDTO
     public int SucursalProductoId { get; set; }
     public decimal? PrecioUnitario { get; set; }
     public decimal? Stock { get; set; }
+    // Costo de compra a usar SOLO si Stock sube respecto al valor actual (nuevo lote PEPS).
+    public decimal? CostoUnitario { get; set; }
     public decimal? PrecioMayorista { get; set; }
     public int? CantidadMinimaMayorista { get; set; }
     public bool? EnPromocion { get; set; }
@@ -34,4 +36,8 @@ public class EditarProductoDTO
     public int? UsuarioId { get; set; }
     public string? UbicacionTienda { get; set; }
 
+    // Alertas configurables por producto (null = queda como alerta activa por defecto).
+    public bool? AlertaVencimientoActiva { get; set; }
+    public bool? AlertaStockBajoActiva { get; set; }
+    public decimal? StockMinimoAlerta { get; set; }
 }

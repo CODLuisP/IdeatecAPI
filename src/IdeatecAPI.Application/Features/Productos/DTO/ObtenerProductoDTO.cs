@@ -41,6 +41,9 @@ public class ObtenerSucursalProductoDTO
     public int? UsuarioId { get; set; }
     public string? UbicacionTienda { get; set; }
     public DateTime? ProximoVencimiento { get; set; }
+    public bool? AlertaVencimientoActiva { get; set; }
+    public bool? AlertaStockBajoActiva { get; set; }
+    public decimal? StockMinimoAlerta { get; set; }
 }
 
 public class ObtenerCategoriaDTO
