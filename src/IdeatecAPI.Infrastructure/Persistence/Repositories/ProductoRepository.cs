@@ -13,6 +13,41 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
     {
     }
 
+    // Quita tildes/diéresis y pasa a minúsculas, para que la búsqueda no distinga mayúsculas
+    // ni acentos. Debe reflejar exactamente el mismo mapeo que ExpresionColumnaNormalizada,
+    // para que el token buscado en C# coincida con lo que MySQL normaliza en la columna.
+    private static string NormalizarTexto(string texto) => texto
+        .ToLowerInvariant()
+        .Replace('á', 'a').Replace('é', 'e').Replace('í', 'i').Replace('ó', 'o').Replace('ú', 'u')
+        .Replace('ü', 'u').Replace('ñ', 'n');
+
+    private static string ExpresionColumnaNormalizada(string columna) =>
+        $"LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE({columna}, 'á','a'), 'é','e'), 'í','i'), 'ó','o'), 'ú','u'), 'ü','u'), 'ñ','n'))";
+
+    // Búsqueda "difusa" por nombre: exige que todas las palabras de la búsqueda aparezcan en
+    // el nombre (en cualquier orden, como substrings), ignorando mayúsculas y tildes. Así
+    // "Alacena Mayonesa" o "MAYONESA 250" encuentran "Mayonesa Alacena 250 g".
+    private static (string Sql, DynamicParameters Parametros) ConstruirCondicionNombre(string palabra, string columna, string prefijoParametro)
+    {
+        var tokens = NormalizarTexto(palabra).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var parametros = new DynamicParameters();
+
+        if (tokens.Length == 0)
+            return ("1 = 0", parametros);
+
+        var expresion = ExpresionColumnaNormalizada(columna);
+        var condiciones = new List<string>();
+
+        for (var i = 0; i < tokens.Length; i++)
+        {
+            var nombreParametro = $"{prefijoParametro}{i}";
+            condiciones.Add($"{expresion} LIKE @{nombreParametro}");
+            parametros.Add(nombreParametro, $"%{tokens[i]}%");
+        }
+
+        return (string.Join(" AND ", condiciones), parametros);
+    }
+
     private const string SelectColumns = @"
         SELECT
             p.productoID        AS ProductoId,
@@ -197,11 +232,19 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
 
     public async Task<IEnumerable<Producto>> SearchBySucursalAsync(int sucursalId, string palabra)
     {
+        var (condicionNombre, parametrosNombre) = ConstruirCondicionNombre(palabra, "p.nomProducto", "Nombre");
+
         var sql = $@"{SelectColumns}
         AND sp.sucursalID = @SucursalId
-        AND (p.nomProducto LIKE @Palabra OR p.codigo LIKE @Palabra OR p.codigoBarras = @PalabraExacta)
+        AND (({condicionNombre}) OR p.codigo LIKE @Palabra OR p.codigoBarras = @PalabraExacta)
         ORDER BY p.nomProducto ASC
         LIMIT 10";
+
+        var parametros = new DynamicParameters();
+        parametros.AddDynamicParams(parametrosNombre);
+        parametros.Add("SucursalId", sucursalId);
+        parametros.Add("Palabra", $"%{palabra}%");
+        parametros.Add("PalabraExacta", palabra);
 
         var productos = await _connection.QueryAsync<Producto, Categoria, SucursalProducto, Producto>(
             sql,
@@ -211,7 +254,7 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
                 producto.SucursalProducto = sucursalProducto;
                 return producto;
             },
-            new { SucursalId = sucursalId, Palabra = $"%{palabra}%", PalabraExacta = palabra },
+            parametros,
             transaction: _transaction,
             splitOn: "CategoriaId,SucursalProductoId"
         );
@@ -221,7 +264,9 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
 
     public async Task<IEnumerable<Producto>> SearchByRucAsync(string empresaRuc, string palabra)
     {
-        var sql = @"
+        var (condicionNombreRuc, parametrosNombreRuc) = ConstruirCondicionNombre(palabra, "p.nomProducto", "Nombre");
+
+        var sql = $@"
         SELECT
             p.productoID        AS ProductoId,
             p.codigo            AS Codigo,
@@ -269,9 +314,15 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
           AND sp.estado = 1
           AND s.estado = 1
           AND s.empresaRuc = @EmpresaRuc
-          AND (p.nomProducto LIKE @Palabra OR p.codigo LIKE @Palabra OR p.codigoBarras = @PalabraExacta)
+          AND (({condicionNombreRuc}) OR p.codigo LIKE @Palabra OR p.codigoBarras = @PalabraExacta)
         ORDER BY p.nomProducto ASC
         LIMIT 10";
+
+        var parametrosRuc = new DynamicParameters();
+        parametrosRuc.AddDynamicParams(parametrosNombreRuc);
+        parametrosRuc.Add("EmpresaRuc", empresaRuc);
+        parametrosRuc.Add("Palabra", $"%{palabra}%");
+        parametrosRuc.Add("PalabraExacta", palabra);
 
         var productos = await _connection.QueryAsync<Producto, Categoria, SucursalProducto, Producto>(
             sql,
@@ -281,7 +332,7 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
                 producto.SucursalProducto = sucursalProducto;
                 return producto;
             },
-            new { EmpresaRuc = empresaRuc, Palabra = $"%{palabra}%", PalabraExacta = palabra },
+            parametrosRuc,
             transaction: _transaction,
             splitOn: "CategoriaId,SucursalProductoId"
         );
@@ -591,7 +642,9 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
 
     public async Task<IEnumerable<Producto>> SearchProductosRucDisponiblesAsync(int sucursalId, string palabra)
     {
-        var sql = @"
+        var (condicionNombreDisponibles, parametrosNombreDisponibles) = ConstruirCondicionNombre(palabra, "p.nomProducto", "Nombre");
+
+        var sql = $@"
             SELECT DISTINCT
                 p.productoID        AS ProductoId,
                 p.codigo            AS Codigo,
@@ -624,9 +677,14 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
                 SELECT productoID FROM sucursalproducto 
                 WHERE sucursalID = @SucursalId AND estado = 1
             )
-            AND (p.nomProducto LIKE @Palabra OR p.codigo LIKE @Palabra)
+            AND (({condicionNombreDisponibles}) OR p.codigo LIKE @Palabra)
             ORDER BY p.nomProducto
             LIMIT 10";
+
+        var parametrosDisponibles = new DynamicParameters();
+        parametrosDisponibles.AddDynamicParams(parametrosNombreDisponibles);
+        parametrosDisponibles.Add("SucursalId", sucursalId);
+        parametrosDisponibles.Add("Palabra", $"%{palabra}%");
 
         var productos = await _connection.QueryAsync<Producto, Categoria, Producto>(
             sql,
@@ -635,14 +693,14 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
                 producto.Categoria = categoria;
                 return producto;
             },
-            new { SucursalId = sucursalId, Palabra = $"%{palabra}%" },
+            parametrosDisponibles,
             transaction: _transaction,
             splitOn: "CategoriaId"
         );
 
         return productos;
     }
-    
+
     public async Task<IEnumerable<Producto>> GetAllProductosRucAsync(string empresaRuc)
     {
         var sql = @"
