@@ -142,6 +142,13 @@ public class ProductoService : IProductoService
                     fechaVencimiento: dto.FechaVencimiento);
             }
 
+            // El "último precio de compra" se persiste también en la creación, igual que en
+            // la edición, para que quede visible/editable de forma independiente al lote PEPS.
+            if (dto.CostoUnitario is decimal costoUnitario)
+            {
+                await _unitOfWork.Productos.ActualizarCostoSinStockAsync(productoId, dto.SucursalId, costoUnitario);
+            }
+
             _unitOfWork.Commit();
 
             var productoCompleto = await _unitOfWork.Productos.GetProductoByIdAsync(productoId, dto.SucursalId);
