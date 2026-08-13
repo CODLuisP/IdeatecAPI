@@ -12,4 +12,9 @@ public class RegistrarCompraProveedorDTO
     public string? DocReferencia { get; set; }
     public int? IdUsuario { get; set; }
     public DateTime? FechaVencimiento { get; set; }
+
+    // Solo aplica cuando el único campo que cambia es FechaVencimiento y el lote tiene ventas
+    // parciales: confirma que se acepta el aviso de que el cambio también afecta el historial
+    // de lo ya vendido. Ver CompraProveedorService.EditarAsync.
+    public bool Confirmar { get; set; } = false;
 }

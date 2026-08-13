@@ -863,7 +863,9 @@ public class ComprobanteService : IComprobanteService
         // Se limita a los casos SIN CDR para no alterar el flujo de CDR ya existente.
         if (string.IsNullOrEmpty(sunatResponse.CdrBase64)
             && int.TryParse(sunatResponse.CodigoRespuesta, out var codSunat))
-            return codSunat is >= 1000 and < 4000 ? "RECHAZADO" : "PENDIENTE";
+            return codSunat is >= 1000 and < 4000 || EsRechazoPermamente(codSunat)
+                ? "RECHAZADO"
+                : "PENDIENTE";
 
         switch (sunatResponse.CodigoRespuesta)
         {
@@ -888,6 +890,8 @@ public class ComprobanteService : IComprobanteService
                 return !string.IsNullOrEmpty(sunatResponse.CdrBase64) ? "RECHAZADO" : "PENDIENTE";
         }
     }
+
+    private static bool EsRechazoPermamente(int codigo) => codigo is >= 150 and <= 154;
 
     private static string ObtenerTipoCarpeta(string tipoComprobante) => tipoComprobante switch
     {

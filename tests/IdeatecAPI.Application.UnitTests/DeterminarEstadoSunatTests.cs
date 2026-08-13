@@ -77,4 +77,39 @@ public class DeterminarEstadoSunatTests
 
         Assert.Equal("PENDIENTE", estado);
     }
+
+    [Theory]
+    [InlineData("0150")]
+    [InlineData("0151")]
+    [InlineData("0152")]
+    [InlineData("0153")]
+    [InlineData("0154")]
+    public void Errores_permanentes_de_emisor_sin_CDR_son_RECHAZADO(string codigoRespuesta)
+    {
+        var response = new SunatResponse
+        {
+            Success = false,
+            CodigoRespuesta = codigoRespuesta,
+            CdrBase64 = null
+        };
+
+        var estado = ComprobanteService.DeterminarEstadoSunat(response);
+
+        Assert.Equal("RECHAZADO", estado);
+    }
+
+    [Fact]
+    public void Error_transitorio_0422_sin_CDR_queda_PENDIENTE()
+    {
+        var response = new SunatResponse
+        {
+            Success = false,
+            CodigoRespuesta = "0422",
+            CdrBase64 = null
+        };
+
+        var estado = ComprobanteService.DeterminarEstadoSunat(response);
+
+        Assert.Equal("PENDIENTE", estado);
+    }
 }

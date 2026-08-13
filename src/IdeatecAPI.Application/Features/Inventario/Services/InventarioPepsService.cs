@@ -1,3 +1,4 @@
+using IdeatecAPI.Application.Common.Exceptions;
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Application.Features.Inventario.DTOs;
 using IdeatecAPI.Domain.Entities;
@@ -25,7 +26,7 @@ public interface IInventarioPepsService
     Task<IEnumerable<RentabilidadDiariaDTO>> GetRentabilidadDiariaAsync(int sucursalProductoId, DateTime? desde, DateTime? hasta);
     Task<RetirarVencidosResultDTO> RetirarLotesVencidosAsync(int? sucursalProductoId = null, int? idUsuario = null);
     Task<IEnumerable<LoteVencidoDTO>> GetLotesVencidosReporteAsync(int? sucursalId = null);
-    Task<bool> ActualizarFechaVencimientoLoteAsync(int inventarioLoteId, DateTime? fechaVencimiento);
+    Task<ActualizarFechaVencimientoResultDTO> ActualizarFechaVencimientoLoteAsync(int inventarioLoteId, DateTime? fechaVencimiento, bool confirmar = false);
     Task<IEnumerable<HistorialVencidoDTO>> GetHistorialVencidosRetiradosAsync(int sucursalId, DateTime? desde, DateTime? hasta);
 }
 
@@ -416,9 +417,46 @@ public class InventarioPepsService : IInventarioPepsService
         return await _unitOfWork.InventarioLotes.GetLotesVencidosReporteAsync(sucursalId);
     }
 
-    public async Task<bool> ActualizarFechaVencimientoLoteAsync(int inventarioLoteId, DateTime? fechaVencimiento)
+    // No bloquea si el lote no tiene ventas o si ya se vendió por completo (saldoCantidad == 0):
+    // en ambos casos no hay stock físico con fecha ambigua. Solo pide confirmación cuando hay
+    // venta parcial (una parte del lote sigue en stock y otra ya se vendió con la fecha vieja),
+    // porque ahí el cambio sí puede afectar tanto el stock actual como el historial de ventas.
+    public async Task<ActualizarFechaVencimientoResultDTO> ActualizarFechaVencimientoLoteAsync(int inventarioLoteId, DateTime? fechaVencimiento, bool confirmar = false)
     {
-        return await _unitOfWork.InventarioLotes.ActualizarFechaVencimientoAsync(inventarioLoteId, fechaVencimiento);
+        _unitOfWork.BeginTransaction();
+        try
+        {
+            var lote = await _unitOfWork.InventarioLotes.GetPorIdAsync(inventarioLoteId);
+            if (lote == null || !lote.Estado)
+            {
+                _unitOfWork.Rollback();
+                return new ActualizarFechaVencimientoResultDTO { Encontrado = false };
+            }
+
+            var cantidadVendida = lote.CantidadOriginal - lote.SaldoCantidad;
+            var ventaParcial = lote.SaldoCantidad > 0 && cantidadVendida > 0;
+
+            if (ventaParcial && !confirmar)
+            {
+                _unitOfWork.Rollback();
+                return new ActualizarFechaVencimientoResultDTO
+                {
+                    RequiereConfirmacion = true,
+                    CantidadVendida = cantidadVendida,
+                    CantidadOriginal = lote.CantidadOriginal,
+                    SaldoCantidad = lote.SaldoCantidad
+                };
+            }
+
+            var actualizado = await _unitOfWork.InventarioLotes.ActualizarFechaVencimientoAsync(inventarioLoteId, fechaVencimiento);
+            _unitOfWork.Commit();
+            return new ActualizarFechaVencimientoResultDTO { Actualizado = actualizado };
+        }
+        catch
+        {
+            _unitOfWork.Rollback();
+            throw;
+        }
     }
 
     public async Task<IEnumerable<HistorialVencidoDTO>> GetHistorialVencidosRetiradosAsync(int sucursalId, DateTime? desde, DateTime? hasta)

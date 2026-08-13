@@ -1,3 +1,4 @@
+using IdeatecAPI.Application.Common.Exceptions;
 using IdeatecAPI.Application.Features.Proveedor.DTOs;
 using IdeatecAPI.Application.Features.Proveedor.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -319,6 +320,17 @@ public class ProveedorController : ControllerBase
         catch (ArgumentException ex)
         {
             return BadRequest(new { mensaje = ex.Message });
+        }
+        catch (VentaParcialException ex)
+        {
+            return Conflict(new
+            {
+                mensaje = ex.Message,
+                requiereConfirmacion = true,
+                cantidadVendida = ex.CantidadVendida,
+                cantidadOriginal = ex.CantidadOriginal,
+                saldoCantidad = ex.SaldoCantidad
+            });
         }
         catch (InvalidOperationException ex)
         {

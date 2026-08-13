@@ -1,3 +1,4 @@
+using IdeatecAPI.Application.Common.Exceptions;
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Application.Features.Inventario.Services;
 using IdeatecAPI.Application.Features.Proveedor.DTOs;
@@ -69,14 +70,51 @@ public class CompraProveedorService : ICompraProveedorService
         if (compraOriginal == null)
             throw new ArgumentException($"No se encontró la compra con ID {compraProveedorId}");
 
-        // La sucursal no se cambia al editar: siempre hereda la original.
+        // La sucursal no se cambia al editar: siempre hereda la original. UnidadMedida tampoco
+        // es un campo editable en el modal de "editar orden de compra" (no tiene input propio),
+        // así que si no llega en el DTO se hereda de la original — si no, la comparación de
+        // "solo cambió la fecha" (más abajo) fallaría siempre por este campo ausente.
         dto.SucursalId = compraOriginal.SucursalId;
         dto.IdUsuario ??= compraOriginal.IdUsuario;
+        dto.UnidadMedida ??= compraOriginal.UnidadMedida;
 
         _unitOfWork.BeginTransaction();
         try
         {
             var lotes = (await _unitOfWork.InventarioLotes.GetByCompraProveedorIdAsync(compraProveedorId)).ToList();
+
+            // Si lo único que cambia es la fecha de vencimiento, no hace falta borrar y recrear
+            // el lote (eso solo es necesario cuando cambian cantidad/precio, para no romper el
+            // costeo PEPS). Se actualiza la fecha in-place: si el lote tiene venta parcial, pide
+            // confirmación (VentaParcialException -> 409) en vez de bloquear como antes; si no
+            // tiene ventas o ya se vendió por completo, se aplica directo.
+            var soloCambioFecha = lotes.Count > 0
+                && dto.FechaVencimiento != compraOriginal.FechaVencimiento
+                && dto.ProveedorId == compraOriginal.ProveedorId
+                && dto.ProductoId == compraOriginal.ProductoId
+                && dto.PrecioCompra == compraOriginal.PrecioCompra
+                && dto.Cantidad == compraOriginal.Cantidad
+                && (dto.UnidadMedida ?? "") == (compraOriginal.UnidadMedida ?? "")
+                && (dto.DocReferencia ?? "") == (compraOriginal.DocReferencia ?? "");
+
+            if (soloCambioFecha)
+            {
+                foreach (var lote in lotes)
+                {
+                    var cantidadVendida = lote.CantidadOriginal - lote.SaldoCantidad;
+                    var ventaParcial = lote.SaldoCantidad > 0 && cantidadVendida > 0;
+                    if (ventaParcial && !dto.Confirmar)
+                        throw new VentaParcialException(cantidadVendida, lote.CantidadOriginal, lote.SaldoCantidad);
+                }
+
+                foreach (var lote in lotes)
+                    await _unitOfWork.InventarioLotes.ActualizarFechaVencimientoAsync(lote.InventarioLoteId, dto.FechaVencimiento);
+
+                var actualizada = await _unitOfWork.ComprasProveedor.GetByIdAsync(compraProveedorId);
+                _unitOfWork.Commit();
+                return MapToDTO(actualizada!);
+            }
+
             if (lotes.Any(l => l.SaldoCantidad != l.CantidadOriginal))
                 throw new InvalidOperationException("No se puede editar esta compra: el producto ya fue vendido (total o parcialmente).");
 

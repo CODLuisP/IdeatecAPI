@@ -19,6 +19,7 @@ public interface IInventarioLoteRepository : IRepository<InventarioLote>
     Task<IEnumerable<RentabilidadProductoDTO>> GetRentabilidadPorProductoAsync(int sucursalId, DateTime? desde, DateTime? hasta);
     Task<IEnumerable<RentabilidadDiariaDTO>> GetRentabilidadDiariaAsync(int sucursalProductoId, DateTime? desde, DateTime? hasta);
     Task<IEnumerable<InventarioLote>> GetByCompraProveedorIdAsync(int compraProveedorId);
+    Task<InventarioLote?> GetPorIdAsync(int inventarioLoteId);
     Task EliminarEntradaLoteAsync(int inventarioLoteId);
     Task<IEnumerable<InventarioLote>> GetLotesVencidosAsync(int? sucursalProductoId = null);
     Task<bool> DesactivarLoteAsync(int inventarioLoteId);

@@ -486,6 +486,8 @@ public class NoteService : INoteService
             ?? throw new InvalidOperationException("Error al recuperar la nota actualizada");
     }
 
+    private static bool EsRechazoPermamente(int codigo) => codigo is >= 150 and <= 154;
+
     private static string ObtenerTipoCarpeta(string tipoDoc) => tipoDoc switch
     {
         "07" => "notas-credito",
@@ -505,7 +507,9 @@ public class NoteService : INoteService
         // Se limita a los casos SIN CDR para no alterar el flujo de CDR ya existente.
         if (string.IsNullOrEmpty(sunatResponse.CdrBase64)
             && int.TryParse(sunatResponse.CodigoRespuesta, out var codSunat))
-            return codSunat is >= 1000 and < 4000 ? "RECHAZADO" : "PENDIENTE";
+            return codSunat is >= 1000 and < 4000 || EsRechazoPermamente(codSunat)
+                ? "RECHAZADO"
+                : "PENDIENTE";
 
         switch (sunatResponse.CodigoRespuesta)
         {

@@ -318,6 +318,18 @@ public class InventarioLoteRepository : DapperRepository<InventarioLote>, IInven
         return await _connection.QueryAsync<InventarioLote>(sql, new { CompraProveedorId = compraProveedorId }, _transaction);
     }
 
+    // FOR UPDATE: bloquea la fila mientras se decide si el cambio de fecha requiere confirmación
+    // (ver InventarioPepsService.ActualizarFechaVencimientoLoteAsync), evitando que una venta
+    // concurrente cambie saldoCantidad justo entre el chequeo y el UPDATE.
+    public async Task<InventarioLote?> GetPorIdAsync(int inventarioLoteId)
+    {
+        var sql = $@"{SelectLoteBase}
+            WHERE il.inventarioLoteID = @InventarioLoteId
+            FOR UPDATE;";
+
+        return await _connection.QueryFirstOrDefaultAsync<InventarioLote>(sql, new { InventarioLoteId = inventarioLoteId }, _transaction);
+    }
+
     public async Task<IEnumerable<InventarioLote>> GetLotesVencidosAsync(int? sucursalProductoId = null)
     {
         var sql = $@"{SelectLoteBase}

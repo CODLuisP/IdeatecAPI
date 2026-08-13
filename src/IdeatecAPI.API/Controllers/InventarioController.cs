@@ -181,17 +181,34 @@ public class InventarioController : ControllerBase
     // Corrige la fecha de vencimiento de un lote ya registrado (p.ej. error al registrar la compra).
     // No afecta cantidad, costo ni Kardex. Solo aplica sobre lotes activos (estado = 1);
     // uno ya dado de baja por vencimiento se considera historia cerrada y no se puede editar.
+    // Si el lote tiene venta parcial (parte vendida, parte aún en stock) y dto.Confirmar es false,
+    // responde 409 con el detalle de lo vendido en vez de aplicar el cambio a ciegas.
     [HttpPut("lote/{inventarioLoteId:int}/fecha-vencimiento")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> ActualizarFechaVencimientoLoteAsync(int inventarioLoteId, [FromBody] ActualizarFechaVencimientoDTO dto)
     {
         try
         {
-            var actualizado = await _inventarioPepsService.ActualizarFechaVencimientoLoteAsync(inventarioLoteId, dto.FechaVencimiento);
-            if (!actualizado)
+            var resultado = await _inventarioPepsService.ActualizarFechaVencimientoLoteAsync(inventarioLoteId, dto.FechaVencimiento, dto.Confirmar);
+
+            if (!resultado.Encontrado)
                 return NotFound(new { mensaje = "No se encontró el lote o ya no está activo." });
+
+            if (resultado.RequiereConfirmacion)
+            {
+                return Conflict(new
+                {
+                    mensaje = $"Se vendieron {resultado.CantidadVendida} de {resultado.CantidadOriginal} unidades de este lote. " +
+                              "El cambio de fecha también se reflejará en los reportes de lo ya vendido. ¿Deseas continuar?",
+                    requiereConfirmacion = true,
+                    cantidadVendida = resultado.CantidadVendida,
+                    cantidadOriginal = resultado.CantidadOriginal,
+                    saldoCantidad = resultado.SaldoCantidad
+                });
+            }
 
             return Ok(new { mensaje = "Fecha de vencimiento actualizada correctamente." });
         }
