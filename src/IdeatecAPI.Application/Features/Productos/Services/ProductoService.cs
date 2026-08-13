@@ -200,35 +200,43 @@ public class ProductoService : IProductoService
 
             await _unitOfWork.Productos.EditarProductoAsync(producto);
 
-            // Si el stock cambió, la diferencia se registra como movimiento PEPS (ajuste)
-            // para que kardex/valorizado/rentabilidad reflejen el nuevo stock, en vez de
-            // solo sobrescribir el número en sucursalproducto.
-            if (dto.Stock is decimal stockNuevo)
+            // Se resuelve el SucursalId una sola vez si hace falta (para el ajuste de stock
+            // y/o para persistir el costo), evitando una segunda consulta redundante.
+            int? sucursalId = null;
+            if (dto.Stock is decimal || dto.CostoUnitario is decimal)
             {
-                var infoActual = await _unitOfWork.Productos.GetInfoConversionBySucursalProductoIdAsync(dto.SucursalProductoId);
-                var stockActual = infoActual?.SucursalProducto?.Stock ?? 0m;
-                var delta = stockNuevo - stockActual;
+                var info = await _unitOfWork.Productos.GetInfoConversionBySucursalProductoIdAsync(dto.SucursalProductoId);
+                sucursalId = info?.SucursalProducto?.SucursalId;
 
-                if (delta > 0)
+                // Si el stock cambió, la diferencia se registra como movimiento PEPS (ajuste)
+                // para que kardex/valorizado/rentabilidad reflejen el nuevo stock, en vez de
+                // solo sobrescribir el número en sucursalproducto.
+                if (dto.Stock is decimal stockNuevo)
                 {
-                    await _inventarioPepsService.RegistrarEntradaLoteAsync(
-                        dto.SucursalProductoId,
-                        compraProveedorId: null,
-                        origen: "AJUSTE_INVENTARIO",
-                        cantidad: delta,
-                        costoUnitario: dto.CostoUnitario ?? 0m,
-                        fecha: DateTime.Now,
-                        idUsuario: dto.UsuarioId);
-                }
-                else if (delta < 0)
-                {
-                    await _inventarioPepsService.ConsumirFifoAsync(
-                        dto.SucursalProductoId,
-                        Math.Abs(delta),
-                        "SALIDA_AJUSTE",
-                        referenciaTipo: null,
-                        referenciaId: null,
-                        idUsuario: dto.UsuarioId);
+                    var stockActual = info?.SucursalProducto?.Stock ?? 0m;
+                    var delta = stockNuevo - stockActual;
+
+                    if (delta > 0)
+                    {
+                        await _inventarioPepsService.RegistrarEntradaLoteAsync(
+                            dto.SucursalProductoId,
+                            compraProveedorId: null,
+                            origen: "AJUSTE_INVENTARIO",
+                            cantidad: delta,
+                            costoUnitario: dto.CostoUnitario ?? 0m,
+                            fecha: DateTime.Now,
+                            idUsuario: dto.UsuarioId);
+                    }
+                    else if (delta < 0)
+                    {
+                        await _inventarioPepsService.ConsumirFifoAsync(
+                            dto.SucursalProductoId,
+                            Math.Abs(delta),
+                            "SALIDA_AJUSTE",
+                            referenciaTipo: null,
+                            referenciaId: null,
+                            idUsuario: dto.UsuarioId);
+                    }
                 }
             }
 
@@ -249,6 +257,14 @@ public class ProductoService : IProductoService
             };
 
             await _unitOfWork.Productos.EditarSucursalProductoAsync(sucursalProducto);
+
+            // El "último precio de compra" se persiste siempre que el usuario lo informe en el
+            // modal, aunque el stock no suba: así el campo queda visible/editable de forma
+            // independiente al lote PEPS (que solo se genera cuando efectivamente entra stock).
+            if (dto.CostoUnitario is decimal costoUnitario && sucursalId is int sucId)
+            {
+                await _unitOfWork.Productos.ActualizarCostoSinStockAsync(dto.ProductoId, sucId, costoUnitario);
+            }
 
             _unitOfWork.Commit();
             return true;
