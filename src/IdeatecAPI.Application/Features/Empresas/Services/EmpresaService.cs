@@ -62,6 +62,7 @@ public class EmpresaService : IEmpresaService
             Telefono = dto.Telefono,
             Email = dto.Email,
             LogoBase64 = dto.LogoBase64,
+            LogoPdfBase64 = dto.LogoPdfBase64,
             CertificadoPem = dto.CertificadoPem,
             CertificadoPassword = dto.CertificadoPassword,
             SolUsuario = dto.SolUsuario,
@@ -97,6 +98,7 @@ public class EmpresaService : IEmpresaService
         empresa.Telefono = dto.Telefono ?? empresa.Telefono;
         empresa.Email = dto.Email ?? empresa.Email;
         empresa.LogoBase64 = string.IsNullOrEmpty(dto.LogoBase64) ? null : dto.LogoBase64;
+        empresa.LogoPdfBase64 = string.IsNullOrEmpty(dto.LogoPdfBase64) ? null : dto.LogoPdfBase64;
         empresa.CertificadoPem = dto.CertificadoPem ?? empresa.CertificadoPem;
         empresa.CertificadoPassword = dto.CertificadoPassword ?? empresa.CertificadoPassword;
         empresa.SolUsuario = dto.SolUsuario ?? empresa.SolUsuario;
@@ -330,6 +332,7 @@ public class EmpresaService : IEmpresaService
         Telefono = e.Telefono,
         Email = e.Email,
         LogoBase64 = e.LogoBase64,
+        LogoPdfBase64 = e.LogoPdfBase64,
         CertificadoPem = e.CertificadoPem,
         CertificadoPassword = e.CertificadoPassword,
         ClientId = e.ClientId,

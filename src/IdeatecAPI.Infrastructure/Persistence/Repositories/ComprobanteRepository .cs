@@ -678,6 +678,26 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         }, _transaction);
     }
 
+    // ── NUEVO: Anular comprobante (Nota de Venta) ────────────────────────────
+    public async Task AnularComprobanteAsync(int comprobanteId, string? motivo, int? usuarioId)
+    {
+        var sql = @"
+            UPDATE comprobante SET
+                estadoSunat           = 'ANULADO',
+                mensajeRespuestaSunat = @Motivo,
+                usuarioModificacion   = @UsuarioId,
+                fechaModificacion     = @Fecha
+            WHERE comprobanteID = @ComprobanteId";
+
+        await _connection.ExecuteAsync(sql, new
+        {
+            ComprobanteId = comprobanteId,
+            Motivo        = motivo,
+            UsuarioId     = usuarioId,
+            Fecha         = AhoraLima()
+        }, _transaction);
+    }
+
     public Task<Comprobante?> GetComprobanteByIdAsync(int comprobanteId)
     {
         return GetByIdAsync(comprobanteId);

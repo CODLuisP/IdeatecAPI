@@ -12,4 +12,5 @@ public interface IEmpresaRepository : IRepository<Empresa>
     Task DeleteEmpresaAsync(string ruc);
     Task<Empresa?> GetEmpresaByRucAsync(string ruc);
     Task<string?> GetLogoByRucAsync(string ruc);
+    Task<string?> GetLogoPdfByRucAsync(string ruc);
 }

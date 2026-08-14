@@ -45,6 +45,33 @@ public class NotaVentaController : ControllerBase
         }
     }
 
+    [HttpPatch("{id}/anular")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> AnularNotaVenta(int id, [FromBody] AnularNotaVentaDTO dto)
+    {
+        try
+        {
+            var resultado = await _notaVentaService.AnularNotaVentaAsync(id, dto.Motivo, dto.UsuarioId);
+            return Ok(resultado);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { mensaje = ex.Message });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { mensaje = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al anular nota de venta {ComprobanteId}", id);
+            return StatusCode(StatusCodes.Status500InternalServerError, new { mensaje = "Error interno al anular la nota de venta.", detalle = ex.Message });
+        }
+    }
+
     [HttpGet("sucursal/{sucursalId}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]

@@ -21,6 +21,7 @@ public class EmpresaDto
     public string? Telefono { get; set; }
     public string? Email { get; set; }
     public string? LogoBase64 { get; set; }
+    public string? LogoPdfBase64 { get; set; }
     public string? CertificadoPem { get; set; }
     public string? CertificadoPassword { get; set; }
     public string? ClientId { get; set; }

@@ -37,6 +37,12 @@ public class GenerarNotaVentaDTO
     public List<ActualizarStockDTO>? StockItems { get; set; }
 }
 
+public class AnularNotaVentaDTO
+{
+    public string? Motivo { get; set; }
+    public int? UsuarioId { get; set; }
+}
+
 public class DetalleNotaVentaDTO
 {
     public int? TrabajadorId { get; set; }

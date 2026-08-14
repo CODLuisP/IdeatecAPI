@@ -63,14 +63,14 @@ public class GuiaPdfService : IGuiaPdfService
             col.Item().Row(row =>
             {
                 // LOGO
-                if (!string.IsNullOrEmpty(empresa.LogoBase64))
+                if (!string.IsNullOrEmpty(empresa.LogoPdfEfectivo))
                 {
                     try
                     {
                         var logoBytes = Convert.FromBase64String(
-                            empresa.LogoBase64.Contains(",")
-                                ? empresa.LogoBase64.Split(',')[1]
-                                : empresa.LogoBase64);
+                            empresa.LogoPdfEfectivo.Contains(",")
+                                ? empresa.LogoPdfEfectivo.Split(',')[1]
+                                : empresa.LogoPdfEfectivo);
                         row.ConstantItem(70).Padding(2).Image(logoBytes).FitArea();
                     }
                     catch { row.ConstantItem(70); }

@@ -34,17 +34,21 @@ public class CompaniesController : ControllerBase
     }
 
     /// <summary>
-    /// GET api/companies/logo?ruc=20123456789
-    /// Retorna el logoBase64 de la empresa. No requiere autenticación.
+    /// GET api/companies/logo?ruc=20123456789&amp;tipo=comprobante|pdf
+    /// Retorna el logoBase64 de la empresa. "tipo=comprobante" (default) devuelve el logo
+    /// de comprobantes/HTML; "tipo=pdf" devuelve el logo específico de documentos PDF (puede
+    /// venir vacío si la empresa no lo configuró por separado). No requiere autenticación.
     /// </summary>
     [HttpGet("logo")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetLogo([FromQuery] string ruc)
+    public async Task<IActionResult> GetLogo([FromQuery] string ruc, [FromQuery] string tipo = "comprobante")
     {
         if (string.IsNullOrWhiteSpace(ruc))
             return BadRequest(new { success = false, message = "El RUC es requerido" });
 
-        var logo = await _unitOfWork.Empresas.GetLogoByRucAsync(ruc);
+        var logo = tipo == "pdf"
+            ? await _unitOfWork.Empresas.GetLogoPdfByRucAsync(ruc)
+            : await _unitOfWork.Empresas.GetLogoByRucAsync(ruc);
 
         if (logo == null)
             return Ok(new { success = false, message = $"No se encontró logo para el RUC {ruc}" });

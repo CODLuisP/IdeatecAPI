@@ -557,7 +557,7 @@ public class ReportesService : IReportesService
             nombreResponsable,
             empresa?.NombreComercial ?? empresa?.RazonSocial,
             empresa?.Direccion,
-            empresa?.LogoBase64,
+            empresa?.LogoPdfEfectivo,
             nombreUsuario);
     }
 

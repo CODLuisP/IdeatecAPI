@@ -39,15 +39,15 @@ public class EmpresaRepository : DapperRepository<Empresa>, IEmpresaRepository
 
     public async Task<int> CreateEmpresaAsync(Empresa empresa)
     {
-        var sql = @"INSERT IGNORE INTO empresa 
+        var sql = @"INSERT IGNORE INTO empresa
         (ruc, igv, tipoemision, razonSocial, nombreComercial, direccion, ubigeo, urbanizacion,
         provincia, departamento, distrito,
-        solUsuario, solClave, activo, creadoEn, telefono, email, logoBase64,
+        solUsuario, solClave, activo, creadoEn, telefono, email, logoBase64, logoPdfBase64,
         certificadoPem, certificadoPassword, clientId, clientSecret, plan, environment)
         VALUES
         (@Ruc, @Igv, @TipoEmision, @RazonSocial, @NombreComercial, @Direccion, @Ubigeo, @Urbanizacion,
         @Provincia, @Departamento, @Distrito,
-        @SolUsuario, @SolClave, @Activo, @CreadoEn, @Telefono, @Email, @LogoBase64,
+        @SolUsuario, @SolClave, @Activo, @CreadoEn, @Telefono, @Email, @LogoBase64, @LogoPdfBase64,
         @CertificadoPem, @CertificadoPassword, @ClientId, @ClientSecret, @Plan, @Environment)";
 
         await _connection.ExecuteAsync(sql, empresa, _transaction);
@@ -76,6 +76,7 @@ public class EmpresaRepository : DapperRepository<Empresa>, IEmpresaRepository
             telefono = @Telefono,
             email = @Email,
             logoBase64 = @LogoBase64,
+            logoPdfBase64 = @LogoPdfBase64,
             certificadoPem = @CertificadoPem,
             certificadoPassword = @CertificadoPassword,
             clientId = @ClientId,
@@ -97,6 +98,12 @@ public class EmpresaRepository : DapperRepository<Empresa>, IEmpresaRepository
     public async Task<string?> GetLogoByRucAsync(string ruc)
     {
         var sql = "SELECT logoBase64 FROM empresa WHERE ruc = @Ruc AND activo = 1 LIMIT 1";
+        return await _connection.ExecuteScalarAsync<string?>(sql, new { Ruc = ruc }, _transaction);
+    }
+
+    public async Task<string?> GetLogoPdfByRucAsync(string ruc)
+    {
+        var sql = "SELECT logoPdfBase64 FROM empresa WHERE ruc = @Ruc AND activo = 1 LIMIT 1";
         return await _connection.ExecuteScalarAsync<string?>(sql, new { Ruc = ruc }, _transaction);
     }
 }

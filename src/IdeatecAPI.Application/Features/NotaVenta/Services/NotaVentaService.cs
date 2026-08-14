@@ -9,6 +9,7 @@ public interface INotaVentaService
 {
     Task<NotaVentaResponse> GenerarNotaVentaAsync(GenerarNotaVentaDTO dto);
     Task<IEnumerable<ListarComprobanteDTO>> ListarNotasVentaAsync(int sucursalId, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null);
+    Task<NotaVentaResponse> AnularNotaVentaAsync(int comprobanteId, string? motivo, int? usuarioId);
 }
 
 public class NotaVentaResponse
@@ -209,6 +210,43 @@ public class NotaVentaService : INotaVentaService
             offset);
 
         return comprobantes.Select(MapToListarDto);
+    }
+
+    public async Task<NotaVentaResponse> AnularNotaVentaAsync(int comprobanteId, string? motivo, int? usuarioId)
+    {
+        var comprobante = await _unitOfWork.Comprobantes.GetComprobanteByIdAsync(comprobanteId)
+            ?? throw new KeyNotFoundException("Nota de venta no encontrada.");
+
+        if (comprobante.TipoComprobante != "NV")
+            throw new InvalidOperationException("Solo se pueden anular notas de venta desde esta operación.");
+
+        if (comprobante.EstadoSunat == "ANULADO")
+            throw new InvalidOperationException("La nota de venta ya se encuentra anulada.");
+
+        _unitOfWork.BeginTransaction();
+        try
+        {
+            // Revierte el stock de forma atómica junto con el cambio de estado: si algo falla,
+            // ni el stock se devuelve ni la nota queda marcada como anulada.
+            await _productoService.RevertirStockPorReferenciaEnTransaccionAsync("COMPROBANTE", comprobanteId);
+
+            await _unitOfWork.Comprobantes.AnularComprobanteAsync(comprobanteId, motivo, usuarioId);
+
+            _unitOfWork.Commit();
+
+            return new NotaVentaResponse
+            {
+                Exitoso        = true,
+                Mensaje        = "Nota de venta anulada correctamente.",
+                ComprobanteId  = comprobanteId,
+                NumeroCompleto = comprobante.NumeroCompleto
+            };
+        }
+        catch
+        {
+            _unitOfWork.Rollback();
+            throw;
+        }
     }
 
     private static ListarComprobanteDTO MapToListarDto(Domain.Entities.Comprobante c) => new()

@@ -224,6 +224,34 @@ public class InventarioLoteRepository : DapperRepository<InventarioLote>, IInven
             new { ReferenciaTipo = referenciaTipo, ReferenciaId = referenciaId, SucursalProductoId = sucursalProductoId }, _transaction);
     }
 
+    // Todos los movimientos (cualquier producto) ligados a una referencia (ej. un comprobante),
+    // usado para anular/revertir de forma robusta sin depender de que el llamador ya sepa
+    // qué SucursalProductoId se vio afectado (soporta múltiples productos por comprobante).
+    public async Task<IEnumerable<KardexMovimiento>> GetMovimientosPorReferenciaAsync(string referenciaTipo, int referenciaId)
+    {
+        var sql = @"
+            SELECT
+                km.kardexMovimientoID    AS KardexMovimientoId,
+                km.sucursalProductoID    AS SucursalProductoId,
+                km.tipoMovimiento        AS TipoMovimiento,
+                km.referenciaTipo        AS ReferenciaTipo,
+                km.referenciaID          AS ReferenciaId,
+                km.cantidad              AS Cantidad,
+                km.costoUnitarioPromedio AS CostoUnitarioPromedio,
+                km.costoTotal            AS CostoTotal,
+                km.saldoCantidadPost     AS SaldoCantidadPost,
+                km.saldoValorPost        AS SaldoValorPost,
+                km.fechaMovimiento       AS FechaMovimiento,
+                km.idUsuario             AS IdUsuario
+            FROM kardex_movimiento km
+            WHERE km.referenciaTipo = @ReferenciaTipo
+            AND km.referenciaID = @ReferenciaId
+            ORDER BY km.fechaMovimiento ASC, km.kardexMovimientoID ASC;";
+
+        return await _connection.QueryAsync<KardexMovimiento>(sql,
+            new { ReferenciaTipo = referenciaTipo, ReferenciaId = referenciaId }, _transaction);
+    }
+
     public async Task<IEnumerable<RentabilidadProductoDTO>> GetRentabilidadPorProductoAsync(int sucursalId, DateTime? desde, DateTime? hasta)
     {
         // Costo (COGS) sale del Kardex PEPS de las salidas por venta; el ingreso se toma de
@@ -247,6 +275,10 @@ public class InventarioLoteRepository : DapperRepository<InventarioLote>, IInven
             FROM kardex_movimiento km
             INNER JOIN sucursalproducto sp ON sp.sucursalProductoID = km.sucursalProductoID
             INNER JOIN producto p ON p.productoID = sp.productoID
+            -- Excluye comprobantes anulados: una venta anulada no debe contar como venta real
+            -- en rentabilidad (ni su costo ni su ingreso), aunque el Kardex sí conserve el
+            -- movimiento original y su reversión para trazabilidad.
+            INNER JOIN comprobante cv ON cv.comprobanteID = km.referenciaID AND cv.estadoSunat <> 'ANULADO'
             LEFT JOIN (
                 SELECT cd.comprobanteId, cd.productoId, SUM(cd.totalVentaItem) AS ingreso
                 FROM comprobantedetalle cd
@@ -279,6 +311,8 @@ public class InventarioLoteRepository : DapperRepository<InventarioLote>, IInven
                 COALESCE(SUM(ventas.ingreso), 0)   AS IngresoVentas,
                 SUM(km.costoTotal)                AS CostoVentas
             FROM kardex_movimiento km
+            -- Excluye comprobantes anulados del gráfico, igual que en GetRentabilidadPorProductoAsync.
+            INNER JOIN comprobante cv ON cv.comprobanteID = km.referenciaID AND cv.estadoSunat <> 'ANULADO'
             LEFT JOIN (
                 SELECT cd.comprobanteId, cd.productoId, SUM(cd.totalVentaItem) AS ingreso
                 FROM comprobantedetalle cd

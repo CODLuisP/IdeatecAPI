@@ -22,6 +22,11 @@ public class Empresa
     public string? Email { get; set; }
     
     public string? LogoBase64 { get; set; }
+    // Logo específico para documentos PDF (comprobantes, guías, reportes). Si no está
+    // configurado, se usa LogoBase64 (el de comprobantes/HTML) como respaldo, para que
+    // los PDFs no queden sin logo mientras el usuario no suba uno propio.
+    public string? LogoPdfBase64 { get; set; }
+    public string? LogoPdfEfectivo => string.IsNullOrEmpty(LogoPdfBase64) ? LogoBase64 : LogoPdfBase64;
     public string? CertificadoPem { get; set; }
     public string? CertificadoPassword { get; set; }
     public string? ClientId { get; set; }

@@ -25,6 +25,12 @@ public interface IProductoService
     // hace rollback y la venta completa no se registra.
     Task DescontarStockEnTransaccionAsync(IEnumerable<ActualizarStockDTO> dtos, string tipoMovimiento = "SALIDA_VENTA");
     Task<bool> DevolverStockAsync(IEnumerable<DevolverStockDTO> dtos);
+    // Revierte TODO el stock que se descontó para una referencia (ej. un comprobante anulado),
+    // reutilizando una transacción YA abierta por el llamador (no hace Begin/Commit/Rollback).
+    // A diferencia de DevolverStockAsync (que requiere que el llamador ya sepa qué productos
+    // devolver), esta consulta el Kardex por referencia y revierte exactamente lo que salió,
+    // sin importar si hubo redirección a producto base por paquete.
+    Task RevertirStockPorReferenciaEnTransaccionAsync(string referenciaTipo, int referenciaId);
     Task<bool> EliminarSucursalProductoAsync(int sucursalProductoId);
     Task<byte[]> GenerarReporteExcelAsync(ReporteProductoFiltroDTO filtro);
 }
@@ -438,6 +444,32 @@ public class ProductoService : IProductoService
         {
             _unitOfWork.Rollback();
             throw;
+        }
+    }
+
+    public async Task RevertirStockPorReferenciaEnTransaccionAsync(string referenciaTipo, int referenciaId)
+    {
+        var movimientos = await _unitOfWork.InventarioLotes.GetMovimientosPorReferenciaAsync(referenciaTipo, referenciaId);
+
+        foreach (var mov in movimientos.Where(m => m.TipoMovimiento == "SALIDA_VENTA"))
+        {
+            var producto = await _unitOfWork.Productos.GetInfoConversionBySucursalProductoIdAsync(mov.SucursalProductoId);
+            if (producto?.SucursalProducto == null)
+                throw new InvalidOperationException($"No se encontró el producto asociado al movimiento de stock {mov.KardexMovimientoId} para revertir.");
+
+            var sucursalId = producto.SucursalProducto.SucursalId;
+
+            var resultado = await _unitOfWork.Productos.DevolverStockAsync(producto.ProductoId, sucursalId, mov.Cantidad);
+            if (!resultado)
+                throw new InvalidOperationException($"No se pudo revertir el stock del producto {producto.ProductoId} en la sucursal {sucursalId}.");
+
+            await _inventarioPepsService.DevolverAFifoAsync(
+                mov.SucursalProductoId,
+                mov.Cantidad,
+                producto.SucursalProducto.UltimoPrecioCompra,
+                referenciaTipo,
+                referenciaId,
+                idUsuario: null);
         }
     }
 

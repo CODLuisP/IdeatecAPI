@@ -55,7 +55,8 @@ public class ComprobantePdfService : IComprobantePdfService
             Departamento = empresaEntidad.Departamento,
             Telefono = empresaEntidad.Telefono,
             Email = empresaEntidad.Email,
-            LogoBase64 = empresaEntidad.LogoBase64,
+            // Logo específico de PDF, con respaldo al de comprobantes si no está configurado.
+            LogoBase64 = empresaEntidad.LogoPdfEfectivo,
         };
 
         // Sucursal — solo si el establecimiento anexo no es la sede principal (0000)
