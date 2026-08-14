@@ -605,9 +605,12 @@ public Task<byte[]> ExportarListadoReportesAsync(
         bool esUsd2 = tc2 != 1m;
         static decimal Conv2(decimal v, decimal t, bool usd) =>
             Math.Round(v * t, 2);
-        var valorVenta = Conv2((item.TipoComprobante == "07" ? -item.ValorVenta   : item.ValorVenta),   tc2, esUsd2);
-        var igv        = Conv2((item.TipoComprobante == "07" ? -item.TotalIGV     : item.TotalIGV),     tc2, esUsd2);
-        var importe    = Conv2((item.TipoComprobante == "07" ? -item.ImporteTotal : item.ImporteTotal), tc2, esUsd2);
+        // PENDIENTES, ANULADOS y RECHAZADOS no afectan el total del reporte (ver nota impresa
+        // más abajo); se muestran en 0 para que la fórmula SUM del total los ignore.
+        var noAfectaTotal = esRechazado2 || item.EstadoSunat == "ANULADO" || item.EstadoSunat == "PENDIENTE";
+        var valorVenta = noAfectaTotal ? 0 : Conv2((item.TipoComprobante == "07" ? -item.ValorVenta   : item.ValorVenta),   tc2, esUsd2);
+        var igv        = noAfectaTotal ? 0 : Conv2((item.TipoComprobante == "07" ? -item.TotalIGV     : item.TotalIGV),     tc2, esUsd2);
+        var importe    = noAfectaTotal ? 0 : Conv2((item.TipoComprobante == "07" ? -item.ImporteTotal : item.ImporteTotal), tc2, esUsd2);
 
         ws.Cell(fila, 1).Value  = item.NumeroCompleto;
         ws.Cell(fila, 2).Value  = item.TipoComprobante switch

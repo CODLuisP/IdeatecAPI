@@ -525,7 +525,8 @@ public class ReportesService : IReportesService
 
             var itemsPdf = comprobantes.Select(c =>
             {
-                var esRechazado = c.EstadoSunat == "RECHAZADO";
+                // PENDIENTES, ANULADOS y RECHAZADOS no afectan el total del reporte de caja.
+                var noAfectaTotal = c.EstadoSunat is "RECHAZADO" or "ANULADO" or "PENDIENTE";
                 return new ControlCajaTicketItemDto
                 {
                     ComprobanteId         = c.ComprobanteId,
@@ -534,16 +535,16 @@ public class ReportesService : IReportesService
                     Correlativo           = c.Correlativo,
                     NumeroCompleto        = c.NumeroCompleto ?? "",
                     FechaEmision          = c.FechaEmision,
-                    ImporteTotal          = esRechazado ? 0 : c.ImporteTotal ?? 0,
-                    ValorVenta            = esRechazado ? 0 : c.ValorVenta ?? 0,
-                    TotalIGV              = esRechazado ? 0 : c.TotalIGV ?? 0,
+                    ImporteTotal          = noAfectaTotal ? 0 : c.ImporteTotal ?? 0,
+                    ValorVenta            = noAfectaTotal ? 0 : c.ValorVenta ?? 0,
+                    TotalIGV              = noAfectaTotal ? 0 : c.TotalIGV ?? 0,
                     TipoMoneda            = c.TipoMoneda ?? "PEN",
-                    TipoCambio            = esRechazado ? 0 : c.TipoCambio ?? 0,
+                    TipoCambio            = noAfectaTotal ? 0 : c.TipoCambio ?? 0,
                     EstadoSunat           = c.EstadoSunat,
                     ComprobanteAfectadoId = c.ComprobanteAfectadoId,
                     NumDocAfectado        = c.NumDocAfectado,
-                    TotalComisionPagoTarjeta = esRechazado ? null : c.TotalComisionPagoTarjeta,
-                    Pagos                 = esRechazado ? new() : (pagosPorId.TryGetValue(c.ComprobanteId, out var p) ? p : new())
+                    TotalComisionPagoTarjeta = noAfectaTotal ? null : c.TotalComisionPagoTarjeta,
+                    Pagos                 = noAfectaTotal ? new() : (pagosPorId.TryGetValue(c.ComprobanteId, out var p) ? p : new())
                 };
             }).ToList();
 
