@@ -1,6 +1,7 @@
 
 using IdeatecAPI.Application.Features.Detraccion.DTOs;
 using IdeatecAPI.Application.Features.Notas.DTOs;
+using IdeatecAPI.Application.Features.Productos.DTO;
 using System.Text.Json.Serialization;
 namespace IdeatecAPI.Application.Features.Comprobante.DTOs;
 
@@ -50,6 +51,11 @@ public class GenerarComprobanteDTO
     public List<NoteLegendDto>? Legends { get; set; } = [];
     public List<GuiaComprobanteDTO>? Guias { get; set; } = [];
     public List<DetraccionDTO>? Detracciones { get; set; } = [];
+
+    // Ítems de stock a descontar atómicamente al generar el comprobante (solo
+    // negocios con control de stock). Si viene vacío/null, no se descuenta stock.
+    // Si algún ítem no tiene stock suficiente, la generación se revierte entera.
+    public List<ActualizarStockDTO>? StockItems { get; set; }
 }
 
 public class DetallePagosDTO

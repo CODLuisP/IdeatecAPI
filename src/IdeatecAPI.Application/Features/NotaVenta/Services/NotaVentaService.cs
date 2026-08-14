@@ -1,6 +1,7 @@
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Application.Features.Comprobante.DTOs;
 using IdeatecAPI.Application.Features.NotaVenta.DTOs;
+using IdeatecAPI.Application.Features.Productos.Services;
 
 namespace IdeatecAPI.Application.Features.NotaVenta.Services;
 
@@ -21,10 +22,12 @@ public class NotaVentaResponse
 public class NotaVentaService : INotaVentaService
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IProductoService _productoService;
 
-    public NotaVentaService(IUnitOfWork unitOfWork)
+    public NotaVentaService(IUnitOfWork unitOfWork, IProductoService productoService)
     {
         _unitOfWork = unitOfWork;
+        _productoService = productoService;
     }
 
     public async Task<NotaVentaResponse> GenerarNotaVentaAsync(GenerarNotaVentaDTO dto)
@@ -160,6 +163,21 @@ public class NotaVentaService : INotaVentaService
             };
 
             var newId = await _unitOfWork.Comprobantes.GenerarComprobanteAsync(comprobante);
+
+            // Descuento de stock ATÓMICO: ocurre dentro de esta misma transacción.
+            // Si algún producto no tiene stock suficiente, se lanza excepción y el
+            // catch hace Rollback => la nota de venta NO queda registrada. Así nunca
+            // se crea una venta sin respaldo de stock (evita sobreventa).
+            if (dto.StockItems is { Count: > 0 })
+            {
+                foreach (var it in dto.StockItems)
+                {
+                    it.ReferenciaTipo = "COMPROBANTE";
+                    it.ReferenciaId = newId;
+                }
+                await _productoService.DescontarStockEnTransaccionAsync(dto.StockItems, "SALIDA_VENTA");
+            }
+
             _unitOfWork.Commit();
 
             return new NotaVentaResponse

@@ -1,4 +1,5 @@
 using IdeatecAPI.Application.Features.Comprobante.DTOs;
+using IdeatecAPI.Application.Features.Productos.DTO;
 
 namespace IdeatecAPI.Application.Features.NotaVenta.DTOs;
 
@@ -29,6 +30,11 @@ public class GenerarNotaVentaDTO
     public List<DetalleNotaVentaDTO> Detalles { get; set; } = [];
     public List<DetallePagosDTO>? Pagos { get; set; } = [];
     public List<DetalleCuotasDTO>? Cuotas { get; set; } = [];
+
+    // Ítems de stock a descontar atómicamente al crear la venta (solo negocios con
+    // control de stock). Si viene vacío/null, no se descuenta stock. Si algún ítem
+    // no tiene stock suficiente, la creación de la nota de venta se revierte entera.
+    public List<ActualizarStockDTO>? StockItems { get; set; }
 }
 
 public class DetalleNotaVentaDTO

@@ -6,6 +6,7 @@ using IdeatecAPI.Application.Features.Comprobante.DTOs;
 using IdeatecAPI.Application.Features.Detraccion.DTOs;
 using IdeatecAPI.Application.Features.Notas.DTOs;
 using IdeatecAPI.Application.Features.Notas.Services;
+using IdeatecAPI.Application.Features.Productos.Services;
 using IdeatecAPI.Application.Features.Reportes.DTOs;
 using IdeatecAPI.Application.Features.Vales.DTOs;
 using Microsoft.Extensions.Configuration;
@@ -78,6 +79,7 @@ public class ComprobanteService : IComprobanteService
     private readonly IConfiguration _configuration;
     private readonly IStorageService _storageService;
     private readonly IWebSocketNotifier _wsNotifier;
+    private readonly IProductoService _productoService;
 
     public ComprobanteService(
         IUnitOfWork unitOfWork,
@@ -86,6 +88,7 @@ public class ComprobanteService : IComprobanteService
         ISunatSenderService sunatSender,
         IWebSocketNotifier wsNotifier,
         IStorageService storageService,
+        IProductoService productoService,
         IConfiguration configuration)
     {
         _unitOfWork = unitOfWork;
@@ -95,6 +98,7 @@ public class ComprobanteService : IComprobanteService
         _configuration = configuration;
         _wsNotifier = wsNotifier;
         _storageService = storageService;
+        _productoService = productoService;
     }
 
     public async Task<IEnumerable<ObtenerComprobanteDTO>> GetByRucAndFechasAsync(string ruc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null)
@@ -505,6 +509,20 @@ public class ComprobanteService : IComprobanteService
 
             if (dto.Vales?.Any() == true)
                 await _unitOfWork.Comprobantes.InsertValesAsync(newComprobanteId, dto.Vales);
+
+            // Descuento de stock ATÓMICO dentro de esta misma transacción: si algún
+            // producto no tiene stock suficiente, se lanza excepción y el catch hace
+            // Rollback => el comprobante NO queda registrado y NO se envía a SUNAT.
+            // Evita que se emita una venta sin respaldo de stock (sobreventa).
+            if (dto.StockItems is { Count: > 0 })
+            {
+                foreach (var it in dto.StockItems)
+                {
+                    it.ReferenciaTipo = "COMPROBANTE";
+                    it.ReferenciaId = newComprobanteId;
+                }
+                await _productoService.DescontarStockEnTransaccionAsync(dto.StockItems, "SALIDA_VENTA");
+            }
 
             _unitOfWork.Commit();
 
