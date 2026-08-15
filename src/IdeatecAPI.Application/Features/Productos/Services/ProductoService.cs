@@ -66,6 +66,15 @@ public class ProductoService : IProductoService
 
     public async Task<ObtenerProductoDTO> RegistrarProductoAsync(RegistrarProductoDTO dto)
     {
+        // Si no se exige, el stock inicial termina generando un lote PEPS con costo 0 (ver más abajo),
+        // que después queda invisible para el backfill de saldo-inicial y arrastra costo 0 en
+        // kardex/valorizado/rentabilidad hasta que alguien lo corrija a mano.
+        if (dto.Stock is decimal stockInicialValidar && stockInicialValidar > 0
+            && (dto.CostoUnitario is null || dto.CostoUnitario <= 0))
+        {
+            throw new ArgumentException("Debes registrar el costo de compra cuando informas stock inicial del producto.");
+        }
+
         _unitOfWork.BeginTransaction();
         try
         {
@@ -236,6 +245,11 @@ public class ProductoService : IProductoService
 
                     if (delta > 0)
                     {
+                        // Igual que en RegistrarProductoAsync: sin costo, este incremento generaría
+                        // un lote PEPS con costo 0 que arrastra costo 0 en kardex/valorizado/rentabilidad.
+                        if (dto.CostoUnitario is null || dto.CostoUnitario <= 0)
+                            throw new ArgumentException("Debes registrar el costo de compra cuando aumentas el stock del producto.");
+
                         await _inventarioPepsService.RegistrarEntradaLoteAsync(
                             dto.SucursalProductoId,
                             compraProveedorId: null,
