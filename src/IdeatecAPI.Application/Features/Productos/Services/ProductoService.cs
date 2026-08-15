@@ -243,13 +243,15 @@ public class ProductoService : IProductoService
                     var stockActual = info?.SucursalProducto?.Stock ?? 0m;
                     var delta = stockNuevo - stockActual;
 
+                    // Cualquier cambio de stock (subir o bajar) exige tener costo registrado:
+                    // subir sin costo generaría un lote PEPS a costo 0, y bajar sin costo indica
+                    // que el producto todavía no tiene su costo corregido (arrastraría movimientos
+                    // de Kardex a costo 0 desde los lotes existentes).
+                    if (delta != 0 && (dto.CostoUnitario is null || dto.CostoUnitario <= 0))
+                        throw new ArgumentException("Debes registrar el costo de compra para modificar el stock del producto.");
+
                     if (delta > 0)
                     {
-                        // Igual que en RegistrarProductoAsync: sin costo, este incremento generaría
-                        // un lote PEPS con costo 0 que arrastra costo 0 en kardex/valorizado/rentabilidad.
-                        if (dto.CostoUnitario is null || dto.CostoUnitario <= 0)
-                            throw new ArgumentException("Debes registrar el costo de compra cuando aumentas el stock del producto.");
-
                         await _inventarioPepsService.RegistrarEntradaLoteAsync(
                             dto.SucursalProductoId,
                             compraProveedorId: null,
