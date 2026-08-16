@@ -69,6 +69,26 @@ public class CajaEstadoDto
 
     /// <summary>Efectivo que debería haber ahora mismo en el cajón.</summary>
     public decimal SaldoEfectivo { get; set; }
+
+    /// <summary>
+    /// El usuario ya cerró un turno en esta caja. Evita que al volver a Nueva
+    /// Venta (tras cuadrar y seguir navegando) se le abra otro turno solo.
+    /// </summary>
+    public bool UsuarioYaCuadro { get; set; }
+
+    /// <summary>
+    /// Con la caja cerrada, el efectivo con el que cerró la última caja de la
+    /// sucursal: se propone como fondo de la nueva apertura. Null si nunca se
+    /// cerró una o si se cerró sin contar el efectivo.
+    /// </summary>
+    public decimal? SugerenciaMontoInicial { get; set; }
+
+    /// <summary>
+    /// La caja abierta se aperturó un día anterior al de hoy: nadie la cerró al
+    /// terminar la jornada. Es una sugerencia para el frontend, no un bloqueo:
+    /// se puede seguir vendiendo sobre ella con un turno nuevo.
+    /// </summary>
+    public bool CajaDeDiaAnterior { get; set; }
 }
 
 public class AbrirCajaDto

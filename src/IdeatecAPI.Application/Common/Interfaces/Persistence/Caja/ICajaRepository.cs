@@ -18,6 +18,13 @@ public interface ICajaRepository
     // ── Caja del día ──
     Task<CajaApertura?> GetCajaAbiertaAsync(int sucursalId);
     Task<CajaApertura?> GetCajaByIdAsync(int cajaAperturaId);
+
+    /// <summary>
+    /// Última caja cerrada de la sucursal, sin importar hace cuánto. Su
+    /// efectivo contado es lo que quedó físicamente en el cajón y sirve para
+    /// proponer el fondo con el que se abre la siguiente.
+    /// </summary>
+    Task<CajaApertura?> GetUltimaCajaCerradaAsync(int sucursalId);
     Task<int> InsertCajaAsync(CajaApertura caja);
     Task<bool> CerrarCajaAsync(CajaApertura caja);
 
@@ -26,6 +33,12 @@ public interface ICajaRepository
     Task<CajaTurno?> GetTurnoByIdAsync(int cajaTurnoId);
     Task<CajaTurno?> GetUltimoTurnoCerradoAsync(int cajaAperturaId);
     Task<IEnumerable<CajaTurno>> GetTurnosByCajaAsync(int cajaAperturaId);
+
+    /// <summary>
+    /// Si el usuario ya cerró un turno en esta caja, no se le abre otro solo
+    /// por volver a entrar a Nueva Venta: tiene que pedirlo explícitamente.
+    /// </summary>
+    Task<bool> UsuarioTieneTurnoCerradoAsync(int cajaAperturaId, int usuarioId);
     Task<int> InsertTurnoAsync(CajaTurno turno);
     Task<bool> CerrarTurnoAsync(CajaTurno turno);
 
