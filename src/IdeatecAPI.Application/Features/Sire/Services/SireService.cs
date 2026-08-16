@@ -58,7 +58,7 @@ public class SireService : ISireService
 
             // Manual v30 §5.2: la respuesta es un array raíz de ejercicios (numEjercicio, desEstado, lisPeriodos[])
             // Cada lisPeriodos contiene: perTributario, codEstado, desEstado
-            var periodos = new List<SirePeriodoDto>();
+            var ejercicios = new List<SireEjercicioDto>();
             using var doc = JsonDocument.Parse(content);
 
             if (doc.RootElement.ValueKind == JsonValueKind.Array)
@@ -69,19 +69,28 @@ public class SireService : ISireService
                         || lisPeriodos.ValueKind != JsonValueKind.Array)
                         continue;
 
+                    var periodosDelAnio = new List<SirePeriodoDto>();
                     foreach (var item in lisPeriodos.EnumerateArray())
                     {
-                        periodos.Add(new SirePeriodoDto
+                        periodosDelAnio.Add(new SirePeriodoDto
                         {
                             Periodo = item.TryGetProperty("perTributario", out var p) ? p.GetString() : null,
                             Estado = item.TryGetProperty("desEstado", out var e) ? e.GetString() : null,
                             Descripcion = item.TryGetProperty("codEstado", out var d) ? d.GetString() : null
                         });
                     }
+
+                    // El año se deriva del propio perTributario (YYYYMM) en vez de confiar en el tipo
+                    // de numEjercicio, que el manual no especifica con certeza (string vs number).
+                    var anio = periodosDelAnio
+                        .FirstOrDefault(p => !string.IsNullOrEmpty(p.Periodo) && p.Periodo!.Length >= 4)
+                        ?.Periodo?.Substring(0, 4);
+
+                    ejercicios.Add(new SireEjercicioDto { Anio = anio, Periodos = periodosDelAnio });
                 }
             }
 
-            return new SirePeriodosResponse { Success = true, Periodos = periodos, RespuestaCruda = content };
+            return new SirePeriodosResponse { Success = true, Ejercicios = ejercicios, RespuestaCruda = content };
         }
         catch (Exception ex)
         {
@@ -108,9 +117,14 @@ public class SireService : ISireService
             if (string.IsNullOrEmpty(nomArchivoReporte))
                 return new SireDescargarPropuestaResponse { Success = false, Mensaje = mensajeEspera, NumTicket = numTicket };
 
-            var zipBytes = await DescargarArchivoReporteAsync(token, nomArchivoReporte, codTipoArchivoReporte, perTributario, codProceso ?? "01", numTicket);
+            // El polling del ticket puede tardar hasta ~51s; se renueva el token antes de descargar
+            // por si el original ya expiró.
+            var tokenDescarga = await ObtenerTokenAsync(ruc, solUsuario, solClave, clienteId, clientSecret) ?? token;
+
+            var (zipBytes, errorDescarga) = await DescargarArchivoReporteAsync(
+                tokenDescarga, nomArchivoReporte, codTipoArchivoReporte, perTributario, codProceso ?? "01", numTicket);
             if (zipBytes is null)
-                return new SireDescargarPropuestaResponse { Success = false, Mensaje = "No se pudo descargar el archivo de la propuesta", NumTicket = numTicket };
+                return new SireDescargarPropuestaResponse { Success = false, Mensaje = errorDescarga, NumTicket = numTicket };
 
             var comprobantes = ExtraerComprobantesDeZip(zipBytes);
             return new SireDescargarPropuestaResponse { Success = true, NumTicket = numTicket, Comprobantes = comprobantes };
@@ -228,25 +242,42 @@ public class SireService : ISireService
 
     // Manual v30 §5.17: codTipoArchivoReporte viene de archivoReporte[0].codTipoAchivoReporte del ticket
     // Si es null, se envía "null" según indicación del manual
-    private async Task<byte[]?> DescargarArchivoReporteAsync(
+    private async Task<(byte[]? Bytes, string? Error)> DescargarArchivoReporteAsync(
         string token, string nomArchivoReporte, string? codTipoArchivoReporte, string perTributario, string codProceso, string numTicket)
     {
         var codTipo = string.IsNullOrEmpty(codTipoArchivoReporte) ? "null" : codTipoArchivoReporte;
         var url = string.Format(UrlArchivoReporte, nomArchivoReporte, codTipo, perTributario, codProceso, numTicket);
         var client = _httpClientFactory.CreateClient();
-        var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Headers.Add("Authorization", $"Bearer {token}");
-        request.Headers.Add("User-Agent", UserAgent);
 
-        var response = await client.SendAsync(request);
-        if (!response.IsSuccessStatusCode)
+        const int intentos = 2;
+        for (var intento = 1; intento <= intentos; intento++)
         {
+            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Add("Authorization", $"Bearer {token}");
+            request.Headers.Add("User-Agent", UserAgent);
+
+            var response = await client.SendAsync(request);
+            if (response.IsSuccessStatusCode)
+                return (await response.Content.ReadAsByteArrayAsync(), null);
+
             var content = await response.Content.ReadAsStringAsync();
-            _logger.LogError("[SIRE] Error descargando archivo reporte {Archivo}: {Status} {Content}", nomArchivoReporte, response.StatusCode, content);
-            return null;
+            _logger.LogError(
+                "[SIRE] Error descargando archivo reporte {Archivo} (intento {Intento}/{Total}): {Status} {Content}",
+                nomArchivoReporte, intento, intentos, response.StatusCode, content);
+
+            if (intento < intentos)
+            {
+                // SUNAT a veces marca el ticket como Terminado antes de que el archivo esté
+                // realmente disponible para descarga; se reintenta una vez tras una breve espera.
+                await Task.Delay(3000);
+                continue;
+            }
+
+            var detalle = content.Length > 300 ? content[..300] : content;
+            return (null, $"No se pudo descargar el archivo de la propuesta. SUNAT respondió {(int)response.StatusCode} ({response.StatusCode}): {detalle}");
         }
 
-        return await response.Content.ReadAsByteArrayAsync();
+        return (null, "No se pudo descargar el archivo de la propuesta");
     }
 
     private List<SireComprobanteDto> ExtraerComprobantesDeZip(byte[] zipBytes)

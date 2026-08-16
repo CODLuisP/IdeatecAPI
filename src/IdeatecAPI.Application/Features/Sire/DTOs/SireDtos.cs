@@ -7,11 +7,17 @@ public class SirePeriodoDto
     public string? Descripcion { get; set; }
 }
 
+public class SireEjercicioDto
+{
+    public string? Anio { get; set; }
+    public List<SirePeriodoDto> Periodos { get; set; } = new();
+}
+
 public class SirePeriodosResponse
 {
     public bool Success { get; set; }
     public string? Mensaje { get; set; }
-    public List<SirePeriodoDto> Periodos { get; set; } = new();
+    public List<SireEjercicioDto> Ejercicios { get; set; } = new();
     public string? RespuestaCruda { get; set; }
 }
 
