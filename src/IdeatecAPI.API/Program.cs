@@ -1,3 +1,5 @@
+using System.IO.Compression;
+using Microsoft.AspNetCore.ResponseCompression;
 using IdeatecAPI.Infrastructure;
 using Microsoft.OpenApi.Models; // ← AGREGAR
 using MySqlConnector;
@@ -73,6 +75,18 @@ builder.Services.AddCors(options =>
     });
 });
 
+// Compresion de respuestas: el JSON del catalogo de productos viajaba sin
+// comprimir (~1 MB con 1000 productos). Gzip/Brotli lo reducen alrededor del
+// 90%, que es la diferencia entre tardar segundos y tardar un instante.
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+    options.Providers.Add<BrotliCompressionProvider>();
+    options.Providers.Add<GzipCompressionProvider>();
+    options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(
+        new[] { "application/json", "application/json; charset=utf-8" });
+});
+
 var app = builder.Build();
 
 
@@ -96,6 +110,10 @@ _ = Task.Run(async () =>
         catch { /* Si la DB no está disponible al arrancar, no bloquear */ }
     }
 });
+
+// Primer middleware del pipeline: para comprimir una respuesta hay que estar
+// por encima de quien la escribe.
+app.UseResponseCompression();
 
     app.UseSwagger();
     app.UseSwaggerUI();
