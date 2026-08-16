@@ -1,3 +1,4 @@
+using IdeatecAPI.Application.Features.Inventario.DTOs;
 using IdeatecAPI.Application.Features.Productos.DTO;
 using IdeatecAPI.Domain.Entities;
 
@@ -36,6 +37,8 @@ public interface IProductoRepository : IRepository<Producto>
     /// existan simplemente no aparecen en el diccionario (igual que devolver null).
     /// </summary>
     Task<IReadOnlyDictionary<int, Producto>> GetInfoConversionBySucursalProductoIdsAsync(IEnumerable<int> sucursalProductoIds);
+    Task<IReadOnlyDictionary<int, decimal>> GetStocksParaDescontarAsync(IEnumerable<int> sucursalProductoIds);
+    Task<int> DescontarStocksEnBloqueAsync(IReadOnlyList<ConsumoProducto> consumos);
     Task<bool> DescontarStockBaseAsync(int productoBaseId, int sucursalId, decimal cantidad);
     Task<bool> ExisteCodigoBarrasAsync(string codigoBarras, int sucursalId);
 }

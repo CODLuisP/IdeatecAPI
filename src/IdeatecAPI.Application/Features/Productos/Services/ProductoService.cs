@@ -1,3 +1,4 @@
+using IdeatecAPI.Application.Features.Inventario.DTOs;
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Application.Features.Inventario.Services;
 using IdeatecAPI.Application.Features.Productos.DTO;
@@ -343,7 +344,53 @@ public class ProductoService : IProductoService
         var infoPorSucursalProducto = await _unitOfWork.Productos
             .GetInfoConversionBySucursalProductoIdsAsync(dtos.Select(d => d.SucursalProductoId));
 
+        // Los productos normales se procesan EN BLOQUE (una tanda de consultas para
+        // todo el carrito). Los paquetes/cajas, que son la excepcion y necesitan
+        // resolver su producto base, siguen por el camino unitario de siempre.
+        var normales = new List<ActualizarStockDTO>();
+        var paquetes = new List<ActualizarStockDTO>();
+
         foreach (var dto in dtos)
+        {
+            infoPorSucursalProducto.TryGetValue(dto.SucursalProductoId, out var infoPrev);
+            var esPaquete = infoPrev?.EsPaquete == true
+                && infoPrev.ProductoBaseId is int
+                && infoPrev.FactorConversion is decimal f
+                && f > 0;
+            (esPaquete ? paquetes : normales).Add(dto);
+        }
+
+        if (normales.Count > 0)
+        {
+            // Validacion de stock sobre filas bloqueadas: se comprueba que alcance
+            // ANTES de descontar nada, con el mismo mensaje de error de antes.
+            var stocks = await _unitOfWork.Productos.GetStocksParaDescontarAsync(
+                normales.Select(d => d.SucursalProductoId));
+
+            var requeridoPorProducto = normales
+                .GroupBy(d => d.SucursalProductoId)
+                .ToDictionary(g => g.Key, g => g.Sum(x => x.Cantidad));
+
+            foreach (var (sucursalProductoId, requerido) in requeridoPorProducto)
+            {
+                if (!stocks.TryGetValue(sucursalProductoId, out var disponible) || disponible < requerido)
+                    throw new InvalidOperationException(
+                        $"Stock insuficiente o producto no encontrado para SucursalProductoId {sucursalProductoId}.");
+            }
+
+            var consumos = normales.Select(d => new ConsumoProducto
+            {
+                SucursalProductoId = d.SucursalProductoId,
+                Cantidad = d.Cantidad,
+                ReferenciaTipo = d.ReferenciaTipo,
+                ReferenciaId = d.ReferenciaId
+            }).ToList();
+
+            await _unitOfWork.Productos.DescontarStocksEnBloqueAsync(consumos);
+            await _inventarioPepsService.ConsumirFifoEnBloqueAsync(consumos, tipoMovimiento);
+        }
+
+        foreach (var dto in paquetes)
         {
             // Si el producto vendido es un paquete (caja, pack, etc.), el descuento de stock
             // se redirige al producto base (cantidad x factor de conversión), igual que en compras.

@@ -18,6 +18,14 @@ public interface IInventarioLoteRepository : IRepository<InventarioLote>
     /// (misma tabla, mismo filtro), pero ahorra un viaje a la base de datos.
     /// </summary>
     Task<(decimal Cantidad, decimal Valor)> GetSaldosLotesAsync(int sucursalProductoId);
+
+    // ── Versiones en bloque (una sola ida y vuelta para todo el comprobante) ──
+    Task<IEnumerable<InventarioLote>> GetLotesConSaldoFifoPorProductosAsync(IEnumerable<int> sucursalProductoIds);
+    Task<int> DescontarSaldosLotesEnBloqueAsync(IReadOnlyList<ConsumoLote> consumos);
+    Task<IReadOnlyDictionary<int, SaldosLote>> GetSaldosLotesPorProductosAsync(IEnumerable<int> sucursalProductoIds);
+    Task RegistrarMovimientosEnBloqueAsync(
+        IReadOnlyList<KardexMovimiento> movimientos,
+        IReadOnlyList<IReadOnlyList<KardexMovimientoLote>> detallesPorMovimiento);
     Task<IEnumerable<InventarioLote>> GetSaldoValorizadoSucursalAsync(int sucursalId);
     Task<KardexMovimiento> RegistrarMovimientoAsync(KardexMovimiento movimiento, IEnumerable<KardexMovimientoLote> detalleLotes);
     Task<IEnumerable<KardexMovimiento>> GetKardexAsync(int sucursalProductoId, DateTime? desde, DateTime? hasta);

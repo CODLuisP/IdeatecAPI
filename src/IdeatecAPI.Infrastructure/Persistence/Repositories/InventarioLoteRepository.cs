@@ -65,6 +65,189 @@ public class InventarioLoteRepository : DapperRepository<InventarioLote>, IInven
         return filas > 0;
     }
 
+    // ─────────────────────────────────────────────────────────────────────
+    // Versiones EN BLOQUE de las operaciones de venta. Hacen exactamente lo
+    // mismo que las de un solo producto, pero resolviendo todos los productos
+    // del comprobante de una vez, para no pagar una ida y vuelta a la base de
+    // datos por cada producto del carrito.
+    // ─────────────────────────────────────────────────────────────────────
+
+    public async Task<IEnumerable<InventarioLote>> GetLotesConSaldoFifoPorProductosAsync(IEnumerable<int> sucursalProductoIds)
+    {
+        var ids = sucursalProductoIds.Distinct().ToList();
+        if (ids.Count == 0) return [];
+
+        // Mismo filtro, mismo FOR UPDATE y mismo orden PEPS dentro de cada
+        // producto que GetLotesConSaldoFifoAsync; solo se agrupa por producto.
+        var sql = $@"{SelectLoteBase}
+            WHERE il.sucursalProductoID IN @Ids
+            AND il.estado = 1
+            AND il.saldoCantidad > 0
+            ORDER BY il.sucursalProductoID ASC,
+                     (il.fechaVencimiento IS NULL), il.fechaVencimiento ASC, il.fechaLote ASC, il.inventarioLoteID ASC
+            FOR UPDATE;";
+
+        return await _connection.QueryAsync<InventarioLote>(sql, new { Ids = ids }, _transaction);
+    }
+
+    public async Task<int> DescontarSaldosLotesEnBloqueAsync(IReadOnlyList<ConsumoLote> consumos)
+    {
+        if (consumos.Count == 0) return 0;
+
+        // No lleva el guard "saldoCantidad >= cantidad" de la version unitaria
+        // porque quien llama ya valido la suficiencia sobre estas MISMAS filas
+        // bloqueadas con FOR UPDATE, antes de escribir nada. Aun asi, el saldo
+        // resultante se vuelve a leer de la base y se rechaza si quedo negativo.
+        // CRITICO: un mismo lote puede aparecer varias veces (dos lineas de venta
+        // del mismo producto consumen del mismo lote). Hay que SUMAR sus cantidades
+        // antes de armar el CASE: si no, el CASE aplicaria solo la primera y se
+        // perderia el resto del descuento.
+        var agrupados = consumos
+            .GroupBy(c => c.InventarioLoteId)
+            .Select(g => new ConsumoLote { InventarioLoteId = g.Key, Cantidad = g.Sum(x => x.Cantidad) })
+            .ToList();
+
+        var parametros = new DynamicParameters();
+        var casos = new System.Text.StringBuilder();
+        var ids = new List<string>();
+
+        for (var i = 0; i < agrupados.Count; i++)
+        {
+            parametros.Add($"id{i}", agrupados[i].InventarioLoteId);
+            parametros.Add($"c{i}", agrupados[i].Cantidad);
+            casos.Append($" WHEN @id{i} THEN @c{i}");
+            ids.Add($"@id{i}");
+        }
+
+        var sql = $@"
+            UPDATE inventario_lote
+            SET saldoCantidad = saldoCantidad - CASE inventarioLoteID{casos} END
+            WHERE inventarioLoteID IN ({string.Join(",", ids)})";
+
+        return await _connection.ExecuteAsync(sql, parametros, _transaction);
+    }
+
+    public async Task<IReadOnlyDictionary<int, SaldosLote>> GetSaldosLotesPorProductosAsync(IEnumerable<int> sucursalProductoIds)
+    {
+        var ids = sucursalProductoIds.Distinct().ToList();
+        var mapa = new Dictionary<int, SaldosLote>();
+        if (ids.Count == 0) return mapa;
+
+        var sql = @"
+            SELECT
+                sucursalProductoID                              AS SucursalProductoId,
+                COALESCE(SUM(saldoCantidad), 0)                 AS Cantidad,
+                COALESCE(SUM(saldoCantidad * costoUnitario), 0) AS Valor
+            FROM inventario_lote
+            WHERE sucursalProductoID IN @Ids
+            AND estado = 1
+            GROUP BY sucursalProductoID";
+
+        var filas = await _connection.QueryAsync<SaldosPorProductoRow>(sql, new { Ids = ids }, _transaction);
+        foreach (var f in filas)
+            mapa[f.SucursalProductoId] = new SaldosLote { Cantidad = f.Cantidad, Valor = f.Valor };
+
+        // Un producto sin lotes no devuelve fila en el GROUP BY; la version
+        // unitaria devolvia 0 por el COALESCE, asi que se rellena igual.
+        foreach (var id in ids)
+            if (!mapa.ContainsKey(id)) mapa[id] = new SaldosLote { Cantidad = 0m, Valor = 0m };
+
+        return mapa;
+    }
+
+    public async Task RegistrarMovimientosEnBloqueAsync(
+        IReadOnlyList<KardexMovimiento> movimientos,
+        IReadOnlyList<IReadOnlyList<KardexMovimientoLote>> detallesPorMovimiento)
+    {
+        if (movimientos.Count == 0) return;
+        if (movimientos.Count != detallesPorMovimiento.Count)
+            throw new InvalidOperationException("Movimientos y detalles no coinciden en cantidad.");
+
+        var parametros = new DynamicParameters();
+        var values = new List<string>();
+        for (var i = 0; i < movimientos.Count; i++)
+        {
+            var m = movimientos[i];
+            parametros.Add($"sp{i}", m.SucursalProductoId);
+            parametros.Add($"tm{i}", m.TipoMovimiento);
+            parametros.Add($"rt{i}", m.ReferenciaTipo);
+            parametros.Add($"ri{i}", m.ReferenciaId);
+            parametros.Add($"ca{i}", m.Cantidad);
+            parametros.Add($"cu{i}", m.CostoUnitarioPromedio);
+            parametros.Add($"ct{i}", m.CostoTotal);
+            parametros.Add($"sc{i}", m.SaldoCantidadPost);
+            parametros.Add($"sv{i}", m.SaldoValorPost);
+            parametros.Add($"fm{i}", m.FechaMovimiento);
+            parametros.Add($"iu{i}", m.IdUsuario);
+            values.Add($"(@sp{i}, @tm{i}, @rt{i}, @ri{i}, @ca{i}, @cu{i}, @ct{i}, @sc{i}, @sv{i}, @fm{i}, @iu{i})");
+        }
+
+        var sqlHeader = $@"
+            INSERT INTO kardex_movimiento
+                (sucursalProductoID, tipoMovimiento, referenciaTipo, referenciaID, cantidad,
+                 costoUnitarioPromedio, costoTotal, saldoCantidadPost, saldoValorPost, fechaMovimiento, idUsuario)
+            VALUES {string.Join(",", values)};
+            SELECT LAST_INSERT_ID();";
+
+        // MySQL asigna un bloque de ids consecutivo a un INSERT multifila y
+        // LAST_INSERT_ID() devuelve el PRIMERO. Aun asi no se asume: los ids se
+        // releen de la base y se verifica que sean exactamente los esperados.
+        var primerId = await _connection.ExecuteScalarAsync<int>(sqlHeader, parametros, _transaction);
+
+        var sqlIds = @"
+            SELECT kardexMovimientoID
+            FROM kardex_movimiento
+            WHERE kardexMovimientoID >= @PrimerId
+            ORDER BY kardexMovimientoID ASC
+            LIMIT @Cuantos";
+
+        var idsReales = (await _connection.QueryAsync<int>(
+            sqlIds, new { PrimerId = primerId, Cuantos = movimientos.Count }, _transaction)).ToList();
+
+        if (idsReales.Count != movimientos.Count)
+            throw new InvalidOperationException(
+                $"No se pudieron recuperar los ids de los {movimientos.Count} movimientos de kardex insertados.");
+
+        var detallesPlanos = new List<KardexMovimientoLote>();
+        for (var i = 0; i < movimientos.Count; i++)
+        {
+            movimientos[i].KardexMovimientoId = idsReales[i];
+            foreach (var d in detallesPorMovimiento[i])
+            {
+                d.KardexMovimientoId = idsReales[i];
+                detallesPlanos.Add(d);
+            }
+        }
+
+        if (detallesPlanos.Count == 0) return;
+
+        var pd = new DynamicParameters();
+        var valuesDet = new List<string>();
+        for (var i = 0; i < detallesPlanos.Count; i++)
+        {
+            var d = detallesPlanos[i];
+            pd.Add($"km{i}", d.KardexMovimientoId);
+            pd.Add($"il{i}", d.InventarioLoteId);
+            pd.Add($"ct{i}", d.Cantidad);
+            pd.Add($"cu{i}", d.CostoUnitario);
+            valuesDet.Add($"(@km{i}, @il{i}, @ct{i}, @cu{i})");
+        }
+
+        var sqlDetalle = $@"
+            INSERT INTO kardex_movimiento_lote
+                (kardexMovimientoID, inventarioLoteID, cantidad, costoUnitario)
+            VALUES {string.Join(",", valuesDet)};";
+
+        await _connection.ExecuteAsync(sqlDetalle, pd, _transaction);
+    }
+
+    private sealed class SaldosPorProductoRow
+    {
+        public int SucursalProductoId { get; set; }
+        public decimal Cantidad { get; set; }
+        public decimal Valor { get; set; }
+    }
+
     public async Task<IEnumerable<InventarioLote>> GetLotesReporteAsync(int sucursalProductoId, DateTime? desde, DateTime? hasta)
     {
         var sql = $@"{SelectLoteBase}

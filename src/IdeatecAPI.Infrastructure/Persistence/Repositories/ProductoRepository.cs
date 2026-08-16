@@ -1,3 +1,4 @@
+using IdeatecAPI.Application.Features.Inventario.DTOs;
 using System.Data;
 using Dapper;
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
@@ -458,6 +459,66 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
 
         var filas = await _connection.ExecuteAsync(sql, new { SucursalProductoId = sucursalProductoId, Cantidad = cantidad }, _transaction);
         return filas > 0;
+    }
+
+    public async Task<IReadOnlyDictionary<int, decimal>> GetStocksParaDescontarAsync(IEnumerable<int> sucursalProductoIds)
+    {
+        var ids = sucursalProductoIds.Distinct().ToList();
+        var mapa = new Dictionary<int, decimal>();
+        if (ids.Count == 0) return mapa;
+
+        // FOR UPDATE: bloquea las filas para que el stock leido no pueda cambiar
+        // entre la validacion y el descuento, igual que hacia el UPDATE
+        // condicional de la version unitaria.
+        var sql = @"
+            SELECT sucursalProductoID AS SucursalProductoId, stock AS Stock
+            FROM sucursalproducto
+            WHERE sucursalProductoID IN @Ids
+            AND estado = 1
+            FOR UPDATE";
+
+        var filas = await _connection.QueryAsync<StockRow>(sql, new { Ids = ids }, _transaction);
+        foreach (var f in filas) mapa[f.SucursalProductoId] = f.Stock;
+        return mapa;
+    }
+
+    public async Task<int> DescontarStocksEnBloqueAsync(IReadOnlyList<ConsumoProducto> consumos)
+    {
+        if (consumos.Count == 0) return 0;
+
+        // CRITICO: el mismo producto puede venir en dos lineas de la misma venta.
+        // Se suman las cantidades antes del CASE; en caso contrario solo se
+        // aplicaria la primera y el stock quedaria mal descontado.
+        var agrupados = consumos
+            .GroupBy(c => c.SucursalProductoId)
+            .Select(g => new { Id = g.Key, Cantidad = g.Sum(x => x.Cantidad) })
+            .ToList();
+
+        var parametros = new DynamicParameters();
+        var casos = new System.Text.StringBuilder();
+        var ids = new List<string>();
+
+        for (var i = 0; i < agrupados.Count; i++)
+        {
+            parametros.Add($"id{i}", agrupados[i].Id);
+            parametros.Add($"c{i}", agrupados[i].Cantidad);
+            casos.Append($" WHEN @id{i} THEN @c{i}");
+            ids.Add($"@id{i}");
+        }
+
+        var sql = $@"
+            UPDATE sucursalproducto
+            SET stock = stock - CASE sucursalProductoID{casos} END
+            WHERE sucursalProductoID IN ({string.Join(",", ids)})
+            AND estado = 1";
+
+        return await _connection.ExecuteAsync(sql, parametros, _transaction);
+    }
+
+    private sealed class StockRow
+    {
+        public int SucursalProductoId { get; set; }
+        public decimal Stock { get; set; }
     }
 
     public async Task<bool> DevolverStockAsync(int productoId, int sucursalId, decimal cantidad)

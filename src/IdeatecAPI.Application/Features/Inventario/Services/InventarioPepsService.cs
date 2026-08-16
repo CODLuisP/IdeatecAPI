@@ -17,6 +17,7 @@ public interface IInventarioPepsService
     Task DevolverAFifoAsync(int sucursalProductoId, decimal cantidad, decimal? costoUnitarioRespaldo,
         string? referenciaTipo, int? referenciaId, int? idUsuario);
 
+    Task ConsumirFifoEnBloqueAsync(IReadOnlyList<ConsumoProducto> consumos, string tipoMovimiento, int? idUsuario = null);
     Task<IEnumerable<KardexMovimientoDTO>> GetKardexAsync(int sucursalProductoId, DateTime? desde, DateTime? hasta);
     Task<StockValorizadoDTO> GetStockValorizadoAsync(int sucursalProductoId, string? nomProducto = null, string? codigo = null);
     Task<IEnumerable<StockValorizadoDTO>> GetStockValorizadoSucursalAsync(int sucursalId);
@@ -191,6 +192,119 @@ public class InventarioPepsService : IInventarioPepsService
             idUsuario: idUsuario,
             referenciaTipo: referenciaTipo,
             referenciaId: referenciaId);
+    }
+
+    /// <summary>
+    /// Consume PEPS de VARIOS productos en bloque. Hace exactamente lo mismo que
+    /// llamar a ConsumirFifoAsync producto por producto (mismo orden de lotes,
+    /// mismos costos, mismos saldos y los mismos mensajes de error), pero con un
+    /// numero fijo de consultas en vez de ~5 por producto.
+    ///
+    /// Orden: 1) se leen y BLOQUEAN todos los lotes, 2) se reparte en memoria y
+    /// se valida la suficiencia ANTES de escribir nada, 3) se descuentan los
+    /// lotes, 4) se releen los saldos reales y 5) se registra el kardex.
+    /// </summary>
+    public async Task ConsumirFifoEnBloqueAsync(
+        IReadOnlyList<ConsumoProducto> consumos,
+        string tipoMovimiento,
+        int? idUsuario = null)
+    {
+        if (consumos.Count == 0) return;
+        if (consumos.Any(c => c.Cantidad <= 0))
+            throw new ArgumentException("La cantidad a consumir debe ser mayor a 0.");
+
+        var idsProducto = consumos.Select(c => c.SucursalProductoId).Distinct().ToList();
+
+        // 1) Lotes de todos los productos, bloqueados (FOR UPDATE), en orden PEPS.
+        var lotes = (await _unitOfWork.InventarioLotes.GetLotesConSaldoFifoPorProductosAsync(idsProducto)).ToList();
+        var lotesPorProducto = lotes
+            .GroupBy(l => l.SucursalProductoId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        // 2) Reparto en memoria sobre las filas ya bloqueadas. Si algo no alcanza
+        //    se lanza aqui, ANTES de tocar la base: no se deja nada a medias.
+        var saldoRestantePorLote = lotes.ToDictionary(l => l.InventarioLoteId, l => l.SaldoCantidad);
+        var consumosLote = new List<ConsumoLote>();
+        var detallesPorConsumo = new List<IReadOnlyList<KardexMovimientoLote>>();
+        var costoTotalPorConsumo = new List<decimal>();
+
+        foreach (var consumo in consumos)
+        {
+            var restante = consumo.Cantidad;
+            var costoTotal = 0m;
+            var detalle = new List<KardexMovimientoLote>();
+
+            lotesPorProducto.TryGetValue(consumo.SucursalProductoId, out var lotesDelProducto);
+            foreach (var lote in lotesDelProducto ?? new List<InventarioLote>())
+            {
+                if (restante <= 0) break;
+
+                var disponible = saldoRestantePorLote[lote.InventarioLoteId];
+                if (disponible <= 0) continue;
+
+                var tomar = Math.Min(disponible, restante);
+                saldoRestantePorLote[lote.InventarioLoteId] = disponible - tomar;
+
+                costoTotal += tomar * lote.CostoUnitario;
+                detalle.Add(new KardexMovimientoLote
+                {
+                    InventarioLoteId = lote.InventarioLoteId,
+                    Cantidad = tomar,
+                    CostoUnitario = lote.CostoUnitario
+                });
+                consumosLote.Add(new ConsumoLote { InventarioLoteId = lote.InventarioLoteId, Cantidad = tomar });
+                restante -= tomar;
+            }
+
+            if (restante > 0)
+                throw new InvalidOperationException(
+                    $"Stock insuficiente en lotes PEPS para SucursalProductoId {consumo.SucursalProductoId}: faltan {restante} unidades por cubrir.");
+
+            detallesPorConsumo.Add(detalle);
+            costoTotalPorConsumo.Add(costoTotal);
+        }
+
+        // 3) Descuento de todos los lotes en una sola sentencia.
+        if (consumosLote.Count > 0)
+            await _unitOfWork.InventarioLotes.DescontarSaldosLotesEnBloqueAsync(consumosLote);
+
+        // 4) Saldos posteriores leidos de la base (no calculados en memoria) para
+        //    que el kardex refleje exactamente lo que quedo almacenado.
+        var saldos = await _unitOfWork.InventarioLotes.GetSaldosLotesPorProductosAsync(idsProducto);
+
+        foreach (var id in idsProducto)
+        {
+            if (saldos.TryGetValue(id, out var s) && s.Cantidad < 0)
+                throw new InvalidOperationException(
+                    $"El saldo de lotes de SucursalProductoId {id} quedo negativo tras el descuento; se cancela la operacion.");
+        }
+
+        // 5) Kardex: cabeceras y detalles en bloque.
+        var movimientos = new List<KardexMovimiento>();
+        for (var i = 0; i < consumos.Count; i++)
+        {
+            var consumo = consumos[i];
+            var saldo = saldos.TryGetValue(consumo.SucursalProductoId, out var s)
+                ? s
+                : new SaldosLote { Cantidad = 0m, Valor = 0m };
+
+            movimientos.Add(new KardexMovimiento
+            {
+                SucursalProductoId    = consumo.SucursalProductoId,
+                TipoMovimiento        = tipoMovimiento,
+                ReferenciaTipo        = consumo.ReferenciaTipo,
+                ReferenciaId          = consumo.ReferenciaId,
+                Cantidad              = consumo.Cantidad,
+                CostoUnitarioPromedio = costoTotalPorConsumo[i] / consumo.Cantidad,
+                CostoTotal            = costoTotalPorConsumo[i],
+                SaldoCantidadPost     = saldo.Cantidad,
+                SaldoValorPost        = saldo.Valor,
+                FechaMovimiento       = DateTime.Now,
+                IdUsuario             = idUsuario
+            });
+        }
+
+        await _unitOfWork.InventarioLotes.RegistrarMovimientosEnBloqueAsync(movimientos, detallesPorConsumo);
     }
 
     public async Task<IEnumerable<KardexMovimientoDTO>> GetKardexAsync(int sucursalProductoId, DateTime? desde, DateTime? hasta)
