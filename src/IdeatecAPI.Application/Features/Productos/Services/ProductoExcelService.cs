@@ -59,17 +59,27 @@ public class ProductoExcelService : IProductoExcelService
 
         var columnas = new[]
         {
-            ("Código",            14),
-            ("Nombre Producto",   34),
-            ("Categoría",         18),
-            ("Tipo Producto",     14),
-            ("Unid. Medida",      13),
-            ("Tipo IGV",          13),
-            ("Inc. IGV",          10),
-            ("Sucursal",          22),
-            ("Precio Unit. (S/)", 18),
-            ("Stock",             10),
+            ("Código",              14),
+            ("Código de Barras",    20),
+            ("Nombre Producto",     34),
+            ("Categoría",           18),
+            ("Tipo Producto",       14),
+            ("Unid. Medida",        13),
+            ("Tipo IGV",            13),
+            ("Inc. IGV",            10),
+            ("Sucursal",            22),
+            ("Precio Compra (S/)",  18),
+            ("Precio Venta (S/)",   18),
+            ("Stock",               10),
+            ("Imagen (URL)",        50),
         };
+
+        // Índices (0-based). La imagen va al final a propósito: así las columnas
+        // numéricas conservan sus letras (J/K/L) en las fórmulas de la fila TOTAL.
+        const int colPrecioCompra = 9;   // J
+        const int colPrecioVenta  = 10;  // K
+        const int colStock        = 11;  // L
+        const int colUrlImagen    = 12;  // M
 
         int numCols = columnas.Length;
 
@@ -141,18 +151,24 @@ public class ProductoExcelService : IProductoExcelService
                 _    => item.TipoAfectacionIGV ?? ""
             };
 
+            // Los servicios no manejan costo ni stock: se marcan con "-".
+            bool esServicio = item.TipoProducto == "SERVICIO";
+
             var valores = new object?[]
             {
                 item.Codigo,
+                item.CodigoBarras,
                 item.NomProducto,
-                item.CategoriaNombre,
+                item.CategoriaNombre ?? "Sin categoría",
                 item.TipoProducto,
                 item.UnidadMedida,
                 igvLabel,
                 item.IncluirIGV == true ? "Sí" : "No",
                 item.NomSucursal,
+                esServicio ? (object?)"-" : item.PrecioCompra,
                 item.PrecioUnitario,
-                item.TipoProducto == "SERVICIO" ? (object?)"-" : item.Stock
+                esServicio ? (object?)"-" : item.Stock,
+                item.UrlImagenProducto
             };
 
             for (int col = 0; col < valores.Length; col++)
@@ -167,14 +183,21 @@ public class ProductoExcelService : IProductoExcelService
                 cell.Style.Border.OutsideBorder      = XLBorderStyleValues.Thin;
                 cell.Style.Border.OutsideBorderColor = colorBorde;
 
-                if (col == 8) // Precio
+                if (col == colPrecioCompra || col == colPrecioVenta)
                 {
                     cell.Style.NumberFormat.Format  = "#,##0.00";
                     cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
                 }
-                else if (col == 9) // Stock
+                else if (col == colStock)
                 {
                     cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                }
+                else if (col == colUrlImagen)
+                {
+                    // Sin WrapText: la URL debe quedar en una sola línea para poder
+                    // copiarla o reimportarla tal cual.
+                    cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
+                    cell.Style.Font.FontSize        = 9;
                 }
                 else
                 {
@@ -190,7 +213,7 @@ public class ProductoExcelService : IProductoExcelService
         {
             int lastDataRow = totalRow - 1;
 
-            var rangeTotalLabel = ws.Range(totalRow, 1, totalRow, 8);
+            var rangeTotalLabel = ws.Range(totalRow, 1, totalRow, colPrecioCompra);
             rangeTotalLabel.Merge();
             rangeTotalLabel.Value = $"TOTAL: {lista.Count} producto(s)";
             rangeTotalLabel.Style.Font.Bold                  = true;
@@ -203,8 +226,22 @@ public class ProductoExcelService : IProductoExcelService
             rangeTotalLabel.Style.Border.OutsideBorder       = XLBorderStyleValues.Thin;
             rangeTotalLabel.Style.Border.OutsideBorderColor  = colorBorde;
 
-            var cellValorTotal = ws.Cell(totalRow, 9);
-            cellValorTotal.FormulaA1                        = $"=SUMPRODUCT(I{dataStartRow}:I{lastDataRow},J{dataStartRow}:J{lastDataRow})";
+            // Valorización del inventario: costo total (compra x stock) y venta total (venta x stock).
+            // SUMPRODUCT ignora los "-" de los servicios porque los trata como cero.
+            var cellCostoTotal = ws.Cell(totalRow, colPrecioCompra + 1);
+            cellCostoTotal.FormulaA1                        = $"=SUMPRODUCT(J{dataStartRow}:J{lastDataRow},L{dataStartRow}:L{lastDataRow})";
+            cellCostoTotal.Style.Font.Bold                  = true;
+            cellCostoTotal.Style.Font.FontSize              = 10;
+            cellCostoTotal.Style.Font.FontColor             = colorTitulo;
+            cellCostoTotal.Style.Font.FontName              = "Arial";
+            cellCostoTotal.Style.Fill.BackgroundColor       = colorTotal;
+            cellCostoTotal.Style.NumberFormat.Format        = "#,##0.00";
+            cellCostoTotal.Style.Alignment.Horizontal       = XLAlignmentHorizontalValues.Right;
+            cellCostoTotal.Style.Border.OutsideBorder       = XLBorderStyleValues.Thin;
+            cellCostoTotal.Style.Border.OutsideBorderColor  = colorBorde;
+
+            var cellValorTotal = ws.Cell(totalRow, colPrecioVenta + 1);
+            cellValorTotal.FormulaA1                        = $"=SUMPRODUCT(K{dataStartRow}:K{lastDataRow},L{dataStartRow}:L{lastDataRow})";
             cellValorTotal.Style.Font.Bold                  = true;
             cellValorTotal.Style.Font.FontSize              = 10;
             cellValorTotal.Style.Font.FontColor             = colorTitulo;
@@ -215,8 +252,8 @@ public class ProductoExcelService : IProductoExcelService
             cellValorTotal.Style.Border.OutsideBorder       = XLBorderStyleValues.Thin;
             cellValorTotal.Style.Border.OutsideBorderColor  = colorBorde;
 
-            var cellStockTotal = ws.Cell(totalRow, 10);
-            cellStockTotal.FormulaA1                        = $"=SUM(J{dataStartRow}:J{lastDataRow})";
+            var cellStockTotal = ws.Cell(totalRow, colStock + 1);
+            cellStockTotal.FormulaA1                        = $"=SUM(L{dataStartRow}:L{lastDataRow})";
             cellStockTotal.Style.Font.Bold                  = true;
             cellStockTotal.Style.Font.FontSize              = 10;
             cellStockTotal.Style.Font.FontColor             = colorTitulo;
@@ -225,6 +262,12 @@ public class ProductoExcelService : IProductoExcelService
             cellStockTotal.Style.Alignment.Horizontal       = XLAlignmentHorizontalValues.Center;
             cellStockTotal.Style.Border.OutsideBorder       = XLBorderStyleValues.Thin;
             cellStockTotal.Style.Border.OutsideBorderColor  = colorBorde;
+
+            // Celda vacía para que la banda del total cubra también la columna de imagen.
+            var cellRelleno = ws.Cell(totalRow, colUrlImagen + 1);
+            cellRelleno.Style.Fill.BackgroundColor      = colorTotal;
+            cellRelleno.Style.Border.OutsideBorder      = XLBorderStyleValues.Thin;
+            cellRelleno.Style.Border.OutsideBorderColor = colorBorde;
 
             ws.Row(totalRow).Height = 20;
         }

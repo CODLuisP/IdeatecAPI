@@ -22,6 +22,7 @@ public class ReporteProductoFiltroDTO
 public class ReporteProductoItemDTO
 {
     public string? Codigo { get; set; }
+    public string? CodigoBarras { get; set; }
     public string? NomProducto { get; set; }
     public string? CategoriaNombre { get; set; }
     public string? TipoProducto { get; set; }
@@ -29,6 +30,15 @@ public class ReporteProductoItemDTO
     public string? TipoAfectacionIGV { get; set; }
     public bool? IncluirIGV { get; set; }
     public string? NomSucursal { get; set; }
+
+    /// <summary>URL pública de la imagen (Cloudflare Images).</summary>
+    public string? UrlImagenProducto { get; set; }
+
+    /// <summary>Último precio de compra (costo) registrado para el producto en la sucursal.</summary>
+    public decimal? PrecioCompra { get; set; }
+
+    /// <summary>Precio de venta al público.</summary>
     public decimal? PrecioUnitario { get; set; }
+
     public decimal? Stock { get; set; }
 }

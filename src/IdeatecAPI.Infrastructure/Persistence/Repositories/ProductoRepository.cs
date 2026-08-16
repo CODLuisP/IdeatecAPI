@@ -775,6 +775,7 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
         var sql = new System.Text.StringBuilder(@"
             SELECT
                 p.codigo                AS Codigo,
+                p.codigoBarras          AS CodigoBarras,
                 p.nomProducto           AS NomProducto,
                 c.categoriaNombre       AS CategoriaNombre,
                 p.tipoProducto          AS TipoProducto,
@@ -782,10 +783,25 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
                 p.tipoAfectacionIGV     AS TipoAfectacionIGV,
                 p.incluirIGV            AS IncluirIGV,
                 s.nombre                AS NomSucursal,
+                p.urlImagenProducto     AS UrlImagenProducto,
+                sp.ultimoPrecioCompra   AS PrecioCompra,
                 sp.precioUnitario       AS PrecioUnitario,
-                sp.stock                AS Stock
+                -- Un paquete/caja no lleva stock propio: se deriva del producto base
+                -- (unidades del base / factor de conversión), igual que en la lista de productos.
+                CASE
+                    WHEN p.esPaquete = 1
+                     AND p.productoBaseId IS NOT NULL
+                     AND IFNULL(p.factorConversion, 0) > 0
+                    THEN FLOOR(IFNULL((SELECT spb.stock
+                                       FROM sucursalproducto spb
+                                       WHERE spb.productoID = p.productoBaseId
+                                         AND spb.sucursalID = sp.sucursalID
+                                         AND spb.estado = 1
+                                       LIMIT 1), 0) / p.factorConversion)
+                    ELSE sp.stock
+                END                     AS Stock
             FROM producto p
-            INNER JOIN categoria c   ON c.categoriaID  = p.categoriaID
+            LEFT  JOIN categoria c   ON c.categoriaID  = p.categoriaID
             INNER JOIN sucursalproducto sp ON sp.productoID = p.productoID
             INNER JOIN sucursal s    ON s.sucursalID   = sp.sucursalID
             WHERE p.estado  = 1
