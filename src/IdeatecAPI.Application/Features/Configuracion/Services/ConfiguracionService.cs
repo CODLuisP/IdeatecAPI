@@ -50,7 +50,8 @@ public class ConfiguracionService : IConfiguracionService
             UseNotaVenta      = configuracion.UseNotaVenta,
             IsCajaAutopago    = configuracion.IsCajaAutopago,
             UsaSire           = configuracion.UsaSire,
-            ComisionPagoTarjeta = configuracion.ComisionPagoTarjeta
+            ComisionPagoTarjeta = configuracion.ComisionPagoTarjeta,
+            AdministraCaja    = configuracion.AdministraCaja
         };
     }
 
@@ -84,7 +85,8 @@ public class ConfiguracionService : IConfiguracionService
                 UseNotaVenta      = dto.UseNotaVenta,
                 IsCajaAutopago    = dto.IsCajaAutopago,
                 UsaSire           = dto.UsaSire,
-                ComisionPagoTarjeta = dto.ComisionPagoTarjeta
+                ComisionPagoTarjeta = dto.ComisionPagoTarjeta,
+                AdministraCaja    = dto.AdministraCaja
             };
 
             var result = await _unitOfWork.Configuracion.RegistrarConfiguracionAsync(configuracion);
@@ -131,7 +133,8 @@ public class ConfiguracionService : IConfiguracionService
                 UseNotaVenta      = dto.UseNotaVenta,
                 IsCajaAutopago    = dto.IsCajaAutopago,
                 UsaSire           = dto.UsaSire,
-                ComisionPagoTarjeta = dto.ComisionPagoTarjeta
+                ComisionPagoTarjeta = dto.ComisionPagoTarjeta,
+                AdministraCaja    = dto.AdministraCaja
             };
 
             var result = await _unitOfWork.Configuracion.EditarConfiguracionAsync(ruc, configuracion);

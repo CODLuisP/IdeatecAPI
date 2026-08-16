@@ -25,4 +25,5 @@ public class ConfiguracionDto
     public bool? IsCajaAutopago { get; set; }
     public bool? UsaSire { get; set; }
     public string? ComisionPagoTarjeta { get; set; }
+    public bool? AdministraCaja { get; set; }
 }

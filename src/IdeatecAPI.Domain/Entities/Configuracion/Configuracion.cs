@@ -26,4 +26,6 @@ public class Configuracion
     public bool? IsCajaAutopago { get; set; }
     public bool? UsaSire { get; set; }
     public string? ComisionPagoTarjeta { get; set; }
+    // Activa el control de apertura/cierre de caja por turnos de usuario.
+    public bool? AdministraCaja { get; set; }
 }

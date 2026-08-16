@@ -120,6 +120,10 @@ public static class DependencyInjection
         services.AddScoped<IControlCajaTicketHtmlService, ControlCajaTicketHtmlService>();
         services.AddScoped<IReportesService, ReportesService>();
 
+        //Caja (apertura, turnos y cierre)
+        services.AddScoped<IdeatecAPI.Application.Features.Caja.Services.ICajaService,
+                           IdeatecAPI.Application.Features.Caja.Services.CajaService>();
+
         //Cuentas por cobrar
         services.AddScoped<ICuentasPorCobrarService, CuentasPorCobrarService>();
         services.AddScoped<ICuentasPorCobrarExcelService, CuentasPorCobrarExcelService>();
