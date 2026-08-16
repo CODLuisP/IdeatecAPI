@@ -65,6 +65,17 @@ public class CajaRepository : DapperRepository<CajaApertura>, ICajaRepository
             sql, new { Id = cajaAperturaId }, _transaction);
     }
 
+    public async Task<CajaApertura?> GetUltimaCajaCerradaAsync(int sucursalId)
+    {
+        var sql = SelectCaja + @"
+            WHERE sucursalID = @SucursalId AND estado = 'CERRADA'
+            ORDER BY cajaAperturaID DESC
+            LIMIT 1;";
+
+        return await _connection.QueryFirstOrDefaultAsync<CajaApertura>(
+            sql, new { SucursalId = sucursalId }, _transaction);
+    }
+
     public async Task<int> InsertCajaAsync(CajaApertura caja)
     {
         var sql = @"
@@ -158,6 +169,21 @@ public class CajaRepository : DapperRepository<CajaApertura>, ICajaRepository
 
         return await _connection.QueryAsync<CajaTurno>(
             sql, new { CajaAperturaId = cajaAperturaId }, _transaction);
+    }
+
+    public async Task<bool> UsuarioTieneTurnoCerradoAsync(int cajaAperturaId, int usuarioId)
+    {
+        var sql = @"
+            SELECT COUNT(*)
+            FROM caja_turno
+            WHERE cajaAperturaID = @CajaAperturaId
+              AND usuarioID = @UsuarioId
+              AND estado = 'CERRADO';";
+
+        var total = await _connection.ExecuteScalarAsync<int>(
+            sql, new { CajaAperturaId = cajaAperturaId, UsuarioId = usuarioId }, _transaction);
+
+        return total > 0;
     }
 
     public async Task<int> InsertTurnoAsync(CajaTurno turno)

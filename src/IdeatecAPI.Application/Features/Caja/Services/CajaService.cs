@@ -40,7 +40,16 @@ public class CajaService : ICajaService
     {
         var caja = await _unitOfWork.Caja.GetCajaAbiertaAsync(sucursalId);
         if (caja == null)
-            return new CajaEstadoDto { CajaAbierta = false };
+        {
+            // Sin caja abierta, se propone arrancar con el efectivo que quedó
+            // en el cajón al cerrar la anterior, sea de ayer o de hace un mes.
+            var ultimaCerrada = await _unitOfWork.Caja.GetUltimaCajaCerradaAsync(sucursalId);
+            return new CajaEstadoDto
+            {
+                CajaAbierta = false,
+                SugerenciaMontoInicial = ultimaCerrada?.EfectivoContado
+            };
+        }
 
         var sucursal = await _unitOfWork.Caja.GetDatosSucursalAsync(sucursalId);
         var turnoAbierto = await _unitOfWork.Caja.GetTurnoAbiertoAsync(caja.CajaAperturaId);
@@ -49,7 +58,11 @@ public class CajaService : ICajaService
         {
             CajaAbierta = true,
             Caja = MapCaja(caja, sucursal?.Nombre),
-            SaldoEfectivo = await CalcularSaldoEfectivoAsync(caja, turnoAbierto, sucursal)
+            SaldoEfectivo = await CalcularSaldoEfectivoAsync(caja, turnoAbierto, sucursal),
+            UsuarioYaCuadro = await _unitOfWork.Caja.UsuarioTieneTurnoCerradoAsync(caja.CajaAperturaId, usuarioId),
+            // Se compara solo el día calendario, no cuántas horas pasaron: una
+            // caja abierta a las 11 pm y consultada a la 1 am ya es de ayer.
+            CajaDeDiaAnterior = caja.FechaApertura.Date < DateTime.Now.Date
         };
 
         if (turnoAbierto == null)
@@ -136,13 +149,7 @@ public class CajaService : ICajaService
 
             _unitOfWork.Commit();
 
-            return new CajaEstadoDto
-            {
-                CajaAbierta = true,
-                Caja = MapCaja(caja, sucursal.Nombre),
-                TurnoActual = MapTurno(turno),
-                SaldoEfectivo = dto.MontoInicial
-            };
+            return await GetEstadoAsync(dto.SucursalId, usuarioId);
         }
         catch
         {
@@ -190,13 +197,7 @@ public class CajaService : ICajaService
 
             _unitOfWork.Commit();
 
-            return new CajaEstadoDto
-            {
-                CajaAbierta = true,
-                Caja = MapCaja(caja, sucursal?.Nombre),
-                TurnoActual = MapTurno(turno),
-                SaldoEfectivo = saldoInicial
-            };
+            return await GetEstadoAsync(sucursalId, usuarioId);
         }
         catch
         {
@@ -295,12 +296,23 @@ public class CajaService : ICajaService
 
             if (dto.CerrarCaja)
             {
+                // El cierre resume el día entero, no solo el último turno: si un
+                // turno anterior quedó con faltante, ese descuadre debe seguir
+                // visible aunque los turnos posteriores hayan cuadrado exacto.
+                // Cada turno arrastra como saldo inicial lo que se contó al final
+                // del anterior, así que el esperado del día se reconstruye
+                // sumando lo que cada turno vendió en efectivo sobre el fondo
+                // con el que se abrió la caja.
+                var turnos = (await _unitOfWork.Caja.GetTurnosByCajaAsync(caja.CajaAperturaId)).ToList();
+                var ventasEfectivoDia = turnos.Sum(t => (t.EfectivoEsperado ?? t.SaldoInicial) - t.SaldoInicial);
+
                 caja.FechaCierre = ahora;
                 caja.UsuarioCierre = usuarioId;
                 caja.NombreUsuarioCierre = nombreUsuario;
-                caja.EfectivoEsperado = efectivoEsperado;
+                caja.EfectivoEsperado = caja.MontoInicial + ventasEfectivoDia;
                 caja.EfectivoContado = dto.EfectivoContado;
-                caja.Diferencia = diferencia;
+                // Equivale a la suma de las diferencias de todos los turnos.
+                caja.Diferencia = dto.EfectivoContado - caja.EfectivoEsperado;
                 caja.Observaciones = dto.Observaciones ?? caja.Observaciones;
 
                 if (!await _unitOfWork.Caja.CerrarCajaAsync(caja))
