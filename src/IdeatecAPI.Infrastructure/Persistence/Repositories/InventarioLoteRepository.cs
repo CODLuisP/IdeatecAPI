@@ -99,6 +99,33 @@ public class InventarioLoteRepository : DapperRepository<InventarioLote>, IInven
         return await _connection.ExecuteScalarAsync<decimal>(sql, new { SucursalProductoId = sucursalProductoId }, _transaction);
     }
 
+    public async Task<(decimal Cantidad, decimal Valor)> GetSaldosLotesAsync(int sucursalProductoId)
+    {
+        // Los dos agregados salen de la misma tabla y el mismo filtro, asi que se
+        // resuelven en una sola consulta en vez de dos viajes seguidos.
+        var sql = @"
+            SELECT
+                COALESCE(SUM(saldoCantidad), 0)                  AS Cantidad,
+                COALESCE(SUM(saldoCantidad * costoUnitario), 0)  AS Valor
+            FROM inventario_lote
+            WHERE sucursalProductoID = @SucursalProductoId
+            AND estado = 1";
+
+        // Se mapea a una clase con propiedades (por nombre) y no a un ValueTuple:
+        // Dapper mapea las tuplas por POSICION de columna, lo que se rompe en
+        // silencio si alguien reordena el SELECT.
+        var fila = await _connection.QuerySingleAsync<SaldosLoteRow>(
+            sql, new { SucursalProductoId = sucursalProductoId }, _transaction);
+
+        return (fila.Cantidad, fila.Valor);
+    }
+
+    private sealed class SaldosLoteRow
+    {
+        public decimal Cantidad { get; set; }
+        public decimal Valor { get; set; }
+    }
+
     public async Task<IEnumerable<InventarioLote>> GetSaldoValorizadoSucursalAsync(int sucursalId)
     {
         var sql = @"

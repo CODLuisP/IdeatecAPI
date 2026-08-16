@@ -11,6 +11,13 @@ public interface IInventarioLoteRepository : IRepository<InventarioLote>
     Task<IEnumerable<InventarioLote>> GetLotesReporteAsync(int sucursalProductoId, DateTime? desde, DateTime? hasta);
     Task<decimal> GetSaldoValorizadoAsync(int sucursalProductoId);
     Task<decimal> GetSaldoCantidadLotesAsync(int sucursalProductoId);
+
+    /// <summary>
+    /// Devuelve saldo en cantidad y saldo valorizado en UNA sola consulta.
+    /// Equivale a llamar a GetSaldoCantidadLotesAsync + GetSaldoValorizadoAsync
+    /// (misma tabla, mismo filtro), pero ahorra un viaje a la base de datos.
+    /// </summary>
+    Task<(decimal Cantidad, decimal Valor)> GetSaldosLotesAsync(int sucursalProductoId);
     Task<IEnumerable<InventarioLote>> GetSaldoValorizadoSucursalAsync(int sucursalId);
     Task<KardexMovimiento> RegistrarMovimientoAsync(KardexMovimiento movimiento, IEnumerable<KardexMovimientoLote> detalleLotes);
     Task<IEnumerable<KardexMovimiento>> GetKardexAsync(int sucursalProductoId, DateTime? desde, DateTime? hasta);

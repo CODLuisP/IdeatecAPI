@@ -131,8 +131,8 @@ public class InventarioPepsService : IInventarioPepsService
 
         var costoUnitarioPromedio = costoTotal / cantidad;
 
-        var saldoCantidad = await _unitOfWork.InventarioLotes.GetSaldoCantidadLotesAsync(sucursalProductoId);
-        var saldoValor = await _unitOfWork.InventarioLotes.GetSaldoValorizadoAsync(sucursalProductoId);
+        // Los dos saldos se piden juntos: misma tabla y mismo filtro, un viaje menos.
+        var (saldoCantidad, saldoValor) = await _unitOfWork.InventarioLotes.GetSaldosLotesAsync(sucursalProductoId);
 
         var movimiento = new KardexMovimiento
         {

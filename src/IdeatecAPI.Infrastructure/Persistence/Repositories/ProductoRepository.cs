@@ -557,6 +557,50 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
         return result.FirstOrDefault();
     }
 
+    public async Task<IReadOnlyDictionary<int, Producto>> GetInfoConversionBySucursalProductoIdsAsync(IEnumerable<int> sucursalProductoIds)
+    {
+        var ids = sucursalProductoIds.Distinct().ToList();
+        if (ids.Count == 0) return new Dictionary<int, Producto>();
+
+        // Mismo SELECT que la version de un solo id, pero resolviendo todos los
+        // productos de la venta en una sola consulta (IN) en vez de uno por uno.
+        var sql = @"
+            SELECT
+                p.productoID        AS ProductoId,
+                p.esPaquete         AS EsPaquete,
+                p.productoBaseId    AS ProductoBaseId,
+                p.factorConversion  AS FactorConversion,
+
+                sp.sucursalProductoID AS SucursalProductoId,
+                sp.sucursalID         AS SucursalId,
+                sp.stock              AS Stock
+            FROM producto p
+            INNER JOIN sucursalproducto sp ON sp.productoID = p.productoID
+            WHERE sp.sucursalProductoID IN @Ids
+            AND p.estado = 1
+            AND sp.estado = 1";
+
+        var result = await _connection.QueryAsync<Producto, SucursalProducto, Producto>(
+            sql,
+            (producto, sucursalProducto) =>
+            {
+                producto.SucursalProducto = sucursalProducto;
+                return producto;
+            },
+            new { Ids = ids },
+            transaction: _transaction,
+            splitOn: "SucursalProductoId"
+        );
+
+        var mapa = new Dictionary<int, Producto>();
+        foreach (var prod in result)
+        {
+            if (prod.SucursalProducto is null) continue;
+            mapa[prod.SucursalProducto.SucursalProductoId] = prod;
+        }
+        return mapa;
+    }
+
     public async Task<bool> DescontarStockBaseAsync(int productoBaseId, int sucursalId, decimal cantidad)
     {
         var sql = @"

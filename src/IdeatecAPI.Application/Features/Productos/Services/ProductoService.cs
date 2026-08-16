@@ -337,11 +337,17 @@ public class ProductoService : IProductoService
         if (dtos.Any(d => d.Cantidad <= 0))
             throw new ArgumentException("Todas las cantidades deben ser mayores a 0.");
 
+        // Se resuelve la info de conversion de TODOS los productos de la venta en una
+        // sola consulta, en vez de una por producto. Los ids inexistentes no aparecen
+        // en el diccionario, que es justo lo que antes devolvia null.
+        var infoPorSucursalProducto = await _unitOfWork.Productos
+            .GetInfoConversionBySucursalProductoIdsAsync(dtos.Select(d => d.SucursalProductoId));
+
         foreach (var dto in dtos)
         {
             // Si el producto vendido es un paquete (caja, pack, etc.), el descuento de stock
             // se redirige al producto base (cantidad x factor de conversión), igual que en compras.
-            var info = await _unitOfWork.Productos.GetInfoConversionBySucursalProductoIdAsync(dto.SucursalProductoId);
+            infoPorSucursalProducto.TryGetValue(dto.SucursalProductoId, out var info);
 
             var esPaqueteValido = info?.EsPaquete == true
                 && info.ProductoBaseId is int

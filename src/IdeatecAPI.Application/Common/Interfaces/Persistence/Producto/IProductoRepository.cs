@@ -29,6 +29,13 @@ public interface IProductoRepository : IRepository<Producto>
     Task<bool> IncrementarStockSinCostoAsync(int productoId, int sucursalId, decimal cantidad);
     Task<bool> ActualizarCostoSinStockAsync(int productoId, int sucursalId, decimal precioCompra);
     Task<Producto?> GetInfoConversionBySucursalProductoIdAsync(int sucursalProductoId);
+
+    /// <summary>
+    /// Misma informacion que GetInfoConversionBySucursalProductoIdAsync pero para
+    /// varios sucursalProductoID a la vez, en una sola consulta. Los ids que no
+    /// existan simplemente no aparecen en el diccionario (igual que devolver null).
+    /// </summary>
+    Task<IReadOnlyDictionary<int, Producto>> GetInfoConversionBySucursalProductoIdsAsync(IEnumerable<int> sucursalProductoIds);
     Task<bool> DescontarStockBaseAsync(int productoBaseId, int sucursalId, decimal cantidad);
     Task<bool> ExisteCodigoBarrasAsync(string codigoBarras, int sucursalId);
 }
