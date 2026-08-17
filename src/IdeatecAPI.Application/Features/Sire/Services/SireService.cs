@@ -109,11 +109,11 @@ public class SireService : ISireService
 
         try
         {
-            var (numTicket, codProceso) = await ExportarPropuestaAsync(token, perTributario);
+            var numTicket = await ExportarPropuestaAsync(token, perTributario);
             if (string.IsNullOrEmpty(numTicket))
                 return new SireDescargarPropuestaResponse { Success = false, Mensaje = "SUNAT no devolvió un ticket para exportar la propuesta" };
 
-            var (nomArchivoReporte, codTipoArchivoReporte, mensajeEspera) = await EsperarTicketTerminadoAsync(token, perTributario, numTicket);
+            var (nomArchivoReporte, codTipoArchivoReporte, codProcesoTicket, mensajeEspera) = await EsperarTicketTerminadoAsync(token, perTributario, numTicket);
             if (string.IsNullOrEmpty(nomArchivoReporte))
                 return new SireDescargarPropuestaResponse { Success = false, Mensaje = mensajeEspera, NumTicket = numTicket };
 
@@ -122,7 +122,7 @@ public class SireService : ISireService
             var tokenDescarga = await ObtenerTokenAsync(ruc, solUsuario, solClave, clienteId, clientSecret) ?? token;
 
             var (zipBytes, errorDescarga) = await DescargarArchivoReporteAsync(
-                tokenDescarga, nomArchivoReporte, codTipoArchivoReporte, perTributario, codProceso ?? "01", numTicket);
+                tokenDescarga, nomArchivoReporte, codTipoArchivoReporte, perTributario, codProcesoTicket ?? "01", numTicket);
             if (zipBytes is null)
                 return new SireDescargarPropuestaResponse { Success = false, Mensaje = errorDescarga, NumTicket = numTicket };
 
@@ -136,7 +136,7 @@ public class SireService : ISireService
         }
     }
 
-    private async Task<(string? NumTicket, string? CodProceso)> ExportarPropuestaAsync(string token, string perTributario)
+    private async Task<string?> ExportarPropuestaAsync(string token, string perTributario)
     {
         var url = string.Format(UrlExportaPropuesta, perTributario);
         var client = _httpClientFactory.CreateClient();
@@ -151,18 +151,16 @@ public class SireService : ISireService
         if (!response.IsSuccessStatusCode)
         {
             _logger.LogError("[SIRE] Error exportando propuesta {Periodo}: {Status} {Content}", perTributario, response.StatusCode, content);
-            return (null, null);
+            return null;
         }
 
         using var doc = JsonDocument.Parse(content);
-        var numTicket = doc.RootElement.TryGetProperty("numTicket", out var t) ? t.GetString() : null;
-        var codProceso = doc.RootElement.TryGetProperty("codProceso", out var cp) ? cp.GetString() : null;
-        return (numTicket, codProceso);
+        return doc.RootElement.TryGetProperty("numTicket", out var t) ? t.GetString() : null;
     }
 
     // Manual v30 Anexo III - codEstadoProceso: 01=Cargado, 02=Validando, 03=Error, 04=Procesado OK, 05=En proceso, 06=Terminado
-    // Retorna: (nomArchivoReporte, codTipoArchivoReporte, mensaje)
-    private async Task<(string? NomArchivoReporte, string? CodTipoArchivoReporte, string Mensaje)> EsperarTicketTerminadoAsync(
+    // Retorna: (nomArchivoReporte, codTipoArchivoReporte, codProceso, mensaje)
+    private async Task<(string? NomArchivoReporte, string? CodTipoArchivoReporte, string? CodProceso, string Mensaje)> EsperarTicketTerminadoAsync(
         string token, string perTributario, string numTicket)
     {
         var url = string.Format(UrlConsultaEstadoTicket, perTributario, numTicket);
@@ -203,6 +201,10 @@ public class SireService : ISireService
                 string? nomArchivo = null;
                 string? codTipoArchivo = null;
 
+                // Manual v30 §5.17: el codProceso para descargar el archivo (5.17) debe ser el que
+                // devuelve ESTE servicio (5.16 registros[0].codProceso), no el de exportapropuesta (5.18).
+                var codProcesoTicket = registro.TryGetProperty("codProceso", out var cp) ? cp.GetString() : null;
+
                 // Manual v30 §5.17: fuente principal es archivoReporte[0]
                 if (registro.TryGetProperty("archivoReporte", out var archivoArr)
                     && archivoArr.ValueKind == JsonValueKind.Array)
@@ -226,18 +228,18 @@ public class SireService : ISireService
                     nomArchivo = detalle.TryGetProperty("nomArchivoReporte", out var dna) ? dna.GetString() : null;
                 }
 
-                return (nomArchivo, codTipoArchivo, "Terminado");
+                return (nomArchivo, codTipoArchivo, codProcesoTicket, "Terminado");
             }
 
             if (estadoNorm == "3") // 03=Procesado con Errores
             {
                 _logger.LogError("[SIRE] Ticket {Ticket} procesado con errores por SUNAT", numTicket);
-                return (null, null, "SUNAT procesó el ticket con errores. Revisa los comprobantes e intenta nuevamente.");
+                return (null, null, null, "SUNAT procesó el ticket con errores. Revisa los comprobantes e intenta nuevamente.");
             }
             // 01, 02, 05 → sigue esperando
         }
 
-        return (null, null, "SUNAT aún está generando la propuesta. Intenta de nuevo en unos minutos.");
+        return (null, null, null, "SUNAT aún está generando la propuesta. Intenta de nuevo en unos minutos.");
     }
 
     // Manual v30 §5.17: codTipoArchivoReporte viene de archivoReporte[0].codTipoAchivoReporte del ticket
@@ -407,7 +409,7 @@ public class SireService : ISireService
                         && !string.IsNullOrEmpty(t.GetString()))
                     {
                         var numTicket = t.GetString()!;
-                        var (_, _, mensajeTicket) = await EsperarTicketTerminadoAsync(token, perTributario, numTicket);
+                        var (_, _, _, mensajeTicket) = await EsperarTicketTerminadoAsync(token, perTributario, numTicket);
                         var exitoso = mensajeTicket == "Terminado";
                         return new SireRegistrarPreliminarResponse
                         {

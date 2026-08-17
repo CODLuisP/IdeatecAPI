@@ -240,36 +240,99 @@ public class ProductoService : IProductoService
                 // solo sobrescribir el número en sucursalproducto.
                 if (dto.Stock is decimal stockNuevo)
                 {
-                    var stockActual = info?.SucursalProducto?.Stock ?? 0m;
-                    var delta = stockNuevo - stockActual;
+                    // Si el producto editado es un paquete (caja, pack, etc.), el valor de Stock
+                    // representa la cantidad de cajas deseada (siempre entera), y el ajuste real
+                    // de inventario/PEPS se redirige al producto base (cantidad x factor de
+                    // conversión), igual que ya hacen las ventas, devoluciones y compras. Las
+                    // unidades sueltas que ya tuviera el base (resto de la división) se preservan.
+                    var esPaqueteValido = info?.EsPaquete == true
+                        && info.ProductoBaseId is int
+                        && info.FactorConversion is decimal factorTmp
+                        && factorTmp > 0;
 
-                    // Cualquier cambio de stock (subir o bajar) exige tener costo registrado:
-                    // subir sin costo generaría un lote PEPS a costo 0, y bajar sin costo indica
-                    // que el producto todavía no tiene su costo corregido (arrastraría movimientos
-                    // de Kardex a costo 0 desde los lotes existentes).
-                    if (delta != 0 && (dto.CostoUnitario is null || dto.CostoUnitario <= 0))
-                        throw new ArgumentException("Debes registrar el costo de compra para modificar el stock del producto.");
-
-                    if (delta > 0)
+                    if (esPaqueteValido && sucursalId is int sucIdPaquete)
                     {
-                        await _inventarioPepsService.RegistrarEntradaLoteAsync(
-                            dto.SucursalProductoId,
-                            compraProveedorId: null,
-                            origen: "AJUSTE_INVENTARIO",
-                            cantidad: delta,
-                            costoUnitario: dto.CostoUnitario ?? 0m,
-                            fecha: DateTime.Now,
-                            idUsuario: dto.UsuarioId);
+                        if (stockNuevo < 0 || stockNuevo != Math.Floor(stockNuevo))
+                            throw new ArgumentException("La cantidad de cajas/paquetes debe ser un número entero mayor o igual a 0.");
+
+                        var productoBaseId = info!.ProductoBaseId!.Value;
+                        var factor = info.FactorConversion!.Value;
+
+                        var productoBase = await _unitOfWork.Productos.GetProductoByIdAsync(productoBaseId, sucIdPaquete);
+                        if (productoBase?.SucursalProducto == null)
+                            throw new InvalidOperationException("El producto base de este paquete no está registrado en la sucursal.");
+
+                        var baseSucursalProductoId = productoBase.SucursalProducto.SucursalProductoId;
+                        var stockBaseActual = productoBase.SucursalProducto.Stock ?? 0m;
+                        var sueltas = stockBaseActual % factor;
+                        var nuevoStockBase = stockNuevo * factor + sueltas;
+                        var deltaBase = nuevoStockBase - stockBaseActual;
+
+                        if (deltaBase != 0 && (dto.CostoUnitario is null || dto.CostoUnitario <= 0))
+                            throw new ArgumentException("Debes registrar el costo de compra para modificar el stock del producto.");
+
+                        if (deltaBase > 0)
+                        {
+                            // RegistrarEntradaLoteAsync solo maneja lotes/kardex (no toca la
+                            // columna stock): hay que incrementarla aparte, igual que en compras.
+                            await _unitOfWork.Productos.IncrementarStockSinCostoAsync(productoBaseId, sucIdPaquete, deltaBase);
+                            await _inventarioPepsService.RegistrarEntradaLoteAsync(
+                                baseSucursalProductoId,
+                                compraProveedorId: null,
+                                origen: "AJUSTE_INVENTARIO",
+                                cantidad: deltaBase,
+                                costoUnitario: (dto.CostoUnitario ?? 0m) / factor,
+                                fecha: DateTime.Now,
+                                idUsuario: dto.UsuarioId);
+                        }
+                        else if (deltaBase < 0)
+                        {
+                            var descontado = await _unitOfWork.Productos.DescontarStockBaseAsync(productoBaseId, sucIdPaquete, Math.Abs(deltaBase));
+                            if (!descontado)
+                                throw new InvalidOperationException("Stock insuficiente en el producto base para reducir el stock del paquete.");
+
+                            await _inventarioPepsService.ConsumirFifoAsync(
+                                baseSucursalProductoId,
+                                Math.Abs(deltaBase),
+                                "SALIDA_AJUSTE",
+                                referenciaTipo: null,
+                                referenciaId: null,
+                                idUsuario: dto.UsuarioId);
+                        }
                     }
-                    else if (delta < 0)
+                    else
                     {
-                        await _inventarioPepsService.ConsumirFifoAsync(
-                            dto.SucursalProductoId,
-                            Math.Abs(delta),
-                            "SALIDA_AJUSTE",
-                            referenciaTipo: null,
-                            referenciaId: null,
-                            idUsuario: dto.UsuarioId);
+                        var stockActual = info?.SucursalProducto?.Stock ?? 0m;
+                        var delta = stockNuevo - stockActual;
+
+                        // Cualquier cambio de stock (subir o bajar) exige tener costo registrado:
+                        // subir sin costo generaría un lote PEPS a costo 0, y bajar sin costo indica
+                        // que el producto todavía no tiene su costo corregido (arrastraría movimientos
+                        // de Kardex a costo 0 desde los lotes existentes).
+                        if (delta != 0 && (dto.CostoUnitario is null || dto.CostoUnitario <= 0))
+                            throw new ArgumentException("Debes registrar el costo de compra para modificar el stock del producto.");
+
+                        if (delta > 0)
+                        {
+                            await _inventarioPepsService.RegistrarEntradaLoteAsync(
+                                dto.SucursalProductoId,
+                                compraProveedorId: null,
+                                origen: "AJUSTE_INVENTARIO",
+                                cantidad: delta,
+                                costoUnitario: dto.CostoUnitario ?? 0m,
+                                fecha: DateTime.Now,
+                                idUsuario: dto.UsuarioId);
+                        }
+                        else if (delta < 0)
+                        {
+                            await _inventarioPepsService.ConsumirFifoAsync(
+                                dto.SucursalProductoId,
+                                Math.Abs(delta),
+                                "SALIDA_AJUSTE",
+                                referenciaTipo: null,
+                                referenciaId: null,
+                                idUsuario: dto.UsuarioId);
+                        }
                     }
                 }
             }
