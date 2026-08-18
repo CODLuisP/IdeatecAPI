@@ -53,6 +53,44 @@ public class InventarioLoteRepository : DapperRepository<InventarioLote>, IInven
         return await _connection.QueryAsync<InventarioLote>(sql, new { SucursalProductoId = sucursalProductoId }, _transaction);
     }
 
+    // Misma consulta que la version por producto, pero para todos los productos de una venta.
+    // Se ordena tambien por sucursalProductoID para poder agrupar el resultado en memoria
+    // conservando el orden PEPS dentro de cada producto.
+    public async Task<IEnumerable<InventarioLote>> GetLotesConSaldoFifoAsync(IEnumerable<int> sucursalProductoIds)
+    {
+        var ids = sucursalProductoIds.Distinct().ToList();
+        if (ids.Count == 0)
+            return [];
+
+        var sql = $@"{SelectLoteBase}
+            WHERE il.sucursalProductoID IN @SucursalProductoIds
+            AND il.estado = 1
+            AND il.saldoCantidad > 0
+            ORDER BY il.sucursalProductoID ASC, (il.fechaVencimiento IS NULL), il.fechaVencimiento ASC, il.fechaLote ASC, il.inventarioLoteID ASC
+            FOR UPDATE;";
+
+        return await _connection.QueryAsync<InventarioLote>(sql, new { SucursalProductoIds = ids }, _transaction);
+    }
+
+    public async Task<IEnumerable<SaldoLotesDTO>> GetSaldosLotesAsync(IEnumerable<int> sucursalProductoIds)
+    {
+        var ids = sucursalProductoIds.Distinct().ToList();
+        if (ids.Count == 0)
+            return [];
+
+        var sql = @"
+            SELECT
+                sucursalProductoID                              AS SucursalProductoId,
+                COALESCE(SUM(saldoCantidad), 0)                 AS SaldoCantidad,
+                COALESCE(SUM(saldoCantidad * costoUnitario), 0) AS SaldoValor
+            FROM inventario_lote
+            WHERE sucursalProductoID IN @SucursalProductoIds
+            AND estado = 1
+            GROUP BY sucursalProductoID";
+
+        return await _connection.QueryAsync<SaldoLotesDTO>(sql, new { SucursalProductoIds = ids }, _transaction);
+    }
+
     public async Task<bool> DescontarSaldoLoteAsync(int inventarioLoteId, decimal cantidad)
     {
         var sql = @"
@@ -64,6 +102,9 @@ public class InventarioLoteRepository : DapperRepository<InventarioLote>, IInven
         var filas = await _connection.ExecuteAsync(sql, new { InventarioLoteId = inventarioLoteId, Cantidad = cantidad }, _transaction);
         return filas > 0;
     }
+
+    public Task<int> DescontarSaldoLotesBatchAsync(IReadOnlyDictionary<int, decimal> consumoPorLote) =>
+        RestarEnLoteAsync("inventario_lote", "inventarioLoteID", "saldoCantidad", consumoPorLote);
 
     public async Task<IEnumerable<InventarioLote>> GetLotesReporteAsync(int sucursalProductoId, DateTime? desde, DateTime? hasta)
     {
@@ -142,21 +183,94 @@ public class InventarioLoteRepository : DapperRepository<InventarioLote>, IInven
         movimiento.KardexMovimientoId = newId;
 
         var detalles = detalleLotes.ToList();
-        if (detalles.Count > 0)
-        {
-            foreach (var detalle in detalles)
-                detalle.KardexMovimientoId = newId;
+        foreach (var detalle in detalles)
+            detalle.KardexMovimientoId = newId;
 
-            var sqlDetalle = @"
-                INSERT INTO kardex_movimiento_lote
-                    (kardexMovimientoID, inventarioLoteID, cantidad, costoUnitario)
-                VALUES
-                    (@KardexMovimientoId, @InventarioLoteId, @Cantidad, @CostoUnitario);";
-
-            await _connection.ExecuteAsync(sqlDetalle, detalles, _transaction);
-        }
+        await EjecutarInsertMasivoAsync(
+            "kardex_movimiento_lote",
+            ["kardexMovimientoID", "inventarioLoteID", "cantidad", "costoUnitario"],
+            detalles,
+            d => [d.KardexMovimientoId, d.InventarioLoteId, d.Cantidad, d.CostoUnitario]);
 
         return movimiento;
+    }
+
+    private sealed class ResultadoInsertMasivo
+    {
+        public int PrimerId { get; set; }
+        public int Filas { get; set; }
+    }
+
+    public async Task<IReadOnlyList<KardexMovimiento>> RegistrarMovimientosBatchAsync(
+        IReadOnlyList<KardexMovimientoConDetalle> movimientos)
+    {
+        if (movimientos.Count == 0)
+            return [];
+
+        const int tamanoLote = 200;
+
+        for (var inicio = 0; inicio < movimientos.Count; inicio += tamanoLote)
+        {
+            var fin = Math.Min(inicio + tamanoLote, movimientos.Count);
+            var parametros = new DynamicParameters();
+            var tuplas = new List<string>(fin - inicio);
+
+            for (var i = inicio; i < fin; i++)
+            {
+                var m = movimientos[i].Movimiento;
+                parametros.Add($"sp{i}", m.SucursalProductoId);
+                parametros.Add($"tm{i}", m.TipoMovimiento);
+                parametros.Add($"rt{i}", m.ReferenciaTipo);
+                parametros.Add($"ri{i}", m.ReferenciaId);
+                parametros.Add($"ca{i}", m.Cantidad);
+                parametros.Add($"cu{i}", m.CostoUnitarioPromedio);
+                parametros.Add($"ct{i}", m.CostoTotal);
+                parametros.Add($"sc{i}", m.SaldoCantidadPost);
+                parametros.Add($"sv{i}", m.SaldoValorPost);
+                parametros.Add($"fm{i}", m.FechaMovimiento);
+                parametros.Add($"iu{i}", m.IdUsuario);
+
+                tuplas.Add($"(@sp{i}, @tm{i}, @rt{i}, @ri{i}, @ca{i}, @cu{i}, @ct{i}, @sc{i}, @sv{i}, @fm{i}, @iu{i})");
+            }
+
+            // MySQL asigna IDs consecutivos a las filas de un unico INSERT multi-fila y
+            // LAST_INSERT_ID() devuelve el de la primera, asi que se pueden repartir sin
+            // releer la tabla. ROW_COUNT() confirma que entraron todas antes de usarlos.
+            var sql = $@"
+                INSERT INTO kardex_movimiento
+                    (sucursalProductoID, tipoMovimiento, referenciaTipo, referenciaID, cantidad,
+                     costoUnitarioPromedio, costoTotal, saldoCantidadPost, saldoValorPost, fechaMovimiento, idUsuario)
+                VALUES {string.Join(", ", tuplas)};
+                SELECT LAST_INSERT_ID() AS PrimerId, ROW_COUNT() AS Filas;";
+
+            var resultado = await _connection.QuerySingleAsync<ResultadoInsertMasivo>(sql, parametros, _transaction);
+
+            var esperadas = fin - inicio;
+            if (resultado.Filas != esperadas)
+                throw new InvalidOperationException(
+                    $"Se esperaban {esperadas} movimientos de kardex insertados y la base reporto {resultado.Filas}.");
+
+            for (var i = inicio; i < fin; i++)
+                movimientos[i].Movimiento.KardexMovimientoId = resultado.PrimerId + (i - inicio);
+        }
+
+        var detalles = new List<KardexMovimientoLote>();
+        foreach (var m in movimientos)
+        {
+            foreach (var lote in m.Lotes)
+            {
+                lote.KardexMovimientoId = m.Movimiento.KardexMovimientoId;
+                detalles.Add(lote);
+            }
+        }
+
+        await EjecutarInsertMasivoAsync(
+            "kardex_movimiento_lote",
+            ["kardexMovimientoID", "inventarioLoteID", "cantidad", "costoUnitario"],
+            detalles,
+            d => [d.KardexMovimientoId, d.InventarioLoteId, d.Cantidad, d.CostoUnitario]);
+
+        return [.. movimientos.Select(m => m.Movimiento)];
     }
 
     public async Task<IEnumerable<KardexMovimiento>> GetKardexAsync(int sucursalProductoId, DateTime? desde, DateTime? hasta)

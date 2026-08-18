@@ -208,114 +208,79 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         await _connection.ExecuteAsync(sql, d, _transaction);
     }
 
-    private async Task RegistrarDetallesBatchAsync(int comprobanteId, ICollection<ComprobanteDetalle> detalles)
-    {
-        var sql = @"
-            INSERT INTO comprobantedetalle (
-                comprobanteId, trabajadorID, item, productoId, codigo, descripcion, cantidad,
-                unidadMedida, precioUnitario, tipoAfectacionIGV, porcentajeIGV,
-                montoIGV, baseIgv, codigoTipoDescuento, descuentoUnitario, descuentoTotal,
-                valorVenta, precioVenta, totalVentaItem, icbper, factorIcbper
-            ) VALUES (
-                @ComprobanteId, @TrabajadorID, @Item, @ProductoId, @Codigo, @Descripcion, @Cantidad,
-                @UnidadMedida, @PrecioUnitario, @TipoAfectacionIGV, @PorcentajeIGV,
-                @MontoIGV, @BaseIgv, @codigoTipoDescuento, @DescuentoUnitario, @DescuentoTotal,
-                @ValorVenta, @PrecioVenta, @TotalVentaItem, @Icbper, @FactorIcbper
-            );";
+    private Task RegistrarDetallesBatchAsync(int comprobanteId, ICollection<ComprobanteDetalle> detalles) =>
+        EjecutarInsertMasivoAsync(
+            "comprobantedetalle",
+            [
+                "comprobanteId", "trabajadorID", "item", "productoId", "codigo", "descripcion", "cantidad",
+                "unidadMedida", "precioUnitario", "tipoAfectacionIGV", "porcentajeIGV",
+                "montoIGV", "baseIgv", "codigoTipoDescuento", "descuentoUnitario", "descuentoTotal",
+                "valorVenta", "precioVenta", "totalVentaItem", "icbper", "factorIcbper"
+            ],
+            [.. detalles],
+            d =>
+            [
+                comprobanteId, d.TrabajadorID, d.Item, d.ProductoId, d.Codigo, d.Descripcion, d.Cantidad,
+                d.UnidadMedida, d.PrecioUnitario, d.TipoAfectacionIGV, d.PorcentajeIGV,
+                d.MontoIGV, d.BaseIgv, d.CodigoTipoDescuento, d.DescuentoUnitario, d.DescuentoTotal,
+                d.ValorVenta, d.PrecioVenta, d.TotalVentaItem, d.Icbper, d.FactorIcbper
+            ]);
 
-        var batch = detalles.Select(d => new
-        {
-            ComprobanteId = comprobanteId,
-            d.TrabajadorID, d.Item, d.ProductoId, d.Codigo, d.Descripcion, d.Cantidad,
-            d.UnidadMedida, d.PrecioUnitario, d.TipoAfectacionIGV, d.PorcentajeIGV,
-            d.MontoIGV, d.BaseIgv, d.CodigoTipoDescuento, d.DescuentoUnitario, d.DescuentoTotal,
-            d.ValorVenta, d.PrecioVenta, d.TotalVentaItem, d.Icbper, d.FactorIcbper
-        });
-        await _connection.ExecuteAsync(sql, batch, _transaction);
-    }
+    private Task RegistrarLeyendasBatchAsync(int comprobanteId, ICollection<NoteLegend> leyendas) =>
+        EjecutarInsertMasivoAsync(
+            "notelegend",
+            ["comprobanteId", "code", "value"],
+            [.. leyendas],
+            l => [comprobanteId, l.Code, l.Value]);
 
-    private async Task RegistrarLeyendasBatchAsync(int comprobanteId, ICollection<NoteLegend> leyendas)
-    {
-        var sql = @"
-            INSERT INTO notelegend (comprobanteId, code, value)
-            VALUES (@ComprobanteId, @Code, @Value);";
+    private Task RegistrarPagosBatchAsync(int comprobanteId, ICollection<Pago> pagos) =>
+        EjecutarInsertMasivoAsync(
+            "pago",
+            [
+                "comprobanteId", "medioPago", "monto", "fechaPago",
+                "numeroOperacion", "entidadFinanciera", "observaciones"
+            ],
+            [.. pagos],
+            p =>
+            [
+                comprobanteId, p.MedioPago, p.Monto, p.FechaPago,
+                p.NumeroOperacion, p.EntidadFinanciera, p.Observaciones
+            ]);
 
-        var batch = leyendas.Select(l => new { ComprobanteId = comprobanteId, l.Code, l.Value });
-        await _connection.ExecuteAsync(sql, batch, _transaction);
-    }
+    private Task RegistrarCuotasBatchAsync(int comprobanteId, ICollection<Cuota> cuotas) =>
+        EjecutarInsertMasivoAsync(
+            "cuota",
+            [
+                "comprobanteId", "numeroCuota", "monto", "fechaVencimiento",
+                "montoPagado", "fechaPago", "estado"
+            ],
+            [.. cuotas],
+            c =>
+            [
+                comprobanteId, c.NumeroCuota, c.Monto, c.FechaVencimiento,
+                c.MontoPagado, c.FechaPago, c.Estado
+            ]);
 
-    private async Task RegistrarPagosBatchAsync(int comprobanteId, ICollection<Pago> pagos)
-    {
-        var sql = @"
-            INSERT INTO pago (
-                comprobanteId, medioPago, monto, fechaPago,
-                numeroOperacion, entidadFinanciera, observaciones
-            ) VALUES (
-                @ComprobanteId, @MedioPago, @Monto, @FechaPago,
-                @NumeroOperacion, @EntidadFinanciera, @Observaciones
-            );";
+    private Task RegistrarGuiasBatchAsync(int comprobanteId, ICollection<GuiaComprobante> guias) =>
+        EjecutarInsertMasivoAsync(
+            "guiacomprobante",
+            ["comprobanteID", "guiaTipoDoc", "guiaNumeroCompleto"],
+            [.. guias],
+            g => [comprobanteId, g.GuiaTipoDoc, g.GuiaNumeroCompleto]);
 
-        var batch = pagos.Select(p => new
-        {
-            ComprobanteId = comprobanteId,
-            p.MedioPago, p.Monto, p.FechaPago,
-            p.NumeroOperacion, p.EntidadFinanciera, p.Observaciones
-        });
-        await _connection.ExecuteAsync(sql, batch, _transaction);
-    }
-
-    private async Task RegistrarCuotasBatchAsync(int comprobanteId, ICollection<Cuota> cuotas)
-    {
-        var sql = @"
-            INSERT INTO cuota (
-                comprobanteId, numeroCuota, monto, fechaVencimiento,
-                montoPagado, fechaPago, estado
-            ) VALUES (
-                @ComprobanteId, @NumeroCuota, @Monto, @FechaVencimiento,
-                @MontoPagado, @FechaPago, @Estado
-            );";
-
-        var batch = cuotas.Select(c => new
-        {
-            ComprobanteId = comprobanteId,
-            c.NumeroCuota, c.Monto, c.FechaVencimiento,
-            c.MontoPagado, c.FechaPago, c.Estado
-        });
-        await _connection.ExecuteAsync(sql, batch, _transaction);
-    }
-
-    private async Task RegistrarGuiasBatchAsync(int comprobanteId, ICollection<GuiaComprobante> guias)
-    {
-        var sql = @"
-            INSERT INTO guiacomprobante (
-                comprobanteID, guiaTipoDoc, guiaNumeroCompleto
-            ) VALUES (
-                @ComprobanteId, @GuiaTipoDoc, @GuiaNumeroCompleto
-            );";
-
-        var batch = guias.Select(g => new { ComprobanteId = comprobanteId, g.GuiaTipoDoc, g.GuiaNumeroCompleto });
-        await _connection.ExecuteAsync(sql, batch, _transaction);
-    }
-
-    private async Task RegistrarDetraccionesBatchAsync(int comprobanteId, ICollection<Detraccion> detracciones)
-    {
-        var sql = @"
-            INSERT INTO detraccion (
-                comprobanteID, codigoBienDetraccion, codigoMedioPago,
-                cuentaBancoDetraccion, porcentajeDetraccion, montoDetraccion, observacion
-            ) VALUES (
-                @ComprobanteID, @CodigoBienDetraccion, @CodigoMedioPago,
-                @CuentaBancoDetraccion, @PorcentajeDetraccion, @MontoDetraccion, @Observacion
-            );";
-
-        var batch = detracciones.Select(d => new
-        {
-            ComprobanteID = comprobanteId,
-            d.CodigoBienDetraccion, d.CodigoMedioPago,
-            d.CuentaBancoDetraccion, d.PorcentajeDetraccion, d.MontoDetraccion, d.Observacion
-        });
-        await _connection.ExecuteAsync(sql, batch, _transaction);
-    }
+    private Task RegistrarDetraccionesBatchAsync(int comprobanteId, ICollection<Detraccion> detracciones) =>
+        EjecutarInsertMasivoAsync(
+            "detraccion",
+            [
+                "comprobanteID", "codigoBienDetraccion", "codigoMedioPago",
+                "cuentaBancoDetraccion", "porcentajeDetraccion", "montoDetraccion", "observacion"
+            ],
+            [.. detracciones],
+            d =>
+            [
+                comprobanteId, d.CodigoBienDetraccion, d.CodigoMedioPago,
+                d.CuentaBancoDetraccion, d.PorcentajeDetraccion, d.MontoDetraccion, d.Observacion
+            ]);
 
     private async Task ActualizarSerieCorrelativoAsync(Comprobante comprobante)
     {

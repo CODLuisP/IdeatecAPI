@@ -14,6 +14,12 @@ public interface IInventarioPepsService
     Task<ConsumoPepsResultDTO> ConsumirFifoAsync(int sucursalProductoId, decimal cantidad, string tipoMovimiento,
         string? referenciaTipo, int? referenciaId, int? idUsuario);
 
+    // Procesa varias salidas PEPS de golpe (todos los productos de una venta). Lee lotes y
+    // saldos en dos consultas y escribe el kardex en dos INSERT, en vez de repetir ~8
+    // consultas por producto.
+    Task<IReadOnlyList<ConsumoPepsResultDTO>> ConsumirFifoBatchAsync(
+        IReadOnlyList<ConsumoPepsRequestDTO> consumos, int? idUsuario);
+
     Task DevolverAFifoAsync(int sucursalProductoId, decimal cantidad, decimal? costoUnitarioRespaldo,
         string? referenciaTipo, int? referenciaId, int? idUsuario);
 
@@ -102,63 +108,134 @@ public class InventarioPepsService : IInventarioPepsService
     public async Task<ConsumoPepsResultDTO> ConsumirFifoAsync(int sucursalProductoId, decimal cantidad, string tipoMovimiento,
         string? referenciaTipo, int? referenciaId, int? idUsuario)
     {
-        if (cantidad <= 0)
+        var resultados = await ConsumirFifoBatchAsync(
+            [
+                new ConsumoPepsRequestDTO
+                {
+                    SucursalProductoId = sucursalProductoId,
+                    Cantidad = cantidad,
+                    TipoMovimiento = tipoMovimiento,
+                    ReferenciaTipo = referenciaTipo,
+                    ReferenciaId = referenciaId
+                }
+            ],
+            idUsuario);
+
+        return resultados[0];
+    }
+
+    public async Task<IReadOnlyList<ConsumoPepsResultDTO>> ConsumirFifoBatchAsync(
+        IReadOnlyList<ConsumoPepsRequestDTO> consumos, int? idUsuario)
+    {
+        if (consumos.Count == 0)
+            return [];
+
+        if (consumos.Any(c => c.Cantidad <= 0))
             throw new ArgumentException("La cantidad a consumir debe ser mayor a 0.");
 
-        var lotes = await _unitOfWork.InventarioLotes.GetLotesConSaldoFifoAsync(sucursalProductoId);
+        var ids = consumos.Select(c => c.SucursalProductoId).Distinct().ToList();
 
-        var restante = cantidad;
-        var costoTotal = 0m;
-        var detalle = new List<KardexMovimientoLote>();
+        // Dos consultas para toda la venta: los lotes con saldo (bloqueados con FOR UPDATE,
+        // igual que antes) y el saldo acumulado previo de cada producto.
+        var lotesPorProducto = (await _unitOfWork.InventarioLotes.GetLotesConSaldoFifoAsync(ids))
+            .GroupBy(l => l.SucursalProductoId)
+            .ToDictionary(g => g.Key, g => g.ToList());
 
-        foreach (var lote in lotes)
+        var saldos = (await _unitOfWork.InventarioLotes.GetSaldosLotesAsync(ids))
+            .ToDictionary(s => s.SucursalProductoId, s => (Cantidad: s.SaldoCantidad, Valor: s.SaldoValor));
+
+        var consumoPorLote = new Dictionary<int, decimal>();
+        var movimientos = new List<KardexMovimientoConDetalle>(consumos.Count);
+        var resultados = new List<ConsumoPepsResultDTO>(consumos.Count);
+        var fechaMovimiento = DateTime.Now;
+
+        foreach (var consumo in consumos)
         {
-            if (restante <= 0) break;
+            var lotes = lotesPorProducto.TryGetValue(consumo.SucursalProductoId, out var encontrados)
+                ? encontrados
+                : [];
 
-            var tomar = Math.Min(lote.SaldoCantidad, restante);
-            var descontado = await _unitOfWork.InventarioLotes.DescontarSaldoLoteAsync(lote.InventarioLoteId, tomar);
-            if (!descontado)
-                throw new InvalidOperationException($"No se pudo descontar el lote {lote.InventarioLoteId}, saldo modificado concurrentemente.");
+            var restante = consumo.Cantidad;
+            var costoTotal = 0m;
+            var detalle = new List<KardexMovimientoLote>();
 
-            costoTotal += tomar * lote.CostoUnitario;
-            detalle.Add(new KardexMovimientoLote { InventarioLoteId = lote.InventarioLoteId, Cantidad = tomar, CostoUnitario = lote.CostoUnitario });
-            restante -= tomar;
+            // El saldo de cada lote baja en memoria, de modo que si el mismo producto aparece
+            // en varias lineas de la venta la segunda arranca donde termino la primera.
+            foreach (var lote in lotes)
+            {
+                if (restante <= 0) break;
+                if (lote.SaldoCantidad <= 0) continue;
+
+                var tomar = Math.Min(lote.SaldoCantidad, restante);
+                lote.SaldoCantidad -= tomar;
+
+                consumoPorLote[lote.InventarioLoteId] =
+                    consumoPorLote.GetValueOrDefault(lote.InventarioLoteId) + tomar;
+
+                costoTotal += tomar * lote.CostoUnitario;
+                detalle.Add(new KardexMovimientoLote
+                {
+                    InventarioLoteId = lote.InventarioLoteId,
+                    Cantidad = tomar,
+                    CostoUnitario = lote.CostoUnitario
+                });
+                restante -= tomar;
+            }
+
+            if (restante > 0)
+                throw new InvalidOperationException(
+                    $"Stock insuficiente en lotes PEPS para SucursalProductoId {consumo.SucursalProductoId}: faltan {restante} unidades por cubrir.");
+
+            // El saldo posterior se calcula restando sobre el saldo previo ya leido, en vez de
+            // volver a sumar los lotes en la base despues de cada producto.
+            var saldoPrevio = saldos.GetValueOrDefault(consumo.SucursalProductoId);
+            var saldoCantidad = saldoPrevio.Cantidad - consumo.Cantidad;
+            var saldoValor = saldoPrevio.Valor - costoTotal;
+            saldos[consumo.SucursalProductoId] = (saldoCantidad, saldoValor);
+
+            var costoUnitarioPromedio = costoTotal / consumo.Cantidad;
+
+            movimientos.Add(new KardexMovimientoConDetalle
+            {
+                Movimiento = new KardexMovimiento
+                {
+                    SucursalProductoId = consumo.SucursalProductoId,
+                    TipoMovimiento = consumo.TipoMovimiento,
+                    ReferenciaTipo = consumo.ReferenciaTipo,
+                    ReferenciaId = consumo.ReferenciaId,
+                    Cantidad = consumo.Cantidad,
+                    CostoUnitarioPromedio = costoUnitarioPromedio,
+                    CostoTotal = costoTotal,
+                    SaldoCantidadPost = saldoCantidad,
+                    SaldoValorPost = saldoValor,
+                    FechaMovimiento = fechaMovimiento,
+                    IdUsuario = idUsuario
+                },
+                Lotes = detalle
+            });
+
+            resultados.Add(new ConsumoPepsResultDTO
+            {
+                SucursalProductoId = consumo.SucursalProductoId,
+                CantidadConsumida = consumo.Cantidad,
+                CostoUnitarioPromedio = costoUnitarioPromedio,
+                CostoTotal = costoTotal
+            });
         }
 
-        if (restante > 0)
+        // Todos los lotes se descuentan en una sola sentencia. Si varias lineas consumen del
+        // mismo lote, sus cantidades ya vienen acumuladas en una unica resta.
+        var lotesDescontados = await _unitOfWork.InventarioLotes.DescontarSaldoLotesBatchAsync(consumoPorLote);
+        if (lotesDescontados != consumoPorLote.Count)
             throw new InvalidOperationException(
-                $"Stock insuficiente en lotes PEPS para SucursalProductoId {sucursalProductoId}: faltan {restante} unidades por cubrir.");
+                $"Se esperaba descontar {consumoPorLote.Count} lotes y solo {lotesDescontados} tenian saldo suficiente; algun saldo cambio de forma concurrente.");
 
-        var costoUnitarioPromedio = costoTotal / cantidad;
+        await _unitOfWork.InventarioLotes.RegistrarMovimientosBatchAsync(movimientos);
 
-        var saldoCantidad = await _unitOfWork.InventarioLotes.GetSaldoCantidadLotesAsync(sucursalProductoId);
-        var saldoValor = await _unitOfWork.InventarioLotes.GetSaldoValorizadoAsync(sucursalProductoId);
+        for (var i = 0; i < resultados.Count; i++)
+            resultados[i].KardexMovimientoId = movimientos[i].Movimiento.KardexMovimientoId;
 
-        var movimiento = new KardexMovimiento
-        {
-            SucursalProductoId = sucursalProductoId,
-            TipoMovimiento = tipoMovimiento,
-            ReferenciaTipo = referenciaTipo,
-            ReferenciaId = referenciaId,
-            Cantidad = cantidad,
-            CostoUnitarioPromedio = costoUnitarioPromedio,
-            CostoTotal = costoTotal,
-            SaldoCantidadPost = saldoCantidad,
-            SaldoValorPost = saldoValor,
-            FechaMovimiento = DateTime.Now,
-            IdUsuario = idUsuario
-        };
-
-        var movimientoCreado = await _unitOfWork.InventarioLotes.RegistrarMovimientoAsync(movimiento, detalle);
-
-        return new ConsumoPepsResultDTO
-        {
-            SucursalProductoId = sucursalProductoId,
-            CantidadConsumida = cantidad,
-            CostoUnitarioPromedio = costoUnitarioPromedio,
-            CostoTotal = costoTotal,
-            KardexMovimientoId = movimientoCreado.KardexMovimientoId
-        };
+        return resultados;
     }
 
     public async Task DevolverAFifoAsync(int sucursalProductoId, decimal cantidad, decimal? costoUnitarioRespaldo,

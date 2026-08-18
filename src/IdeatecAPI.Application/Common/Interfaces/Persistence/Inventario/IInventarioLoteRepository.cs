@@ -8,11 +8,19 @@ public interface IInventarioLoteRepository : IRepository<InventarioLote>
     Task<InventarioLote> CrearLoteAsync(InventarioLote lote);
     Task<IEnumerable<InventarioLote>> GetLotesConSaldoFifoAsync(int sucursalProductoId);
     Task<bool> DescontarSaldoLoteAsync(int inventarioLoteId, decimal cantidad);
+    // Descuenta el saldo de todos los lotes consumidos por una venta en un unico UPDATE.
+    // Devuelve cuantos lotes cumplieron la guardia de saldo suficiente.
+    Task<int> DescontarSaldoLotesBatchAsync(IReadOnlyDictionary<int, decimal> consumoPorLote);
     Task<IEnumerable<InventarioLote>> GetLotesReporteAsync(int sucursalProductoId, DateTime? desde, DateTime? hasta);
     Task<decimal> GetSaldoValorizadoAsync(int sucursalProductoId);
     Task<decimal> GetSaldoCantidadLotesAsync(int sucursalProductoId);
     Task<IEnumerable<InventarioLote>> GetSaldoValorizadoSucursalAsync(int sucursalId);
+    Task<IEnumerable<InventarioLote>> GetLotesConSaldoFifoAsync(IEnumerable<int> sucursalProductoIds);
+    Task<IEnumerable<SaldoLotesDTO>> GetSaldosLotesAsync(IEnumerable<int> sucursalProductoIds);
     Task<KardexMovimiento> RegistrarMovimientoAsync(KardexMovimiento movimiento, IEnumerable<KardexMovimientoLote> detalleLotes);
+    // Inserta todas las cabeceras de kardex y todo su detalle de lotes en dos sentencias,
+    // en vez de dos por movimiento. Devuelve los movimientos con su ID ya asignado.
+    Task<IReadOnlyList<KardexMovimiento>> RegistrarMovimientosBatchAsync(IReadOnlyList<KardexMovimientoConDetalle> movimientos);
     Task<IEnumerable<KardexMovimiento>> GetKardexAsync(int sucursalProductoId, DateTime? desde, DateTime? hasta);
     Task<bool> ExisteLoteSaldoInicialAsync(int sucursalProductoId);
     Task<KardexMovimiento?> GetUltimoMovimientoSalidaPorReferenciaAsync(string referenciaTipo, int referenciaId, int sucursalProductoId);

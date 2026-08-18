@@ -1,4 +1,5 @@
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
+using IdeatecAPI.Application.Features.Inventario.DTOs;
 using IdeatecAPI.Application.Features.Inventario.Services;
 using IdeatecAPI.Application.Features.Productos.DTO;
 using IdeatecAPI.Domain.Entities;
@@ -394,62 +395,105 @@ public class ProductoService : IProductoService
     // para que la venta y el descuento de stock sean atómicos.
     public async Task DescontarStockEnTransaccionAsync(IEnumerable<ActualizarStockDTO> dtos, string tipoMovimiento = "SALIDA_VENTA")
     {
-        if (!dtos.Any())
+        var items = dtos.ToList();
+
+        if (items.Count == 0)
             throw new ArgumentException("La lista no puede estar vacía.");
 
-        if (dtos.Any(d => d.Cantidad <= 0))
+        if (items.Any(d => d.Cantidad <= 0))
             throw new ArgumentException("Todas las cantidades deben ser mayores a 0.");
 
-        foreach (var dto in dtos)
+        // Una sola consulta resuelve, para todos los productos de la venta, si son paquete y
+        // cual es el sucursalProducto base al que hay que redirigir el descuento.
+        var infoConversion = (await _unitOfWork.Productos.GetInfoConversionBySucursalProductoIdsAsync(
+                items.Select(i => i.SucursalProductoId)))
+            .ToDictionary(i => i.SucursalProductoId);
+
+        var consumos = new List<ConsumoPepsRequestDTO>(items.Count);
+        var descuentos = new Dictionary<int, decimal>();
+        // Destino -> sucursalProductoID del paquete que lo origino, solo para poder dar el
+        // mismo mensaje de error de antes cuando falla el stock del producto base.
+        var paquetesPorDestino = new Dictionary<int, int>();
+
+        foreach (var dto in items)
         {
+            infoConversion.TryGetValue(dto.SucursalProductoId, out var info);
+
             // Si el producto vendido es un paquete (caja, pack, etc.), el descuento de stock
             // se redirige al producto base (cantidad x factor de conversión), igual que en compras.
-            var info = await _unitOfWork.Productos.GetInfoConversionBySucursalProductoIdAsync(dto.SucursalProductoId);
-
             var esPaqueteValido = info?.EsPaquete == true
                 && info.ProductoBaseId is int
                 && info.FactorConversion is decimal factorTmp
                 && factorTmp > 0;
 
+            int sucursalProductoDestino;
+            decimal cantidadDestino;
+
             if (esPaqueteValido)
             {
-                var productoBaseId = info!.ProductoBaseId!.Value;
-                var sucursalId = info.SucursalProducto!.SucursalId;
-                var factor = info.FactorConversion!.Value;
-                var cantidadStockBase = (int)Math.Round(dto.Cantidad * factor, MidpointRounding.AwayFromZero);
+                var factor = info!.FactorConversion!.Value;
+                cantidadDestino = (int)Math.Round(dto.Cantidad * factor, MidpointRounding.AwayFromZero);
 
-                var resultadoBase = await _unitOfWork.Productos.DescontarStockBaseAsync(productoBaseId, sucursalId, cantidadStockBase);
-                if (!resultadoBase)
-                    throw new InvalidOperationException($"Stock insuficiente en el producto base para cubrir la venta del paquete (SucursalProductoId {dto.SucursalProductoId}).");
+                sucursalProductoDestino = info.BaseSucursalProductoId
+                    ?? throw new InvalidOperationException(
+                        $"Stock insuficiente en el producto base para cubrir la venta del paquete (SucursalProductoId {dto.SucursalProductoId}).");
 
-                // El consumo PEPS ocurre sobre los lotes del producto BASE (que es quien tiene costo/lotes reales).
-                var productoBase = await _unitOfWork.Productos.GetProductoByIdAsync(productoBaseId, sucursalId);
-                if (productoBase?.SucursalProducto != null)
-                {
-                    await _inventarioPepsService.ConsumirFifoAsync(
-                        productoBase.SucursalProducto.SucursalProductoId,
-                        cantidadStockBase,
-                        tipoMovimiento,
-                        dto.ReferenciaTipo,
-                        dto.ReferenciaId,
-                        idUsuario: null);
-                }
+                paquetesPorDestino.TryAdd(sucursalProductoDestino, dto.SucursalProductoId);
             }
             else
             {
-                var resultado = await _unitOfWork.Productos.ActualizarStockAsync(dto.SucursalProductoId, dto.Cantidad);
-                if (!resultado)
-                    throw new InvalidOperationException($"Stock insuficiente o producto no encontrado para SucursalProductoId {dto.SucursalProductoId}.");
-
-                await _inventarioPepsService.ConsumirFifoAsync(
-                    dto.SucursalProductoId,
-                    dto.Cantidad,
-                    tipoMovimiento,
-                    dto.ReferenciaTipo,
-                    dto.ReferenciaId,
-                    idUsuario: null);
+                sucursalProductoDestino = dto.SucursalProductoId;
+                cantidadDestino = dto.Cantidad;
             }
+
+            // Si el mismo producto aparece en varias lineas, se descuenta una sola vez por el total.
+            descuentos[sucursalProductoDestino] = descuentos.GetValueOrDefault(sucursalProductoDestino) + cantidadDestino;
+
+            // El consumo PEPS ocurre sobre los lotes del destino, que en el caso del paquete
+            // es el producto BASE (quien tiene costo y lotes reales).
+            consumos.Add(new ConsumoPepsRequestDTO
+            {
+                SucursalProductoId = sucursalProductoDestino,
+                Cantidad = cantidadDestino,
+                TipoMovimiento = tipoMovimiento,
+                ReferenciaTipo = dto.ReferenciaTipo,
+                ReferenciaId = dto.ReferenciaId
+            });
         }
+
+        await DescontarStockDeSucursalAsync(descuentos, paquetesPorDestino);
+
+        await _inventarioPepsService.ConsumirFifoBatchAsync(consumos, idUsuario: null);
+    }
+
+    // Descuenta el stock de toda la venta en dos viajes en vez de un UPDATE por linea: primero
+    // lee y bloquea las filas implicadas, valida la disponibilidad en memoria (para poder decir
+    // exactamente que producto falta) y luego aplica todas las restas de una sola vez.
+    private async Task DescontarStockDeSucursalAsync(
+        Dictionary<int, decimal> descuentos,
+        Dictionary<int, int> paquetesPorDestino)
+    {
+        var stockActual = (await _unitOfWork.Productos.GetStockParaDescontarAsync(descuentos.Keys))
+            .ToDictionary(s => s.SucursalProductoId, s => s.Stock);
+
+        foreach (var (sucursalProductoId, cantidad) in descuentos)
+        {
+            var disponible = stockActual.TryGetValue(sucursalProductoId, out var stock) ? stock : null;
+            if (disponible is not null && disponible >= cantidad)
+                continue;
+
+            throw paquetesPorDestino.TryGetValue(sucursalProductoId, out var sucursalProductoPaquete)
+                ? new InvalidOperationException($"Stock insuficiente en el producto base para cubrir la venta del paquete (SucursalProductoId {sucursalProductoPaquete}).")
+                : new InvalidOperationException($"Stock insuficiente o producto no encontrado para SucursalProductoId {sucursalProductoId}.");
+        }
+
+        // La guardia del UPDATE es redundante con la validacion de arriba, pero se conserva
+        // como ultima linea de defensa: si por lo que sea alguna fila no la cumple, el conteo
+        // no cuadra y la transaccion se revierte antes de registrar la venta.
+        var filas = await _unitOfWork.Productos.DescontarStockBatchAsync(descuentos);
+        if (filas != descuentos.Count)
+            throw new InvalidOperationException(
+                $"Se esperaba descontar stock de {descuentos.Count} productos y solo {filas} tenian stock suficiente.");
     }
 
     public async Task<bool> DevolverStockAsync(IEnumerable<DevolverStockDTO> dtos)
