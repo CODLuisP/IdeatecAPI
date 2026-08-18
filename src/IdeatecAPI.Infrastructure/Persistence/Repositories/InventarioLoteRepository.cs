@@ -103,6 +103,40 @@ public class InventarioLoteRepository : DapperRepository<InventarioLote>, IInven
         return filas > 0;
     }
 
+    public async Task<(IEnumerable<InventarioLote> Lotes, IEnumerable<SaldoLotesDTO> Saldos)> GetLotesYSaldosFifoAsync(
+        IEnumerable<int> sucursalProductoIds)
+    {
+        var ids = sucursalProductoIds.Distinct().ToList();
+        if (ids.Count == 0)
+            return ([], []);
+
+        var sql = $@"{SelectLoteBase}
+            WHERE il.sucursalProductoID IN @SucursalProductoIds
+            AND il.estado = 1
+            AND il.saldoCantidad > 0
+            ORDER BY il.sucursalProductoID ASC, (il.fechaVencimiento IS NULL), il.fechaVencimiento ASC, il.fechaLote ASC, il.inventarioLoteID ASC
+            FOR UPDATE;
+
+            SELECT
+                sucursalProductoID                              AS SucursalProductoId,
+                COALESCE(SUM(saldoCantidad), 0)                 AS SaldoCantidad,
+                COALESCE(SUM(saldoCantidad * costoUnitario), 0) AS SaldoValor
+            FROM inventario_lote
+            WHERE sucursalProductoID IN @SucursalProductoIds
+            AND estado = 1
+            GROUP BY sucursalProductoID;";
+
+        using var grid = await _connection.QueryMultipleAsync(
+            sql, new { SucursalProductoIds = ids }, _transaction);
+
+        // El orden importa: hay que leer las rejillas en el mismo orden en que van las
+        // sentencias, y antes de que se libere el grid.
+        var lotes = (await grid.ReadAsync<InventarioLote>()).ToList();
+        var saldos = (await grid.ReadAsync<SaldoLotesDTO>()).ToList();
+
+        return (lotes, saldos);
+    }
+
     public Task<int> DescontarSaldoLotesBatchAsync(IReadOnlyDictionary<int, decimal> consumoPorLote) =>
         RestarEnLoteAsync("inventario_lote", "inventarioLoteID", "saldoCantidad", consumoPorLote);
 
@@ -193,6 +227,92 @@ public class InventarioLoteRepository : DapperRepository<InventarioLote>, IInven
             d => [d.KardexMovimientoId, d.InventarioLoteId, d.Cantidad, d.CostoUnitario]);
 
         return movimiento;
+    }
+
+    private sealed class ResultadoConsumoPeps
+    {
+        public int LotesDescontados { get; set; }
+        public int PrimerKardexId { get; set; }
+        public int KardexInsertados { get; set; }
+    }
+
+    public async Task<int> AplicarConsumoPepsAsync(
+        IReadOnlyDictionary<int, decimal> consumoPorLote,
+        IReadOnlyList<KardexMovimientoConDetalle> movimientos)
+    {
+        if (movimientos.Count == 0)
+            return await DescontarSaldoLotesBatchAsync(consumoPorLote);
+
+        var parametros = new DynamicParameters();
+
+        // 1) Descuento de todos los lotes tocados por la venta.
+        var sqlLotes = ConstruirRestaEnLote(
+            "inventario_lote", "inventarioLoteID", "saldoCantidad",
+            [.. consumoPorLote], parametros, "lot");
+
+        // 2) Cabeceras de kardex. MySQL asigna IDs consecutivos a las filas de un unico
+        //    INSERT multi-fila y LAST_INSERT_ID() devuelve el de la primera, asi que el
+        //    detalle puede referenciarlas como @primerKardex + desplazamiento sin volver
+        //    del servidor a preguntar los IDs.
+        var sqlCabeceras = ConstruirInsertMasivo(
+            "kardex_movimiento",
+            [
+                "sucursalProductoID", "tipoMovimiento", "referenciaTipo", "referenciaID", "cantidad",
+                "costoUnitarioPromedio", "costoTotal", "saldoCantidadPost", "saldoValorPost", "fechaMovimiento", "idUsuario"
+            ],
+            [.. movimientos],
+            m =>
+            [
+                m.Movimiento.SucursalProductoId, m.Movimiento.TipoMovimiento, m.Movimiento.ReferenciaTipo,
+                m.Movimiento.ReferenciaId, m.Movimiento.Cantidad, m.Movimiento.CostoUnitarioPromedio,
+                m.Movimiento.CostoTotal, m.Movimiento.SaldoCantidadPost, m.Movimiento.SaldoValorPost,
+                m.Movimiento.FechaMovimiento, m.Movimiento.IdUsuario
+            ],
+            parametros, "kar");
+
+        // 3) Detalle de lotes por movimiento, apuntando al ID que le tocara a cada cabecera.
+        var detalles = new List<(int Desplazamiento, KardexMovimientoLote Lote)>();
+        for (var i = 0; i < movimientos.Count; i++)
+            foreach (var lote in movimientos[i].Lotes)
+                detalles.Add((i, lote));
+
+        var sqlDetalles = "";
+        if (detalles.Count > 0)
+        {
+            var tuplas = new List<string>(detalles.Count);
+            for (var i = 0; i < detalles.Count; i++)
+            {
+                var (desplazamiento, lote) = detalles[i];
+                parametros.Add($"kdl{i}_0", lote.InventarioLoteId);
+                parametros.Add($"kdl{i}_1", lote.Cantidad);
+                parametros.Add($"kdl{i}_2", lote.CostoUnitario);
+                tuplas.Add($"(@primerKardex + {desplazamiento}, @kdl{i}_0, @kdl{i}_1, @kdl{i}_2)");
+            }
+
+            sqlDetalles = "INSERT INTO kardex_movimiento_lote "
+                        + "(kardexMovimientoID, inventarioLoteID, cantidad, costoUnitario) VALUES "
+                        + string.Join(", ", tuplas) + "; ";
+        }
+
+        // ROW_COUNT() solo refleja la ultima sentencia, asi que cada conteo se guarda en su
+        // variable justo despues de la sentencia que lo produce.
+        var sql = sqlLotes
+                + " SET @lotesDescontados = ROW_COUNT(); "
+                + sqlCabeceras
+                + " SET @primerKardex = LAST_INSERT_ID(), @kardexInsertados = ROW_COUNT(); "
+                + sqlDetalles
+                + " SELECT @lotesDescontados AS LotesDescontados, @primerKardex AS PrimerKardexId, @kardexInsertados AS KardexInsertados;";
+
+        var resultado = await _connection.QuerySingleAsync<ResultadoConsumoPeps>(sql, parametros, _transaction);
+
+        if (resultado.KardexInsertados != movimientos.Count)
+            throw new InvalidOperationException(
+                $"Se esperaban {movimientos.Count} movimientos de kardex insertados y la base reporto {resultado.KardexInsertados}.");
+
+        for (var i = 0; i < movimientos.Count; i++)
+            movimientos[i].Movimiento.KardexMovimientoId = resultado.PrimerKardexId + i;
+
+        return resultado.LotesDescontados;
     }
 
     private sealed class ResultadoInsertMasivo

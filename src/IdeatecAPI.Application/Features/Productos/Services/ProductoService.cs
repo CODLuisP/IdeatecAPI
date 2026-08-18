@@ -414,6 +414,8 @@ public class ProductoService : IProductoService
         // Destino -> sucursalProductoID del paquete que lo origino, solo para poder dar el
         // mismo mensaje de error de antes cuando falla el stock del producto base.
         var paquetesPorDestino = new Dictionary<int, int>();
+        // Stock que reporto la consulta de conversion, para validar en memoria sin pedirlo aparte.
+        var stockConocido = new Dictionary<int, decimal?>();
 
         foreach (var dto in items)
         {
@@ -439,11 +441,13 @@ public class ProductoService : IProductoService
                         $"Stock insuficiente en el producto base para cubrir la venta del paquete (SucursalProductoId {dto.SucursalProductoId}).");
 
                 paquetesPorDestino.TryAdd(sucursalProductoDestino, dto.SucursalProductoId);
+                stockConocido[sucursalProductoDestino] = info.BaseStock;
             }
             else
             {
                 sucursalProductoDestino = dto.SucursalProductoId;
                 cantidadDestino = dto.Cantidad;
+                stockConocido[sucursalProductoDestino] = info?.Stock;
             }
 
             // Si el mismo producto aparece en varias lineas, se descuenta una sola vez por el total.
@@ -461,24 +465,27 @@ public class ProductoService : IProductoService
             });
         }
 
-        await DescontarStockDeSucursalAsync(descuentos, paquetesPorDestino);
+        await DescontarStockDeSucursalAsync(descuentos, paquetesPorDestino, stockConocido);
 
         await _inventarioPepsService.ConsumirFifoBatchAsync(consumos, idUsuario: null);
     }
 
-    // Descuenta el stock de toda la venta en dos viajes en vez de un UPDATE por linea: primero
-    // lee y bloquea las filas implicadas, valida la disponibilidad en memoria (para poder decir
-    // exactamente que producto falta) y luego aplica todas las restas de una sola vez.
+    // Descuenta el stock de toda la venta en un unico UPDATE, en vez de uno por linea.
+    //
+    // La validacion previa usa el stock que ya trajo la consulta de conversion, asi que no
+    // cuesta un viaje extra. Esa lectura no bloquea, y no hace falta que lo haga: quien
+    // garantiza que nadie sobrevenda es la guardia "stock >= cantidad" del propio UPDATE,
+    // que es atomica por si sola. Si otra venta vacia el stock entremedio, la guardia falla,
+    // el conteo de filas no cuadra y la transaccion se revierte. La validacion en memoria
+    // solo existe para poder decir exactamente que producto falto.
     private async Task DescontarStockDeSucursalAsync(
         Dictionary<int, decimal> descuentos,
-        Dictionary<int, int> paquetesPorDestino)
+        Dictionary<int, int> paquetesPorDestino,
+        Dictionary<int, decimal?> stockConocido)
     {
-        var stockActual = (await _unitOfWork.Productos.GetStockParaDescontarAsync(descuentos.Keys))
-            .ToDictionary(s => s.SucursalProductoId, s => s.Stock);
-
         foreach (var (sucursalProductoId, cantidad) in descuentos)
         {
-            var disponible = stockActual.TryGetValue(sucursalProductoId, out var stock) ? stock : null;
+            var disponible = stockConocido.TryGetValue(sucursalProductoId, out var stock) ? stock : null;
             if (disponible is not null && disponible >= cantidad)
                 continue;
 
@@ -487,9 +494,6 @@ public class ProductoService : IProductoService
                 : new InvalidOperationException($"Stock insuficiente o producto no encontrado para SucursalProductoId {sucursalProductoId}.");
         }
 
-        // La guardia del UPDATE es redundante con la validacion de arriba, pero se conserva
-        // como ultima linea de defensa: si por lo que sea alguna fila no la cumple, el conteo
-        // no cuadra y la transaccion se revierte antes de registrar la venta.
         var filas = await _unitOfWork.Productos.DescontarStockBatchAsync(descuentos);
         if (filas != descuentos.Count)
             throw new InvalidOperationException(

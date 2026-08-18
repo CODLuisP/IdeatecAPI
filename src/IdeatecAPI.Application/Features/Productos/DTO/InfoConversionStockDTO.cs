@@ -13,6 +13,11 @@ public class InfoConversionStockDTO
     public int? ProductoBaseId { get; set; }
     public decimal? FactorConversion { get; set; }
     public int? BaseSucursalProductoId { get; set; }
+
+    // Stock actual del propio producto y el de su producto base, para no tener que
+    // volver a consultar la misma tabla antes de descontar.
+    public decimal? Stock { get; set; }
+    public decimal? BaseStock { get; set; }
 }
 
 // Stock actual de un sucursalProducto, leido y bloqueado antes de descontarlo.

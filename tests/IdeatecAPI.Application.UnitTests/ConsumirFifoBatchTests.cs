@@ -104,8 +104,12 @@ public class ConsumirFifoBatchTests
 
         // Este es el nucleo del arreglo de rendimiento: 20 productos no pueden costar
         // 20 lecturas de lotes ni 40 de saldos, y el kardex se escribe de una sola vez.
+        // Lotes y saldos viajan juntos: un unico viaje de lectura para toda la venta.
+        Assert.Equal(1, repo.LecturasCombinadas);
         Assert.Equal(1, repo.LecturasDeLotes);
         Assert.Equal(1, repo.LecturasDeSaldos);
+        // Descuento de lotes y kardex van en el mismo comando: una sola escritura.
+        Assert.Equal(1, repo.EscriturasCombinadas);
         Assert.Equal(1, repo.EscriturasDeLotes);
         Assert.Equal(1, repo.EscriturasDeKardex);
         Assert.Equal(20, repo.MovimientosRegistrados.Count);
@@ -125,8 +129,9 @@ public class ConsumirFifoBatchTests
             () => servicio.ConsumirFifoBatchAsync([Consumo(10, 4m)], idUsuario: null));
 
         // El conteo de filas afectadas es lo que delata la carrera; sin el, la venta
-        // quedaria registrada sin respaldo de stock.
+        // quedaria registrada sin respaldo de stock. El kardex llego a escribirse en el
+        // mismo comando, pero al lanzarse la excepcion la transaccion lo revierte.
         Assert.Contains("cambio de forma concurrente", ex.Message);
-        Assert.Empty(repo.MovimientosRegistrados);
+        Assert.Empty(repo.Descuentos);
     }
 }

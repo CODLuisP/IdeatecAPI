@@ -597,7 +597,9 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
                 p.esPaquete            AS EsPaquete,
                 p.productoBaseId       AS ProductoBaseId,
                 p.factorConversion     AS FactorConversion,
-                spb.sucursalProductoID AS BaseSucursalProductoId
+                spb.sucursalProductoID AS BaseSucursalProductoId,
+                sp.stock               AS Stock,
+                spb.stock              AS BaseStock
             FROM producto p
             INNER JOIN sucursalproducto sp ON sp.productoID = p.productoID
             LEFT JOIN sucursalproducto spb

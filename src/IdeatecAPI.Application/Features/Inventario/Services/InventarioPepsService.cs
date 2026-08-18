@@ -135,13 +135,16 @@ public class InventarioPepsService : IInventarioPepsService
 
         var ids = consumos.Select(c => c.SucursalProductoId).Distinct().ToList();
 
-        // Dos consultas para toda la venta: los lotes con saldo (bloqueados con FOR UPDATE,
-        // igual que antes) y el saldo acumulado previo de cada producto.
-        var lotesPorProducto = (await _unitOfWork.InventarioLotes.GetLotesConSaldoFifoAsync(ids))
+        // Un solo viaje trae las dos cosas que hacen falta para toda la venta: los lotes con
+        // saldo (bloqueados con FOR UPDATE, igual que antes) y el saldo acumulado previo de
+        // cada producto.
+        var (lotesLeidos, saldosLeidos) = await _unitOfWork.InventarioLotes.GetLotesYSaldosFifoAsync(ids);
+
+        var lotesPorProducto = lotesLeidos
             .GroupBy(l => l.SucursalProductoId)
             .ToDictionary(g => g.Key, g => g.ToList());
 
-        var saldos = (await _unitOfWork.InventarioLotes.GetSaldosLotesAsync(ids))
+        var saldos = saldosLeidos
             .ToDictionary(s => s.SucursalProductoId, s => (Cantidad: s.SaldoCantidad, Valor: s.SaldoValor));
 
         var consumoPorLote = new Dictionary<int, decimal>();
@@ -223,14 +226,13 @@ public class InventarioPepsService : IInventarioPepsService
             });
         }
 
-        // Todos los lotes se descuentan en una sola sentencia. Si varias lineas consumen del
-        // mismo lote, sus cantidades ya vienen acumuladas en una unica resta.
-        var lotesDescontados = await _unitOfWork.InventarioLotes.DescontarSaldoLotesBatchAsync(consumoPorLote);
+        // Descuento de lotes y escritura del kardex viajan juntos en un solo comando. Si
+        // varias lineas consumen del mismo lote, sus cantidades ya vienen acumuladas en una
+        // unica resta.
+        var lotesDescontados = await _unitOfWork.InventarioLotes.AplicarConsumoPepsAsync(consumoPorLote, movimientos);
         if (lotesDescontados != consumoPorLote.Count)
             throw new InvalidOperationException(
                 $"Se esperaba descontar {consumoPorLote.Count} lotes y solo {lotesDescontados} tenian saldo suficiente; algun saldo cambio de forma concurrente.");
-
-        await _unitOfWork.InventarioLotes.RegistrarMovimientosBatchAsync(movimientos);
 
         for (var i = 0; i < resultados.Count; i++)
             resultados[i].KardexMovimientoId = movimientos[i].Movimiento.KardexMovimientoId;

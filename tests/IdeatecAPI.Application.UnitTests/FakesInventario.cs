@@ -12,14 +12,24 @@ internal sealed class FakeInventarioLoteRepository : IInventarioLoteRepository
 
     public FakeInventarioLoteRepository(IEnumerable<InventarioLote> lotes) => _lotes = [.. lotes];
 
+    public int LecturasCombinadas { get; private set; }
     public int LecturasDeLotes { get; private set; }
     public int LecturasDeSaldos { get; private set; }
+    public int EscriturasCombinadas { get; private set; }
     public int EscriturasDeKardex { get; private set; }
     public int EscriturasDeLotes { get; private set; }
     public List<(int InventarioLoteId, decimal Cantidad)> Descuentos { get; } = [];
     public List<KardexMovimientoConDetalle> MovimientosRegistrados { get; } = [];
     // Permite simular que otra transaccion toco los saldos justo antes del UPDATE.
     public Action<List<InventarioLote>>? AntesDeDescontarLotes { get; set; }
+
+    public async Task<(IEnumerable<InventarioLote> Lotes, IEnumerable<SaldoLotesDTO> Saldos)> GetLotesYSaldosFifoAsync(
+        IEnumerable<int> sucursalProductoIds)
+    {
+        LecturasCombinadas++;
+        var ids = sucursalProductoIds.ToList();
+        return (await GetLotesConSaldoFifoAsync(ids), await GetSaldosLotesAsync(ids));
+    }
 
     public Task<IEnumerable<InventarioLote>> GetLotesConSaldoFifoAsync(IEnumerable<int> sucursalProductoIds)
     {
@@ -68,6 +78,20 @@ internal sealed class FakeInventarioLoteRepository : IInventarioLoteRepository
             .ToList();
 
         return Task.FromResult<IEnumerable<SaldoLotesDTO>>(resultado);
+    }
+
+    public async Task<int> AplicarConsumoPepsAsync(
+        IReadOnlyDictionary<int, decimal> consumoPorLote,
+        IReadOnlyList<KardexMovimientoConDetalle> movimientos)
+    {
+        EscriturasCombinadas++;
+
+        // Igual que el comando real: descuento y kardex ocurren en la misma ida. Si algun
+        // lote no cumplia la guardia, quien lo deshace es el rollback de la transaccion,
+        // no este metodo.
+        var descontados = await DescontarSaldoLotesBatchAsync(consumoPorLote);
+        await RegistrarMovimientosBatchAsync(movimientos);
+        return descontados;
     }
 
     public Task<int> DescontarSaldoLotesBatchAsync(IReadOnlyDictionary<int, decimal> consumoPorLote)
