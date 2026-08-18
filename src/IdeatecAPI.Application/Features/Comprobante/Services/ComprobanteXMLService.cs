@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO.Compression;
 using System.Text;
 using IdeatecAPI.Application.Common.Interfaces;
@@ -10,6 +11,7 @@ using IdeatecAPI.Application.Features.Productos.Services;
 using IdeatecAPI.Application.Features.Reportes.DTOs;
 using IdeatecAPI.Application.Features.Vales.DTOs;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace IdeatecAPI.Application.Features.Comprobante.Services;
 
@@ -80,6 +82,7 @@ public class ComprobanteService : IComprobanteService
     private readonly IStorageService _storageService;
     private readonly IWebSocketNotifier _wsNotifier;
     private readonly IProductoService _productoService;
+    private readonly ILogger<ComprobanteService> _logger;
 
     public ComprobanteService(
         IUnitOfWork unitOfWork,
@@ -89,7 +92,8 @@ public class ComprobanteService : IComprobanteService
         IWebSocketNotifier wsNotifier,
         IStorageService storageService,
         IProductoService productoService,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        ILogger<ComprobanteService> logger)
     {
         _unitOfWork = unitOfWork;
         _xmlService = xmlService;
@@ -99,6 +103,7 @@ public class ComprobanteService : IComprobanteService
         _wsNotifier = wsNotifier;
         _storageService = storageService;
         _productoService = productoService;
+        _logger = logger;
     }
 
     public async Task<IEnumerable<ObtenerComprobanteDTO>> GetByRucAndFechasAsync(string ruc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null)
@@ -350,23 +355,39 @@ public class ComprobanteService : IComprobanteService
         //if (dto.Cuotas?.Count == 0 && dto.Pagos?.Count == 0)
         //throw new InvalidOperationException("El comprobante debe tener al menos un pago o una cuota");
 
-        // ── 2. Buscar empresa por RUC ─────────────────────────────────────────
-        var empresa = await _unitOfWork.Empresas.GetEmpresaByRucAsync(dto.Company.NumeroDocumento ?? "")
-            ?? throw new KeyNotFoundException($"Empresa con RUC {dto.Company.NumeroDocumento} no encontrada");
+        // Medicion por fase: contra una BD remota el costo dominante es la cantidad de
+        // viajes de red, no el trabajo en el servidor. Mismo desglose que en nota de venta.
+        var cronometro = Stopwatch.StartNew();
+        var marcas = new List<(string Fase, long Ms)>();
+        void Marcar(string fase)
+        {
+            marcas.Add((fase, cronometro.ElapsedMilliseconds));
+            cronometro.Restart();
+        }
 
         // ── 4. BeginTransaction ───────────────────────────────────────────────
         _unitOfWork.BeginTransaction();
+        Marcar("beginTransaction");
         try
         {
-            // Obtener sucursal y asignar correlativo atómicamente (SELECT FOR UPDATE dentro de la transacción)
-            var sucursalId = await _unitOfWork.Comprobantes.GetSucursalIdByRucAndAnexoAsync(
+            // Un solo viaje: valida que la empresa este activa, ubica la sucursal por
+            // RUC+anexo y reserva el correlativo de forma atomica.
+            //
+            // La serie sale de la sucursal, no del DTO. El front la manda porque antes la
+            // leyo del API para mostrarla en pantalla, asi que era un eco del mismo valor;
+            // tomarla de la base elimina la posibilidad de emitir con una serie desfasada.
+            var asignacion = await _unitOfWork.Comprobantes.AsignarSerieYCorrelativoAsync(
                 dto.Company.NumeroDocumento!,
-                dto.Company.EstablecimientoAnexo!
-            ) ?? throw new KeyNotFoundException($"No se encontró sucursal activa para RUC {dto.Company.NumeroDocumento}");
+                dto.Company.EstablecimientoAnexo!,
+                dto.TipoComprobante!
+            ) ?? throw new KeyNotFoundException($"No se encontró sucursal activa para RUC {dto.Company.NumeroDocumento}, o la empresa no está activa");
 
-            var correlativoAsignado = await _unitOfWork.Comprobantes.ObtenerYIncrementarCorrelativoAsync(
-                sucursalId, dto.TipoComprobante!, dto.Serie);
-            dto.Correlativo = correlativoAsignado.ToString().PadLeft(8, '0');
+            var sucursalId = asignacion.SucursalId;
+
+            dto.Serie = asignacion.Serie
+                ?? throw new InvalidOperationException($"La sucursal no tiene configurada una serie para el tipo de comprobante '{dto.TipoComprobante}'.");
+            dto.Correlativo = asignacion.Correlativo.ToString().PadLeft(8, '0');
+            Marcar("serieYCorrelativo");
 
             var comprobante = new Domain.Entities.Comprobante
             {
@@ -500,10 +521,12 @@ public class ComprobanteService : IComprobanteService
             var xmlResultado = _xmlService.GenerarXml(dto);
             if (!xmlResultado.Exitoso)
                 throw new InvalidOperationException($"Error al generar XML base: {xmlResultado.Error}");
+            Marcar("generarXmlBase");
 
             // Guardar Comprobante en la DB (el hash se asignará al firmar en SendToSunatAsync)
             newComprobanteId = await _unitOfWork.Comprobantes
                 .GenerarComprobanteAsync(comprobante);
+            Marcar("insertComprobante");
 
             comprobante.ComprobanteId = newComprobanteId;
 
@@ -523,8 +546,19 @@ public class ComprobanteService : IComprobanteService
                 }
                 await _productoService.DescontarStockEnTransaccionAsync(dto.StockItems, "SALIDA_VENTA");
             }
+            Marcar("stockYKardex");
 
             _unitOfWork.Commit();
+            Marcar("commit");
+
+            _logger.LogInformation(
+                "{Tipo} {Serie}-{Correlativo} con {Detalles} detalle(s) en {Total} ms | {Desglose}",
+                dto.TipoComprobante == "01" ? "Factura" : "Boleta",
+                dto.Serie,
+                dto.Correlativo,
+                dto.Details.Count,
+                marcas.Sum(m => m.Ms),
+                string.Join(", ", marcas.Select(m => $"{m.Fase}={m.Ms}ms")));
 
             _ = Task.Run(() => _wsNotifier.NotifyAsync(sucursalId, comprobante.EmpresaRuc, "pending"));
 

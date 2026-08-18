@@ -460,6 +460,29 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
         return filas > 0;
     }
 
+    public async Task<IEnumerable<StockBloqueadoDTO>> GetStockParaDescontarAsync(IEnumerable<int> sucursalProductoIds)
+    {
+        var ids = sucursalProductoIds.Distinct().ToList();
+        if (ids.Count == 0)
+            return [];
+
+        // FOR UPDATE bloquea las filas de stock que la venta va a modificar, de modo que la
+        // validacion en memoria y el UPDATE posterior sean atomicos frente a otra venta
+        // simultanea del mismo producto.
+        var sql = @"
+            SELECT sucursalProductoID AS SucursalProductoId,
+                   stock              AS Stock
+            FROM sucursalproducto
+            WHERE sucursalProductoID IN @SucursalProductoIds
+            AND estado = 1
+            FOR UPDATE";
+
+        return await _connection.QueryAsync<StockBloqueadoDTO>(sql, new { SucursalProductoIds = ids }, _transaction);
+    }
+
+    public Task<int> DescontarStockBatchAsync(IReadOnlyDictionary<int, decimal> descuentosPorSucursalProducto) =>
+        RestarEnLoteAsync("sucursalproducto", "sucursalProductoID", "stock", descuentosPorSucursalProducto, "estado = 1");
+
     public async Task<bool> DevolverStockAsync(int productoId, int sucursalId, decimal cantidad)
     {
         var sql = @"
@@ -555,6 +578,39 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
         );
 
         return result.FirstOrDefault();
+    }
+
+    public async Task<IEnumerable<InfoConversionStockDTO>> GetInfoConversionBySucursalProductoIdsAsync(
+        IEnumerable<int> sucursalProductoIds)
+    {
+        var ids = sucursalProductoIds.Distinct().ToList();
+        if (ids.Count == 0)
+            return [];
+
+        // El LEFT JOIN resuelve de una vez el sucursalProductoID del producto base dentro de
+        // la misma sucursal, que antes costaba una consulta extra por cada paquete vendido.
+        var sql = @"
+            SELECT
+                sp.sucursalProductoID  AS SucursalProductoId,
+                p.productoID           AS ProductoId,
+                sp.sucursalID          AS SucursalId,
+                p.esPaquete            AS EsPaquete,
+                p.productoBaseId       AS ProductoBaseId,
+                p.factorConversion     AS FactorConversion,
+                spb.sucursalProductoID AS BaseSucursalProductoId,
+                sp.stock               AS Stock,
+                spb.stock              AS BaseStock
+            FROM producto p
+            INNER JOIN sucursalproducto sp ON sp.productoID = p.productoID
+            LEFT JOIN sucursalproducto spb
+                   ON spb.productoID = p.productoBaseId
+                  AND spb.sucursalID = sp.sucursalID
+                  AND spb.estado = 1
+            WHERE sp.sucursalProductoID IN @SucursalProductoIds
+            AND p.estado = 1
+            AND sp.estado = 1";
+
+        return await _connection.QueryAsync<InfoConversionStockDTO>(sql, new { SucursalProductoIds = ids }, _transaction);
     }
 
     public async Task<bool> DescontarStockBaseAsync(int productoBaseId, int sucursalId, decimal cantidad)

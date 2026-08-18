@@ -1,7 +1,9 @@
+using System.Diagnostics;
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Application.Features.Comprobante.DTOs;
 using IdeatecAPI.Application.Features.NotaVenta.DTOs;
 using IdeatecAPI.Application.Features.Productos.Services;
+using Microsoft.Extensions.Logging;
 
 namespace IdeatecAPI.Application.Features.NotaVenta.Services;
 
@@ -24,11 +26,13 @@ public class NotaVentaService : INotaVentaService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IProductoService _productoService;
+    private readonly ILogger<NotaVentaService> _logger;
 
-    public NotaVentaService(IUnitOfWork unitOfWork, IProductoService productoService)
+    public NotaVentaService(IUnitOfWork unitOfWork, IProductoService productoService, ILogger<NotaVentaService> logger)
     {
         _unitOfWork = unitOfWork;
         _productoService = productoService;
+        _logger = logger;
     }
 
     public async Task<NotaVentaResponse> GenerarNotaVentaAsync(GenerarNotaVentaDTO dto)
@@ -36,24 +40,36 @@ public class NotaVentaService : INotaVentaService
         if (dto.Detalles == null || dto.Detalles.Count == 0)
             throw new InvalidOperationException("La nota de venta debe tener al menos un detalle.");
 
-        _ = await _unitOfWork.Empresas.GetEmpresaByRucAsync(dto.Company.NumeroDocumento ?? "")
-            ?? throw new KeyNotFoundException($"Empresa con RUC {dto.Company.NumeroDocumento} no encontrada.");
+        // Medicion por fase: contra una BD remota el costo dominante es la cantidad de
+        // viajes de red, no el trabajo en el servidor. Este desglose dice en que fase se
+        // van los milisegundos sin tener que adivinar.
+        var cronometro = Stopwatch.StartNew();
+        var marcas = new List<(string Fase, long Ms)>();
+        void Marcar(string fase)
+        {
+            marcas.Add((fase, cronometro.ElapsedMilliseconds));
+            cronometro.Restart();
+        }
 
         _unitOfWork.BeginTransaction();
+        Marcar("beginTransaction");
         try
         {
-            var sucursalId = await _unitOfWork.Comprobantes.GetSucursalIdByRucAndAnexoAsync(
+            // Un solo viaje: valida empresa activa, ubica la sucursal por RUC+anexo y reserva
+            // el correlativo. Antes eran cuatro consultas, y la de empresa hacia SELECT * sobre
+            // una tabla que guarda logos y certificados en base64 para luego descartar el
+            // resultado: solo se usaba como comprobacion de existencia.
+            var asignacion = await _unitOfWork.Comprobantes.AsignarSerieYCorrelativoAsync(
                 dto.Company.NumeroDocumento!,
-                dto.Company.EstablecimientoAnexo!
-            ) ?? throw new KeyNotFoundException("No se encontró sucursal activa para el RUC y establecimiento indicados.");
+                dto.Company.EstablecimientoAnexo!,
+                "NV"
+            ) ?? throw new KeyNotFoundException("No se encontró sucursal activa para el RUC y establecimiento indicados, o la empresa no está activa.");
 
-            // Leer serie de NV directamente desde la sucursal
-            var sucursal = await _unitOfWork.Sucursal.GetByIdSucursalAsync(sucursalId);
-            var serieNV = sucursal.SerieNotaVenta
+            var serieNV = asignacion.Serie
                 ?? throw new InvalidOperationException("La sucursal no tiene configurada una serie para Nota de Venta.");
+            var correlativo = asignacion.Correlativo;
+            Marcar("serieYCorrelativo");
 
-            // Obtener correlativo y actualizar atomicamente (SELECT FOR UPDATE + UPDATE dentro de la transacción)
-            var correlativo = await _unitOfWork.Comprobantes.ObtenerYIncrementarCorrelativoAsync(sucursalId, "NV", serieNV);
             var correlativoStr = correlativo.ToString().PadLeft(8, '0');
             var numeroCompleto = $"{serieNV}-{correlativoStr}";
 
@@ -164,6 +180,7 @@ public class NotaVentaService : INotaVentaService
             };
 
             var newId = await _unitOfWork.Comprobantes.GenerarComprobanteAsync(comprobante);
+            Marcar("insertComprobante");
 
             // Descuento de stock ATÓMICO: ocurre dentro de esta misma transacción.
             // Si algún producto no tiene stock suficiente, se lanza excepción y el
@@ -178,8 +195,17 @@ public class NotaVentaService : INotaVentaService
                 }
                 await _productoService.DescontarStockEnTransaccionAsync(dto.StockItems, "SALIDA_VENTA");
             }
+            Marcar("stockYKardex");
 
             _unitOfWork.Commit();
+            Marcar("commit");
+
+            _logger.LogInformation(
+                "Nota de venta {Numero} con {Detalles} detalle(s) en {Total} ms | {Desglose}",
+                numeroCompleto,
+                dto.Detalles.Count,
+                marcas.Sum(m => m.Ms),
+                string.Join(", ", marcas.Select(m => $"{m.Fase}={m.Ms}ms")));
 
             return new NotaVentaResponse
             {

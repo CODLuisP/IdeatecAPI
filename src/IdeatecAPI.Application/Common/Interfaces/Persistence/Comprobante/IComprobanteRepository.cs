@@ -49,6 +49,9 @@ public interface IComprobanteRepository : IRepository<Comprobante>
     Task<IEnumerable<int>> GetValesByComprobanteIdAsync(int comprobanteId);
     Task<IEnumerable<Vale>> GetValesFullByComprobanteIdAsync(int comprobanteId);
     Task<int> ObtenerYIncrementarCorrelativoAsync(int sucursalId, string tipoComprobante, string serie);
+    // Version de un solo viaje: localiza la sucursal por RUC+anexo, comprueba que la empresa
+    // este activa, reserva el siguiente correlativo y devuelve serie y numero asignado.
+    Task<AsignacionSerieDTO?> AsignarSerieYCorrelativoAsync(string empresaRuc, string codEstablecimiento, string tipoComprobante);
     Task<IEnumerable<Comprobante>> GetNotasByComprobanteAfectadoIdAsync(int comprobanteAfectadoId, string tipoComprobante);
     Task<IEnumerable<Comprobante>> GetNotasVentaBySucursalAsync(string empresaRuc, string codEstablecimiento, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null);
 }
