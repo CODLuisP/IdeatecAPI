@@ -1,0 +1,34 @@
+-- =====================================================================
+-- Índice de cobertura para el "próximo vencimiento" del catálogo.
+--
+-- El listado de productos (GET /api/productos/{sucursalId}) trae por cada
+-- producto-sucursal esta subconsulta correlacionada:
+--
+--     (SELECT MIN(il.fechaVencimiento) FROM inventario_lote il
+--       WHERE il.sucursalProductoID = sp.sucursalProductoID
+--         AND il.saldoCantidad > 0
+--         AND il.fechaVencimiento IS NOT NULL
+--         AND il.estado = 1)
+--
+-- El único índice que existía, idx_lote_fifo (sucursalProductoID,
+-- saldoCantidad, fechaLote, inventarioLoteID), sirve para ubicar los lotes
+-- del producto, pero NO contiene `estado` ni `fechaVencimiento`: MySQL tiene
+-- que volver a la tabla (row lookup por clave primaria) por cada lote que
+-- encuentra, solo para leer esas dos columnas. Con ~1000 productos en la
+-- sucursal y varios lotes cada uno son miles de lecturas aleatorias por
+-- request.
+--
+-- Este índice cubre la subconsulta completa: igualdad en sucursalProductoID
+-- y estado, rango en saldoCantidad, y fechaVencimiento se lee del propio
+-- índice. MySQL resuelve el MIN sin tocar la tabla ni una sola vez.
+--
+-- Aplicar manualmente contra la base de datos MySQL (no hay EF Migrations
+-- en este proyecto). Es un índice nuevo: no altera datos ni consultas
+-- existentes, solo agrega un camino de acceso.
+--
+-- MySQL no soporta CREATE INDEX IF NOT EXISTS. Para comprobar antes:
+--     SHOW INDEX FROM inventario_lote WHERE Key_name = 'idx_lote_venc';
+-- =====================================================================
+
+CREATE INDEX idx_lote_venc
+    ON inventario_lote (sucursalProductoID, estado, saldoCantidad, fechaVencimiento);
