@@ -1,5 +1,7 @@
 using System.Data;
+using System.Linq;
 using Dapper;
+using MySqlConnector;
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Application.Features.Productos.DTO;
 using IdeatecAPI.Domain.Entities;
@@ -96,11 +98,56 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
         WHERE p.estado = 1
         AND sp.estado = 1";
 
+    // El catalogo completo se trae en varios lotes paralelos, cada uno por su
+    // propia conexion. El motivo NO es la base (ejecuta en ~19 ms) ni Dapper
+    // (cuesta 0 sobre el lector crudo): es el arranque lento de TCP. La conexion
+    // que entrega el pool lleva rato ociosa, perdio su ventana de congestion y
+    // vuelve a crecer desde cero, asi que traer ~1 MB cuesta ~690 ms en vez de
+    // los ~200 ms que cuesta por una conexion caliente.
+    //
+    // Ese arranque es POR CONEXION: varias ramificando a la vez suman ventana
+    // mas rapido. Medido contra sucursal 18 (1249 productos), desde conexion
+    // fria: 1 consulta 690 ms | 2 lotes 521 ms | 3 lotes 352 ms | 4 lotes 369 ms
+    // | 6 lotes 364 ms. De 3 en adelante no baja: ahi manda el RTT.
+    //
+    // Cuesta 3 conexiones del pool por request en vez de 1 (ver MaximumPoolSize).
+    private const int LotesCatalogo = 3;
+
     public async Task<IEnumerable<Producto>> GetAllProductosAsync(int sucursalId)
     {
-        var sql = $"{SelectColumns} AND sp.sucursalID = @SucursalId ORDER BY p.productoID";
+        // Dentro de una transaccion no se puede repartir: las otras conexiones
+        // no la verian. Tampoco tiene sentido si el driver no es MySqlConnector.
+        if (_transaction != null || _connection is not MySqlConnection plantilla)
+            return await LeerLoteCatalogoAsync(_connection, _transaction, sucursalId, null);
 
-        var productos = await _connection.QueryAsync<Producto, Categoria, SucursalProducto, Producto>(
+        var tareas = Enumerable.Range(0, LotesCatalogo).Select(async lote =>
+        {
+            // Clone() conserva la cadena completa (con credenciales) y toma otra
+            // conexion del mismo pool.
+            await using var conexion = plantilla.Clone();
+            await conexion.OpenAsync();
+            return await LeerLoteCatalogoAsync(conexion, null, sucursalId, lote);
+        }).ToArray();
+
+        var partes = await Task.WhenAll(tareas);
+
+        // Los lotes vuelven entremezclados; se restaura el orden por productoID
+        // que traia la consulta original.
+        return partes.SelectMany(p => p).OrderBy(p => p.ProductoId).ToList();
+    }
+
+    private static async Task<IEnumerable<Producto>> LeerLoteCatalogoAsync(
+        IDbConnection conexion, IDbTransaction? transaccion, int sucursalId, int? lote)
+    {
+        // Repartir por el resto de la division reparte parejo y no depende de
+        // rangos de id, que quedan con huecos al dar de baja productos.
+        var filtroLote = lote is null
+            ? string.Empty
+            : $" AND (sp.sucursalProductoID % {LotesCatalogo}) = {lote}";
+
+        var sql = $"{SelectColumns} AND sp.sucursalID = @SucursalId{filtroLote} ORDER BY p.productoID";
+
+        return await conexion.QueryAsync<Producto, Categoria, SucursalProducto, Producto>(
             sql,
             (producto, categoria, sucursalProducto) =>
             {
@@ -109,11 +156,9 @@ public class ProductoRepository : DapperRepository<Producto>, IProductoRepositor
                 return producto;
             },
             new { SucursalId = sucursalId },
-            transaction: _transaction,
+            transaction: transaccion,
             splitOn: "CategoriaId,SucursalProductoId"
         );
-
-        return productos;
     }
 
     public async Task<IEnumerable<Producto>> GetAllProductosBaseRucAsync(string empresaRuc)
