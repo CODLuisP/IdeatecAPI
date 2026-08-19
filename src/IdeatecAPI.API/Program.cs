@@ -78,11 +78,19 @@ builder.Services.AddCors(options =>
 // Compresion de respuestas: el JSON del catalogo de productos viajaba sin
 // comprimir (~1 MB con 1000 productos). Gzip/Brotli lo reducen alrededor del
 // 90%, que es la diferencia entre tardar segundos y tardar un instante.
+//
+// GZIP VA PRIMERO A PROPOSITO. El proveedor que se registra antes gana la
+// negociacion con el cliente, y Brotli aqui sale peor: MVC serializa el JSON
+// por chunks y hace flush seguido, y Brotli emite un bloque nuevo en cada
+// flush perdiendo el contexto de compresion. Medido contra
+// /api/productos/18 (1137 KB sin comprimir): brotli 280 KB, gzip 93 KB.
+// Los navegadores piden "gzip, deflate, br", asi que con Brotli primero
+// estaban recibiendo el triple de bytes.
 builder.Services.AddResponseCompression(options =>
 {
     options.EnableForHttps = true;
-    options.Providers.Add<BrotliCompressionProvider>();
     options.Providers.Add<GzipCompressionProvider>();
+    options.Providers.Add<BrotliCompressionProvider>();
     options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(
         new[] { "application/json", "application/json; charset=utf-8" });
 });
