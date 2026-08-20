@@ -26,8 +26,25 @@ public class ProductoController : ControllerBase
     {
         try
         {
+            // [TEMPORAL - MEDICION] Quitar cuando se cierre el analisis de rendimiento.
+            var cron = System.Diagnostics.Stopwatch.StartNew();
             var productos = await _productoService.GetAllProductosAsync(sucursalId);
-            return Ok(productos ?? []);
+            var msConsulta = cron.Elapsed.TotalMilliseconds;
+
+            // El Select del service es perezoso: sin materializarlo aqui, el mapeo a
+            // DTO ocurriria dentro del serializador y quedaria mezclado con el.
+            var lista = productos as List<ObtenerProductoDTO> ?? productos?.ToList() ?? [];
+            var msMapeo = cron.Elapsed.TotalMilliseconds - msConsulta;
+
+            HttpContext.Items["perf"] =
+                $"filas={lista.Count} consulta+dapper={msConsulta:F0}ms mapeo={msMapeo:F0}ms";
+
+            // Ademas del log, va en una cabecera: se puede leer con curl sin
+            // depender de la consola donde corre la API.
+            Response.Headers["Server-Timing"] =
+                $"db;dur={msConsulta:F1}, map;dur={msMapeo:F1}, filas;dur={lista.Count}";
+
+            return Ok(lista);
         }
         catch (Exception ex)
         {
