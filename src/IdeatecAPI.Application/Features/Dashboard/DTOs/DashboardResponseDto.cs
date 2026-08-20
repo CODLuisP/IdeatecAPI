@@ -7,6 +7,9 @@ public class DashboardResponseDto
     public decimal VentasNetas { get; set; }               // VentasDelDia + NDDelDia - NCDelDia
     public decimal TotalComisionTarjetaDelDia { get; set; } // Comisión por pago con tarjeta del día (01 + 03)
 
+    // Ganancia del día (ingreso - costo PEPS). Solo aplica si la empresa tiene control de stock activo.
+    public decimal Ganancias { get; set; }
+
     // ── Conteos ───────────────────────────────────────────────────────────────
     public int FacturasEmitidas { get; set; }
     public int BoletasEmitidas { get; set; }

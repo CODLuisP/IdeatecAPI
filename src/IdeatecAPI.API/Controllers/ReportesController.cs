@@ -1,6 +1,7 @@
 using ClosedXML.Excel;
 using IdeatecAPI.Application.Features.Comprobante.DTOs;
 using IdeatecAPI.Application.Features.Reportes.DTOs;
+using IdeatecAPI.Application.Common.Interfaces.Persistence.Reportes;
 using IdeatecAPI.Application.Features.Reportes.Services;
 using IdeatecAPI.Application.Features.Trabajadores.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -750,6 +751,80 @@ public class ReportesController : ControllerBase
 
     private static readonly string[] PeriodosValidos =
         { "hoy", "semana", "mes", "año", "personalizado" };
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // DASHBOARD REPORT (PDF / EXCEL)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    [HttpGet("dashboard-report/pdf")]
+    [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetDashboardReportPdf(
+        [FromQuery] string ruc,
+        [FromQuery] string? codEstablecimiento = null,
+        [FromQuery] DateTime? desde = null,
+        [FromQuery] DateTime? hasta = null,
+        [FromQuery] int? usuarioId = null,
+        [FromQuery] int topLimit = 10,
+        [FromServices] IDashboardReportService dashboardReportService = null!,
+        [FromServices] IDashboardReportPdfService pdfService = null!)
+    {
+        try
+        {
+            var data = await dashboardReportService.GenerarReporteAsync(new DashboardReportRequestDto
+            {
+                Ruc = ruc,
+                CodEstablecimiento = codEstablecimiento,
+                FechaDesde = desde,
+                FechaHasta = hasta,
+                UsuarioCreacion = usuarioId,
+                TopLimit = topLimit
+            });
+
+            var bytes = await pdfService.ExportarDashboardReportPdfAsync(data);
+            return File(bytes, "application/pdf", $"Dashboard_{ruc}_{DateTime.Now:yyyyMMdd_HHmm}.pdf");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al generar dashboard report PDF para RUC {Ruc}", ruc);
+            return StatusCode(500, new { mensaje = "Error al generar el reporte PDF.", detalle = ex.Message });
+        }
+    }
+
+    [HttpGet("dashboard-report/excel")]
+    [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetDashboardReportExcel(
+        [FromQuery] string ruc,
+        [FromQuery] string? codEstablecimiento = null,
+        [FromQuery] DateTime? desde = null,
+        [FromQuery] DateTime? hasta = null,
+        [FromQuery] int? usuarioId = null,
+        [FromQuery] int topLimit = 10,
+        [FromServices] IDashboardReportService dashboardReportService = null!,
+        [FromServices] IDashboardReportExcelService excelService = null!)
+    {
+        try
+        {
+            var data = await dashboardReportService.GenerarReporteAsync(new DashboardReportRequestDto
+            {
+                Ruc = ruc,
+                CodEstablecimiento = codEstablecimiento,
+                FechaDesde = desde,
+                FechaHasta = hasta,
+                UsuarioCreacion = usuarioId,
+                TopLimit = topLimit
+            });
+
+            var bytes = await excelService.ExportarAsync(data);
+            return File(bytes,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"Dashboard_{ruc}_{DateTime.Now:yyyyMMdd_HHmm}.xlsx");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al generar dashboard report Excel para RUC {Ruc}", ruc);
+            return StatusCode(500, new { mensaje = "Error al generar el reporte Excel.", detalle = ex.Message });
+        }
+    }
 
     private static bool PeriodoValido(
         string periodo, DateTime? desde, DateTime? hasta, out string error)

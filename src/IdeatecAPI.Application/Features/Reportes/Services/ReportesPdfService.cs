@@ -966,46 +966,49 @@ public class ReportesPdfService : IReportesPdfService
 
                 page.Header().Element(h => BuildCabecera(h, titulo, filtros));
 
-                page.Content().PaddingTop(4).Table(table =>
-                {
-                    table.ColumnsDefinition(cols =>
-                    {
-                        cols.ConstantColumn(25);  // #
-                        cols.RelativeColumn();    // Medio de Pago
-                        cols.ConstantColumn(70);  // Veces Usado
-                        cols.ConstantColumn(80);  // Monto Total
-                        cols.ConstantColumn(80);  // Promedio
-                    });
-
-                    table.Header(h =>
-                    {
-                        h.Cell().Element(c => TH(c, "#"));
-                        h.Cell().Element(c => TH(c, "Medio de Pago"));
-                        h.Cell().Element(c => TH(c, "Veces Usado", right: true));
-                        h.Cell().Element(c => TH(c, "Monto Total", right: true));
-                        h.Cell().Element(c => TH(c, "Promedio", right: true));
-                    });
-
-                    bool par = false; int n = 1;
-                    foreach (var d in lista)
-                    {
-                        var bg = par ? Blanco : GrisClaro; par = !par;
-                        table.Cell().Element(c => TD(c, (n++).ToString(), bg));
-                        table.Cell().Element(c => TD(c, d.MedioPago ?? "-", bg));
-                        table.Cell().Element(c => TD(c, d.VecesUsado.ToString(), bg, right: true));
-                        table.Cell().Element(c => TD(c, Fmt(d.MontoTotal), bg, right: true));
-                        table.Cell().Element(c => TD(c, Fmt(d.PromedioMonto), bg, right: true));
-                    }
-                });
-
-                // Total row
                 var total = lista.Sum(x => x.MontoTotal);
-                page.Content().Column(col =>
+
+                page.Content().PaddingTop(4).Column(col =>
+                {
+                    col.Item().Table(table =>
+                    {
+                        table.ColumnsDefinition(cols =>
+                        {
+                            cols.ConstantColumn(25);  // #
+                            cols.RelativeColumn();    // Medio de Pago
+                            cols.ConstantColumn(70);  // Veces Usado
+                            cols.ConstantColumn(80);  // Monto Total
+                            cols.ConstantColumn(80);  // Promedio
+                        });
+
+                        table.Header(h =>
+                        {
+                            h.Cell().Element(c => TH(c, "#"));
+                            h.Cell().Element(c => TH(c, "Medio de Pago"));
+                            h.Cell().Element(c => TH(c, "Veces Usado", right: true));
+                            h.Cell().Element(c => TH(c, "Monto Total", right: true));
+                            h.Cell().Element(c => TH(c, "Promedio", right: true));
+                        });
+
+                        bool par = false; int n = 1;
+                        foreach (var d in lista)
+                        {
+                            var bg = par ? Blanco : GrisClaro; par = !par;
+                            table.Cell().Element(c => TD(c, (n++).ToString(), bg));
+                            table.Cell().Element(c => TD(c, d.MedioPago ?? "-", bg));
+                            table.Cell().Element(c => TD(c, d.VecesUsado.ToString(), bg, right: true));
+                            table.Cell().Element(c => TD(c, Fmt(d.MontoTotal), bg, right: true));
+                            table.Cell().Element(c => TD(c, Fmt(d.PromedioMonto), bg, right: true));
+                        }
+                    });
+
+                    // Total row
                     col.Item().Background(VerdeFila).Border(1).BorderColor(Azul).Padding(4).Row(r =>
                     {
                         r.RelativeItem().Text("TOTAL").Bold().FontSize(9);
                         r.ConstantItem(80).AlignRight().Text(Fmt(total)).Bold().FontSize(9);
-                    }));
+                    });
+                });
 
                 page.Footer().AlignRight().Text(txt =>
                 {
@@ -1017,4 +1020,5 @@ public class ReportesPdfService : IReportesPdfService
 
         return Task.FromResult(ToBytes(doc));
     }
+
 }

@@ -119,6 +119,9 @@ public static class DependencyInjection
         services.AddScoped<IReportesPdfService, ReportesPdfService>();
         services.AddScoped<IControlCajaTicketHtmlService, ControlCajaTicketHtmlService>();
         services.AddScoped<IReportesService, ReportesService>();
+        services.AddScoped<IDashboardReportService, DashboardReportService>();
+        services.AddScoped<IDashboardReportExcelService, DashboardReportExcelService>();
+        services.AddScoped<IDashboardReportPdfService, DashboardReportPdfService>();
 
         //Caja (apertura, turnos y cierre)
         services.AddScoped<IdeatecAPI.Application.Features.Caja.Services.ICajaService,

@@ -32,6 +32,7 @@ public class DashboardService : IDashboardService
     {
         var result = await _unitOfWork.Dashboard.GetDashboardPorEmpresaAsync(ruc, fecha, limite);
         result.VentasNetas = CalcularVentasNetas(result);
+        result.Ganancias = await CalcularGananciasAsync(ruc, codEstablecimiento: null, fecha);
         return result;
     }
 
@@ -42,6 +43,10 @@ public class DashboardService : IDashboardService
     {
         var result = await _unitOfWork.Dashboard.GetDashboardPorSucursalAsync(sucursalId, fecha, limite);
         result.VentasNetas = CalcularVentasNetas(result);
+
+        var sucursal = await _unitOfWork.Sucursal.GetByIdSucursalAsync(sucursalId);
+        result.Ganancias = await CalcularGananciasAsync(sucursal.EmpresaRuc!, sucursal.CodEstablecimiento, fecha);
+
         return result;
     }
 
@@ -50,4 +55,12 @@ public class DashboardService : IDashboardService
         dto.VentasDelDia
         + dto.TotalNotasDebitoDelDia
         - dto.TotalNotasCreditoDelDia;
+
+    // ── Ganancia del día: mismo cálculo (ingreso - costo PEPS) usado en el reporte descargable ──
+    private async Task<decimal> CalcularGananciasAsync(string ruc, string? codEstablecimiento, DateTime? fecha)
+    {
+        var dia = fecha ?? DateTime.Today;
+        var ganancias = await _unitOfWork.Reportes.GetGananciasAsync(ruc, codEstablecimiento, dia, dia, usuarioCreacion: null);
+        return ganancias.IngresoVentas - ganancias.CostoVentas;
+    }
 }

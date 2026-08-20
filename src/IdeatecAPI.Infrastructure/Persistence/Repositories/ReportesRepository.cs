@@ -226,11 +226,15 @@ public class ReportesRepository : IReportesRepository
                 COALESCE(SUM(
                     CASE WHEN c.tipoMoneda = 'USD' THEN c.importeTotal * c.tipoCambio
                          ELSE c.importeTotal END
+                    + CASE WHEN c.tipoMoneda = 'USD' THEN COALESCE(c.totalComisionPagoTarjeta, 0) * c.tipoCambio
+                         ELSE COALESCE(c.totalComisionPagoTarjeta, 0) END
                 ), 0) AS Total
             FROM comprobante c
             WHERE {whereBase}
-              AND c.estadoSunat NOT IN ('RECHAZADO')
-              AND c.tipoComprobante IN ('01','03')
+              AND (
+                  (c.tipoComprobante IN ('01','03') AND c.estadoSunat NOT IN ('RECHAZADO'))
+                  OR (c.tipoComprobante = 'NV' AND c.estadoSunat = 'NO_APLICA')
+              )
               AND c.fechaEmision >= @Desde
               AND c.fechaEmision <= @Hasta
               {whereUsuario}
@@ -629,45 +633,78 @@ public class ReportesRepository : IReportesRepository
         string? clienteNumDoc = null,
         int? limit = null)
     {
-        var sql = @"
-            SELECT MedioPago, SUM(VecesUsado) AS VecesUsado, SUM(MontoTotal) AS MontoTotal, AVG(PromedioMonto) AS PromedioMonto
+        // Subconsulta con los pagos/cuotas reales, agrupada por medio de pago
+        // (el GROUP BY interno es indispensable: sin él, cada rama del UNION
+        // colapsa en una sola fila con un MedioPago arbitrario).
+        const string union_medios = @"
+            SELECT
+                medioPago               AS MedioPago,
+                COUNT(*)                AS VecesUsado,
+                SUM(p.monto)            AS MontoTotal,
+                AVG(p.monto)            AS PromedioMonto
+            FROM pago p
+            INNER JOIN comprobante c ON c.comprobanteID = p.comprobanteID
+            WHERE c.empresaRuc = @Ruc
+            AND (
+                (c.tipoComprobante <> 'NV' AND c.estadoSunat IN ('ACEPTADO', 'ACEPTADO_CON_OBSERVACIONES'))
+                OR (c.tipoComprobante = 'NV' AND c.estadoSunat = 'NO_APLICA')
+            )
+            AND p.medioPago IS NOT NULL AND p.medioPago != ''
+            AND (@CodEstablecimiento IS NULL OR c.establecimientoAnexo = @CodEstablecimiento)
+            AND (@FechaDesde IS NULL OR c.fechaEmision >= @FechaDesde)
+            AND (@FechaHasta IS NULL OR c.fechaEmision <= @FechaHasta)
+            AND (@UsuarioCreacion IS NULL OR c.usuarioCreacion = @UsuarioCreacion)
+            AND (@ClienteNumDoc IS NULL OR c.clienteNumDoc = @ClienteNumDoc)
+            GROUP BY medioPago
+
+            UNION ALL
+
+            SELECT
+                c2.tipoPago             AS MedioPago,
+                COUNT(*)                AS VecesUsado,
+                SUM(cu.monto)           AS MontoTotal,
+                AVG(cu.monto)           AS PromedioMonto
+            FROM cuota cu
+            INNER JOIN comprobante c2 ON c2.comprobanteID = cu.comprobanteID
+            WHERE cu.estado = 'PAGADO'
+            AND c2.empresaRuc = @Ruc
+            AND (
+                (c2.tipoComprobante <> 'NV' AND c2.estadoSunat IN ('ACEPTADO', 'ACEPTADO_CON_OBSERVACIONES'))
+                OR (c2.tipoComprobante = 'NV' AND c2.estadoSunat = 'NO_APLICA')
+            )
+            AND c2.tipoPago IS NOT NULL AND c2.tipoPago != ''
+            AND (@CodEstablecimiento IS NULL OR c2.establecimientoAnexo = @CodEstablecimiento)
+            AND (@FechaDesde IS NULL OR c2.fechaEmision >= @FechaDesde)
+            AND (@FechaHasta IS NULL OR c2.fechaEmision <= @FechaHasta)
+            AND (@UsuarioCreacion IS NULL OR c2.usuarioCreacion = @UsuarioCreacion)
+            AND (@ClienteNumDoc IS NULL OR c2.clienteNumDoc = @ClienteNumDoc)
+            GROUP BY c2.tipoPago";
+
+        // Catálogo fijo de los 5 medios de pago habilitados en el frontend: se
+        // muestran siempre (con 0 si no tuvieron movimiento) vía LEFT JOIN, y
+        // cualquier otro medio histórico que no esté en el catálogo también se
+        // conserva (segunda mitad del UNION ALL) para no perder datos reales.
+        var sql = $@"
+            SELECT cat.Medio AS MedioPago,
+                   COALESCE(SUM(u.VecesUsado), 0)    AS VecesUsado,
+                   COALESCE(SUM(u.MontoTotal), 0)    AS MontoTotal,
+                   COALESCE(AVG(u.PromedioMonto), 0) AS PromedioMonto
             FROM (
-                SELECT 
-                    medioPago               AS MedioPago,
-                    COUNT(*)                AS VecesUsado,
-                    SUM(p.monto)            AS MontoTotal,
-                    AVG(p.monto)            AS PromedioMonto
-                FROM pago p
-                INNER JOIN comprobante c ON c.comprobanteID = p.comprobanteID
-                WHERE c.empresaRuc = @Ruc
-                AND c.estadoSunat IN ('ACEPTADO', 'ACEPTADO_CON_OBSERVACIONES')
-                AND p.medioPago IS NOT NULL AND p.medioPago != ''
-                AND (@CodEstablecimiento IS NULL OR c.establecimientoAnexo = @CodEstablecimiento)
-                AND (@FechaDesde IS NULL OR c.fechaEmision >= @FechaDesde)
-                AND (@FechaHasta IS NULL OR c.fechaEmision <= @FechaHasta)
-                AND (@UsuarioCreacion IS NULL OR c.usuarioCreacion = @UsuarioCreacion)
-                AND (@ClienteNumDoc IS NULL OR c.clienteNumDoc = @ClienteNumDoc)
+                SELECT 'Efectivo' AS Medio UNION ALL
+                SELECT 'Tarjeta'  UNION ALL
+                SELECT 'Yape'     UNION ALL
+                SELECT 'Plin'     UNION ALL
+                SELECT 'Transferencia'
+            ) cat
+            LEFT JOIN ({union_medios}) u ON u.MedioPago = cat.Medio
+            GROUP BY cat.Medio
 
-                UNION ALL
+            UNION ALL
 
-                SELECT
-                    c2.tipoPago             AS MedioPago,
-                    COUNT(*)                AS VecesUsado,
-                    SUM(cu.monto)           AS MontoTotal,
-                    AVG(cu.monto)           AS PromedioMonto
-                FROM cuota cu
-                INNER JOIN comprobante c2 ON c2.comprobanteID = cu.comprobanteID
-                WHERE cu.estado = 'PAGADO'
-                AND c2.empresaRuc = @Ruc
-                AND c2.estadoSunat IN ('ACEPTADO', 'ACEPTADO_CON_OBSERVACIONES')
-                AND c2.tipoPago IS NOT NULL AND c2.tipoPago != ''
-                AND (@CodEstablecimiento IS NULL OR c2.establecimientoAnexo = @CodEstablecimiento)
-                AND (@FechaDesde IS NULL OR c2.fechaEmision >= @FechaDesde)
-                AND (@FechaHasta IS NULL OR c2.fechaEmision <= @FechaHasta)
-                AND (@UsuarioCreacion IS NULL OR c2.usuarioCreacion = @UsuarioCreacion)
-                AND (@ClienteNumDoc IS NULL OR c2.clienteNumDoc = @ClienteNumDoc)
-            ) AS union_medios
-            GROUP BY MedioPago
+            SELECT u2.MedioPago, u2.VecesUsado, u2.MontoTotal, u2.PromedioMonto
+            FROM ({union_medios}) u2
+            WHERE u2.MedioPago NOT IN ('Efectivo', 'Tarjeta', 'Yape', 'Plin', 'Transferencia')
+
             ORDER BY VecesUsado DESC"
             + (limit.HasValue ? " LIMIT @Limit" : "");
 
@@ -797,6 +834,237 @@ public class ReportesRepository : IReportesRepository
             c.fechaCreacion           AS FechaCreacion
         FROM comprobante c
         ";
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // DASHBOARD REPORT — queries nuevos
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private static DynamicParameters BuildDashboardParams(
+        string ruc, string? codEstablecimiento, DateTime? fechaDesde, DateTime? fechaHasta,
+        int? usuarioCreacion, int? limit = null)
+    {
+        var dp = new DynamicParameters();
+        dp.Add("Ruc", ruc);
+        dp.Add("CodEstablecimiento", codEstablecimiento);
+        dp.Add("FechaDesde", fechaDesde);
+        dp.Add("FechaHasta", fechaHasta);
+        dp.Add("UsuarioCreacion", usuarioCreacion);
+        if (limit.HasValue) dp.Add("Limit", limit.Value);
+        return dp;
+    }
+
+    private static string BuildDashboardWhere(bool includeEstado = true) => @"
+        WHERE c.empresaRuc = @Ruc
+        AND (@CodEstablecimiento IS NULL OR c.establecimientoAnexo = @CodEstablecimiento)
+        AND (@FechaDesde IS NULL OR c.fechaEmision >= @FechaDesde)
+        AND (@FechaHasta IS NULL OR c.fechaEmision <= @FechaHasta)
+        AND (@UsuarioCreacion IS NULL OR c.usuarioCreacion = @UsuarioCreacion)"
+        + (includeEstado ? "\nAND c.estadoSunat NOT IN ('RECHAZADO','ANULADO')" : "");
+
+    public async Task<IEnumerable<ComprobanteTopDto>> GetTopComprobantesAsync(
+        string ruc, string? codEstablecimiento, DateTime? fechaDesde, DateTime? fechaHasta,
+        int? usuarioCreacion, int limit = 10)
+    {
+        // ImporteTotal incluye la comisión de tarjeta (si la hubo) para que la tabla
+        // refleje lo realmente cobrado al cliente, no solo el valor del comprobante.
+        var sql = $@"
+            SELECT c.numeroCompleto AS NumeroCompleto,
+                   c.tipoComprobante AS TipoComprobante,
+                   c.clienteRznSocial AS ClienteRznSocial,
+                   c.fechaEmision AS FechaEmision,
+                   CASE WHEN c.tipoMoneda = 'USD' THEN c.importeTotal * c.tipoCambio
+                        ELSE c.importeTotal END
+                   + CASE WHEN c.tipoMoneda = 'USD' THEN COALESCE(c.totalComisionPagoTarjeta, 0) * c.tipoCambio
+                        ELSE COALESCE(c.totalComisionPagoTarjeta, 0) END AS ImporteTotal,
+                   COALESCE(c.totalComisionPagoTarjeta, 0) AS ComisionTarjeta
+            FROM comprobante c
+            {BuildDashboardWhere()}
+            AND c.tipoComprobante IN ('01','03')
+            ORDER BY ImporteTotal DESC
+            LIMIT @Limit;";
+
+        return await _connection.QueryAsync<ComprobanteTopDto>(
+            sql, BuildDashboardParams(ruc, codEstablecimiento, fechaDesde, fechaHasta, usuarioCreacion, limit), _transaction);
+    }
+
+    public async Task<IEnumerable<ComprobanteTopDto>> GetTopNotasVentaAsync(
+        string ruc, string? codEstablecimiento, DateTime? fechaDesde, DateTime? fechaHasta,
+        int? usuarioCreacion, int limit = 10)
+    {
+        var sql = $@"
+            SELECT c.numeroCompleto AS NumeroCompleto,
+                   c.tipoComprobante AS TipoComprobante,
+                   c.clienteRznSocial AS ClienteRznSocial,
+                   c.fechaEmision AS FechaEmision,
+                   CASE WHEN c.tipoMoneda = 'USD' THEN c.importeTotal * c.tipoCambio
+                        ELSE c.importeTotal END
+                   + CASE WHEN c.tipoMoneda = 'USD' THEN COALESCE(c.totalComisionPagoTarjeta, 0) * c.tipoCambio
+                        ELSE COALESCE(c.totalComisionPagoTarjeta, 0) END AS ImporteTotal,
+                   COALESCE(c.totalComisionPagoTarjeta, 0) AS ComisionTarjeta
+            FROM comprobante c
+            {BuildDashboardWhere()}
+            AND c.tipoComprobante = 'NV'
+            ORDER BY ImporteTotal DESC
+            LIMIT @Limit;";
+
+        return await _connection.QueryAsync<ComprobanteTopDto>(
+            sql, BuildDashboardParams(ruc, codEstablecimiento, fechaDesde, fechaHasta, usuarioCreacion, limit), _transaction);
+    }
+
+    public async Task<IEnumerable<ComprobanteTopDto>> GetTopComisionTarjetaAsync(
+        string ruc, string? codEstablecimiento, DateTime? fechaDesde, DateTime? fechaHasta,
+        int? usuarioCreacion, int limit = 10)
+    {
+        var sql = $@"
+            SELECT c.numeroCompleto AS NumeroCompleto,
+                   c.tipoComprobante AS TipoComprobante,
+                   c.clienteRznSocial AS ClienteRznSocial,
+                   c.fechaEmision AS FechaEmision,
+                   'Tarjeta' AS MedioPago,
+                   CASE WHEN c.tipoMoneda = 'USD' THEN c.importeTotal * c.tipoCambio
+                        ELSE c.importeTotal END AS ImporteTotal,
+                   CASE WHEN c.tipoMoneda = 'USD' THEN c.totalComisionPagoTarjeta * c.tipoCambio
+                        ELSE c.totalComisionPagoTarjeta END AS ComisionTarjeta
+            FROM comprobante c
+            {BuildDashboardWhere()}
+            AND c.tipoComprobante IN ('01','03','NV')
+            AND c.totalComisionPagoTarjeta > 0
+            ORDER BY ComisionTarjeta DESC
+            LIMIT @Limit;";
+
+        return await _connection.QueryAsync<ComprobanteTopDto>(
+            sql, BuildDashboardParams(ruc, codEstablecimiento, fechaDesde, fechaHasta, usuarioCreacion, limit), _transaction);
+    }
+
+    public async Task<TotalesTributariosDto> GetTotalesTributariosAsync(
+        string ruc, string? codEstablecimiento, DateTime? fechaDesde, DateTime? fechaHasta,
+        int? usuarioCreacion)
+    {
+        var sql = $@"
+            SELECT
+                SUM(CASE WHEN c.tipoComprobante = '01' THEN 1 ELSE 0 END) AS CantidadFacturas,
+                COALESCE(SUM(CASE WHEN c.tipoComprobante = '01'
+                    THEN CASE WHEN c.tipoMoneda = 'USD' THEN c.importeTotal * c.tipoCambio ELSE c.importeTotal END
+                    ELSE 0 END), 0) AS TotalFacturas,
+                COALESCE(SUM(CASE WHEN c.tipoComprobante = '01'
+                    THEN CASE WHEN c.tipoMoneda = 'USD' THEN c.totalIGV * c.tipoCambio ELSE c.totalIGV END
+                    ELSE 0 END), 0) AS IgvFacturas,
+
+                SUM(CASE WHEN c.tipoComprobante = '03' THEN 1 ELSE 0 END) AS CantidadBoletas,
+                COALESCE(SUM(CASE WHEN c.tipoComprobante = '03'
+                    THEN CASE WHEN c.tipoMoneda = 'USD' THEN c.importeTotal * c.tipoCambio ELSE c.importeTotal END
+                    ELSE 0 END), 0) AS TotalBoletas,
+                COALESCE(SUM(CASE WHEN c.tipoComprobante = '03'
+                    THEN CASE WHEN c.tipoMoneda = 'USD' THEN c.totalIGV * c.tipoCambio ELSE c.totalIGV END
+                    ELSE 0 END), 0) AS IgvBoletas,
+
+                COALESCE(SUM(
+                    CASE WHEN c.tipoComprobante IN ('01','03')
+                    THEN CASE WHEN c.tipoMoneda = 'USD' THEN c.importeTotal * c.tipoCambio ELSE c.importeTotal END
+                    ELSE 0 END), 0)
+                + COALESCE(SUM(
+                    CASE WHEN c.tipoComprobante = '08'
+                    THEN CASE WHEN c.tipoMoneda = 'USD' THEN c.importeTotal * c.tipoCambio ELSE c.importeTotal END
+                    ELSE 0 END), 0)
+                - COALESCE(SUM(
+                    CASE WHEN c.tipoComprobante = '07'
+                    THEN CASE WHEN c.tipoMoneda = 'USD' THEN c.importeTotal * c.tipoCambio ELSE c.importeTotal END
+                    ELSE 0 END), 0) AS VentasNetas,
+
+                COALESCE(SUM(
+                    CASE WHEN c.tipoComprobante = '07'
+                    THEN CASE WHEN c.tipoMoneda = 'USD' THEN c.importeTotal * c.tipoCambio ELSE c.importeTotal END
+                    ELSE 0 END), 0) AS TotalNC,
+                COALESCE(SUM(
+                    CASE WHEN c.tipoComprobante = '08'
+                    THEN CASE WHEN c.tipoMoneda = 'USD' THEN c.importeTotal * c.tipoCambio ELSE c.importeTotal END
+                    ELSE 0 END), 0) AS TotalND
+            FROM comprobante c
+            {BuildDashboardWhere()}
+            AND c.tipoComprobante IN ('01','03','07','08');";
+
+        return await _connection.QueryFirstOrDefaultAsync<TotalesTributariosDto>(
+            sql, BuildDashboardParams(ruc, codEstablecimiento, fechaDesde, fechaHasta, usuarioCreacion), _transaction)
+            ?? new TotalesTributariosDto();
+    }
+
+    public async Task<GananciasDashboardDto> GetGananciasAsync(
+        string ruc, string? codEstablecimiento, DateTime? fechaDesde, DateTime? fechaHasta,
+        int? usuarioCreacion)
+    {
+        // El join incluye productoId para evitar fan-out: si un comprobante tiene N productos,
+        // cada fila del kardex solo suma el ingreso de su propio ítem, no el total del comprobante.
+        // FechaHasta se normaliza al fin del día porque fechaMovimiento es DATETIME.
+        var hastaFinDia = fechaHasta?.Date.AddDays(1).AddTicks(-1);
+
+        var sql = @"
+            SELECT
+                COALESCE(SUM(km.costoTotal), 0)  AS CostoVentas,
+                COALESCE(SUM(v.ingreso), 0)       AS IngresoVentas
+            FROM kardex_movimiento km
+            INNER JOIN sucursalproducto sp ON sp.sucursalProductoID = km.sucursalProductoID
+            INNER JOIN sucursal s ON s.sucursalID = sp.sucursalID
+            INNER JOIN comprobante cv ON cv.comprobanteID = km.referenciaID
+                AND cv.estadoSunat NOT IN ('ANULADO','RECHAZADO')
+            LEFT JOIN (
+                SELECT cd.comprobanteId, cd.productoId, SUM(cd.totalVentaItem) AS ingreso
+                FROM comprobantedetalle cd
+                INNER JOIN comprobante c ON c.comprobanteID = cd.comprobanteId
+                WHERE (
+                    (c.tipoComprobante <> 'NV' AND c.estadoSunat IN ('ACEPTADO','ACEPTADO_CON_OBSERVACIONES','PENDIENTE'))
+                    OR (c.tipoComprobante = 'NV' AND c.estadoSunat = 'NO_APLICA')
+                )
+                GROUP BY cd.comprobanteId, cd.productoId
+            ) v ON v.comprobanteId = km.referenciaID AND v.productoId = sp.productoID
+            WHERE km.tipoMovimiento = 'SALIDA_VENTA'
+            AND km.referenciaTipo = 'COMPROBANTE'
+            AND s.empresaRuc = @Ruc
+            AND (@CodEstablecimiento IS NULL OR s.codEstablecimiento = @CodEstablecimiento)
+            AND (@FechaDesde IS NULL OR km.fechaMovimiento >= @FechaDesde)
+            AND (@FechaHasta IS NULL OR km.fechaMovimiento <= @FechaHasta)
+            AND (@UsuarioCreacion IS NULL OR cv.usuarioCreacion = @UsuarioCreacion);";
+
+        var dp = new DynamicParameters();
+        dp.Add("Ruc", ruc);
+        dp.Add("CodEstablecimiento", codEstablecimiento);
+        dp.Add("FechaDesde", fechaDesde);
+        dp.Add("FechaHasta", hastaFinDia);
+        dp.Add("UsuarioCreacion", usuarioCreacion);
+
+        return await _connection.QueryFirstOrDefaultAsync<GananciasDashboardDto>(sql, dp, _transaction)
+            ?? new GananciasDashboardDto();
+    }
+
+    public async Task<IEnumerable<VentasPorUsuarioDto>> GetVentasPorUsuarioAsync(
+        string ruc, string? codEstablecimiento, DateTime? fechaDesde, DateTime? fechaHasta)
+    {
+        var sql = @"
+            SELECT
+                COALESCE(u.username, 'Sin usuario') AS NombreUsuario,
+                COUNT(*)                             AS TotalDocumentos,
+                COALESCE(SUM(
+                    CASE WHEN c.tipoMoneda = 'USD' THEN c.importeTotal * c.tipoCambio
+                         ELSE c.importeTotal END
+                ), 0) AS TotalVentas
+            FROM comprobante c
+            LEFT JOIN usuario u ON u.usuarioID = c.usuarioCreacion
+            WHERE c.empresaRuc = @Ruc
+            AND (@CodEstablecimiento IS NULL OR c.establecimientoAnexo = @CodEstablecimiento)
+            AND c.estadoSunat NOT IN ('RECHAZADO','ANULADO')
+            AND c.tipoComprobante IN ('01','03','NV')
+            AND (@FechaDesde IS NULL OR c.fechaEmision >= @FechaDesde)
+            AND (@FechaHasta IS NULL OR c.fechaEmision <= @FechaHasta)
+            GROUP BY c.usuarioCreacion, u.username
+            ORDER BY TotalVentas DESC;";
+
+        var dp = new DynamicParameters();
+        dp.Add("Ruc", ruc);
+        dp.Add("CodEstablecimiento", codEstablecimiento);
+        dp.Add("FechaDesde", fechaDesde);
+        dp.Add("FechaHasta", fechaHasta);
+
+        return await _connection.QueryAsync<VentasPorUsuarioDto>(sql, dp, _transaction);
+    }
     }
 // ── DTO interno para mapeo raw ────────────────────────────────────────────────
 internal class KpiRawDto

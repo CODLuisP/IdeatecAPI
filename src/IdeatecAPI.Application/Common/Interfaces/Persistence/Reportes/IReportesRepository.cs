@@ -78,4 +78,28 @@ public interface IReportesRepository
     /// Devuelve (ComprobanteId, MedioPago, Monto) para un conjunto de comprobantes.
     Task<IEnumerable<(int ComprobanteId, string? MedioPago, decimal Monto)>>
         GetPagosByComprobanteIdsAsync(IEnumerable<int> comprobanteIds);
+
+    // ── Dashboard Report ─────────────────────────────────────────────────────
+    Task<IEnumerable<ComprobanteTopDto>> GetTopComprobantesAsync(
+        string ruc, string? codEstablecimiento, DateTime? fechaDesde, DateTime? fechaHasta,
+        int? usuarioCreacion, int limit = 10);
+
+    Task<IEnumerable<ComprobanteTopDto>> GetTopNotasVentaAsync(
+        string ruc, string? codEstablecimiento, DateTime? fechaDesde, DateTime? fechaHasta,
+        int? usuarioCreacion, int limit = 10);
+
+    Task<IEnumerable<ComprobanteTopDto>> GetTopComisionTarjetaAsync(
+        string ruc, string? codEstablecimiento, DateTime? fechaDesde, DateTime? fechaHasta,
+        int? usuarioCreacion, int limit = 10);
+
+    Task<TotalesTributariosDto> GetTotalesTributariosAsync(
+        string ruc, string? codEstablecimiento, DateTime? fechaDesde, DateTime? fechaHasta,
+        int? usuarioCreacion);
+
+    Task<GananciasDashboardDto> GetGananciasAsync(
+        string ruc, string? codEstablecimiento, DateTime? fechaDesde, DateTime? fechaHasta,
+        int? usuarioCreacion);
+
+    Task<IEnumerable<VentasPorUsuarioDto>> GetVentasPorUsuarioAsync(
+        string ruc, string? codEstablecimiento, DateTime? fechaDesde, DateTime? fechaHasta);
 }
