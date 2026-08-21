@@ -180,15 +180,12 @@ public class ReportesPdfService : IReportesPdfService
         {
             container.Page(page =>
             {
-                
                 // Portrait A4 (595 × 842) — compacto, font 7pt
                 page.Size(PageSizes.A4);
                 page.MarginHorizontal(8, Unit.Millimetre);
                 page.MarginVertical(8, Unit.Millimetre);
                 page.DefaultTextStyle(x => x.FontFamily(Fonts.Lato).FontSize(7).FontColor("#1A1A1A"));
-
                 page.Header().Element(h => BuildCabecera(h, titulo, filtros));
-
                 page.Content().PaddingTop(4).Column(col =>
                 {
                     // ── Movimientos (total incluido dentro de la tabla) ───────
