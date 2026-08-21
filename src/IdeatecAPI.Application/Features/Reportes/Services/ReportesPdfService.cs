@@ -180,6 +180,7 @@ public class ReportesPdfService : IReportesPdfService
         {
             container.Page(page =>
             {
+                
                 // Portrait A4 (595 × 842) — compacto, font 7pt
                 page.Size(PageSizes.A4);
                 page.MarginHorizontal(8, Unit.Millimetre);
