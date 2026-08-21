@@ -129,6 +129,53 @@ public class CajaController : ControllerBase
         }
     }
 
+    /// <summary>Registra un retiro de efectivo del turno abierto (con motivo).</summary>
+    [HttpPost("retiro")]
+    public async Task<IActionResult> Retiro([FromBody] RegistrarRetiroDto dto)
+    {
+        try
+        {
+            return Ok(await _cajaService.RegistrarRetiroAsync(dto, UsuarioId(), NombreUsuario()));
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { mensaje = ex.Message });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { mensaje = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { mensaje = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error registrando retiro del turno {CajaTurnoId}", dto.CajaTurnoId);
+            return StatusCode(500, new { mensaje = "No se pudo registrar el retiro", detalle = ex.Message });
+        }
+    }
+
+    /// <summary>Corte de caja de un día (y opcionalmente de un cajero puntual).</summary>
+    [HttpGet("corte/{sucursalId:int}")]
+    public async Task<IActionResult> GetCorteDiario(
+        int sucursalId, [FromQuery] DateTime fecha, [FromQuery] int? usuarioId)
+    {
+        try
+        {
+            return Ok(await _cajaService.GetCorteDiarioAsync(sucursalId, fecha, usuarioId));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { mensaje = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error obteniendo el corte diario de la sucursal {SucursalId}", sucursalId);
+            return StatusCode(500, new { mensaje = "No se pudo obtener el corte diario", detalle = ex.Message });
+        }
+    }
+
     [HttpGet("historial/{ruc}")]
     public async Task<IActionResult> GetHistorial(
         string ruc,

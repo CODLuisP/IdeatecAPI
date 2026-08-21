@@ -384,19 +384,36 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
             sql, new { Ruc = ruc, FechaDesde = fechaDesde, FechaHasta = fechaHasta, Limit = limit, Offset = offset }, _transaction);
     }
 
-    public async Task<IEnumerable<Comprobante>> GetBySucursalAndFechasAsync(string empresaRuc, string codEstablecimiento, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null)
+    public async Task<IEnumerable<Comprobante>> GetBySucursalAndFechasAsync(string empresaRuc, string codEstablecimiento, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null, int? usuarioId = null)
     {
         var sql = BaseSelect + @"
         WHERE empresaRuc = @EmpresaRuc
         AND establecimientoAnexo = @CodEstablecimiento
         AND (@FechaDesde IS NULL OR fechaEmision >= @FechaDesde)
         AND (@FechaHasta IS NULL OR fechaEmision <= @FechaHasta)
+        AND (@UsuarioId IS NULL OR usuarioCreacion = @UsuarioId)
         ORDER BY fechaEmision DESC"
         + (limit.HasValue ? " LIMIT @Limit" : "")
         + (limit.HasValue && offset.HasValue ? " OFFSET @Offset" : "");
 
         return await _connection.QueryAsync<Comprobante>(
-            sql, new { EmpresaRuc = empresaRuc, CodEstablecimiento = codEstablecimiento, FechaDesde = fechaDesde, FechaHasta = fechaHasta, Limit = limit, Offset = offset }, _transaction);
+            sql, new { EmpresaRuc = empresaRuc, CodEstablecimiento = codEstablecimiento, FechaDesde = fechaDesde, FechaHasta = fechaHasta, Limit = limit, Offset = offset, UsuarioId = usuarioId }, _transaction);
+    }
+
+    public async Task<IReadOnlyDictionary<int, int>> GetCantidadItemsPorComprobantesAsync(IEnumerable<int> comprobanteIds)
+    {
+        var ids = comprobanteIds.ToList();
+        if (ids.Count == 0)
+            return new Dictionary<int, int>();
+
+        var sql = @"
+            SELECT comprobanteId AS ComprobanteId, COUNT(*) AS Cantidad
+            FROM comprobantedetalle
+            WHERE comprobanteId IN @Ids
+            GROUP BY comprobanteId;";
+
+        var filas = await _connection.QueryAsync<(int ComprobanteId, int Cantidad)>(sql, new { Ids = ids }, _transaction);
+        return filas.ToDictionary(f => f.ComprobanteId, f => f.Cantidad);
     }
 
     public async Task<IEnumerable<Comprobante>> GetByDocClienteAndFechasAsync(string rucEmpresa, string clienteNumDoc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null)

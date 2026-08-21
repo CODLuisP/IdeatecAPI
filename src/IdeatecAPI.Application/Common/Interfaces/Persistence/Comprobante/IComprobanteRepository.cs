@@ -21,7 +21,9 @@ public interface IComprobanteRepository : IRepository<Comprobante>
     Task<IEnumerable<ComprobanteDetalle>> GetDetallesByIdAsync(int comprobanteId);
     Task<IEnumerable<Comprobante>> GetByRucAndFechasAsync(string ruc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null);
     Task<IEnumerable<Comprobante>> GetByDocClienteAndFechasAsync(string rucEmpresa, string clienteNumDoc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null);
-    Task<IEnumerable<Comprobante>> GetBySucursalAndFechasAsync(string empresaRuc, string codEstablecimiento, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null);
+    Task<IEnumerable<Comprobante>> GetBySucursalAndFechasAsync(string empresaRuc, string codEstablecimiento, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null, int? usuarioId = null);
+    /// <summary>Cantidad de líneas de detalle por comprobante, para listados que necesitan mostrar "N artículos" sin traer el detalle completo.</summary>
+    Task<IReadOnlyDictionary<int, int>> GetCantidadItemsPorComprobantesAsync(IEnumerable<int> comprobanteIds);
     Task<IEnumerable<Comprobante>> GetByDocUsuarioAndFechasAsync(string rucEmpresa, int usuarioCreacion, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null);
     Task<IEnumerable<Comprobante>> GetByClienteAndSucursalAsync(string empresaRuc, string codEstablecimiento, string clienteNumDoc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null);
     Task UpdateCorreoWhatsappAsync(int comprobanteId, string? correo, bool? enviadoPorCorreo, string? whatsApp, bool? enviadoPorWhatsApp);

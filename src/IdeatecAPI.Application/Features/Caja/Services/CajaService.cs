@@ -14,6 +14,8 @@ public interface ICajaService
     Task<CajaHistorialDto> GetHistorialAsync(string empresaRuc, int? sucursalId, DateTime? desde,
                                              DateTime? hasta, string? estado, int page, int pageSize);
     Task<CajaDetalleDto?> GetDetalleAsync(int cajaAperturaId);
+    Task<CajaEstadoDto> RegistrarRetiroAsync(RegistrarRetiroDto dto, int usuarioId, string nombreUsuario);
+    Task<CorteDiarioDto> GetCorteDiarioAsync(int sucursalId, DateTime fecha, int? usuarioId);
 }
 
 public class CajaService : ICajaService
@@ -98,7 +100,9 @@ public class CajaService : ICajaService
             sucursal.EmpresaRuc, sucursal.CodEstablecimiento,
             turnoAbierto.UsuarioId, turnoAbierto.FechaInicio, null);
 
-        return turnoAbierto.SaldoInicial + MontoDe(resumen, MedioEfectivo);
+        var retiros = await _unitOfWork.Caja.GetRetirosByTurnoIdsAsync(new[] { turnoAbierto.CajaTurnoId });
+
+        return turnoAbierto.SaldoInicial + MontoDe(resumen, MedioEfectivo) - retiros.Sum(r => r.Monto);
     }
 
     // ─────────────────────────────── Apertura ───────────────────────────────
@@ -221,6 +225,9 @@ public class CajaService : ICajaService
 
         var ventasEfectivo = MontoDe(resumen, MedioEfectivo);
 
+        var retiros = (await _unitOfWork.Caja.GetRetirosByTurnoIdsAsync(new[] { turno.CajaTurnoId })).ToList();
+        var totalRetiros = retiros.Sum(r => r.Monto);
+
         return new CuadreTurnoDto
         {
             CajaTurnoId = turno.CajaTurnoId,
@@ -229,10 +236,12 @@ public class CajaService : ICajaService
             FechaInicio = turno.FechaInicio,
             SaldoInicial = turno.SaldoInicial,
             VentasEfectivo = ventasEfectivo,
-            EfectivoEsperado = turno.SaldoInicial + ventasEfectivo,
+            TotalRetiros = totalRetiros,
+            EfectivoEsperado = turno.SaldoInicial + ventasEfectivo - totalRetiros,
             TotalVentas = resumen.TotalVentas,
             CantidadComprobantes = resumen.CantidadComprobantes,
-            Medios = ArmarMedios(resumen)
+            Medios = ArmarMedios(resumen),
+            Retiros = retiros.Select(MapRetiro).ToList()
         };
     }
 
@@ -257,7 +266,9 @@ public class CajaService : ICajaService
         var resumen = await _unitOfWork.Caja.GetResumenVentasAsync(
             caja.EmpresaRuc!, caja.CodEstablecimiento!, turno.UsuarioId, turno.FechaInicio, ahora);
 
-        var efectivoEsperado = turno.SaldoInicial + MontoDe(resumen, MedioEfectivo);
+        var totalRetiros = (await _unitOfWork.Caja.GetRetirosByTurnoIdsAsync(new[] { turno.CajaTurnoId }))
+            .Sum(r => r.Monto);
+        var efectivoEsperado = turno.SaldoInicial + MontoDe(resumen, MedioEfectivo) - totalRetiros;
         var diferencia = dto.EfectivoContado - efectivoEsperado;
 
         _unitOfWork.BeginTransaction();
@@ -330,6 +341,107 @@ public class CajaService : ICajaService
             _unitOfWork.Rollback();
             throw;
         }
+    }
+
+    // ────────────────────────── Retiros de efectivo ──────────────────────────
+
+    public async Task<CajaEstadoDto> RegistrarRetiroAsync(RegistrarRetiroDto dto, int usuarioId, string nombreUsuario)
+    {
+        if (dto.Monto <= 0)
+            throw new ArgumentException("El monto del retiro debe ser mayor a cero.");
+
+        if (string.IsNullOrWhiteSpace(dto.Motivo))
+            throw new ArgumentException("Debe indicar el motivo del retiro.");
+
+        var turno = await _unitOfWork.Caja.GetTurnoByIdAsync(dto.CajaTurnoId)
+            ?? throw new KeyNotFoundException($"Turno {dto.CajaTurnoId} no encontrado.");
+
+        if (turno.Estado != CajaTurno.EstadoAbierto)
+            throw new InvalidOperationException("El turno ya fue cuadrado, no se puede retirar efectivo de él.");
+
+        await _unitOfWork.Caja.InsertRetiroAsync(new CajaRetiro
+        {
+            CajaTurnoId = dto.CajaTurnoId,
+            Monto = dto.Monto,
+            Motivo = dto.Motivo.Trim(),
+            FechaRetiro = DateTime.Now,
+            UsuarioId = usuarioId,
+            NombreUsuario = nombreUsuario
+        });
+
+        var caja = await _unitOfWork.Caja.GetCajaByIdAsync(turno.CajaAperturaId)
+            ?? throw new KeyNotFoundException($"Caja {turno.CajaAperturaId} no encontrada.");
+
+        return await GetEstadoAsync(caja.SucursalId, usuarioId);
+    }
+
+    // ────────────────────────────── Corte diario ──────────────────────────────
+
+    public async Task<CorteDiarioDto> GetCorteDiarioAsync(int sucursalId, DateTime fecha, int? usuarioId)
+    {
+        var sucursal = await _unitOfWork.Caja.GetDatosSucursalAsync(sucursalId)
+            ?? throw new KeyNotFoundException($"Sucursal {sucursalId} no encontrada.");
+
+        var desde = fecha.Date;
+        var hasta = fecha.Date.AddDays(1).AddTicks(-1);
+
+        var turnosDelDia = (await _unitOfWork.Caja.GetTurnosPorFechaAsync(sucursalId, desde, hasta, usuarioId)).ToList();
+        var turnoIds = turnosDelDia.Select(t => t.CajaTurnoId).ToList();
+
+        var resumen = await _unitOfWork.Caja.GetResumenVentasAsync(
+            sucursal.EmpresaRuc, sucursal.CodEstablecimiento, usuarioId, desde, hasta);
+
+        var retiros = (await _unitOfWork.Caja.GetRetirosByTurnoIdsAsync(turnoIds)).ToList();
+        var totalRetiros = retiros.Sum(r => r.Monto);
+
+        var dineroInicial = turnosDelDia.Count > 0 ? turnosDelDia[0].SaldoInicial : 0m;
+        var ventasEfectivo = MontoDe(resumen, MedioEfectivo);
+
+        var ventasPorCategoria = await _unitOfWork.Caja.GetVentasPorCategoriaAsync(
+            sucursal.EmpresaRuc, sucursal.CodEstablecimiento, usuarioId, desde, hasta);
+
+        var rentabilidad = await _unitOfWork.InventarioLotes.GetRentabilidadDiaSucursalAsync(sucursalId, desde, hasta, usuarioId);
+
+        // El selector de cajero necesita a TODOS los que trabajaron ese día, no
+        // solo al filtrado, así que se pide sin usuarioId cuando ya hay uno.
+        var cajerosDelDia = usuarioId.HasValue
+            ? (await _unitOfWork.Caja.GetTurnosPorFechaAsync(sucursalId, desde, hasta, null)).ToList()
+            : turnosDelDia;
+
+        return new CorteDiarioDto
+        {
+            Fecha = desde,
+            SucursalId = sucursalId,
+            NombreSucursal = sucursal.Nombre,
+            UsuarioId = usuarioId,
+            NombreUsuario = turnosDelDia.FirstOrDefault()?.NombreUsuario,
+
+            DineroInicial = dineroInicial,
+            VentasEfectivo = ventasEfectivo,
+            TotalRetiros = totalRetiros,
+            EfectivoEsperado = dineroInicial + ventasEfectivo - totalRetiros,
+
+            VentasTotales = resumen.TotalVentas,
+            CantidadComprobantes = resumen.CantidadComprobantes,
+            GananciaDia = rentabilidad.IngresoVentas > 0 || rentabilidad.CostoVentas > 0 ? rentabilidad.UtilidadBruta : null,
+
+            OtrosMediosPago = resumen.Medios
+                .Where(m => m.Monto > 0)
+                .Select(m => new MedioPagoResumenDto { MedioPago = m.MedioPago, MontoEsperado = m.Monto })
+                .ToList(),
+            VentasPorCategoria = ventasPorCategoria
+                .Select(v => new VentaCategoriaDto { Categoria = v.Categoria, Monto = v.Monto })
+                .ToList(),
+            Retiros = retiros.Select(MapRetiro).ToList(),
+            Observaciones = turnosDelDia
+                .Where(t => !string.IsNullOrWhiteSpace(t.Observaciones))
+                .Select(t => new ObservacionTurnoDto { NombreUsuario = t.NombreUsuario, Texto = t.Observaciones! })
+                .ToList(),
+            CajerosDelDia = cajerosDelDia
+                .GroupBy(t => t.UsuarioId)
+                .Select(g => new CajeroResumenDto { UsuarioId = g.Key, NombreUsuario = g.First().NombreUsuario })
+                .ToList()
+        };
     }
 
     // ────────────────────────────── Historial ──────────────────────────────
@@ -440,6 +552,16 @@ public class CajaService : ICajaService
         medios.AddRange(extras);
         return medios;
     }
+
+    private static CajaRetiroDto MapRetiro(CajaRetiro retiro) => new()
+    {
+        CajaRetiroId = retiro.CajaRetiroId,
+        CajaTurnoId = retiro.CajaTurnoId,
+        Monto = retiro.Monto,
+        Motivo = retiro.Motivo,
+        FechaRetiro = retiro.FechaRetiro,
+        NombreUsuario = retiro.NombreUsuario
+    };
 
     private static CajaAperturaDto MapCaja(CajaApertura caja, string? nombreSucursal) => new()
     {

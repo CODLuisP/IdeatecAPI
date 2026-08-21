@@ -38,6 +38,8 @@ public class ListarComprobanteDTO
     public decimal ImporteTotal { get; set; }
     public decimal MontoCredito { get; set; }
     public decimal? TotalComisionPagoTarjeta { get; set; }
+    /// <summary>Cantidad de líneas de detalle (artículos) del comprobante.</summary>
+    public int? CantidadItems { get; set; }
 
     // Notas
     public int? ComprobanteAfectadoId { get; set; }

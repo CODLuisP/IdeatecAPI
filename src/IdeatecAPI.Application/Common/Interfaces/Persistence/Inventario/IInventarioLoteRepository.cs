@@ -37,6 +37,8 @@ public interface IInventarioLoteRepository : IRepository<InventarioLote>
     Task<IEnumerable<KardexMovimiento>> GetMovimientosPorReferenciaAsync(string referenciaTipo, int referenciaId);
     Task<IEnumerable<RentabilidadProductoDTO>> GetRentabilidadPorProductoAsync(int sucursalId, DateTime? desde, DateTime? hasta);
     Task<IEnumerable<RentabilidadDiariaDTO>> GetRentabilidadDiariaAsync(int sucursalProductoId, DateTime? desde, DateTime? hasta);
+    /// <summary>Utilidad bruta de toda la sucursal en una ventana de tiempo, opcionalmente de un solo usuario. Para el corte de caja.</summary>
+    Task<RentabilidadDiariaDTO> GetRentabilidadDiaSucursalAsync(int sucursalId, DateTime desde, DateTime hasta, int? usuarioId);
     Task<IEnumerable<InventarioLote>> GetByCompraProveedorIdAsync(int compraProveedorId);
     Task<InventarioLote?> GetPorIdAsync(int inventarioLoteId);
     Task EliminarEntradaLoteAsync(int inventarioLoteId);

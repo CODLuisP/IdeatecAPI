@@ -201,12 +201,13 @@ public class ComprobantesController : ControllerBase
         [FromQuery] DateTime? fechaDesde,
         [FromQuery] DateTime? fechaHasta,
         [FromQuery] int? limit = null,
-        [FromQuery] int? offset = null)
+        [FromQuery] int? offset = null,
+        [FromQuery] int? usuarioId = null)
     {
         try
         {
             var (desde, hasta) = NormalizarFechas(fechaDesde, fechaHasta);
-            var result = await _comprobanteService.GetListadoBySucursalAndFechasAsync(sucursalId, desde, hasta, limit, offset);
+            var result = await _comprobanteService.GetListadoBySucursalAndFechasAsync(sucursalId, desde, hasta, limit, offset, usuarioId);
             return Ok(result ?? Enumerable.Empty<object>());
         }
         catch (KeyNotFoundException ex)

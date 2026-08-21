@@ -259,18 +259,19 @@ public class CajaRepository : DapperRepository<CajaApertura>, ICajaRepository
     public async Task<ResumenVentasTurno> GetResumenVentasAsync(
         string empresaRuc,
         string codEstablecimiento,
-        int usuarioId,
+        int? usuarioId,
         DateTime desde,
         DateTime? hasta)
     {
         // Los comprobantes del turno son los que ese usuario creó en esa
         // sucursal dentro de la ventana del turno. Se usa fechaCreacion (tiene
         // hora) y no fechaEmision, que es solo la fecha del documento.
+        // Con usuarioId nulo se agregan todos los usuarios (corte del día).
         const string filtroComprobantes = @"
             FROM comprobante c
             WHERE c.empresaRuc = @EmpresaRuc
               AND c.establecimientoAnexo = @CodEstablecimiento
-              AND c.usuarioCreacion = @UsuarioId
+              AND (@UsuarioId IS NULL OR c.usuarioCreacion = @UsuarioId)
               AND c.fechaCreacion >= @Desde
               AND (@Hasta IS NULL OR c.fechaCreacion <= @Hasta)
               AND (c.estadoSunat IS NULL OR c.estadoSunat NOT IN ('RECHAZADO', 'ANULADO'))";
@@ -305,6 +306,112 @@ public class CajaRepository : DapperRepository<CajaApertura>, ICajaRepository
             sqlTotales, parametros, _transaction);
 
         return new ResumenVentasTurno(medios, totales.TotalVentas, totales.CantidadComprobantes);
+    }
+
+    public async Task<IEnumerable<VentaCategoria>> GetVentasPorCategoriaAsync(
+        string empresaRuc,
+        string codEstablecimiento,
+        int? usuarioId,
+        DateTime desde,
+        DateTime hasta)
+    {
+        // Mismo filtro de comprobantes válidos que GetResumenVentasAsync, pero
+        // agregando el detalle de venta por la categoría del producto.
+        var sql = @"
+            SELECT COALESCE(cat.categoriaNombre, 'Sin categoría') AS Categoria,
+                   COALESCE(SUM(cd.totalVentaItem), 0)            AS Monto
+            FROM comprobantedetalle cd
+            INNER JOIN comprobante c ON c.comprobanteID = cd.comprobanteId
+            LEFT JOIN producto p     ON p.productoID = cd.productoId
+            LEFT JOIN categoria cat  ON cat.categoriaID = p.categoriaID
+            WHERE c.empresaRuc = @EmpresaRuc
+              AND c.establecimientoAnexo = @CodEstablecimiento
+              AND (@UsuarioId IS NULL OR c.usuarioCreacion = @UsuarioId)
+              AND c.fechaCreacion >= @Desde
+              AND c.fechaCreacion <= @Hasta
+              AND (c.estadoSunat IS NULL OR c.estadoSunat NOT IN ('RECHAZADO', 'ANULADO'))
+            GROUP BY COALESCE(cat.categoriaNombre, 'Sin categoría')
+            ORDER BY Monto DESC;";
+
+        return await _connection.QueryAsync<VentaCategoria>(
+            sql,
+            new { EmpresaRuc = empresaRuc, CodEstablecimiento = codEstablecimiento, UsuarioId = usuarioId, Desde = desde, Hasta = hasta },
+            _transaction);
+    }
+
+    // ───────────────────────── Retiros de efectivo ─────────────────────────
+
+    public async Task<int> InsertRetiroAsync(CajaRetiro retiro)
+    {
+        var sql = @"
+            INSERT INTO caja_retiro
+                (cajaTurnoID, monto, motivo, fechaRetiro, usuarioID, nombreUsuario)
+            VALUES
+                (@CajaTurnoId, @Monto, @Motivo, @FechaRetiro, @UsuarioId, @NombreUsuario);
+            SELECT LAST_INSERT_ID();";
+
+        return await _connection.ExecuteScalarAsync<int>(sql, retiro, _transaction);
+    }
+
+    public async Task<IEnumerable<CajaRetiro>> GetRetirosByTurnoIdsAsync(IEnumerable<int> cajaTurnoIds)
+    {
+        var ids = cajaTurnoIds.ToList();
+        if (ids.Count == 0)
+            return Enumerable.Empty<CajaRetiro>();
+
+        var sql = @"
+            SELECT cajaRetiroID  AS CajaRetiroId,
+                   cajaTurnoID   AS CajaTurnoId,
+                   monto         AS Monto,
+                   motivo        AS Motivo,
+                   fechaRetiro   AS FechaRetiro,
+                   usuarioID     AS UsuarioId,
+                   nombreUsuario AS NombreUsuario
+            FROM caja_retiro
+            WHERE cajaTurnoID IN @Ids
+            ORDER BY fechaRetiro ASC;";
+
+        return await _connection.QueryAsync<CajaRetiro>(sql, new { Ids = ids }, _transaction);
+    }
+
+    // ──────────────────────────── Corte diario ────────────────────────────
+
+    public async Task<IEnumerable<CajaTurno>> GetTurnosPorFechaAsync(
+        int sucursalId,
+        DateTime desde,
+        DateTime hasta,
+        int? usuarioId)
+    {
+        // Columnas calificadas con "t.": caja_apertura también tiene
+        // cajaAperturaID/estado/observaciones, así que el SELECT sin prefijo de
+        // SelectTurno sería ambiguo apenas se une con esa tabla.
+        var sql = @"
+            SELECT t.cajaTurnoID          AS CajaTurnoId,
+                   t.cajaAperturaID       AS CajaAperturaId,
+                   t.usuarioID            AS UsuarioId,
+                   t.nombreUsuario        AS NombreUsuario,
+                   t.fechaInicio          AS FechaInicio,
+                   t.fechaFin             AS FechaFin,
+                   t.saldoInicial         AS SaldoInicial,
+                   t.efectivoEsperado     AS EfectivoEsperado,
+                   t.efectivoContado      AS EfectivoContado,
+                   t.diferencia           AS Diferencia,
+                   t.totalVentas          AS TotalVentas,
+                   t.cantidadComprobantes AS CantidadComprobantes,
+                   t.estado               AS Estado,
+                   t.cerradoPorUsuarioID  AS CerradoPorUsuarioId,
+                   t.esCierreCaja         AS EsCierreCaja,
+                   t.observaciones        AS Observaciones
+            FROM caja_turno t
+            INNER JOIN caja_apertura a ON a.cajaAperturaID = t.cajaAperturaID
+            WHERE a.sucursalID = @SucursalId
+              AND t.fechaInicio >= @Desde
+              AND t.fechaInicio <= @Hasta
+              AND (@UsuarioId IS NULL OR t.usuarioID = @UsuarioId)
+            ORDER BY t.fechaInicio ASC;";
+
+        return await _connection.QueryAsync<CajaTurno>(
+            sql, new { SucursalId = sucursalId, Desde = desde, Hasta = hasta, UsuarioId = usuarioId }, _transaction);
     }
 
     // ──────────────────────────── Historial ────────────────────────────

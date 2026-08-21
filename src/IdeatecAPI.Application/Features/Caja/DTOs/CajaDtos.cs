@@ -112,10 +112,78 @@ public class CuadreTurnoDto
     public DateTime FechaInicio { get; set; }
     public decimal SaldoInicial { get; set; }
     public decimal VentasEfectivo { get; set; }
+    public decimal TotalRetiros { get; set; }
     public decimal EfectivoEsperado { get; set; }
     public decimal TotalVentas { get; set; }
     public int CantidadComprobantes { get; set; }
     public List<MedioPagoResumenDto> Medios { get; set; } = new();
+    public List<CajaRetiroDto> Retiros { get; set; } = new();
+}
+
+/// <summary>Salida de efectivo del cajón dentro de un turno, con su motivo.</summary>
+public class CajaRetiroDto
+{
+    public int CajaRetiroId { get; set; }
+    public int CajaTurnoId { get; set; }
+    public decimal Monto { get; set; }
+    public string Motivo { get; set; } = string.Empty;
+    public DateTime FechaRetiro { get; set; }
+    public string? NombreUsuario { get; set; }
+}
+
+public class RegistrarRetiroDto
+{
+    public int CajaTurnoId { get; set; }
+    public decimal Monto { get; set; }
+    public string Motivo { get; set; } = string.Empty;
+}
+
+/// <summary>Cajero que tuvo movimiento en el día del corte, para el selector.</summary>
+public class CajeroResumenDto
+{
+    public int UsuarioId { get; set; }
+    public string? NombreUsuario { get; set; }
+}
+
+public class VentaCategoriaDto
+{
+    public string Categoria { get; set; } = string.Empty;
+    public decimal Monto { get; set; }
+}
+
+public class ObservacionTurnoDto
+{
+    public string? NombreUsuario { get; set; }
+    public string Texto { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Corte de caja de un día (y opcionalmente de un cajero puntual), en el
+/// formato que el módulo Caja muestra: entradas de efectivo, medios de pago,
+/// ventas por categoría, retiros y ganancia del día.
+/// </summary>
+public class CorteDiarioDto
+{
+    public DateTime Fecha { get; set; }
+    public int SucursalId { get; set; }
+    public string? NombreSucursal { get; set; }
+    public int? UsuarioId { get; set; }
+    public string? NombreUsuario { get; set; }
+
+    public decimal DineroInicial { get; set; }
+    public decimal VentasEfectivo { get; set; }
+    public decimal TotalRetiros { get; set; }
+    public decimal EfectivoEsperado { get; set; }
+
+    public decimal VentasTotales { get; set; }
+    public int CantidadComprobantes { get; set; }
+    public decimal? GananciaDia { get; set; }
+
+    public List<MedioPagoResumenDto> OtrosMediosPago { get; set; } = new();
+    public List<VentaCategoriaDto> VentasPorCategoria { get; set; } = new();
+    public List<CajaRetiroDto> Retiros { get; set; } = new();
+    public List<ObservacionTurnoDto> Observaciones { get; set; } = new();
+    public List<CajeroResumenDto> CajerosDelDia { get; set; } = new();
 }
 
 public class CuadrarCajaDto
