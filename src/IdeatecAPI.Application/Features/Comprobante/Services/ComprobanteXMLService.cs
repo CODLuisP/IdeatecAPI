@@ -34,7 +34,7 @@ public interface IComprobanteService
     Task<IEnumerable<ListarComprobanteDTO>> GetListadoByRucAndFechasAsync(string ruc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null);
     Task<IEnumerable<ListarComprobanteDTO>> GetListadoByDocClienteAndFechasAsync(string rucEmpresa, string clienteNumDoc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null);
     Task<IEnumerable<ListarComprobanteDTO>> GetListadoByDocUsuarioAndFechasAsync(string rucEmpresa, int usuarioCreacion, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null);
-    Task<IEnumerable<ListarComprobanteDTO>> GetListadoBySucursalAndFechasAsync(int sucursalId, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null);
+    Task<IEnumerable<ListarComprobanteDTO>> GetListadoBySucursalAndFechasAsync(int sucursalId, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null, int? usuarioId = null);
     Task<IEnumerable<ListarComprobanteDTO>> GetListadoByClienteAndSucursalAsync(int sucursalId, string clienteNumDoc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null);
 
     //Traer solo detalles de un comprobante
@@ -210,17 +210,27 @@ public class ComprobanteService : IComprobanteService
         return comprobantes.Select(MapToListarDto);
     }
 
-    public async Task<IEnumerable<ListarComprobanteDTO>> GetListadoBySucursalAndFechasAsync(int sucursalId, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null)
+    public async Task<IEnumerable<ListarComprobanteDTO>> GetListadoBySucursalAndFechasAsync(int sucursalId, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null, int? usuarioId = null)
     {
         var sucursal = await _unitOfWork.Sucursal.GetByIdSucursalAsync(sucursalId);
-        var comprobantes = await _unitOfWork.Comprobantes.GetBySucursalAndFechasAsync(
+        var comprobantes = (await _unitOfWork.Comprobantes.GetBySucursalAndFechasAsync(
             sucursal.EmpresaRuc ?? throw new InvalidOperationException("La sucursal no tiene RUC"),
             sucursal.CodEstablecimiento ?? throw new InvalidOperationException("La sucursal no tiene código de establecimiento"),
             fechaDesde,
             fechaHasta,
             limit,
-            offset);
-        return comprobantes.Select(MapToListarDto);
+            offset,
+            usuarioId)).ToList();
+
+        var dtos = comprobantes.Select(MapToListarDto).ToList();
+
+        // "N artículos" para el listado, sin traer el detalle completo de cada uno.
+        var cantidadItems = await _unitOfWork.Comprobantes.GetCantidadItemsPorComprobantesAsync(
+            dtos.Select(d => d.ComprobanteId));
+        foreach (var dto in dtos)
+            dto.CantidadItems = cantidadItems.TryGetValue(dto.ComprobanteId, out var cantidad) ? cantidad : 0;
+
+        return dtos;
     }
 
     public async Task<IEnumerable<ListarComprobanteDTO>> GetListadoByClienteAndSucursalAsync(int sucursalId, string clienteNumDoc, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null)

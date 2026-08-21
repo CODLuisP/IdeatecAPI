@@ -569,6 +569,41 @@ public class InventarioLoteRepository : DapperRepository<InventarioLote>, IInven
         return await _connection.QueryAsync<RentabilidadDiariaDTO>(sql, new { SucursalProductoId = sucursalProductoId, Desde = desde, Hasta = FinDeDia(hasta) }, _transaction);
     }
 
+    public async Task<RentabilidadDiariaDTO> GetRentabilidadDiaSucursalAsync(int sucursalId, DateTime desde, DateTime hasta, int? usuarioId)
+    {
+        // Misma lógica de costo/ingreso que GetRentabilidadPorProductoAsync, pero
+        // sin agrupar por producto (un único total) y con filtro opcional por
+        // usuario, para la "Ganancia del día" del corte de caja.
+        var sql = @"
+            SELECT
+                COALESCE(SUM(ventas.ingreso), 0) AS IngresoVentas,
+                COALESCE(SUM(km.costoTotal), 0)  AS CostoVentas
+            FROM kardex_movimiento km
+            INNER JOIN sucursalproducto sp ON sp.sucursalProductoID = km.sucursalProductoID
+            INNER JOIN comprobante cv ON cv.comprobanteID = km.referenciaID AND cv.estadoSunat <> 'ANULADO'
+            LEFT JOIN (
+                SELECT cd.comprobanteId, cd.productoId, SUM(cd.totalVentaItem) AS ingreso
+                FROM comprobantedetalle cd
+                INNER JOIN comprobante c ON c.comprobanteID = cd.comprobanteId
+                WHERE (
+                    (c.tipoComprobante <> 'NV' AND c.estadoSunat IN ('ACEPTADO', 'ACEPTADO_CON_OBSERVACIONES', 'PENDIENTE'))
+                    OR (c.tipoComprobante = 'NV' AND c.estadoSunat = 'NO_APLICA')
+                )
+                GROUP BY cd.comprobanteId, cd.productoId
+            ) ventas ON ventas.comprobanteId = km.referenciaID AND ventas.productoId = sp.productoID
+            WHERE km.tipoMovimiento = 'SALIDA_VENTA'
+            AND km.referenciaTipo = 'COMPROBANTE'
+            AND sp.sucursalID = @SucursalId
+            AND (@UsuarioId IS NULL OR cv.usuarioCreacion = @UsuarioId)
+            AND km.fechaMovimiento >= @Desde
+            AND km.fechaMovimiento <= @Hasta;";
+
+        var fila = await _connection.QueryFirstOrDefaultAsync<(decimal IngresoVentas, decimal CostoVentas)>(
+            sql, new { SucursalId = sucursalId, UsuarioId = usuarioId, Desde = desde, Hasta = FinDeDia(hasta) }, _transaction);
+
+        return new RentabilidadDiariaDTO { Fecha = desde.Date, IngresoVentas = fila.IngresoVentas, CostoVentas = fila.CostoVentas };
+    }
+
     // Normaliza el filtro "hasta" para que incluya todo el día seleccionado (23:59:59.999...),
     // ya que el input de fecha llega sin hora (medianoche) y de lo contrario excluiría los
     // movimientos del propio día "hasta" (incluido el caso desde == hasta).
