@@ -60,8 +60,8 @@ builder.Services.AddSwaggerGen(options =>
 // Agregar Infrastructure (incluye JWT, Repositorios, Servicios)
 builder.Services.AddInfrastructure(builder.Configuration);
 
-// Robot de reintentos SUNAT en background
-builder.Services.AddHostedService<IdeatecAPI.API.BackgroundServices.PendienteRetryWorker>();
+// Robot de reintentos SUNAT en background (desactivado temporalmente para diagnóstico)
+// builder.Services.AddHostedService<IdeatecAPI.API.BackgroundServices.PendienteRetryWorker>();
 
 // CORS para cualquier origen (Frontend)
 builder.Services.AddCors(options =>

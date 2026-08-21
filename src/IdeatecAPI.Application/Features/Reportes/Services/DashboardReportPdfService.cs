@@ -11,12 +11,20 @@ public class DashboardReportPdfService : IDashboardReportPdfService
     private static readonly SemaphoreSlim _browserLock = new(1, 1);
     private static IBrowser? _browser;
 
-    private const string CFacturas = "#2563EB";
-    private const string CBoletas  = "#EA580C";
-    private const string CNC       = "#7C3AED";
-    private const string CND       = "#D97706";
-    private const string CNV       = "#0891B2";
-    private const string CComision = "#059669";
+    // Colores de headers de tabla (familia navy brand)
+    private const string CFacturas = "#1A2B4A";
+    private const string CBoletas  = "#1E4A7A";
+    private const string CNC       = "#1A3A60";
+    private const string CND       = "#1C5080";
+    private const string CNV       = "#2B6B9A";
+    private const string CComision = "#1A3D5C";
+
+    // Colores exclusivos del donut
+    private const string DFacturas = "#43A047";   // verde
+    private const string DBoletas  = "#29B6F6";   // azul cielo
+    private const string DNC       = "#EF5350";   // rojo — notas de crédito
+    private const string DND       = "#1A2B4A";   // navy brand — 5° tipo
+    private const string DNV       = "#00BFA5";   // teal — notas de venta
 
     public async Task<byte[]> ExportarDashboardReportPdfAsync(DashboardReportDto d)
     {
@@ -42,11 +50,11 @@ public class DashboardReportPdfService : IDashboardReportPdfService
         var dist = d.Distribucion;
         var segs = new (string L, int C, string Clr)[]
         {
-            ("Facturas",   dist.Facturas,     CFacturas),
-            ("Boletas",    dist.Boletas,      CBoletas),
-            ("N. Crédito", dist.NotasCredito, CNC),
-            ("N. Débito",  dist.NotasDebito,  CND),
-            ("N. Venta",   dist.NotasVenta,   CNV),
+            ("Facturas",   dist.Facturas,     DFacturas),
+            ("Boletas",    dist.Boletas,      DBoletas),
+            ("N. Crédito", dist.NotasCredito, DNC),
+            ("N. Débito",  dist.NotasDebito,  DND),
+            ("N. Venta",   dist.NotasVenta,   DNV),
         }
         .Where(s => s.C > 0)
         .OrderByDescending(s => s.C)
@@ -103,7 +111,7 @@ public class DashboardReportPdfService : IDashboardReportPdfService
         string rightPanel;
         if (esSoloDia)
         {
-            rightPanel = BuildTableCard("Ventas por Usuario", CComision,
+            rightPanel = BuildTableCard("Ventas por Usuario", CBoletas,
                 new[] { "#", "Usuario", "Cant.", "Total" },
                 new[] { "20px", "", "40px", "70px" },
                 new[] { false, false, true, true }, usrR);
@@ -131,7 +139,7 @@ public class DashboardReportPdfService : IDashboardReportPdfService
 body{font-family:'Segoe UI',system-ui,sans-serif;font-size:7.5pt;color:#111827;background:#FFFFFF}
 @page{size:210mm 297mm;margin:0}
 .pg{width:210mm;min-height:297mm;display:flex;flex-direction:column;background:#FFFFFF;padding:7mm 8mm}
-.hdr{background:linear-gradient(135deg,#1E3A5F 0%,#1D4ED8 100%);padding:10px 14px;display:flex;justify-content:space-between;align-items:center;border-radius:8px;margin-bottom:6px}
+.hdr{background:#1A2B4A;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;border-radius:8px;margin-bottom:6px}
 .hdr .co{font-size:12pt;font-weight:700;color:#FFF;letter-spacing:.3px}
 .hdr .ruc{font-size:7pt;color:#BFDBFE;margin-top:2px}
 .hdr .ti{font-size:13pt;font-weight:700;color:#FFF;text-align:right;letter-spacing:.3px}
@@ -168,39 +176,39 @@ tr:nth-child(even) td{background:#FAFAFA}
 <div class="pg">
 <div class="hdr">
  <div><div class="co">{{Esc(d.EmpresaRazonSocial)}}</div><div class="ruc">R.U.C. {{d.EmpresaRuc}}</div></div>
- <div><div class="ti">REPORTE DASHBOARD</div><div class="dt">{{d.FechaGeneracion:dd/MM/yyyy  HH:mm}}</div></div>
+ <div><div class="ti">DASHBOARD VENTAS</div><div class="dt">{{d.FechaGeneracion:dd/MM/yyyy  HH:mm}}</div></div>
 </div>
 <div class="chips"><span><b>Período:</b> {{periodo}}</span>{{sucC}}{{usrC}}</div>
 <div class="ct">
  <div class="row3">
-  {{BuildKpiColor(labelVentas,    Fmt(d.VentasTotal),              "#1E3A5F","#2563EB")}}
-  {{BuildKpiColor("Total IGV",    Fmt(d.TotalIGV),                 "#7C2D12","#EA580C")}}
-  {{BuildKpiColor("Documentos",   d.TotalDocumentos.ToString("N0"),"#4C1D95","#7C3AED")}}
+  {{BuildKpiColor(labelVentas,    Fmt(d.VentasTotal),              "#2D4A72","#3B5A88")}}
+  {{BuildKpiColor("Total IGV",    Fmt(d.TotalIGV),                 "#294468","#375480")}}
+  {{BuildKpiColor("Documentos",   d.TotalDocumentos.ToString("N0"),"#243D62","#324F7A")}}
  </div>
  <div class="row3">
-  {{BuildKpiColor("Ganancias",      Fmt(d.Ganancias),             "#064E3B","#059669")}}
-  {{BuildKpiColor("% de Ganancias", pctStr,                       "#065F46","#10B981")}}
-  {{BuildKpiColor("Comisión POS",   Fmt(d.TotalComisionPOS),      "#0C4A6E","#0284C7")}}
+  {{BuildKpiColor("Ganancias",      Fmt(d.Ganancias),             "#2A4570","#3A5888")}}
+  {{BuildKpiColor("% de Ganancias", pctStr,                       "#284268","#365078")}}
+  {{BuildKpiColor("Comisión POS",   Fmt(d.TotalComisionPOS),      "#2C4870","#3C5A84")}}
  </div>
  <div class="row-mid">
   <div class="card">
-   <div class="card-h" style="background:{{CNC}}"><span class="dot" style="background:#FFFFFF"></span>Distribución de Documentos</div>
+   <div class="card-h" style="background:{{CBoletas}}">Distribución de Documentos</div>
    <div class="donut-wrap">{{donutSvg}}<div style="width:100%;margin-top:5px">{{donutLegend}}</div></div>
   </div>
   {{rightPanel}}
  </div>
  <div class="row2">
-  {{BuildTableCard("Top Comprobantes", CFacturas,
+  {{BuildTableCard("Ventas más Altas", CBoletas,
       new[]{"#","Comprobante","Cliente","Fecha","Importe"},
       new[]{"20px","90px","","60px","78px"},
       new[]{false,false,false,false,true}, compR)}}
-  {{BuildTableCard("Medios de Pago", CComision,
+  {{BuildTableCard("Medios de Pago", CBoletas,
       new[]{"#","Medio de Pago","Usos","Monto"},
       new[]{"20px","110px","42px","78px"},
       new[]{false,false,true,true}, medR)}}
  </div>
  <div class="row2">
-  {{BuildTableCard("Clientes con más Ventas", CNC,
+  {{BuildTableCard("Clientes con más Ventas", CBoletas,
       new[]{"#","Cliente","Doc.","Cant.","Total"},
       new[]{"20px","","68px","40px","78px"},
       new[]{false,false,false,true,true}, cliR)}}
@@ -209,7 +217,7 @@ tr:nth-child(even) td{background:#FAFAFA}
       new[]{"20px","","78px"},
       new[]{false,false,true}, comR)}}
  </div>
- {{BuildTableCard("Productos más Vendidos", CND,
+ {{BuildTableCard("Productos más Vendidos", CBoletas,
      new[]{"#","Producto","Cantidad","Monto"},
      new[]{"20px","","72px","78px"},
      new[]{false,false,true,true}, proR)}}
@@ -272,8 +280,8 @@ tr:nth-child(even) td{background:#FAFAFA}
         var sb = new StringBuilder();
         sb.Append($"<svg viewBox=\"0 0 {W} {H}\" class=\"vchart-svg\" xmlns=\"http://www.w3.org/2000/svg\">");
         sb.Append("<defs><linearGradient id=\"vbg\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">" +
-                  "<stop offset=\"0%\" stop-color=\"#60A5FA\"/>" +
-                  "<stop offset=\"100%\" stop-color=\"#1D4ED8\"/>" +
+                  "<stop offset=\"0%\" stop-color=\"#3B5A88\"/>" +
+                  "<stop offset=\"100%\" stop-color=\"#2D4A72\"/>" +
                   "</linearGradient></defs>");
 
         // Líneas guía
@@ -301,20 +309,20 @@ tr:nth-child(even) td{background:#FAFAFA}
             var lbl = puntos[i].Etiqueta;
             sb.Append($"<text x=\"{x + barW / 2}\" y=\"{H - 10}\" text-anchor=\"middle\" fill=\"#374151\" font-family=\"Segoe UI\" font-size=\"{(agruparSemanas ? 6.5 : 7.5)}\" font-weight=\"600\">{Esc(lbl)}</text>");
 
-            // Valor encima
-            if (barH > 14 && total > 0)
+            // Valor encima (siempre que haya monto, incluso en barras pequeñas)
+            if (total > 0)
             {
                 var v = usarK
                     ? (total >= 1000 ? $"S/{total / 1000m:N1}K" : $"S/{total:N0}")
                     : Fmt(total);
-                sb.Append($"<text x=\"{x + barW / 2}\" y=\"{y - 2}\" text-anchor=\"middle\" fill=\"#1E3A8A\" font-family=\"Segoe UI\" font-size=\"7\" font-weight=\"700\">{Esc(v)}</text>");
+                sb.Append($"<text x=\"{x + barW / 2}\" y=\"{y - 2}\" text-anchor=\"middle\" fill=\"#1A2B4A\" font-family=\"Segoe UI\" font-size=\"7\" font-weight=\"700\">{Esc(v)}</text>");
             }
         }
 
         sb.Append("</svg>");
 
         var pieLbl = agruparSemanas ? "Semanas del período" : "Fechas del período";
-        return $"<div class=\"card\"><div class=\"card-h\" style=\"background:{CFacturas}\"><span class=\"dot\" style=\"background:#FFFFFF\"></span>Ventas por Período</div>" +
+        return $"<div class=\"card\"><div class=\"card-h\" style=\"background:{CBoletas}\">Ventas por Período</div>" +
                $"<div class=\"vchart-wrap\">{sb}</div>" +
                $"<div class=\"vchart-lbl\">{pieLbl}</div></div>";
     }
@@ -357,7 +365,7 @@ tr:nth-child(even) td{background:#FAFAFA}
         // los th mantienen un tinte suave del acento para no saturar toda la tabla.
         var thBg = accent + "26";
         var sb = new StringBuilder();
-        sb.Append($"<div class=\"card\"><div class=\"card-h\" style=\"background:{accent}\"><span class=\"dot\" style=\"background:#FFFFFF\"></span>{Esc(title)}</div>");
+        sb.Append($"<div class=\"card\"><div class=\"card-h\" style=\"background:{accent}\">{Esc(title)}</div>");
         sb.Append("<table><colgroup>");
         foreach (var w in colW) sb.Append(string.IsNullOrEmpty(w) ? "<col>" : $"<col style=\"width:{w}\">");
         sb.Append("</colgroup><thead><tr>");

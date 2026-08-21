@@ -13,19 +13,19 @@ public class CategoriaRepository : DapperRepository<Categoria>, ICategoriaReposi
     }
     public async Task<IEnumerable<Categoria>> GetAllCategoriasAsync()
     {
-        var sql = "SELECT * FROM categoria";
+        var sql = "SELECT * FROM categoria WHERE estado = 1";
         return await _connection.QueryAsync<Categoria>(sql, transaction: _transaction);
     }
 
     public async Task<Categoria?> GetCategoriaByIdAsync(int id)
     {
-        var sql = "SELECT * FROM categoria WHERE categoriaID = @Id";
+        var sql = "SELECT * FROM categoria WHERE categoriaID = @Id AND estado = 1";
         return await _connection.QueryFirstOrDefaultAsync<Categoria>(sql, new { Id = id }, _transaction);
     }
 
     public async Task<IEnumerable<Categoria>> GetCategoriasByEmpresaRucAsync(string empresaRuc)
     {
-        var sql = "SELECT * FROM categoria WHERE empresaRuc = @EmpresaRuc";
+        var sql = "SELECT * FROM categoria WHERE empresaRuc = @EmpresaRuc AND estado = 1";
         return await _connection.QueryAsync<Categoria>(sql, new { EmpresaRuc = empresaRuc }, _transaction);
     }
 
@@ -55,6 +55,16 @@ public class CategoriaRepository : DapperRepository<Categoria>, ICategoriaReposi
         var result = await _connection.ExecuteAsync(sql, categoria, _transaction);
 
         return result > 0;
+    }
+
+    public async Task<bool> TieneProductosAsignadosAsync(int categoriaId)
+    {
+        var sql = @"
+            SELECT COUNT(1) FROM producto
+            WHERE categoriaID = @CategoriaId AND estado = 1;";
+
+        var count = await _connection.ExecuteScalarAsync<int>(sql, new { CategoriaId = categoriaId }, _transaction);
+        return count > 0;
     }
 
     public async Task<bool> EliminarCategoriaAsync(int categoriaId)

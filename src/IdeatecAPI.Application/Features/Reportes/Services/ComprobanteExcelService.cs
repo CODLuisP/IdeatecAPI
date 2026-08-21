@@ -458,7 +458,7 @@ public Task<byte[]> ExportarListadoReportesAsync(
     {
         var movimientos = datos.ToList();
         bool tieneComisionCaja = movimientos.Any(x => (x.TotalComisionPagoTarjeta ?? 0) > 0);
-        int totalColsCaja = tieneComisionCaja ? 14 : 13;
+        int totalColsCaja = tieneComisionCaja ? 15 : 14;
 
         using var wb = new XLWorkbook();
         var ws = wb.Worksheets.Add("Control de Caja");
@@ -484,8 +484,8 @@ public Task<byte[]> ExportarListadoReportesAsync(
             .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
 
         var headers = tieneComisionCaja
-            ? new[] { "N° Comprobante", "Tipo", "F. Emisión", "Cliente", "Doc. Cliente", "Val. Venta", "IGV", "Importe Total", "Moneda", "Estado SUNAT", "Doc. Afectado", "Tipo Pago", "Monto Crédito", "Comisión Tarjeta" }
-            : new[] { "N° Comprobante", "Tipo", "F. Emisión", "Cliente", "Doc. Cliente", "Val. Venta", "IGV", "Importe Total", "Moneda", "Estado SUNAT", "Doc. Afectado", "Tipo Pago", "Monto Crédito" };
+            ? new[] { "Serie", "Correlativo", "Tipo", "F. Emisión", "Cliente", "Doc. Cliente", "Val. Venta", "IGV", "Importe Total", "Moneda", "Estado SUNAT", "Doc. Afectado", "Tipo Pago", "Monto Crédito", "Comisión Tarjeta" }
+            : new[] { "Serie", "Correlativo", "Tipo", "F. Emisión", "Cliente", "Doc. Cliente", "Val. Venta", "IGV", "Importe Total", "Moneda", "Estado SUNAT", "Doc. Afectado", "Tipo Pago", "Monto Crédito" };
 
         int filaActual = 4;
 
@@ -518,13 +518,13 @@ public Task<byte[]> ExportarListadoReportesAsync(
         // ── Total del período ─────────────────────────────────────────────────────
         int filaTotalCaja = filaActual;
         ws.Cell(filaActual, 1).Value = "TOTAL";
-        ws.Cell(filaActual, 6).FormulaA1 = $"=SUM(F{primeraFila}:F{ultimaFila})";
         ws.Cell(filaActual, 7).FormulaA1 = $"=SUM(G{primeraFila}:G{ultimaFila})";
         ws.Cell(filaActual, 8).FormulaA1 = $"=SUM(H{primeraFila}:H{ultimaFila})";
+        ws.Cell(filaActual, 9).FormulaA1 = $"=SUM(I{primeraFila}:I{ultimaFila})";
         if (tieneComisionCaja)
         {
-            ws.Cell(filaActual, 14).FormulaA1 = $"=SUM(N{primeraFila}:N{ultimaFila})";
-            ws.Cell(filaActual, 14).Style.NumberFormat.Format = "#,##0.00";
+            ws.Cell(filaActual, 15).FormulaA1 = $"=SUM(O{primeraFila}:O{ultimaFila})";
+            ws.Cell(filaActual, 15).Style.NumberFormat.Format = "#,##0.00";
         }
         ws.Range(filaActual, 1, filaActual, totalColsCaja).Style
             .Font.SetBold(true)
@@ -542,7 +542,7 @@ public Task<byte[]> ExportarListadoReportesAsync(
             celdaLbl.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
 
             var celdaVal = ws.Cell(filaActual, totalColsCaja);
-            celdaVal.FormulaA1 = $"=H{filaTotalCaja}+N{filaTotalCaja}";
+            celdaVal.FormulaA1 = $"=I{filaTotalCaja}+O{filaTotalCaja}";
             celdaVal.Style.Font.Bold = true;
             celdaVal.Style.Font.FontSize = 10;
             celdaVal.Style.NumberFormat.Format = "#,##0.00";
@@ -571,14 +571,14 @@ public Task<byte[]> ExportarListadoReportesAsync(
         }
 
         // ── Ancho columnas ────────────────────────────────────────────────────────
-        ws.Column(1).Width = 20; ws.Column(2).Width = 12;
-        ws.Column(3).Width = 14; ws.Column(4).Width = 35;
-        ws.Column(5).Width = 16; ws.Column(6).Width = 14;
-        ws.Column(7).Width = 14; ws.Column(8).Width = 14;
-        ws.Column(9).Width = 10; ws.Column(10).Width = 20;
-        ws.Column(11).Width = 20; ws.Column(12).Width = 12;
-        ws.Column(13).Width = 14;
-        if (tieneComisionCaja) ws.Column(14).Width = 18;
+        ws.Column(1).Width = 10;  ws.Column(2).Width = 14;
+        ws.Column(3).Width = 12;  ws.Column(4).Width = 14;
+        ws.Column(5).Width = 35;  ws.Column(6).Width = 16;
+        ws.Column(7).Width = 14;  ws.Column(8).Width = 14;
+        ws.Column(9).Width = 14;  ws.Column(10).Width = 10;
+        ws.Column(11).Width = 20; ws.Column(12).Width = 20;
+        ws.Column(13).Width = 12; ws.Column(14).Width = 14;
+        if (tieneComisionCaja) ws.Column(15).Width = 18;
 
         return Task.FromResult(ToBytes(wb));
     }
@@ -612,8 +612,14 @@ public Task<byte[]> ExportarListadoReportesAsync(
         var igv        = noAfectaTotal ? 0 : Conv2((item.TipoComprobante == "07" ? -item.TotalIGV     : item.TotalIGV),     tc2, esUsd2);
         var importe    = noAfectaTotal ? 0 : Conv2((item.TipoComprobante == "07" ? -item.ImporteTotal : item.ImporteTotal), tc2, esUsd2);
 
-        ws.Cell(fila, 1).Value  = item.NumeroCompleto;
-        ws.Cell(fila, 2).Value  = item.TipoComprobante switch
+        var numCC = item.NumeroCompleto ?? "-";
+        var dashIdxCC = numCC.IndexOf('-');
+        var serieCC = dashIdxCC > 0 ? numCC[..dashIdxCC] : numCC;
+        var correlCC = dashIdxCC > 0 ? numCC[(dashIdxCC + 1)..] : "-";
+
+        ws.Cell(fila, 1).Value  = serieCC;
+        ws.Cell(fila, 2).Value  = correlCC;
+        ws.Cell(fila, 3).Value  = item.TipoComprobante switch
         {
             "01" => "Factura",
             "03" => "Boleta",
@@ -622,18 +628,18 @@ public Task<byte[]> ExportarListadoReportesAsync(
             "NV" => "Nota de Venta",
             _    => item.TipoComprobante
         };
-        ws.Cell(fila, 3).Value  = item.FechaEmision.ToString("dd/MM/yyyy");
-        ws.Cell(fila, 4).Value  = item.Cliente?.RazonSocial;
-        ws.Cell(fila, 5).Value  = item.Cliente?.NumeroDocumento;
-        ws.Cell(fila, 6).Value  = valorVenta;
-        ws.Cell(fila, 7).Value  = igv;
-        ws.Cell(fila, 8).Value  = importe;
-        ws.Cell(fila, 9).Value  = (item.TipoMoneda == "USD" && item.TipoCambio > 0)
+        ws.Cell(fila, 4).Value  = item.FechaEmision.ToString("dd/MM/yyyy");
+        ws.Cell(fila, 5).Value  = item.Cliente?.RazonSocial;
+        ws.Cell(fila, 6).Value  = item.Cliente?.NumeroDocumento;
+        ws.Cell(fila, 7).Value  = valorVenta;
+        ws.Cell(fila, 8).Value  = igv;
+        ws.Cell(fila, 9).Value  = importe;
+        ws.Cell(fila, 10).Value = (item.TipoMoneda == "USD" && item.TipoCambio > 0)
             ? $"USD ({item.TipoCambio:F3})"
             : item.TipoMoneda;
-        ws.Cell(fila, 10).Value = item.EstadoSunat;
-        ws.Cell(fila, 11).Value = !string.IsNullOrEmpty(item.NumDocAfectado) ? item.NumDocAfectado : "-";
-        ws.Cell(fila, 12).Value = item.TipoPago switch
+        ws.Cell(fila, 11).Value = item.EstadoSunat;
+        ws.Cell(fila, 12).Value = !string.IsNullOrEmpty(item.NumDocAfectado) ? item.NumDocAfectado : "-";
+        ws.Cell(fila, 13).Value = item.TipoPago switch
         {
             "Contado"           => "Contado",
             "Credito"           => "Crédito",
@@ -643,40 +649,40 @@ public Task<byte[]> ExportarListadoReportesAsync(
         };
         if (item.MontoCredito > 0)
         {
-            ws.Cell(fila, 13).Value = item.MontoCredito;
-            ws.Cell(fila, 13).Style.NumberFormat.Format = "#,##0.00";
+            ws.Cell(fila, 14).Value = item.MontoCredito;
+            ws.Cell(fila, 14).Style.NumberFormat.Format = "#,##0.00";
         }
         else
         {
-            ws.Cell(fila, 13).Value = "-";
+            ws.Cell(fila, 14).Value = "-";
         }
 
-        ws.Cell(fila, 6).Style.NumberFormat.Format = "#,##0.00";
         ws.Cell(fila, 7).Style.NumberFormat.Format = "#,##0.00";
         ws.Cell(fila, 8).Style.NumberFormat.Format = "#,##0.00";
-        ws.Cell(fila, 13).Style.NumberFormat.Format = "#,##0.00";
+        ws.Cell(fila, 9).Style.NumberFormat.Format = "#,##0.00";
+        ws.Cell(fila, 14).Style.NumberFormat.Format = "#,##0.00";
 
         if (mostrarComision)
         {
             if ((item.TotalComisionPagoTarjeta ?? 0) > 0)
             {
-                ws.Cell(fila, 14).Value = item.TotalComisionPagoTarjeta;
-                ws.Cell(fila, 14).Style.NumberFormat.Format = "#,##0.00";
+                ws.Cell(fila, 15).Value = item.TotalComisionPagoTarjeta;
+                ws.Cell(fila, 15).Style.NumberFormat.Format = "#,##0.00";
             }
             else
             {
-                ws.Cell(fila, 14).Value = "-";
+                ws.Cell(fila, 15).Value = "-";
             }
         }
 
         if (item.TipoComprobante == "07")
         {
-            ws.Cell(fila, 6).Style.Font.SetFontColor(XLColor.Red);
             ws.Cell(fila, 7).Style.Font.SetFontColor(XLColor.Red);
             ws.Cell(fila, 8).Style.Font.SetFontColor(XLColor.Red);
+            ws.Cell(fila, 9).Style.Font.SetFontColor(XLColor.Red);
         }
 
-        int cols = mostrarComision ? 14 : 13;
+        int cols = mostrarComision ? 15 : 14;
         if (esRechazado2)
             ws.Range(fila, 1, fila, cols).Style.Font.SetFontColor(XLColor.Gray);
 

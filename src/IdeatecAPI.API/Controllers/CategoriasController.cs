@@ -78,11 +78,18 @@ public class CategoriasController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Eliminar(int id)
     {
-        var result = await _categoriaService.EliminarCategoriaAsync(id);
+        try
+        {
+            var result = await _categoriaService.EliminarCategoriaAsync(id);
 
-        if (!result)
-            return BadRequest(new { message = "No se pudo eliminar la categoría" });
+            if (!result)
+                return BadRequest(new { message = "No se pudo eliminar la categoría" });
 
-        return Ok(new { message = "Categoría eliminada correctamente" });
+            return Ok(new { message = "Categoría eliminada correctamente" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 }

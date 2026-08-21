@@ -10,4 +10,5 @@ public interface ICategoriaRepository : IRepository<Categoria>
     Task<bool> RegistrarCategoriaAsync(Categoria categoria);
     Task<bool> EditarCategoriaAsync(Categoria categoria);
     Task<bool> EliminarCategoriaAsync(int CategoriaId);
+    Task<bool> TieneProductosAsignadosAsync(int categoriaId);
 }

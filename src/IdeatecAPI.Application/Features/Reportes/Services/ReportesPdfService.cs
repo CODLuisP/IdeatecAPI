@@ -329,7 +329,8 @@ public class ReportesPdfService : IReportesPdfService
         // Columnas fijas = 450pt → RelativeColumn (Cliente) recibe ~99pt
         table.ColumnsDefinition(cols =>
         {
-            cols.ConstantColumn(74);  // N° Comprobante
+            cols.ConstantColumn(30);  // Serie
+            cols.ConstantColumn(44);  // Correlativo
             cols.ConstantColumn(34);  // Tipo
             cols.ConstantColumn(46);  // F. Emisión
             cols.RelativeColumn();    // Cliente
@@ -344,7 +345,8 @@ public class ReportesPdfService : IReportesPdfService
 
         table.Header(h =>
         {
-            h.Cell().Element(c => TH(c, "N° Comprobante", fontSize: fontSize, pad: pad));
+            h.Cell().Element(c => TH(c, "Serie",          fontSize: fontSize, pad: pad));
+            h.Cell().Element(c => TH(c, "Correlativo",    fontSize: fontSize, pad: pad));
             h.Cell().Element(c => TH(c, "Tipo",           fontSize: fontSize, pad: pad));
             h.Cell().Element(c => TH(c, "F. Emisión",     fontSize: fontSize, pad: pad));
             h.Cell().Element(c => TH(c, "Cliente",        fontSize: fontSize, pad: pad));
@@ -375,7 +377,12 @@ public class ReportesPdfService : IReportesPdfService
             var monCC = (d.TipoMoneda == "USD" && d.TipoCambio > 0)
                 ? $"USD ({d.TipoCambio:F3})" : (d.TipoMoneda ?? "PEN");
 
-            table.Cell().Element(c => TD(c, d.NumeroCompleto ?? "-",               bg, fontSize: fontSize, pad: pad));
+            var numPDF = d.NumeroCompleto ?? "-";
+            var dashPDF = numPDF.IndexOf('-');
+            var seriePDF = dashPDF > 0 ? numPDF[..dashPDF] : numPDF;
+            var correlPDF = dashPDF > 0 ? numPDF[(dashPDF + 1)..] : "-";
+            table.Cell().Element(c => TD(c, seriePDF,                              bg, fontSize: fontSize, pad: pad));
+            table.Cell().Element(c => TD(c, correlPDF,                             bg, fontSize: fontSize, pad: pad));
             table.Cell().Element(c => TD(c, tipo ?? "",                             bg, fontSize: fontSize, pad: pad));
             table.Cell().Element(c => TD(c, d.FechaEmision.ToString("dd/MM/yyyy"), bg, fontSize: fontSize, pad: pad));
             table.Cell().Element(c => TD(c, d.Cliente?.RazonSocial ?? "-",         bg, fontSize: fontSize, pad: pad));
@@ -406,7 +413,7 @@ public class ReportesPdfService : IReportesPdfService
                  else       col.Item().Text(txt).Bold().FontSize(fontSize);
              });
 
-        table.Cell().ColumnSpan(5).Element(c => TotalCell(c, totalLabel));
+        table.Cell().ColumnSpan(6).Element(c => TotalCell(c, totalLabel));
         table.Cell().Element(c => TotalCell(c, $"{tvv:N2}",  right: true));
         table.Cell().Element(c => TotalCell(c, $"{tigv:N2}", right: true));
         table.Cell().Element(c => TotalCell(c, $"{timp:N2}", right: true));
