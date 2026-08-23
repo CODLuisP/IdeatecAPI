@@ -1,5 +1,7 @@
 using System.Globalization;
 using System.IO.Compression;
+using System.Net.Http.Headers;
+using System.Text;
 using System.Text.Json;
 using IdeatecAPI.Application.Features.Sire.DTOs;
 using Microsoft.Extensions.Logging;
@@ -20,6 +22,15 @@ public class SireService : ISireService
     private const string UrlArchivoReporte = "https://api-sire.sunat.gob.pe/v1/contribuyente/migeigv/libros/rvierce/gestionprocesosmasivos/web/masivo/archivoreporte?nomArchivoReporte={0}&codTipoArchivoReporte={1}&codLibro=140000&perTributario={2}&codProceso={3}&numTicket={4}";
     private const string UrlAceptaPropuesta = "https://api-sire.sunat.gob.pe/v1/contribuyente/migeigv/libros/rvie/propuesta/web/propuesta/{0}/aceptapropuesta";
     private const string UrlRegistraPreliminar = "https://api-sire.sunat.gob.pe/v1/contribuyente/migeigv/libros/rvierce/gestionlibro/web/registroslibros/{0}/registrapreliminar";
+    // Manual v30 §5.13: DELETE, elimina de la propuesta (antes de aceptar)
+    private const string UrlEliminarComprobantePropuesta = "https://api-sire.sunat.gob.pe/v1/contribuyente/migeigv/libros/rvie/propuesta/web/propuesta/{0}/eliminacomprobante";
+    // Manual v30 §5.14: POST, elimina del preliminar (después de "Registrar preliminar")
+    private const string UrlEliminarComprobantePreliminar = "https://api-sire.sunat.gob.pe/v1/contribuyente/migeigv/libros/rvierce/gestionlibro/web/registroslibros/{0}/comprobantepreliminar";
+    // Manual v30 §5.4/§5.3: endpoints servidor TUS.IO para importar/reemplazar comprobantes
+    private const string UrlImportarPropuesta = "https://api-sire.sunat.gob.pe/v1/contribuyente/migeigv/libros/rvierce/receptorpropuesta/web/propuesta/upload";
+    private const string UrlImportarPreliminar = "https://api-sire.sunat.gob.pe/v1/contribuyente/migeigv/libros/rvierce/receptorpreliminar/web/preliminar/upload";
+    // Manual v30 §5.12: PUT, solo aplica sobre la propuesta (antes de aceptar)
+    private const string UrlEditarTipoCambioIndividual = "https://api-sire.sunat.gob.pe/v1/contribuyente/migeigv/libros/rvie/propuesta/web/propuesta/{0}/complementoindividual";
 
     private static readonly int[] TicketRetryDelays = { 2000, 3000, 5000, 5000, 8000, 8000, 10000, 10000 };
 
@@ -53,7 +64,7 @@ public class SireService : ISireService
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogError("[SIRE] Error consultando periodos: {Status} {Content}", response.StatusCode, content);
-                return new SirePeriodosResponse { Success = false, Mensaje = $"SUNAT respondió {response.StatusCode}", RespuestaCruda = content };
+                return new SirePeriodosResponse { Success = false, Mensaje = ExtraerMensajeErrorSunat(response.StatusCode, content), RespuestaCruda = content };
             }
 
             // Manual v30 §5.2: la respuesta es un array raíz de ejercicios (numEjercicio, desEstado, lisPeriodos[])
@@ -293,6 +304,11 @@ public class SireService : ISireService
         if (entry is null)
             return comprobantes;
 
+        // Índices de columna según RS 112-2021/SUNAT, Anexo N°2 "Información de la propuesta RVIE"
+        // (campo oficial N -> índice N-1 en el array, separador '|'). No coinciden con lo asumido
+        // anteriormente (esa versión leía columnas de otros campos: BI Grav IVAP, ICBPER, Otros
+        // Tributos, etc., que están vacías en comprobantes normales, de ahí Total=0 y Activo=false
+        // siempre).
         using var reader = new StreamReader(entry.Open(), System.Text.Encoding.Latin1);
         string? linea;
         while ((linea = reader.ReadLine()) is not null)
@@ -300,30 +316,38 @@ public class SireService : ISireService
             if (string.IsNullOrWhiteSpace(linea)) continue;
 
             var campos = linea.Split('|');
-            if (campos.Length < 26) continue;
+            if (campos.Length < 35) continue;
 
             comprobantes.Add(new SireComprobanteDto
             {
-                RucEmisor = campos[0],
-                RazonSocialEmisor = campos[1],
-                Periodo = campos[2],
-                CarSunat = campos[3],
-                Correlativo = campos[4],
-                FechaEmision = campos[5],
-                TipoComprobante = campos[6],
-                Serie = campos[7],
-                Numero = campos[8],
-                TipoDocCliente = campos[10],
-                NumDocCliente = campos[11],
-                RazonSocialCliente = campos[12],
-                BaseImponible = ParseDecimal(campos[14]),
-                Igv = ParseDecimal(campos[16]),
-                ImporteTotal = ParseDecimal(campos[21]),
-                Activo = campos[23] == "1",
-                TipoCambio = ParseDecimal(campos[24]),
-                CodMoneda = campos[25],
-                Inconsistencias = campos.Length >= 57 ? campos[56] : null
+                RucEmisor = campos[0],           // campo 1: RUC
+                RazonSocialEmisor = campos[1],   // campo 2: ID
+                Periodo = campos[2],             // campo 3: Periodo
+                CarSunat = campos[3],             // campo 4: CAR SUNAT
+                FechaEmision = campos[4],         // campo 5: Fecha de emisión
+                FechaVctoPago = campos[5],        // campo 6: Fecha Vcto/Pago
+                TipoComprobante = campos[6],      // campo 7: Tipo CP/Doc
+                Serie = campos[7],                // campo 8: Serie del CDP
+                Numero = campos[8],               // campo 9: Nro CP o Doc
+                TipoDocCliente = campos[10],      // campo 11: Tipo Doc Identidad
+                NumDocCliente = campos[11],       // campo 12: Nro Doc Identidad
+                RazonSocialCliente = campos[12],  // campo 13: Apellidos Nombres/Razón Social
+                BaseImponible = ParseDecimal(campos[14]), // campo 15: BI Gravada
+                Igv = ParseDecimal(campos[16]),           // campo 17: IGV/IPM
+                ImporteTotal = ParseDecimal(campos[25]),  // campo 26: Total CP
+                CodMoneda = campos[26],                   // campo 27: Moneda
+                TipoCambio = ParseDecimal(campos[27]),    // campo 28: Tipo Cambio
+                // TEMPORAL: campo 35 "Est. Comp" (Estado del comprobante) es alfanumérico de 2 posiciones;
+                // la RS 112-2021 no documenta los códigos literales (solo los estados: Activo/Baja/
+                // Rechazado/Autorizado). Se loguea crudo hasta confirmar el código real y fijar el mapeo.
+                Activo = campos[34] == "01" || campos[34].Trim().Equals("Activo", StringComparison.OrdinalIgnoreCase),
+                Inconsistencias = campos.Length > 38 && !string.IsNullOrWhiteSpace(campos[38]) ? campos[38] : null // campo 39: Incal
             });
+
+            if (comprobantes.Count == 1)
+            {
+                _logger.LogWarning("[SIRE][debug] campo 35 (Est. Comp) valor crudo = '{Estado}'", campos[34]);
+            }
         }
 
         return comprobantes;
@@ -332,6 +356,38 @@ public class SireService : ISireService
     private static decimal ParseDecimal(string valor)
     {
         return decimal.TryParse(valor, NumberStyles.Any, CultureInfo.InvariantCulture, out var result) ? result : 0;
+    }
+
+    // SUNAT devuelve errores como { "cod":"422", "msg":"...", "errors":[{ "cod":"2293", "msg":"<mensaje específico>" }] }
+    // Se prioriza el mensaje específico de "errors" (más útil para el usuario) sobre el genérico del nivel raíz.
+    private static string ExtraerMensajeErrorSunat(System.Net.HttpStatusCode status, string content)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(content);
+            if (doc.RootElement.ValueKind != JsonValueKind.Object)
+                return $"SUNAT respondió {status}";
+
+            if (doc.RootElement.TryGetProperty("errors", out var errores) && errores.ValueKind == JsonValueKind.Array)
+            {
+                var primerError = errores.EnumerateArray().FirstOrDefault();
+                if (primerError.ValueKind == JsonValueKind.Object
+                    && primerError.TryGetProperty("msg", out var msgEspecifico)
+                    && !string.IsNullOrWhiteSpace(msgEspecifico.GetString()))
+                {
+                    return msgEspecifico.GetString()!;
+                }
+            }
+
+            if (doc.RootElement.TryGetProperty("msg", out var msgGeneral) && !string.IsNullOrWhiteSpace(msgGeneral.GetString()))
+                return msgGeneral.GetString()!;
+
+            return $"SUNAT respondió {status}";
+        }
+        catch (JsonException)
+        {
+            return $"SUNAT respondió {status}";
+        }
     }
 
     public async Task<SireAceptarPropuestaResponse> AceptarPropuestaAsync(
@@ -357,7 +413,7 @@ public class SireService : ISireService
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogError("[SIRE] Error aceptando propuesta {Periodo}: {Status} {Content}", perTributario, response.StatusCode, content);
-                return new SireAceptarPropuestaResponse { Success = false, Mensaje = $"SUNAT respondió {response.StatusCode}", RespuestaCruda = content };
+                return new SireAceptarPropuestaResponse { Success = false, Mensaje = ExtraerMensajeErrorSunat(response.StatusCode, content), RespuestaCruda = content };
             }
 
             using var doc = JsonDocument.Parse(content);
@@ -395,7 +451,7 @@ public class SireService : ISireService
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogError("[SIRE] Error registrando preliminar {Periodo}: {Status} {Content}", perTributario, response.StatusCode, content);
-                return new SireRegistrarPreliminarResponse { Success = false, Mensaje = $"SUNAT respondió {response.StatusCode}", RespuestaCruda = content };
+                return new SireRegistrarPreliminarResponse { Success = false, Mensaje = ExtraerMensajeErrorSunat(response.StatusCode, content), RespuestaCruda = content };
             }
 
             // Manual v30 §5.9: si la respuesta trae numTicket debe esperarse hasta codEstadoProceso 06=Terminado
@@ -475,6 +531,291 @@ public class SireService : ISireService
         {
             _logger.LogError(ex, "[SIRE] Error obteniendo token");
             return null;
+        }
+    }
+
+    public async Task<SireEliminarComprobanteResponse> EliminarComprobanteAsync(
+        string ruc, string solUsuario, string solClave, string clienteId, string clientSecret,
+        string perTributario, bool enPreliminar, List<SireComprobanteEliminarDto> comprobantes)
+    {
+        var token = await ObtenerTokenAsync(ruc, solUsuario, solClave, clienteId, clientSecret);
+        if (string.IsNullOrEmpty(token))
+            return new SireEliminarComprobanteResponse { Success = false, Mensaje = "No se pudo obtener el token de autenticación" };
+
+        try
+        {
+            var url = string.Format(enPreliminar ? UrlEliminarComprobantePreliminar : UrlEliminarComprobantePropuesta, perTributario);
+            var body = comprobantes.Select(c => new
+            {
+                numSerieCDP = c.NumSerieCDP,
+                numCDP = c.NumCDP,
+                codCar = c.CodCar,
+                codTipoCDP = c.CodTipoCDP
+            });
+
+            var client = _httpClientFactory.CreateClient();
+            // Manual v30: §5.13 (propuesta) usa DELETE, §5.14 (preliminar) usa POST
+            var request = new HttpRequestMessage(enPreliminar ? HttpMethod.Post : HttpMethod.Delete, url)
+            {
+                Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json")
+            };
+            request.Headers.Add("Authorization", $"Bearer {token}");
+            request.Headers.Add("User-Agent", UserAgent);
+            request.Headers.Add("Accept", "application/json");
+
+            var response = await client.SendAsync(request);
+            var content = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("[SIRE] Error eliminando comprobante {Periodo}: {Status} {Content}", perTributario, response.StatusCode, content);
+                return new SireEliminarComprobanteResponse { Success = false, Mensaje = ExtraerMensajeErrorSunat(response.StatusCode, content) };
+            }
+
+            return new SireEliminarComprobanteResponse { Success = true, Mensaje = "Comprobante eliminado correctamente" };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[SIRE] Error eliminando comprobante {Periodo}", perTributario);
+            return new SireEliminarComprobanteResponse { Success = false, Mensaje = ex.Message };
+        }
+    }
+
+    public async Task<SireImportarComprobantesResponse> ImportarComprobantesAsync(
+        string ruc, string solUsuario, string solClave, string clienteId, string clientSecret,
+        string perTributario, string razonSocialEmisor, bool enPreliminar, List<SireComprobanteNuevoDto> comprobantes)
+    {
+        var token = await ObtenerTokenAsync(ruc, solUsuario, solClave, clienteId, clientSecret);
+        if (string.IsNullOrEmpty(token))
+            return new SireImportarComprobantesResponse { Success = false, Mensaje = "No se pudo obtener el token de autenticación" };
+
+        try
+        {
+            var correlativo = DateTime.Now.ToString("HHmmss");
+            var nombreBase = $"{ruc}-CPF-{perTributario}-{correlativo}";
+            var txtBytes = ConstruirArchivoComprobantes(ruc, razonSocialEmisor, perTributario, comprobantes);
+            var zipBytes = ComprimirArchivo($"{nombreBase}.txt", txtBytes);
+            var nombreZip = $"{nombreBase}.zip";
+
+            var url = enPreliminar ? UrlImportarPreliminar : UrlImportarPropuesta;
+            // Anexo I: 1=Importar CP-Propuesta, 4=Importar CP-Preliminar
+            var codProceso = enPreliminar ? "4" : "1";
+
+            var (numTicket, errorTus) = await SubirArchivoTusAsync(token, url, nombreZip, ruc, perTributario, codProceso, zipBytes);
+            if (string.IsNullOrEmpty(numTicket))
+                return new SireImportarComprobantesResponse { Success = false, Mensaje = errorTus ?? "SUNAT no devolvió un ticket para el envío" };
+
+            var (_, _, _, mensajeTicket) = await EsperarTicketTerminadoAsync(token, perTributario, numTicket);
+            var exitoso = mensajeTicket == "Terminado";
+            return new SireImportarComprobantesResponse
+            {
+                Success = exitoso,
+                NumTicket = numTicket,
+                Mensaje = exitoso ? "Comprobantes agregados correctamente" : mensajeTicket
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[SIRE] Error importando comprobantes {Periodo}", perTributario);
+            return new SireImportarComprobantesResponse { Success = false, Mensaje = ex.Message };
+        }
+    }
+
+    // RS 112-2021/SUNAT, Anexo N°2: 50 campos (1-33 y 41-57; los campos 34-40 son solo referenciales
+    // en la propuesta descargada y no forman parte del archivo que la complementa).
+    private static byte[] ConstruirArchivoComprobantes(string ruc, string razonSocialEmisor, string perTributario, List<SireComprobanteNuevoDto> comprobantes)
+    {
+        var sb = new StringBuilder();
+        var culture = CultureInfo.InvariantCulture;
+
+        foreach (var c in comprobantes)
+        {
+            var esNotaModificatoria = c.TipoComprobante is "07" or "08" or "87" or "88";
+
+            var campos = new List<string>
+            {
+                ruc,                                                              // 1  RUC
+                razonSocialEmisor,                                                // 2  ID
+                perTributario,                                                    // 3  Periodo
+                "",                                                               // 4  CAR SUNAT (lo asigna SUNAT automáticamente)
+                c.FechaEmision,                                                   // 5  Fecha de emisión
+                c.FechaVctoPago ?? "",                                            // 6  Fecha Vcto/Pago (solo tipo CP '14')
+                c.TipoComprobante,                                                // 7  Tipo CP/Doc
+                c.Serie,                                                          // 8  Serie del CDP
+                c.Numero,                                                         // 9  Nro CP o Doc
+                "",                                                               // 10 Nro Final (Rango) - solo tickets consolidados
+                c.TipoDocCliente ?? "",                                           // 11 Tipo Doc Identidad
+                c.NumDocCliente ?? "",                                            // 12 Nro Doc Identidad
+                c.RazonSocialCliente ?? "",                                       // 13 Apellidos Nombres/Razón Social
+                c.ValorFacturadoExportacion.ToString("0.00", culture),            // 14 Valor Facturado Exportación
+                c.BaseImponible.ToString("0.00", culture),                        // 15 BI Gravada
+                "0.00",                                                           // 16 Dscto BI
+                c.Igv.ToString("0.00", culture),                                  // 17 IGV/IPM
+                "0.00",                                                           // 18 Dscto IGV/IPM
+                c.MtoExonerado.ToString("0.00", culture),                         // 19 Mto Exonerado
+                c.MtoInafecto.ToString("0.00", culture),                          // 20 Mto Inafecto
+                c.Isc.ToString("0.00", culture),                                  // 21 ISC
+                "0.00",                                                           // 22 BI Grav IVAP
+                "0.00",                                                           // 23 IVAP
+                c.Icbper.ToString("0.00", culture),                               // 24 ICBPER
+                "0.00",                                                           // 25 Otros Tributos
+                c.ImporteTotal.ToString("0.00", culture),                         // 26 Total CP
+                c.CodMoneda,                                                      // 27 Moneda
+                c.TipoCambio.HasValue ? c.TipoCambio.Value.ToString("0.000", culture) : "", // 28 Tipo Cambio
+                esNotaModificatoria ? (c.FechaEmisionDocModificado ?? "") : "",   // 29 Fecha Emisión Doc Modificado
+                esNotaModificatoria ? (c.TipoCPModificado ?? "") : "",            // 30 Tipo CP Modificado
+                esNotaModificatoria ? (c.SerieCPModificado ?? "") : "",           // 31 Serie CP Modificado
+                esNotaModificatoria ? (c.NroCPModificado ?? "") : "",             // 32 Nro CP Modificado
+                "",                                                               // 33 ID Proyecto Operadores Atribución
+            };
+
+            // Campos 41 a 57: de libre utilización, se dejan vacíos
+            campos.AddRange(Enumerable.Repeat("", 17));
+
+            sb.Append(string.Join("|", campos));
+            sb.Append("\r\n");
+        }
+
+        return Encoding.Latin1.GetBytes(sb.ToString());
+    }
+
+    private static byte[] ComprimirArchivo(string nombreEntrada, byte[] contenido)
+    {
+        using var zipStream = new MemoryStream();
+        using (var archive = new ZipArchive(zipStream, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            var entry = archive.CreateEntry(nombreEntrada, CompressionLevel.Optimal);
+            using var entryStream = entry.Open();
+            entryStream.Write(contenido, 0, contenido.Length);
+        }
+        return zipStream.ToArray();
+    }
+
+    // Protocolo TUS 1.0 (https://tus.io) - Manual v30 §6 "Documentación TUS.IO":
+    // 1) POST crea la sesión de subida con metadata en base64 -> SUNAT responde con Location (URL de subida)
+    // 2) PATCH sube el contenido completo (los .zip de comprobantes son pequeños, no requiere trocear)
+    // NOTA: el manual no muestra el cuerpo JSON exacto de la respuesta final; se asume "numTicket" por
+    // consistencia con el resto de servicios. Verificar contra una respuesta real antes de confiar en producción.
+    private async Task<(string? NumTicket, string? Error)> SubirArchivoTusAsync(
+        string token, string url, string nombreArchivo, string ruc, string perTributario, string codProceso, byte[] contenido)
+    {
+        var client = _httpClientFactory.CreateClient();
+
+        var metadata = new Dictionary<string, string>
+        {
+            ["filename"] = nombreArchivo,
+            ["filetype"] = "application/zip",
+            ["numRuc"] = ruc,
+            ["perTributario"] = perTributario,
+            ["codOrigenEnvio"] = "2",
+            ["codProceso"] = codProceso,
+            ["codTipoCorrelativo"] = "01",
+            ["nomArchivoImportacion"] = nombreArchivo,
+            ["codLibro"] = "140000"
+        };
+        var uploadMetadata = string.Join(",", metadata.Select(kv => $"{kv.Key} {Convert.ToBase64String(Encoding.UTF8.GetBytes(kv.Value))}"));
+
+        var crear = new HttpRequestMessage(HttpMethod.Post, url);
+        crear.Headers.Add("Authorization", $"Bearer {token}");
+        crear.Headers.Add("User-Agent", UserAgent);
+        crear.Headers.Add("Tus-Resumable", "1.0.0");
+        crear.Headers.Add("Upload-Length", contenido.Length.ToString());
+        crear.Headers.Add("Upload-Metadata", uploadMetadata);
+
+        var respCrear = await client.SendAsync(crear);
+        if (!respCrear.IsSuccessStatusCode || respCrear.Headers.Location is null)
+        {
+            var detalle = await respCrear.Content.ReadAsStringAsync();
+            _logger.LogError("[SIRE] Error creando sesión TUS: {Status} {Content}", respCrear.StatusCode, detalle);
+            return (null, $"No se pudo iniciar la subida del archivo. SUNAT respondió {(int)respCrear.StatusCode}: {detalle}");
+        }
+
+        var uploadUrl = respCrear.Headers.Location.IsAbsoluteUri
+            ? respCrear.Headers.Location
+            : new Uri(new Uri(url), respCrear.Headers.Location);
+
+        var subir = new HttpRequestMessage(HttpMethod.Patch, uploadUrl);
+        subir.Headers.Add("Authorization", $"Bearer {token}");
+        subir.Headers.Add("User-Agent", UserAgent);
+        subir.Headers.Add("Tus-Resumable", "1.0.0");
+        subir.Headers.Add("Upload-Offset", "0");
+        subir.Content = new ByteArrayContent(contenido);
+        subir.Content.Headers.ContentType = new MediaTypeHeaderValue("application/offset+octet-stream");
+
+        var respSubir = await client.SendAsync(subir);
+        var contenidoRespuesta = await respSubir.Content.ReadAsStringAsync();
+
+        if (!respSubir.IsSuccessStatusCode)
+        {
+            _logger.LogError("[SIRE] Error subiendo archivo TUS: {Status} {Content}", respSubir.StatusCode, contenidoRespuesta);
+            return (null, $"SUNAT rechazó el archivo. Respondió {(int)respSubir.StatusCode}: {contenidoRespuesta}");
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(contenidoRespuesta);
+            var numTicket = doc.RootElement.TryGetProperty("numTicket", out var t) ? t.GetString() : null;
+            return (numTicket, numTicket is null ? $"SUNAT no devolvió un ticket tras la subida: {contenidoRespuesta}" : null);
+        }
+        catch (JsonException)
+        {
+            return (null, $"SUNAT no devolvió una respuesta JSON válida tras la subida: {contenidoRespuesta}");
+        }
+    }
+
+    // Manual v30 §5.11/§5.12: el parámetro "codMoneda" del request está tipado como "numérico-String",
+    // a diferencia del campo 27 (Moneda) de la propuesta descargada, que es alfa ISO 4217 (PEN/USD) según
+    // RS 112-2021 Anexo N°2. Se traduce al código ISO 4217 numérico antes de enviarlo a SUNAT.
+    private static string MapearCodigoMonedaNumerico(string codigoAlpha) => codigoAlpha?.Trim().ToUpperInvariant() switch
+    {
+        "PEN" => "604",
+        "USD" => "840",
+        _ => codigoAlpha ?? string.Empty
+    };
+
+    public async Task<SireEditarTipoCambioResponse> EditarTipoCambioAsync(
+        string ruc, string solUsuario, string solClave, string clienteId, string clientSecret,
+        string perTributario, SireEditarTipoCambioDto datos)
+    {
+        var token = await ObtenerTokenAsync(ruc, solUsuario, solClave, clienteId, clientSecret);
+        if (string.IsNullOrEmpty(token))
+            return new SireEditarTipoCambioResponse { Success = false, Mensaje = "No se pudo obtener el token de autenticación" };
+
+        try
+        {
+            var url = string.Format(UrlEditarTipoCambioIndividual, perTributario);
+            var body = new Dictionary<string, object?>
+            {
+                ["codCar"] = datos.CodCar,
+                ["codMoneda"] = MapearCodigoMonedaNumerico(datos.CodMoneda),
+                ["mtoTipoCambio"] = datos.MtoTipoCambio,
+                ["mtoCambioMonedaExt"] = datos.MtoCambioMonedaExt
+            };
+
+            var client = _httpClientFactory.CreateClient();
+            var request = new HttpRequestMessage(HttpMethod.Put, url)
+            {
+                Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json")
+            };
+            request.Headers.Add("Authorization", $"Bearer {token}");
+            request.Headers.Add("User-Agent", UserAgent);
+            request.Headers.Add("Accept", "application/json");
+
+            var response = await client.SendAsync(request);
+            var content = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("[SIRE] Error editando tipo de cambio {Periodo}: {Status} {Content}", perTributario, response.StatusCode, content);
+                return new SireEditarTipoCambioResponse { Success = false, Mensaje = ExtraerMensajeErrorSunat(response.StatusCode, content) };
+            }
+
+            return new SireEditarTipoCambioResponse { Success = true, Mensaje = "Tipo de cambio actualizado correctamente" };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[SIRE] Error editando tipo de cambio {Periodo}", perTributario);
+            return new SireEditarTipoCambioResponse { Success = false, Mensaje = ex.Message };
         }
     }
 }

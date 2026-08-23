@@ -40,4 +40,5 @@ public interface IProductoRepository : IRepository<Producto>
     Task<IEnumerable<InfoConversionStockDTO>> GetInfoConversionBySucursalProductoIdsAsync(IEnumerable<int> sucursalProductoIds);
     Task<bool> DescontarStockBaseAsync(int productoBaseId, int sucursalId, decimal cantidad);
     Task<bool> ExisteCodigoBarrasAsync(string codigoBarras, int sucursalId);
+    Task<bool> ExisteCodigoBarrasEnEdicionAsync(string codigoBarras, int sucursalProductoId, int productoIdExcluir);
 }

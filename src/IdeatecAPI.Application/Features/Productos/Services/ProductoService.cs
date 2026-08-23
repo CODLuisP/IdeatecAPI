@@ -208,6 +208,13 @@ public class ProductoService : IProductoService
         _unitOfWork.BeginTransaction();
         try
         {
+            if (!string.IsNullOrWhiteSpace(dto.CodigoBarras))
+            {
+                var barrasOcupado = await _unitOfWork.Productos.ExisteCodigoBarrasEnEdicionAsync(dto.CodigoBarras, dto.SucursalProductoId, dto.ProductoId);
+                if (barrasOcupado)
+                    throw new InvalidOperationException($"El código de barras '{dto.CodigoBarras}' ya está asignado a otro producto.");
+            }
+
             var producto = new Producto
             {
                 ProductoId = dto.ProductoId,

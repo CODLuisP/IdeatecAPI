@@ -18,4 +18,16 @@ public interface ISireService
     Task<SireRegistrarPreliminarResponse> RegistrarPreliminarAsync(
         string ruc, string solUsuario, string solClave, string clienteId, string clientSecret,
         string perTributario);
+
+    Task<SireEliminarComprobanteResponse> EliminarComprobanteAsync(
+        string ruc, string solUsuario, string solClave, string clienteId, string clientSecret,
+        string perTributario, bool enPreliminar, List<SireComprobanteEliminarDto> comprobantes);
+
+    Task<SireImportarComprobantesResponse> ImportarComprobantesAsync(
+        string ruc, string solUsuario, string solClave, string clienteId, string clientSecret,
+        string perTributario, string razonSocialEmisor, bool enPreliminar, List<SireComprobanteNuevoDto> comprobantes);
+
+    Task<SireEditarTipoCambioResponse> EditarTipoCambioAsync(
+        string ruc, string solUsuario, string solClave, string clienteId, string clientSecret,
+        string perTributario, SireEditarTipoCambioDto datos);
 }

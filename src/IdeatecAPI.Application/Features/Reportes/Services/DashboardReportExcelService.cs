@@ -14,8 +14,8 @@ public interface IDashboardReportExcelService
 // en blanco/gris zebra para que la hoja se lea como una tabla, no como un mosaico de colores.
 public class DashboardReportExcelService : IDashboardReportExcelService
 {
-    private const string NavyHex     = "#1E3A5F";   // franjas de título de sección + cabecera KPI
-    private const string NavyTextHex = "#1E3A5F";   // texto de los th
+    private const string NavyHex     = "#1A2B4A";   // franjas de título de sección + cabecera KPI
+    private const string NavyTextHex = "#1A2B4A";   // texto de los th
     private const string ThBgHex     = "#E2E8F0";   // fondo de los encabezados de columna
     private const string GrisHex     = "#F8FAFC";   // zebra de filas de datos
 
@@ -34,12 +34,22 @@ public class DashboardReportExcelService : IDashboardReportExcelService
         const int maxCol = 7;
 
         // ── Cabecera ─────────────────────────────────────────────────────────
+        // Empresa (izquierda) — columnas 1-4
         ws.Cell(row, 1).Value = d.EmpresaRazonSocial;
-        ws.Range(row, 1, row, maxCol).Merge().Style
+        ws.Range(row, 1, row, 4).Merge().Style
             .Font.SetBold(true).Font.SetFontSize(14)
             .Font.SetFontColor(XLColor.White)
             .Fill.SetBackgroundColor(XLColor.FromHtml(NavyHex))
-            .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+            .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Left)
+            .Alignment.SetVertical(XLAlignmentVerticalValues.Center);
+        // Título (derecha) — columnas 5-7
+        ws.Cell(row, 5).Value = "DASHBOARD VENTAS";
+        ws.Range(row, 5, row, maxCol).Merge().Style
+            .Font.SetBold(true).Font.SetFontSize(14)
+            .Font.SetFontColor(XLColor.White)
+            .Fill.SetBackgroundColor(XLColor.FromHtml(NavyHex))
+            .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Right)
+            .Alignment.SetVertical(XLAlignmentVerticalValues.Center);
         ws.Row(row).Height = 28;
         row++;
 
@@ -195,7 +205,7 @@ public class DashboardReportExcelService : IDashboardReportExcelService
             .ToList();
         if (todosComp.Any())
         {
-            SeccionTitulo(ref row, "Top Comprobantes", 5);
+            SeccionTitulo(ref row, "Ventas más Altas", 5);
             HeaderRow(ref row, "#", "Comprobante", "Cliente", "Fecha", "Importe");
 
             int i = 0;

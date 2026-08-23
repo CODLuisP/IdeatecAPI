@@ -127,6 +127,10 @@ public class CategoriaService : ICategoriaService
         if (categoriaId <= 0)
             throw new ArgumentException("CategoriaId inválido");
 
+        var tieneProductos = await _unitOfWork.Categorias.TieneProductosAsignadosAsync(categoriaId);
+        if (tieneProductos)
+            throw new InvalidOperationException("No se puede eliminar la categoría porque tiene productos asignados.");
+
         _unitOfWork.BeginTransaction();
 
         try

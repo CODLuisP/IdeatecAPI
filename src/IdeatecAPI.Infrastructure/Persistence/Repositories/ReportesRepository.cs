@@ -466,6 +466,18 @@ public class ReportesRepository : IReportesRepository
         _         => "AND c.tipoComprobante != 'NV'"
     };
 
+    // Tipo de cambio efectivo para conversión USD->PEN en las consultas del dashboard.
+    // Las Notas de Crédito/Débito (07/08) en USD no siempre guardan su propio tipoCambio
+    // (queda en NULL/0); en ese caso se hereda el del comprobante afectado (numDocAfectado).
+    // Si tampoco se encuentra, se usa 1 como último resguardo para no zerar el monto.
+    private static string TcEfectivo(string alias) =>
+        $@"COALESCE(NULLIF({alias}.tipoCambio, 0),
+            (SELECT NULLIF(co.tipoCambio, 0) FROM comprobante co
+             WHERE co.numeroCompleto = {alias}.numDocAfectado
+               AND co.empresaRuc = {alias}.empresaRuc
+             LIMIT 1),
+            1)";
+
     private async Task<(string Ruc, string Cod)> ObtenerDatosSucursal(int sucursalId)
     {
         var sql = @"
@@ -589,15 +601,18 @@ public class ReportesRepository : IReportesRepository
             _          => "TotalMonto DESC"
         };
 
-        var sql = @"
+        var sql = $@"
             SELECT
                 cd.codigo                           AS Codigo,
                 cd.descripcion                      AS Descripcion,
                 SUM(cd.cantidad)                    AS TotalCantidad,
-                SUM(cd.totalVentaItem)              AS TotalMonto,
-                SUM(cd.montoIGV)                    AS TotalIGV,
+                SUM(CASE WHEN c.tipoMoneda = 'USD' THEN cd.totalVentaItem * {TcEfectivo("c")}
+                    ELSE cd.totalVentaItem END)     AS TotalMonto,
+                SUM(CASE WHEN c.tipoMoneda = 'USD' THEN cd.montoIGV * {TcEfectivo("c")}
+                    ELSE cd.montoIGV END)           AS TotalIGV,
                 COUNT(DISTINCT cd.comprobanteId)    AS VecesVendido,
-                AVG(cd.precioUnitario)              AS PrecioPromedio
+                AVG(CASE WHEN c.tipoMoneda = 'USD' THEN cd.precioUnitario * {TcEfectivo("c")}
+                    ELSE cd.precioUnitario END)     AS PrecioPromedio
             FROM comprobantedetalle cd
             INNER JOIN comprobante c ON c.comprobanteID = cd.comprobanteId
             WHERE c.empresaRuc = @Ruc
@@ -636,12 +651,14 @@ public class ReportesRepository : IReportesRepository
         // Subconsulta con los pagos/cuotas reales, agrupada por medio de pago
         // (el GROUP BY interno es indispensable: sin él, cada rama del UNION
         // colapsa en una sola fila con un MedioPago arbitrario).
-        const string union_medios = @"
+        var union_medios = $@"
             SELECT
                 medioPago               AS MedioPago,
                 COUNT(*)                AS VecesUsado,
-                SUM(p.monto)            AS MontoTotal,
-                AVG(p.monto)            AS PromedioMonto
+                SUM(CASE WHEN c.tipoMoneda = 'USD' THEN p.monto * {TcEfectivo("c")}
+                    ELSE p.monto END)   AS MontoTotal,
+                AVG(CASE WHEN c.tipoMoneda = 'USD' THEN p.monto * {TcEfectivo("c")}
+                    ELSE p.monto END)   AS PromedioMonto
             FROM pago p
             INNER JOIN comprobante c ON c.comprobanteID = p.comprobanteID
             WHERE c.empresaRuc = @Ruc
@@ -662,8 +679,10 @@ public class ReportesRepository : IReportesRepository
             SELECT
                 c2.tipoPago             AS MedioPago,
                 COUNT(*)                AS VecesUsado,
-                SUM(cu.monto)           AS MontoTotal,
-                AVG(cu.monto)           AS PromedioMonto
+                SUM(CASE WHEN c2.tipoMoneda = 'USD' THEN cu.monto * {TcEfectivo("c2")}
+                    ELSE cu.monto END)  AS MontoTotal,
+                AVG(CASE WHEN c2.tipoMoneda = 'USD' THEN cu.monto * {TcEfectivo("c2")}
+                    ELSE cu.monto END)  AS PromedioMonto
             FROM cuota cu
             INNER JOIN comprobante c2 ON c2.comprobanteID = cu.comprobanteID
             WHERE cu.estado = 'PAGADO'
@@ -997,7 +1016,7 @@ public class ReportesRepository : IReportesRepository
         // FechaHasta se normaliza al fin del día porque fechaMovimiento es DATETIME.
         var hastaFinDia = fechaHasta?.Date.AddDays(1).AddTicks(-1);
 
-        var sql = @"
+        var sql = $@"
             SELECT
                 COALESCE(SUM(km.costoTotal), 0)  AS CostoVentas,
                 COALESCE(SUM(v.ingreso), 0)       AS IngresoVentas
@@ -1007,7 +1026,9 @@ public class ReportesRepository : IReportesRepository
             INNER JOIN comprobante cv ON cv.comprobanteID = km.referenciaID
                 AND cv.estadoSunat NOT IN ('ANULADO','RECHAZADO')
             LEFT JOIN (
-                SELECT cd.comprobanteId, cd.productoId, SUM(cd.totalVentaItem) AS ingreso
+                SELECT cd.comprobanteId, cd.productoId,
+                    SUM(CASE WHEN c.tipoMoneda = 'USD' THEN cd.totalVentaItem * {TcEfectivo("c")}
+                        ELSE cd.totalVentaItem END) AS ingreso
                 FROM comprobantedetalle cd
                 INNER JOIN comprobante c ON c.comprobanteID = cd.comprobanteId
                 WHERE (

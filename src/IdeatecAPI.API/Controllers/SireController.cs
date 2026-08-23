@@ -1,4 +1,5 @@
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
+using IdeatecAPI.Application.Features.Sire.DTOs;
 using IdeatecAPI.Application.Features.Sire.Services;
 using IdeatecAPI.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
@@ -117,6 +118,62 @@ public class SireController : ControllerBase
             registro.FechaCierre = resultado.Success ? DateTime.Now : registro.FechaCierre;
             await _unitOfWork.SireRegistros.UpdateSireRegistroAsync(registro);
         }
+
+        return Ok(resultado);
+    }
+
+    [HttpDelete("propuesta/{perTributario}/comprobantes")]
+    public async Task<IActionResult> EliminarComprobante(
+        string perTributario, [FromQuery] string ruc, [FromQuery] bool enPreliminar,
+        [FromBody] List<SireComprobanteEliminarDto> comprobantes)
+    {
+        if (string.IsNullOrWhiteSpace(ruc))
+            return BadRequest(new { mensaje = "El parámetro ruc es requerido." });
+
+        var empresa = await ValidarEmpresaAsync(ruc);
+        if (empresa is null)
+            return NotFound(new { mensaje = "Empresa no encontrada o sin credenciales SIRE configuradas." });
+
+        var resultado = await _sireService.EliminarComprobanteAsync(
+            empresa.Ruc, empresa.SolUsuario!, empresa.SolClave!, empresa.ClientId!, empresa.ClientSecret!,
+            perTributario, enPreliminar, comprobantes);
+
+        return Ok(resultado);
+    }
+
+    [HttpPost("propuesta/{perTributario}/comprobantes")]
+    public async Task<IActionResult> ImportarComprobantes(
+        string perTributario, [FromQuery] string ruc, [FromQuery] bool enPreliminar,
+        [FromBody] List<SireComprobanteNuevoDto> comprobantes)
+    {
+        if (string.IsNullOrWhiteSpace(ruc))
+            return BadRequest(new { mensaje = "El parámetro ruc es requerido." });
+
+        var empresa = await ValidarEmpresaAsync(ruc);
+        if (empresa is null)
+            return NotFound(new { mensaje = "Empresa no encontrada o sin credenciales SIRE configuradas." });
+
+        var resultado = await _sireService.ImportarComprobantesAsync(
+            empresa.Ruc, empresa.SolUsuario!, empresa.SolClave!, empresa.ClientId!, empresa.ClientSecret!,
+            perTributario, empresa.RazonSocial, enPreliminar, comprobantes);
+
+        return Ok(resultado);
+    }
+
+    [HttpPut("propuesta/{perTributario}/tipo-cambio")]
+    public async Task<IActionResult> EditarTipoCambio(
+        string perTributario, [FromQuery] string ruc, [FromBody] SireEditarTipoCambioDto datos)
+    {
+        if (string.IsNullOrWhiteSpace(ruc))
+            return BadRequest(new { mensaje = "El parámetro ruc es requerido." });
+
+        var empresa = await ValidarEmpresaAsync(ruc);
+        if (empresa is null)
+            return NotFound(new { mensaje = "Empresa no encontrada o sin credenciales SIRE configuradas." });
+
+        var resultado = await _sireService.EditarTipoCambioAsync(
+            empresa.Ruc, empresa.SolUsuario!, empresa.SolClave!, empresa.ClientId!, empresa.ClientSecret!,
+            perTributario, datos);
 
         return Ok(resultado);
     }
