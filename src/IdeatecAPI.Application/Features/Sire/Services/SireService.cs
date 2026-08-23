@@ -337,17 +337,15 @@ public class SireService : ISireService
                 ImporteTotal = ParseDecimal(campos[25]),  // campo 26: Total CP
                 CodMoneda = campos[26],                   // campo 27: Moneda
                 TipoCambio = ParseDecimal(campos[27]),    // campo 28: Tipo Cambio
-                // TEMPORAL: campo 35 "Est. Comp" (Estado del comprobante) es alfanumérico de 2 posiciones;
-                // la RS 112-2021 no documenta los códigos literales (solo los estados: Activo/Baja/
-                // Rechazado/Autorizado). Se loguea crudo hasta confirmar el código real y fijar el mapeo.
-                Activo = campos[34] == "01" || campos[34].Trim().Equals("Activo", StringComparison.OrdinalIgnoreCase),
+                // Campo 35 "Est. Comp" (estado del comprobante). La RS 112-2021 no publica los códigos
+                // de este campo para el RVIE, pero el Anexo N°1 modificado por la RS 040-2022/SUNAT sí
+                // los documenta para el campo equivalente del RCE (Tabla 14 "Estado de Validez de
+                // Comprobante de Pago o Documento"): 1=Activo, 2=Baja, 3=Revertido, 4=Anulado,
+                // 5=Autorizado, 6=No Autorizado. Se usa ese mismo indicador aquí; se acepta "01" y el
+                // texto literal como variantes de compatibilidad.
+                Activo = EsComprobanteActivo(campos[34]),
                 Inconsistencias = campos.Length > 38 && !string.IsNullOrWhiteSpace(campos[38]) ? campos[38] : null // campo 39: Incal
             });
-
-            if (comprobantes.Count == 1)
-            {
-                _logger.LogWarning("[SIRE][debug] campo 35 (Est. Comp) valor crudo = '{Estado}'", campos[34]);
-            }
         }
 
         return comprobantes;
@@ -356,6 +354,12 @@ public class SireService : ISireService
     private static decimal ParseDecimal(string valor)
     {
         return decimal.TryParse(valor, NumberStyles.Any, CultureInfo.InvariantCulture, out var result) ? result : 0;
+    }
+
+    private static bool EsComprobanteActivo(string estadoCrudo)
+    {
+        var estado = estadoCrudo.Trim();
+        return estado == "1" || estado == "01" || estado.Equals("Activo", StringComparison.OrdinalIgnoreCase);
     }
 
     // SUNAT devuelve errores como { "cod":"422", "msg":"...", "errors":[{ "cod":"2293", "msg":"<mensaje específico>" }] }
