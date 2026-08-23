@@ -1,4 +1,5 @@
 using System.Data;
+using System.Linq;
 using Dapper;
 using IdeatecAPI.Application.Common.Interfaces.Persistence;
 using IdeatecAPI.Domain.Entities;
@@ -24,6 +25,25 @@ public class CajaRepository : DapperRepository<CajaApertura>, ICajaRepository
 
         return await _connection.QueryFirstOrDefaultAsync<DatosSucursalCaja>(
             sql, new { SucursalId = sucursalId }, _transaction);
+    }
+
+    public async Task<IReadOnlyDictionary<int, DatosSucursalCaja>> GetDatosSucursalesAsync(IEnumerable<int> sucursalIds)
+    {
+        var ids = sucursalIds.Distinct().ToArray();
+        if (ids.Length == 0) return new Dictionary<int, DatosSucursalCaja>();
+
+        var sql = @"
+            SELECT sucursalID         AS SucursalId,
+                   empresaRuc         AS EmpresaRuc,
+                   codEstablecimiento AS CodEstablecimiento,
+                   nombre             AS Nombre
+            FROM sucursal
+            WHERE sucursalID IN @Ids;";
+
+        var rows = await _connection.QueryAsync<(int SucursalId, string EmpresaRuc, string CodEstablecimiento, string Nombre)>(
+            sql, new { Ids = ids }, _transaction);
+
+        return rows.ToDictionary(r => r.SucursalId, r => new DatosSucursalCaja(r.EmpresaRuc, r.CodEstablecimiento, r.Nombre));
     }
 
     // ─────────────────────────── Caja del día ───────────────────────────
@@ -169,6 +189,19 @@ public class CajaRepository : DapperRepository<CajaApertura>, ICajaRepository
 
         return await _connection.QueryAsync<CajaTurno>(
             sql, new { CajaAperturaId = cajaAperturaId }, _transaction);
+    }
+
+    public async Task<IEnumerable<CajaTurno>> GetTurnosByCajasAsync(IEnumerable<int> cajaAperturaIds)
+    {
+        var ids = cajaAperturaIds.Distinct().ToArray();
+        if (ids.Length == 0) return Enumerable.Empty<CajaTurno>();
+
+        var sql = SelectTurno + @"
+            WHERE cajaAperturaID IN @Ids
+            ORDER BY cajaAperturaID, cajaTurnoID ASC;";
+
+        return await _connection.QueryAsync<CajaTurno>(
+            sql, new { Ids = ids }, _transaction);
     }
 
     public async Task<bool> UsuarioTieneTurnoCerradoAsync(int cajaAperturaId, int usuarioId)
