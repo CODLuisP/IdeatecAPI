@@ -18,6 +18,9 @@ public interface ICajaRepository
 {
     Task<DatosSucursalCaja?> GetDatosSucursalAsync(int sucursalId);
 
+    /// <summary>Datos de varias sucursales en una sola consulta, clave por sucursalID.</summary>
+    Task<IReadOnlyDictionary<int, DatosSucursalCaja>> GetDatosSucursalesAsync(IEnumerable<int> sucursalIds);
+
     // ── Caja del día ──
     Task<CajaApertura?> GetCajaAbiertaAsync(int sucursalId);
     Task<CajaApertura?> GetCajaByIdAsync(int cajaAperturaId);
@@ -36,6 +39,9 @@ public interface ICajaRepository
     Task<CajaTurno?> GetTurnoByIdAsync(int cajaTurnoId);
     Task<CajaTurno?> GetUltimoTurnoCerradoAsync(int cajaAperturaId);
     Task<IEnumerable<CajaTurno>> GetTurnosByCajaAsync(int cajaAperturaId);
+
+    /// <summary>Turnos de varias cajas en una sola consulta, para evitar N+1 al listar historial.</summary>
+    Task<IEnumerable<CajaTurno>> GetTurnosByCajasAsync(IEnumerable<int> cajaAperturaIds);
 
     /// <summary>
     /// Si el usuario ya cerró un turno en esta caja, no se le abre otro solo

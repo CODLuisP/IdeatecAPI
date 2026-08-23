@@ -455,11 +455,20 @@ public class CajaService : ICajaService
 
         var (cajas, total) = await _unitOfWork.Caja.GetHistorialAsync(
             empresaRuc, sucursalId, desde, hasta, estado, page, pageSize);
+        var cajasList = cajas.ToList();
+
+        var cajaIds = cajasList.Select(c => c.CajaAperturaId).ToArray();
+        var turnosPorCaja = (await _unitOfWork.Caja.GetTurnosByCajasAsync(cajaIds))
+            .GroupBy(t => t.CajaAperturaId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        var sucursalIds = cajasList.Select(c => c.SucursalId).ToArray();
+        var sucursales = await _unitOfWork.Caja.GetDatosSucursalesAsync(sucursalIds);
 
         var items = new List<CajaHistorialItemDto>();
-        foreach (var caja in cajas)
+        foreach (var caja in cajasList)
         {
-            var turnos = (await _unitOfWork.Caja.GetTurnosByCajaAsync(caja.CajaAperturaId)).ToList();
+            var turnos = turnosPorCaja.TryGetValue(caja.CajaAperturaId, out var t) ? t : new List<CajaTurno>();
             var item = new CajaHistorialItemDto
             {
                 CajaAperturaId = caja.CajaAperturaId,
@@ -478,11 +487,10 @@ public class CajaService : ICajaService
                 Estado = caja.Estado,
                 Observaciones = caja.Observaciones,
                 CantidadTurnos = turnos.Count,
-                TotalVentas = turnos.Sum(t => t.TotalVentas ?? 0m)
+                TotalVentas = turnos.Sum(t => t.TotalVentas ?? 0m),
+                NombreSucursal = sucursales.TryGetValue(caja.SucursalId, out var s) ? s.Nombre : null
             };
 
-            var sucursal = await _unitOfWork.Caja.GetDatosSucursalAsync(caja.SucursalId);
-            item.NombreSucursal = sucursal?.Nombre;
             items.Add(item);
         }
 
