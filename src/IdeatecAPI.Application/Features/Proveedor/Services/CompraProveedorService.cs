@@ -302,7 +302,11 @@ public class CompraProveedorService : ICompraProveedorService
             UnidadMedida = c.UnidadMedida,
             DocReferencia = c.DocReferencia,
             FechaCreacion = c.FechaCreacion,
-            FechaVencimiento = c.FechaVencimiento
+            FechaVencimiento = c.FechaVencimiento,
+            SaldoDisponible = c.SaldoCantidadLote,
+            CantidadConsumida = c.CantidadOriginalLote.HasValue && c.SaldoCantidadLote.HasValue
+                ? c.CantidadOriginalLote.Value - c.SaldoCantidadLote.Value
+                : null
         };
     }
 }

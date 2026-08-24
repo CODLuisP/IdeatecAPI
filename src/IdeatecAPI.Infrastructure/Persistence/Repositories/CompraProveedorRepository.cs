@@ -26,7 +26,9 @@ public class CompraProveedorRepository : DapperRepository<CompraProveedor>, ICom
             cp.docReferencia     AS DocReferencia,
             cp.fechaCreacion     AS FechaCreacion,
             cp.idUsuario         AS IdUsuario,
-            il.fechaVencimiento  AS FechaVencimiento
+            il.fechaVencimiento  AS FechaVencimiento,
+            il.cantidadOriginal  AS CantidadOriginalLote,
+            il.saldoCantidad     AS SaldoCantidadLote
         FROM compraproveedor cp
         INNER JOIN proveedor pr ON pr.idProveedor = cp.idProveedor
         INNER JOIN sucursal s ON s.sucursalID = cp.idSucursal
