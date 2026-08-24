@@ -15,4 +15,6 @@ public class ObtenerCompraProveedorDTO
     public string? DocReferencia { get; set; }
     public DateTime? FechaCreacion { get; set; }
     public DateTime? FechaVencimiento { get; set; }
+    public decimal? SaldoDisponible { get; set; }
+    public decimal? CantidadConsumida { get; set; }
 }

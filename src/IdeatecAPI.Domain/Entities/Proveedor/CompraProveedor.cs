@@ -18,4 +18,6 @@ public class CompraProveedor
     public string? NomProducto { get; set; }
     public string? NomSucursal { get; set; }
     public DateTime? FechaVencimiento { get; set; }
+    public decimal? CantidadOriginalLote { get; set; }
+    public decimal? SaldoCantidadLote { get; set; }
 }
