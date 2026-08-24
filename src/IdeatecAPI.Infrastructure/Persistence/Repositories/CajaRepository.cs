@@ -297,16 +297,30 @@ public class CajaRepository : DapperRepository<CajaApertura>, ICajaRepository
         DateTime? hasta)
     {
         // Los comprobantes del turno son los que ese usuario creó en esa
-        // sucursal dentro de la ventana del turno. Se usa fechaCreacion (tiene
-        // hora) y no fechaEmision, que es solo la fecha del documento.
+        // sucursal dentro de la ventana del turno. Normalmente se ubican por
+        // fechaCreacion (hora real de inserción en el servidor), que coincide
+        // con el momento de la venta cuando hay conexión.
+        //
+        // Una venta hecha SIN CONEXIÓN se encola en el dispositivo y recién se
+        // inserta (fechaCreacion) cuando vuelve el internet — que puede ser
+        // minutos u horas después, incluso ya con el turno original cerrado.
+        // Si solo mirásemos fechaCreacion, esa venta quedaría fuera de la
+        // ventana de CUALQUIER turno de ese usuario: el efectivo estaría
+        // físicamente en el cajón pero no en ningún cuadre (sobrante fantasma
+        // al cuadrar). Por eso también se acepta por horaEmision, que es el
+        // instante real de la venta que el cliente congela al guardarla
+        // offline. El usuarioCreacion sigue siendo obligatorio en ambos casos,
+        // así que esto nunca puede atribuir una venta al turno de otro usuario.
         // Con usuarioId nulo se agregan todos los usuarios (corte del día).
         const string filtroComprobantes = @"
             FROM comprobante c
             WHERE c.empresaRuc = @EmpresaRuc
               AND c.establecimientoAnexo = @CodEstablecimiento
               AND (@UsuarioId IS NULL OR c.usuarioCreacion = @UsuarioId)
-              AND c.fechaCreacion >= @Desde
-              AND (@Hasta IS NULL OR c.fechaCreacion <= @Hasta)
+              AND (
+                    (c.fechaCreacion >= @Desde AND (@Hasta IS NULL OR c.fechaCreacion <= @Hasta))
+                 OR (c.horaEmision   >= @Desde AND (@Hasta IS NULL OR c.horaEmision   <= @Hasta))
+                  )
               AND (c.estadoSunat IS NULL OR c.estadoSunat NOT IN ('RECHAZADO', 'ANULADO'))";
 
         var parametros = new
@@ -348,8 +362,9 @@ public class CajaRepository : DapperRepository<CajaApertura>, ICajaRepository
         DateTime desde,
         DateTime hasta)
     {
-        // Mismo filtro de comprobantes válidos que GetResumenVentasAsync, pero
-        // agregando el detalle de venta por la categoría del producto.
+        // Mismo filtro de comprobantes válidos que GetResumenVentasAsync
+        // (incluye la venta offline por horaEmision además de fechaCreacion,
+        // ver comentario ahí), agregando el detalle por categoría del producto.
         var sql = @"
             SELECT COALESCE(cat.categoriaNombre, 'Sin categoría') AS Categoria,
                    COALESCE(SUM(cd.totalVentaItem), 0)            AS Monto
@@ -360,8 +375,10 @@ public class CajaRepository : DapperRepository<CajaApertura>, ICajaRepository
             WHERE c.empresaRuc = @EmpresaRuc
               AND c.establecimientoAnexo = @CodEstablecimiento
               AND (@UsuarioId IS NULL OR c.usuarioCreacion = @UsuarioId)
-              AND c.fechaCreacion >= @Desde
-              AND c.fechaCreacion <= @Hasta
+              AND (
+                    (c.fechaCreacion >= @Desde AND c.fechaCreacion <= @Hasta)
+                 OR (c.horaEmision   >= @Desde AND c.horaEmision   <= @Hasta)
+                  )
               AND (c.estadoSunat IS NULL OR c.estadoSunat NOT IN ('RECHAZADO', 'ANULADO'))
             GROUP BY COALESCE(cat.categoriaNombre, 'Sin categoría')
             ORDER BY Monto DESC;";
