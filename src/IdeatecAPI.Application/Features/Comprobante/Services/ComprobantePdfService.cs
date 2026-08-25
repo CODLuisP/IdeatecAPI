@@ -947,7 +947,11 @@ public class ComprobantePdfService : IComprobantePdfService
                         var spotBienServicio = c.SpotBienServicio ?? "Bien o Servicio: 019 Arrendamiento de bienes";
                         var spotMedioPago = c.SpotMedioPago ?? "Medio de pago: 001 Depósito en cuenta";
                         var spotCuentaBanco = c.SpotCuentaBanco ?? "N° Cta. Banco de la Nación: 00068273250";
-                        var spotPorcentaje = c.SpotPorcentaje ?? 10m;
+
+                        // -1 = el usuario dejó el porcentaje en blanco: se oculta la línea pero
+                        // el monto se sigue calculando con el 10% por defecto.
+                        var mostrarPorcentaje = c.SpotPorcentaje is null or >= 0;
+                        var spotPorcentaje = c.SpotPorcentaje is >= 0 ? c.SpotPorcentaje.Value : 10m;
 
                         var montoSpotBase = (c.ImporteTotal ?? 0) * (spotPorcentaje / 100m);
                         var montoSpotSoles = moneda == "USD" && tipoCambioOficial.HasValue
@@ -968,8 +972,9 @@ public class ComprobantePdfService : IComprobantePdfService
                                         d.Item().Text(spotMedioPago).FontSize(9);
                                     if (!string.IsNullOrEmpty(spotCuentaBanco))
                                         d.Item().Text(spotCuentaBanco).FontSize(9);
-                                    d.Item().Text($"Porcentaje de detracción: {spotPorcentaje:0.##}%")
-                                        .FontSize(9);
+                                    if (mostrarPorcentaje)
+                                        d.Item().Text($"Porcentaje de detracción: {spotPorcentaje:0.##}%")
+                                            .FontSize(9);
                                     d.Item().Text($"Monto detracción: S/ {montoSpotSoles:F0}")
                                         .FontSize(9).Bold();
                                 });
