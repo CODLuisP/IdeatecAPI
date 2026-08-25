@@ -942,7 +942,14 @@ public class ComprobantePdfService : IComprobantePdfService
                     // SPOT para RUC 20512134832 cuando Spot es true
                     if (empresa.Ruc == "20512134832" && c.Spot == true)
                     {
-                        var montoSpotBase = (c.ImporteTotal ?? 0) * 0.10m;
+                        // Contenido editable desde el front (null = usar valor por defecto, "" = ocultar la línea)
+                        var spotLeyenda = c.SpotLeyenda ?? "Leyenda: Operación sujeta al SPOT con el Gobierno Central";
+                        var spotBienServicio = c.SpotBienServicio ?? "Bien o Servicio: 019 Arrendamiento de bienes";
+                        var spotMedioPago = c.SpotMedioPago ?? "Medio de pago: 001 Depósito en cuenta";
+                        var spotCuentaBanco = c.SpotCuentaBanco ?? "N° Cta. Banco de la Nación: 00068273250";
+                        var spotPorcentaje = c.SpotPorcentaje ?? 10m;
+
+                        var montoSpotBase = (c.ImporteTotal ?? 0) * (spotPorcentaje / 100m);
                         var montoSpotSoles = moneda == "USD" && tipoCambioOficial.HasValue
                             ? Math.Round(montoSpotBase * tipoCambioOficial.Value, 0, MidpointRounding.AwayFromZero)
                             : Math.Round(montoSpotBase, 0, MidpointRounding.AwayFromZero);
@@ -953,15 +960,15 @@ public class ComprobantePdfService : IComprobantePdfService
                                 .Background(ColorGrisClaro).Border(1).BorderColor(ColorGrisBorde)
                                 .Padding(5).Column(d =>
                                 {
-                                    d.Item().Text("Leyenda: Operación sujeta al SPOT con el Gobierno Central")
-                                        .FontSize(9);
-                                    d.Item().Text("Bien o Servicio: 019 Arrendamiento de bienes")
-                                        .FontSize(9);
-                                    d.Item().Text("Medio de pago: 001 Depósito en cuenta")
-                                        .FontSize(9);
-                                    d.Item().Text("N° Cta. Banco de la Nación: 00068273250")
-                                        .FontSize(9);
-                                    d.Item().Text("Porcentaje de detracción: 10%")
+                                    if (!string.IsNullOrEmpty(spotLeyenda))
+                                        d.Item().Text(spotLeyenda).FontSize(9);
+                                    if (!string.IsNullOrEmpty(spotBienServicio))
+                                        d.Item().Text(spotBienServicio).FontSize(9);
+                                    if (!string.IsNullOrEmpty(spotMedioPago))
+                                        d.Item().Text(spotMedioPago).FontSize(9);
+                                    if (!string.IsNullOrEmpty(spotCuentaBanco))
+                                        d.Item().Text(spotCuentaBanco).FontSize(9);
+                                    d.Item().Text($"Porcentaje de detracción: {spotPorcentaje:0.##}%")
                                         .FontSize(9);
                                     d.Item().Text($"Monto detracción: S/ {montoSpotSoles:F0}")
                                         .FontSize(9).Bold();

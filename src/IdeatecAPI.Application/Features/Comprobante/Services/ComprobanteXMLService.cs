@@ -1370,7 +1370,8 @@ public class ComprobanteService : IComprobanteService
     public async Task<bool> ActualizarOrdenServicioSpotAsync(string ruc, string serie, int correlativo, ActualizarOrdenServicioSpotDto dto)
     {
         return await _unitOfWork.Comprobantes.UpdateOrdenServicioSpotAsync(
-            ruc, serie, correlativo, dto.OrdenServicio, dto.Spot);
+            ruc, serie, correlativo, dto.OrdenServicio, dto.Spot,
+            dto.SpotLeyenda, dto.SpotBienServicio, dto.SpotMedioPago, dto.SpotCuentaBanco, dto.SpotPorcentaje);
     }
 
     // Siempre devuelve la hora actual en zona horaria Lima (UTC-5), sin importar

@@ -833,7 +833,10 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         return await _connection.QueryAsync<Vale>(sql, new { ComprobanteId = comprobanteId }, _transaction);
     }
 
-    public async Task<bool> UpdateOrdenServicioSpotAsync(string ruc, string serie, int correlativo, string? ordenServicio, bool? spot)
+    public async Task<bool> UpdateOrdenServicioSpotAsync(
+        string ruc, string serie, int correlativo, string? ordenServicio, bool? spot,
+        string? spotLeyenda = null, string? spotBienServicio = null, string? spotMedioPago = null,
+        string? spotCuentaBanco = null, decimal? spotPorcentaje = null)
     {
         var setClauses = new List<string>();
         var parameters = new Dapper.DynamicParameters();
@@ -848,6 +851,36 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         {
             setClauses.Add("spot = @Spot");
             parameters.Add("Spot", spot);
+        }
+
+        if (spotLeyenda is not null)
+        {
+            setClauses.Add("spotleyenda = @SpotLeyenda");
+            parameters.Add("SpotLeyenda", spotLeyenda);
+        }
+
+        if (spotBienServicio is not null)
+        {
+            setClauses.Add("spotbienservicio = @SpotBienServicio");
+            parameters.Add("SpotBienServicio", spotBienServicio);
+        }
+
+        if (spotMedioPago is not null)
+        {
+            setClauses.Add("spotmediopago = @SpotMedioPago");
+            parameters.Add("SpotMedioPago", spotMedioPago);
+        }
+
+        if (spotCuentaBanco is not null)
+        {
+            setClauses.Add("spotcuentabanco = @SpotCuentaBanco");
+            parameters.Add("SpotCuentaBanco", spotCuentaBanco);
+        }
+
+        if (spotPorcentaje is not null)
+        {
+            setClauses.Add("spotporcentaje = @SpotPorcentaje");
+            parameters.Add("SpotPorcentaje", spotPorcentaje);
         }
 
         if (setClauses.Count == 0)
@@ -884,6 +917,11 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         comprobante.tipoPago                AS TipoPago,
         comprobante.ordenservicio           AS OrdenServicio,
         comprobante.spot                    AS Spot,
+        comprobante.spotleyenda             AS SpotLeyenda,
+        comprobante.spotbienservicio        AS SpotBienServicio,
+        comprobante.spotmediopago           AS SpotMedioPago,
+        comprobante.spotcuentabanco         AS SpotCuentaBanco,
+        comprobante.spotporcentaje          AS SpotPorcentaje,
         comprobante.empresaID               AS EmpresaId,
         comprobante.empresaRuc              AS EmpresaRuc,
         comprobante.empresaRazonSocial      AS EmpresaRazonSocial,

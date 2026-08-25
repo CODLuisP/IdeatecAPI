@@ -49,6 +49,13 @@ public class Comprobante
     public string? OrdenServicio { get; set; }
     public bool? Spot { get; set; }
 
+    // Contenido editable del recuadro SPOT (null = usar valor por defecto, "" = ocultar la línea)
+    public string? SpotLeyenda { get; set; }
+    public string? SpotBienServicio { get; set; }
+    public string? SpotMedioPago { get; set; }
+    public string? SpotCuentaBanco { get; set; }
+    public decimal? SpotPorcentaje { get; set; }
+
     // Totales
     public string? CodigoTipoDescGlobal { get; set; }
     public decimal? DescuentoGlobal { get; set; }
