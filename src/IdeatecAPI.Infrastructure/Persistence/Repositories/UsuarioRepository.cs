@@ -86,6 +86,38 @@ public class UsuarioRepository : DapperRepository<Usuario>, IUsuarioRepository
         return rowsAffected > 0;
     }
 
+    public async Task<Usuario?> GetByRefreshTokenAsync(string refreshToken)
+    {
+        var sql = @"
+        SELECT 
+            u.usuarioID           AS UsuarioID,
+            u.username            AS Username,
+            u.password            AS Password,
+            u.email               AS Email,
+            u.rol                 AS Rol,
+            u.estado              AS Estado,
+            u.ruc                 AS Ruc,
+            u.sucursalID          AS SucursalID,
+            s.nombre              AS NombreSucursal,
+            COALESCE(e.nombreComercial, e.razonSocial) AS NombreEmpresa,
+            e.igv                 AS Igv,
+            e.tipoEmision         AS TipoEmision,
+            e.environment         AS Environment,
+            u.tokenVersion        AS TokenVersion,
+            u.refreshToken        AS RefreshToken,
+            u.fechaCreacion       AS FechaCreacion,
+            u.fechaUltimoAcceso   AS FechaUltimoAcceso
+        FROM usuario u
+        LEFT JOIN sucursal s ON s.sucursalID = u.sucursalID
+        LEFT JOIN empresa e ON e.ruc = u.ruc
+        WHERE u.refreshToken = @RefreshToken
+        AND u.estado = 1
+        LIMIT 1";
+
+        return await _connection.QueryFirstOrDefaultAsync<Usuario>(
+            sql, new { RefreshToken = refreshToken }, _transaction);
+    }
+
     public async Task<int> CreateAsync(Usuario usuario)
     {
         var sql = @"
