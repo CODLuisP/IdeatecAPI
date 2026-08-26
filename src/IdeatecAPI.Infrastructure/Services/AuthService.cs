@@ -109,8 +109,21 @@ public class AuthService : IAuthService
                 };
             }
 
-            // 1. Buscar usuario por refresh token
+            // 1. Buscar usuario por refresh token (producción primero, luego beta)
             var usuario = await _unitOfWork.Usuarios.GetByRefreshTokenAsync(refreshToken);
+            if (usuario == null)
+            {
+                _unitOfWork.SetEnvironment("beta");
+                usuario = await _unitOfWork.Usuarios.GetByRefreshTokenAsync(refreshToken);
+                if (usuario != null)
+                {
+                    usuario.Environment = "beta";
+                }
+            }
+            else
+            {
+                usuario.Environment = "production";
+            }
 
             if (usuario == null)
             {
@@ -138,12 +151,14 @@ public class AuthService : IAuthService
 
             // 4. Actualizar refresh token en BD (fire & forget para no bloquear)
             var usuarioId = usuario.UsuarioID;
+            var env = usuario.Environment ?? "production";
             _ = Task.Run(async () =>
             {
                 try
                 {
                     using var scope = _scopeFactory.CreateScope();
                     var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+                    uow.SetEnvironment(env);
                     await uow.Usuarios.UpdateRefreshTokenAndLastAccessAsync(usuarioId, newRefreshToken);
                 }
                 catch { /* no bloquear el refresh si falla el update */ }
