@@ -49,11 +49,16 @@ public class TokenService : ITokenService
             issuer: _configuration["JwtSettings:Issuer"],
             audience: _configuration["JwtSettings:Audience"],
             claims: claims,
-            expires: DateTime.UtcNow.AddHours(24),
+            expires: DateTime.UtcNow.AddMinutes(GetAccessTokenExpirationMinutes()),
             signingCredentials: credentials
         );
 
         return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    public int GetAccessTokenExpirationMinutes()
+    {
+        return _configuration.GetValue<int?>("JwtSettings:AccessTokenExpirationMinutes") ?? 21600;
     }
 
     public string GenerateRefreshToken()

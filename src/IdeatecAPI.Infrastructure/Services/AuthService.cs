@@ -45,7 +45,7 @@ public class AuthService : IAuthService
             // 4. Generar tokens (in-memory, <1ms)
             var accessToken  = _tokenService.GenerateAccessToken(usuario);
             var refreshToken = _tokenService.GenerateRefreshToken();
-            var expiresAt    = DateTime.UtcNow.AddMinutes(30);
+            var expiresAt    = DateTime.UtcNow.AddMinutes(_tokenService.GetAccessTokenExpirationMinutes());
 
             // 5. ⚡ Fire & forget: guardar refreshToken + fecha en background
             //    El cliente NO espera este roundtrip — ahorra ~150ms

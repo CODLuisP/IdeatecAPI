@@ -7,4 +7,5 @@ public interface ITokenService
     string GenerateAccessToken(Usuario usuario);
     string GenerateRefreshToken();
     (int usuarioId, int tokenVersion)? ValidateAccessToken(string token);
+    int GetAccessTokenExpirationMinutes();
 }
