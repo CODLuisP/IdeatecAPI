@@ -332,20 +332,31 @@ public class CajaRepository : DapperRepository<CajaApertura>, ICajaRepository
             Hasta = hasta
         };
 
+        // La comisión POS por pago con tarjeta se guarda aparte, en el
+        // comprobante (comprobante.totalComisionPagoTarjeta), y no en el monto
+        // del pago: el cliente la paga junto con la tarjeta, pero no queda
+        // reflejada en "pago.monto". Por eso se suma aquí al medio "Tarjeta",
+        // si no el cuadre siempre la deja fuera de lo recaudado por ese medio.
         var sqlMedios = $@"
-            SELECT COALESCE(p.medioPago, 'Otro') AS MedioPago,
-                   COALESCE(SUM(p.monto), 0)     AS Monto
-            FROM pago p
-            WHERE p.comprobanteID IN (
-                SELECT c.comprobanteID {filtroComprobantes}
-            )
-            GROUP BY COALESCE(p.medioPago, 'Otro');";
+            SELECT medioPago AS MedioPago, SUM(monto) AS Monto
+            FROM (
+                SELECT COALESCE(p.medioPago, 'Otro') AS medioPago, p.monto AS monto
+                FROM pago p
+                WHERE p.comprobanteID IN (
+                    SELECT c.comprobanteID {filtroComprobantes}
+                )
+                UNION ALL
+                SELECT 'Tarjeta' AS medioPago, c.totalComisionPagoTarjeta AS monto
+                {filtroComprobantes}
+                  AND c.totalComisionPagoTarjeta > 0
+            ) t
+            GROUP BY medioPago;";
 
         var medios = (await _connection.QueryAsync<(string MedioPago, decimal Monto)>(
             sqlMedios, parametros, _transaction)).ToList();
 
         var sqlTotales = $@"
-            SELECT COALESCE(SUM(c.importeTotal), 0) AS TotalVentas,
+            SELECT COALESCE(SUM(c.importeTotal + COALESCE(c.totalComisionPagoTarjeta, 0)), 0) AS TotalVentas,
                    COUNT(*)                         AS CantidadComprobantes
             {filtroComprobantes};";
 
