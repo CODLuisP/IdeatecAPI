@@ -319,7 +319,7 @@ public class CajaRepository : DapperRepository<CajaApertura>, ICajaRepository
               AND (@UsuarioId IS NULL OR c.usuarioCreacion = @UsuarioId)
               AND (
                     (c.fechaCreacion >= @Desde AND (@Hasta IS NULL OR c.fechaCreacion <= @Hasta))
-                 OR (c.horaEmision   >= @Desde AND (@Hasta IS NULL OR c.horaEmision   <= @Hasta))
+                 OR (TIMESTAMP(c.fechaEmision, c.horaEmision) >= @Desde AND (@Hasta IS NULL OR TIMESTAMP(c.fechaEmision, c.horaEmision) <= @Hasta))
                   )
               AND (c.estadoSunat IS NULL OR c.estadoSunat NOT IN ('RECHAZADO', 'ANULADO'))";
 
@@ -377,7 +377,7 @@ public class CajaRepository : DapperRepository<CajaApertura>, ICajaRepository
               AND (@UsuarioId IS NULL OR c.usuarioCreacion = @UsuarioId)
               AND (
                     (c.fechaCreacion >= @Desde AND c.fechaCreacion <= @Hasta)
-                 OR (c.horaEmision   >= @Desde AND c.horaEmision   <= @Hasta)
+                 OR (TIMESTAMP(c.fechaEmision, c.horaEmision) >= @Desde AND TIMESTAMP(c.fechaEmision, c.horaEmision) <= @Hasta)
                   )
               AND (c.estadoSunat IS NULL OR c.estadoSunat NOT IN ('RECHAZADO', 'ANULADO'))
             GROUP BY COALESCE(cat.categoriaNombre, 'Sin categoría')
