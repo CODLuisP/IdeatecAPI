@@ -71,9 +71,9 @@ public class AuthController : ControllerBase
     /// </summary>
     [HttpPost("refresh-token")]
     [AllowAnonymous]
-    public async Task<IActionResult> RefreshToken([FromBody] string refreshToken)
+    public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequestDto request)
     {
-        var result = await _authService.RefreshTokenAsync(refreshToken);
+        var result = await _authService.RefreshTokenAsync(request.RefreshToken);
 
         if (!result.Success)
         {
@@ -89,7 +89,8 @@ public class AuthController : ControllerBase
             success = true,
             accessToken = result.AccessToken,
             refreshToken = result.RefreshToken,
-            expiresAt = result.ExpiresAt
+            expiresAt = result.ExpiresAt,
+            user = result.User
         });
     }
 

@@ -100,10 +100,77 @@ public class AuthService : IAuthService
     {
         try
         {
+            if (string.IsNullOrWhiteSpace(refreshToken))
+            {
+                return new LoginResponseDto
+                {
+                    Success = false,
+                    Message = "Refresh token es requerido"
+                };
+            }
+
+            // 1. Buscar usuario por refresh token
+            var usuario = await _unitOfWork.Usuarios.GetByRefreshTokenAsync(refreshToken);
+
+            if (usuario == null)
+            {
+                return new LoginResponseDto
+                {
+                    Success = false,
+                    Message = "Refresh token inválido o expirado"
+                };
+            }
+
+            // 2. Verificar cuenta activa
+            if (!usuario.Estado)
+            {
+                return new LoginResponseDto
+                {
+                    Success = false,
+                    Message = "La cuenta está desactivada"
+                };
+            }
+
+            // 3. Generar nuevos tokens
+            var newAccessToken  = _tokenService.GenerateAccessToken(usuario);
+            var newRefreshToken = _tokenService.GenerateRefreshToken();
+            var expiresAt       = DateTime.UtcNow.AddMinutes(_tokenService.GetAccessTokenExpirationMinutes());
+
+            // 4. Actualizar refresh token en BD (fire & forget para no bloquear)
+            var usuarioId = usuario.UsuarioID;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    using var scope = _scopeFactory.CreateScope();
+                    var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+                    await uow.Usuarios.UpdateRefreshTokenAndLastAccessAsync(usuarioId, newRefreshToken);
+                }
+                catch { /* no bloquear el refresh si falla el update */ }
+            });
+
+            // 5. Respuesta con nuevos tokens
             return new LoginResponseDto
             {
-                Success = false,
-                Message = "Funcionalidad de refresh token no implementada aún"
+                Success = true,
+                Message = "Token renovado exitosamente",
+                AccessToken  = newAccessToken,
+                RefreshToken = newRefreshToken,
+                ExpiresAt    = expiresAt,
+                User = new UsuarioDto
+                {
+                    UsuarioID      = usuario.UsuarioID,
+                    Username       = usuario.Username,
+                    Email          = usuario.Email,
+                    Rol            = usuario.Rol,
+                    Ruc            = usuario.Ruc,
+                    SucursalID     = usuario.SucursalID,
+                    NombreSucursal = usuario.NombreSucursal,
+                    Igv            = usuario.Igv,
+                    TipoEmision    = usuario.TipoEmision,
+                    NombreEmpresa  = usuario.NombreEmpresa,
+                    Environment    = usuario.Environment
+                }
             };
         }
         catch (Exception)
