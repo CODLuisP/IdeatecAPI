@@ -193,6 +193,7 @@ public class ReportesRepository : IReportesRepository
             FROM comprobante c
             WHERE {whereBase}
               AND c.estadoSunat NOT IN ('RECHAZADO')
+              AND (c.tipoComprobante <> 'NV' OR c.estadoSunat = 'NO_APLICA')
               AND c.fechaEmision >= @Desde
               AND c.fechaEmision <= @Hasta
               {whereUsuario};";
