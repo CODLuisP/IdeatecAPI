@@ -9,7 +9,8 @@ public record DatosSucursalCaja(string EmpresaRuc, string CodEstablecimiento, st
 public record ResumenVentasTurno(
     IReadOnlyList<(string MedioPago, decimal Monto)> Medios,
     decimal TotalVentas,
-    int CantidadComprobantes);
+    int CantidadComprobantes,
+    decimal TotalComisionTarjeta);
 
 /// <summary>Vendido por categoría de producto en una ventana de tiempo.</summary>
 public record VentaCategoria(string Categoria, decimal Monto);

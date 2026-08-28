@@ -179,6 +179,9 @@ public class CorteDiarioDto
     public int CantidadComprobantes { get; set; }
     public decimal? GananciaDia { get; set; }
 
+    /// <summary>Comisión POS cobrada por pagos con tarjeta, solo informativa (no forma parte de ningún total).</summary>
+    public decimal TotalComisionTarjeta { get; set; }
+
     public List<MedioPagoResumenDto> OtrosMediosPago { get; set; } = new();
     public List<VentaCategoriaDto> VentasPorCategoria { get; set; } = new();
     public List<CajaRetiroDto> Retiros { get; set; } = new();

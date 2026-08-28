@@ -333,37 +333,30 @@ public class CajaRepository : DapperRepository<CajaApertura>, ICajaRepository
         };
 
         // La comisión POS por pago con tarjeta se guarda aparte, en el
-        // comprobante (comprobante.totalComisionPagoTarjeta), y no en el monto
-        // del pago: el cliente la paga junto con la tarjeta, pero no queda
-        // reflejada en "pago.monto". Por eso se suma aquí al medio "Tarjeta",
-        // si no el cuadre siempre la deja fuera de lo recaudado por ese medio.
+        // comprobante (comprobante.totalComisionPagoTarjeta), y no se suma al
+        // medio "Tarjeta": ese total debe reflejar solo la venta pagada con
+        // tarjeta, no lo que el cliente pagó de más por la comisión.
         var sqlMedios = $@"
-            SELECT medioPago AS MedioPago, SUM(monto) AS Monto
-            FROM (
-                SELECT COALESCE(p.medioPago, 'Otro') AS medioPago, p.monto AS monto
-                FROM pago p
-                WHERE p.comprobanteID IN (
-                    SELECT c.comprobanteID {filtroComprobantes}
-                )
-                UNION ALL
-                SELECT 'Tarjeta' AS medioPago, c.totalComisionPagoTarjeta AS monto
-                {filtroComprobantes}
-                  AND c.totalComisionPagoTarjeta > 0
-            ) t
-            GROUP BY medioPago;";
+            SELECT COALESCE(p.medioPago, 'Otro') AS MedioPago, SUM(p.monto) AS Monto
+            FROM pago p
+            WHERE p.comprobanteID IN (
+                SELECT c.comprobanteID {filtroComprobantes}
+            )
+            GROUP BY COALESCE(p.medioPago, 'Otro');";
 
         var medios = (await _connection.QueryAsync<(string MedioPago, decimal Monto)>(
             sqlMedios, parametros, _transaction)).ToList();
 
         var sqlTotales = $@"
-            SELECT COALESCE(SUM(c.importeTotal + COALESCE(c.totalComisionPagoTarjeta, 0)), 0) AS TotalVentas,
-                   COUNT(*)                         AS CantidadComprobantes
+            SELECT COALESCE(SUM(c.importeTotal), 0) AS TotalVentas,
+                   COUNT(*)                         AS CantidadComprobantes,
+                   COALESCE(SUM(c.totalComisionPagoTarjeta), 0) AS TotalComisionTarjeta
             {filtroComprobantes};";
 
-        var totales = await _connection.QueryFirstOrDefaultAsync<(decimal TotalVentas, int CantidadComprobantes)>(
+        var totales = await _connection.QueryFirstOrDefaultAsync<(decimal TotalVentas, int CantidadComprobantes, decimal TotalComisionTarjeta)>(
             sqlTotales, parametros, _transaction);
 
-        return new ResumenVentasTurno(medios, totales.TotalVentas, totales.CantidadComprobantes);
+        return new ResumenVentasTurno(medios, totales.TotalVentas, totales.CantidadComprobantes, totales.TotalComisionTarjeta);
     }
 
     public async Task<IEnumerable<VentaCategoria>> GetVentasPorCategoriaAsync(

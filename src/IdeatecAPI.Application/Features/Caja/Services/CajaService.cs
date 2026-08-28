@@ -425,6 +425,8 @@ public class CajaService : ICajaService
             CantidadComprobantes = resumen.CantidadComprobantes,
             GananciaDia = rentabilidad.IngresoVentas > 0 || rentabilidad.CostoVentas > 0 ? rentabilidad.UtilidadBruta : null,
 
+            TotalComisionTarjeta = resumen.TotalComisionTarjeta,
+
             OtrosMediosPago = resumen.Medios
                 .Where(m => m.Monto > 0)
                 .Select(m => new MedioPagoResumenDto { MedioPago = m.MedioPago, MontoEsperado = m.Monto })

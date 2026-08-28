@@ -86,7 +86,7 @@ public class DashboardRepository : IDashboardRepository
                 -- (ayuda a cuadrar caja sin importar si el documento es fiscal o no)
                 COALESCE(SUM(
                     CASE WHEN c.tipoComprobante IN ('01','03','NV')
-                            AND c.estadoSunat NOT IN ('RECHAZADO')
+                            AND c.estadoSunat NOT IN ('RECHAZADO','ANULADO')
                         THEN CASE WHEN c.tipoMoneda = 'USD'
                                 THEN c.totalComisionPagoTarjeta * c.tipoCambio
                                 ELSE c.totalComisionPagoTarjeta END
@@ -98,11 +98,11 @@ public class DashboardRepository : IDashboardRepository
                 SUM(CASE WHEN c.tipoComprobante = '03' THEN 1 ELSE 0 END) AS BoletasEmitidas,
                 SUM(CASE WHEN c.tipoComprobante = '07' THEN 1 ELSE 0 END) AS NotasCreditoEmitidas,
                 SUM(CASE WHEN c.tipoComprobante = '08' THEN 1 ELSE 0 END) AS NotasDebitoEmitidas,
-                SUM(CASE WHEN c.tipoComprobante = 'NV' THEN 1 ELSE 0 END) AS NotasVentaEmitidas,
+                SUM(CASE WHEN c.tipoComprobante = 'NV' AND c.estadoSunat != 'ANULADO' THEN 1 ELSE 0 END) AS NotasVentaEmitidas,
 
                 -- Notas de Venta totales del día
                 COALESCE(SUM(
-                    CASE WHEN c.tipoComprobante = 'NV'
+                    CASE WHEN c.tipoComprobante = 'NV' AND c.estadoSunat != 'ANULADO'
                         THEN CASE WHEN c.tipoMoneda = 'USD'
                                 THEN c.importeTotal * c.tipoCambio
                                 ELSE c.importeTotal END
