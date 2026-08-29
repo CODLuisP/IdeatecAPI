@@ -172,9 +172,11 @@ public class ReportesPdfService : IReportesPdfService
         DateTime? fechaDesde = null, DateTime? fechaHasta = null,
         int? usuarioCreacion = null, string? clienteNumDoc = null)
     {
-        var movimientos = datos.ToList();
+        var todosMovimientosCC = datos.ToList();
+        var movimientosPendientesCC = todosMovimientosCC.Where(x => x.EstadoSunat == "PENDIENTE").ToList();
+        var movimientos = todosMovimientosCC.Where(x => x.EstadoSunat != "PENDIENTE").ToList();
         var filtros = Filtros(ruc, codEstablecimiento, fechaDesde, fechaHasta, usuarioCreacion, clienteNumDoc);
-        bool tieneComisionCC = movimientos.Any(x => (x.TotalComisionPagoTarjeta ?? 0) > 0);
+        bool tieneComisionCC = todosMovimientosCC.Any(x => (x.TotalComisionPagoTarjeta ?? 0) > 0);
 
         var doc = Document.Create(container =>
         {
@@ -216,6 +218,19 @@ public class ReportesPdfService : IReportesPdfService
                                 .Text($"Ingresos totales: S/ {ingresosCC:N2}")
                                 .Bold().FontSize(7).FontColor(Azul);
                         });
+                    }
+
+                    // ── Comprobantes pendientes (solo si hay) ─────────────────
+                    if (movimientosPendientesCC.Any())
+                    {
+                        col.Item().PaddingTop(10).Background("#E07B00").Padding(3)
+                            .Text("COMPROBANTES PENDIENTES (no enviados a SUNAT)")
+                            .Bold().FontSize(8).FontColor(Blanco);
+                        col.Item().Table(table => BuildTablaCC(table, movimientosPendientesCC,
+                            "", "#FFF2CC", "#E07B00", fontSize: 7, pad: 2));
+                        col.Item().PaddingTop(3)
+                            .Text("Estos comprobantes están registrados en el sistema pero aún no han sido enviados a SUNAT. No tienen efecto tributario confirmado.")
+                            .Italic().FontSize(7).FontColor("#7F4000");
                     }
                 });
 

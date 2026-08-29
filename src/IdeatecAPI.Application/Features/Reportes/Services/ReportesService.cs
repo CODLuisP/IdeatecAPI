@@ -526,7 +526,7 @@ public class ReportesService : IReportesService
             var itemsPdf = comprobantes.Select(c =>
             {
                 // PENDIENTES, ANULADOS y RECHAZADOS no afectan el total del reporte de caja.
-                var noAfectaTotal = c.EstadoSunat is "RECHAZADO" or "ANULADO" or "PENDIENTE";
+                var noAfectaTotal = c.EstadoSunat is "RECHAZADO";
                 return new ControlCajaTicketItemDto
                 {
                     ComprobanteId         = c.ComprobanteId,

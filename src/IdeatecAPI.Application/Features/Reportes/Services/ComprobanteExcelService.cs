@@ -456,8 +456,10 @@ public Task<byte[]> ExportarListadoReportesAsync(
         int? usuarioCreacion = null,
         string? clienteNumDoc = null)
     {
-        var movimientos = datos.ToList();
-        bool tieneComisionCaja = movimientos.Any(x => (x.TotalComisionPagoTarjeta ?? 0) > 0);
+        var todosMovimientos = datos.ToList();
+        var movimientosPendientes = todosMovimientos.Where(x => x.EstadoSunat == "PENDIENTE").ToList();
+        var movimientos = todosMovimientos.Where(x => x.EstadoSunat != "PENDIENTE").ToList();
+        bool tieneComisionCaja = todosMovimientos.Any(x => (x.TotalComisionPagoTarjeta ?? 0) > 0);
         int totalColsCaja = tieneComisionCaja ? 15 : 14;
 
         using var wb = new XLWorkbook();
@@ -570,6 +572,43 @@ public Task<byte[]> ExportarListadoReportesAsync(
                 .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
         }
 
+        // ═════════════════════════════════════════════════════════════════════════
+        // SECCIÓN — Comprobantes pendientes (no enviados a SUNAT)
+        // ═════════════════════════════════════════════════════════════════════════
+        if (movimientosPendientes.Any())
+        {
+            filaActual += 2;
+            ws.Cell(filaActual, 1).Value = "COMPROBANTES PENDIENTES (no enviados a SUNAT)";
+            ws.Range(filaActual, 1, filaActual, totalColsCaja).Merge();
+            ws.Cell(filaActual, 1).Style
+                .Font.SetBold(true)
+                .Font.SetFontSize(10)
+                .Font.SetFontColor(XLColor.White)
+                .Fill.SetBackgroundColor(XLColor.FromHtml("#E07B00"))
+                .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Left);
+            filaActual++;
+
+            SetHeaders(ws, filaActual, headers);
+            filaActual++;
+
+            foreach (var item in movimientosPendientes)
+            {
+                EscribirFilaControlCaja(ws, filaActual, item, movimientosPendientes.IndexOf(item), tieneComisionCaja);
+                filaActual++;
+            }
+
+            ws.Cell(filaActual, 1).Value = "Estos comprobantes están registrados en el sistema pero aún no han sido enviados a SUNAT. No tienen efecto tributario confirmado.";
+            ws.Range(filaActual, 1, filaActual, totalColsCaja).Merge();
+            ws.Cell(filaActual, 1).Style
+                .Font.SetItalic(true)
+                .Font.SetFontSize(8)
+                .Font.SetFontColor(XLColor.FromHtml("#7F4000"))
+                .Fill.SetBackgroundColor(XLColor.FromHtml("#FFF2CC"))
+                .Alignment.SetWrapText(true);
+            ws.Row(filaActual).Height = 28;
+            filaActual++;
+        }
+
         // ── Ancho columnas ────────────────────────────────────────────────────────
         ws.Column(1).Width = 10;  ws.Column(2).Width = 14;
         ws.Column(3).Width = 12;  ws.Column(4).Width = 14;
@@ -607,7 +646,7 @@ public Task<byte[]> ExportarListadoReportesAsync(
             Math.Round(v * t, 2);
         // PENDIENTES, ANULADOS y RECHAZADOS no afectan el total del reporte (ver nota impresa
         // más abajo); se muestran en 0 para que la fórmula SUM del total los ignore.
-        var noAfectaTotal = esRechazado2 || item.EstadoSunat == "ANULADO" || item.EstadoSunat == "PENDIENTE";
+        var noAfectaTotal = esRechazado2;
         var valorVenta = noAfectaTotal ? 0 : Conv2((item.TipoComprobante == "07" ? -item.ValorVenta   : item.ValorVenta),   tc2, esUsd2);
         var igv        = noAfectaTotal ? 0 : Conv2((item.TipoComprobante == "07" ? -item.TotalIGV     : item.TotalIGV),     tc2, esUsd2);
         var importe    = noAfectaTotal ? 0 : Conv2((item.TipoComprobante == "07" ? -item.ImporteTotal : item.ImporteTotal), tc2, esUsd2);
