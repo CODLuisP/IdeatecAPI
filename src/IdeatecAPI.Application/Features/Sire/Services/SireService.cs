@@ -317,6 +317,8 @@ public class SireService : ISireService
 
             var campos = linea.Split('|');
             if (campos.Length < 35) continue;
+            // Fila de encabezado del TXT de SUNAT: el campo 1 (RUC emisor) no es numérico de 11 dígitos
+            if (campos[0].Length != 11 || !campos[0].All(char.IsDigit)) continue;
 
             comprobantes.Add(new SireComprobanteDto
             {
@@ -334,9 +336,12 @@ public class SireService : ISireService
                 RazonSocialCliente = campos[12],  // campo 13: Apellidos Nombres/Razón Social
                 BaseImponible = ParseDecimal(campos[14]), // campo 15: BI Gravada
                 Igv = ParseDecimal(campos[16]),           // campo 17: IGV/IPM
+                MtoExonerado = ParseDecimal(campos[18]),  // campo 19: Mto Exonerado
+                MtoInafecto = ParseDecimal(campos[19]),   // campo 20: Mto Inafecto
                 ImporteTotal = ParseDecimal(campos[25]),  // campo 26: Total CP
                 CodMoneda = campos[26],                   // campo 27: Moneda
                 TipoCambio = ParseDecimal(campos[27]),    // campo 28: Tipo Cambio
+                FechaEmisionDocModificado = campos.Length > 28 && !string.IsNullOrWhiteSpace(campos[28]) ? campos[28] : null, // campo 29
                 // Campo 35 "Est. Comp" (estado del comprobante). La RS 112-2021 no publica los códigos
                 // de este campo para el RVIE, pero el Anexo N°1 modificado por la RS 040-2022/SUNAT sí
                 // los documenta para el campo equivalente del RCE (Tabla 14 "Estado de Validez de

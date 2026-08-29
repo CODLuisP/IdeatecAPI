@@ -52,11 +52,14 @@ public class SireComprobanteDto
     public string? RazonSocialCliente { get; set; }
     public decimal BaseImponible { get; set; }
     public decimal Igv { get; set; }
+    public decimal MtoExonerado { get; set; }
+    public decimal MtoInafecto { get; set; }
     public decimal ImporteTotal { get; set; }
     public bool Activo { get; set; }
     public decimal? TipoCambio { get; set; }
     public string? CodMoneda { get; set; }
     public string? Inconsistencias { get; set; }
+    public string? FechaEmisionDocModificado { get; set; }
 }
 
 public class SireDescargarPropuestaResponse
