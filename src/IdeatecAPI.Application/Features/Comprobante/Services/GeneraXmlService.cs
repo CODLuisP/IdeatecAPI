@@ -85,7 +85,9 @@ public class GeneraXmlService : IComprobanteXmlService
                 dto.TipoComprobante),
             // LEYENDAS
             dto.Legends?.Select(l =>
-                new XElement(Cbc + "Note", l.Value)
+                !string.IsNullOrEmpty(l.Code)
+                    ? new XElement(Cbc + "Note", new XAttribute("languageLocaleID", l.Code), l.Value)
+                    : new XElement(Cbc + "Note", l.Value)
             ),
             new XElement(Cbc + "DocumentCurrencyCode",
                 new XAttribute("listID", "ISO 4217 Alpha"),
