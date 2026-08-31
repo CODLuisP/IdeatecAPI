@@ -495,8 +495,8 @@ public class InventarioLoteRepository : DapperRepository<InventarioLote>, IInven
         // (facture o no) cuente como ingreso.
         // Nota: en productos tipo paquete, el costo PEPS queda registrado en el producto BASE
         // (por diseño, el stock/lotes viven ahí), mientras que la venta se registra sobre el
-        // productoId del paquete — para esos casos el cruce de ingreso no calza con el costo,
-        // así que el paquete puede no verse en este reporte hasta que se trate ese caso aparte.
+        // productoId del paquete. Por eso el subquery de ingreso remapea cada venta de un
+        // paquete (productoBaseId no nulo) hacia su producto base antes de cruzar con el Kardex.
         var sql = @"
             SELECT
                 sp.productoID                    AS ProductoId,
@@ -514,14 +514,15 @@ public class InventarioLoteRepository : DapperRepository<InventarioLote>, IInven
             -- movimiento original y su reversión para trazabilidad.
             INNER JOIN comprobante cv ON cv.comprobanteID = km.referenciaID AND cv.estadoSunat <> 'ANULADO'
             LEFT JOIN (
-                SELECT cd.comprobanteId, cd.productoId, SUM(cd.totalVentaItem) AS ingreso
+                SELECT cd.comprobanteId, COALESCE(vp.productoBaseId, cd.productoId) AS productoId, SUM(cd.totalVentaItem) AS ingreso
                 FROM comprobantedetalle cd
                 INNER JOIN comprobante c ON c.comprobanteID = cd.comprobanteId
+                INNER JOIN producto vp ON vp.productoID = cd.productoId
                 WHERE (
                     (c.tipoComprobante <> 'NV' AND c.estadoSunat IN ('ACEPTADO', 'ACEPTADO_CON_OBSERVACIONES', 'PENDIENTE'))
                     OR (c.tipoComprobante = 'NV' AND c.estadoSunat = 'NO_APLICA')
                 )
-                GROUP BY cd.comprobanteId, cd.productoId
+                GROUP BY cd.comprobanteId, COALESCE(vp.productoBaseId, cd.productoId)
             ) ventas ON ventas.comprobanteId = km.referenciaID AND ventas.productoId = sp.productoID
             WHERE km.tipoMovimiento = 'SALIDA_VENTA'
             AND km.referenciaTipo = 'COMPROBANTE'
@@ -548,14 +549,15 @@ public class InventarioLoteRepository : DapperRepository<InventarioLote>, IInven
             -- Excluye comprobantes anulados del gráfico, igual que en GetRentabilidadPorProductoAsync.
             INNER JOIN comprobante cv ON cv.comprobanteID = km.referenciaID AND cv.estadoSunat <> 'ANULADO'
             LEFT JOIN (
-                SELECT cd.comprobanteId, cd.productoId, SUM(cd.totalVentaItem) AS ingreso
+                SELECT cd.comprobanteId, COALESCE(vp.productoBaseId, cd.productoId) AS productoId, SUM(cd.totalVentaItem) AS ingreso
                 FROM comprobantedetalle cd
                 INNER JOIN comprobante c ON c.comprobanteID = cd.comprobanteId
+                INNER JOIN producto vp ON vp.productoID = cd.productoId
                 WHERE (
                     (c.tipoComprobante <> 'NV' AND c.estadoSunat IN ('ACEPTADO', 'ACEPTADO_CON_OBSERVACIONES', 'PENDIENTE'))
                     OR (c.tipoComprobante = 'NV' AND c.estadoSunat = 'NO_APLICA')
                 )
-                GROUP BY cd.comprobanteId, cd.productoId
+                GROUP BY cd.comprobanteId, COALESCE(vp.productoBaseId, cd.productoId)
             ) ventas ON ventas.comprobanteId = km.referenciaID
                 AND ventas.productoId = (SELECT sp.productoID FROM sucursalproducto sp WHERE sp.sucursalProductoID = km.sucursalProductoID)
             WHERE km.tipoMovimiento = 'SALIDA_VENTA'
@@ -582,14 +584,15 @@ public class InventarioLoteRepository : DapperRepository<InventarioLote>, IInven
             INNER JOIN sucursalproducto sp ON sp.sucursalProductoID = km.sucursalProductoID
             INNER JOIN comprobante cv ON cv.comprobanteID = km.referenciaID AND cv.estadoSunat <> 'ANULADO'
             LEFT JOIN (
-                SELECT cd.comprobanteId, cd.productoId, SUM(cd.totalVentaItem) AS ingreso
+                SELECT cd.comprobanteId, COALESCE(vp.productoBaseId, cd.productoId) AS productoId, SUM(cd.totalVentaItem) AS ingreso
                 FROM comprobantedetalle cd
                 INNER JOIN comprobante c ON c.comprobanteID = cd.comprobanteId
+                INNER JOIN producto vp ON vp.productoID = cd.productoId
                 WHERE (
                     (c.tipoComprobante <> 'NV' AND c.estadoSunat IN ('ACEPTADO', 'ACEPTADO_CON_OBSERVACIONES', 'PENDIENTE'))
                     OR (c.tipoComprobante = 'NV' AND c.estadoSunat = 'NO_APLICA')
                 )
-                GROUP BY cd.comprobanteId, cd.productoId
+                GROUP BY cd.comprobanteId, COALESCE(vp.productoBaseId, cd.productoId)
             ) ventas ON ventas.comprobanteId = km.referenciaID AND ventas.productoId = sp.productoID
             WHERE km.tipoMovimiento = 'SALIDA_VENTA'
             AND km.referenciaTipo = 'COMPROBANTE'
