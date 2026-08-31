@@ -1027,16 +1027,17 @@ public class ReportesRepository : IReportesRepository
             INNER JOIN comprobante cv ON cv.comprobanteID = km.referenciaID
                 AND cv.estadoSunat NOT IN ('ANULADO','RECHAZADO')
             LEFT JOIN (
-                SELECT cd.comprobanteId, cd.productoId,
+                SELECT cd.comprobanteId, COALESCE(vp.productoBaseId, cd.productoId) AS productoId,
                     SUM(CASE WHEN c.tipoMoneda = 'USD' THEN cd.totalVentaItem * {TcEfectivo("c")}
                         ELSE cd.totalVentaItem END) AS ingreso
                 FROM comprobantedetalle cd
                 INNER JOIN comprobante c ON c.comprobanteID = cd.comprobanteId
+                INNER JOIN producto vp ON vp.productoID = cd.productoId
                 WHERE (
                     (c.tipoComprobante <> 'NV' AND c.estadoSunat IN ('ACEPTADO','ACEPTADO_CON_OBSERVACIONES','PENDIENTE'))
                     OR (c.tipoComprobante = 'NV' AND c.estadoSunat = 'NO_APLICA')
                 )
-                GROUP BY cd.comprobanteId, cd.productoId
+                GROUP BY cd.comprobanteId, COALESCE(vp.productoBaseId, cd.productoId)
             ) v ON v.comprobanteId = km.referenciaID AND v.productoId = sp.productoID
             WHERE km.tipoMovimiento = 'SALIDA_VENTA'
             AND km.referenciaTipo = 'COMPROBANTE'
