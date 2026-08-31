@@ -457,18 +457,23 @@ public class ProductoService : IProductoService
                 stockConocido[sucursalProductoDestino] = info?.Stock;
             }
 
-            // Si el mismo producto aparece en varias lineas, se descuenta una sola vez por el total.
+            // El UPDATE de stock si se hace en un solo total por destino (no importa cuántas
+            // líneas lo originaron, el descuento físico es el mismo de todas formas).
             descuentos[sucursalProductoDestino] = descuentos.GetValueOrDefault(sucursalProductoDestino) + cantidadDestino;
 
-            // El consumo PEPS ocurre sobre los lotes del destino, que en el caso del paquete
-            // es el producto BASE (quien tiene costo y lotes reales).
+            // El consumo PEPS, en cambio, NO se fusiona: cada línea de venta (comprobantedetalle)
+            // genera su propio movimiento de kardex con su propio ComprobanteDetalleId, aunque
+            // varias líneas terminen en el mismo SucursalProductoId destino (p.ej. unidades sueltas
+            // + un paquete del mismo producto base). ConsumirFifoBatchAsync ya soporta que el mismo
+            // destino aparezca más de una vez: consume los lotes en el orden en que llegan.
             consumos.Add(new ConsumoPepsRequestDTO
             {
                 SucursalProductoId = sucursalProductoDestino,
                 Cantidad = cantidadDestino,
                 TipoMovimiento = tipoMovimiento,
                 ReferenciaTipo = dto.ReferenciaTipo,
-                ReferenciaId = dto.ReferenciaId
+                ReferenciaId = dto.ReferenciaId,
+                ComprobanteDetalleId = dto.ComprobanteDetalleId
             });
         }
 

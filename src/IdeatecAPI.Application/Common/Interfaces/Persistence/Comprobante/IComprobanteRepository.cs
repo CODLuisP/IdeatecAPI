@@ -59,4 +59,6 @@ public interface IComprobanteRepository : IRepository<Comprobante>
     Task<AsignacionSerieDTO?> AsignarSerieYCorrelativoAsync(string empresaRuc, string codEstablecimiento, string tipoComprobante);
     Task<IEnumerable<Comprobante>> GetNotasByComprobanteAfectadoIdAsync(int comprobanteAfectadoId, string tipoComprobante);
     Task<IEnumerable<Comprobante>> GetNotasVentaBySucursalAsync(string empresaRuc, string codEstablecimiento, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null);
+    /// <summary>Mapa item (número de línea) → detalleID, para atar cada movimiento de kardex a su línea de venta exacta justo después de insertar el comprobante.</summary>
+    Task<IReadOnlyDictionary<int, int>> GetItemDetalleIdMapAsync(int comprobanteId);
 }

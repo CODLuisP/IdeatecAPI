@@ -6,6 +6,7 @@ public class RentabilidadProductoDTO
     public int SucursalProductoId { get; set; }
     public string? NomProducto { get; set; }
     public string? Codigo { get; set; }
+    public bool EsPaquete { get; set; }
     public decimal CantidadVendida { get; set; }
     public decimal IngresoVentas { get; set; }
     public decimal CostoVentas { get; set; }

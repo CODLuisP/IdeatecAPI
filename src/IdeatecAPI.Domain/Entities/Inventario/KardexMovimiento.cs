@@ -6,6 +6,9 @@ public class KardexMovimiento
     public string TipoMovimiento { get; set; } = string.Empty;
     public string? ReferenciaTipo { get; set; }
     public int? ReferenciaId { get; set; }
+    // Línea de comprobantedetalle que originó este movimiento (NULL en movimientos previos
+    // a este campo, o en movimientos que no vienen de una venta con detalle, p.ej. ajustes).
+    public int? ComprobanteDetalleId { get; set; }
     public decimal Cantidad { get; set; }
     public decimal? CostoUnitarioPromedio { get; set; }
     public decimal? CostoTotal { get; set; }

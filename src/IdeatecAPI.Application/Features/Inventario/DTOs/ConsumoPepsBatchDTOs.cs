@@ -11,6 +11,7 @@ public class ConsumoPepsRequestDTO
     public string TipoMovimiento { get; set; } = "SALIDA_VENTA";
     public string? ReferenciaTipo { get; set; }
     public int? ReferenciaId { get; set; }
+    public int? ComprobanteDetalleId { get; set; }
 }
 
 // Saldo acumulado de los lotes de un producto, leído en bloque para todos los productos

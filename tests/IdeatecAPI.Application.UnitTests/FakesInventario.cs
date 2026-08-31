@@ -138,12 +138,12 @@ internal sealed class FakeInventarioLoteRepository : IInventarioLoteRepository
     public Task<decimal> GetSaldoCantidadLotesAsync(int sucursalProductoId) => NoUsado<Task<decimal>>();
     public Task<IEnumerable<InventarioLote>> GetSaldoValorizadoSucursalAsync(int sucursalId) => NoUsado<Task<IEnumerable<InventarioLote>>>();
     public Task<KardexMovimiento> RegistrarMovimientoAsync(KardexMovimiento movimiento, IEnumerable<KardexMovimientoLote> detalleLotes) => NoUsado<Task<KardexMovimiento>>();
-    public Task<IEnumerable<KardexMovimiento>> GetKardexAsync(int sucursalProductoId, DateTime? desde, DateTime? hasta) => NoUsado<Task<IEnumerable<KardexMovimiento>>>();
+    public Task<IEnumerable<KardexMovimientoResuelto>> GetKardexAsync(int sucursalProductoId, int? productoId, DateTime? desde, DateTime? hasta) => NoUsado<Task<IEnumerable<KardexMovimientoResuelto>>>();
     public Task<bool> ExisteLoteSaldoInicialAsync(int sucursalProductoId) => NoUsado<Task<bool>>();
     public Task<KardexMovimiento?> GetUltimoMovimientoSalidaPorReferenciaAsync(string referenciaTipo, int referenciaId, int sucursalProductoId) => NoUsado<Task<KardexMovimiento?>>();
     public Task<IEnumerable<KardexMovimiento>> GetMovimientosPorReferenciaAsync(string referenciaTipo, int referenciaId) => NoUsado<Task<IEnumerable<KardexMovimiento>>>();
     public Task<IEnumerable<RentabilidadProductoDTO>> GetRentabilidadPorProductoAsync(int sucursalId, DateTime? desde, DateTime? hasta) => NoUsado<Task<IEnumerable<RentabilidadProductoDTO>>>();
-    public Task<IEnumerable<RentabilidadDiariaDTO>> GetRentabilidadDiariaAsync(int sucursalProductoId, DateTime? desde, DateTime? hasta) => NoUsado<Task<IEnumerable<RentabilidadDiariaDTO>>>();
+    public Task<IEnumerable<RentabilidadDiariaDTO>> GetRentabilidadDiariaAsync(int sucursalId, int productoId, DateTime? desde, DateTime? hasta) => NoUsado<Task<IEnumerable<RentabilidadDiariaDTO>>>();
     public Task<RentabilidadDiariaDTO> GetRentabilidadDiaSucursalAsync(int sucursalId, DateTime desde, DateTime hasta, int? usuarioId) => NoUsado<Task<RentabilidadDiariaDTO>>();
     public Task<IEnumerable<InventarioLote>> GetByCompraProveedorIdAsync(int compraProveedorId) => NoUsado<Task<IEnumerable<InventarioLote>>>();
     public Task<InventarioLote?> GetPorIdAsync(int inventarioLoteId) => NoUsado<Task<InventarioLote?>>();

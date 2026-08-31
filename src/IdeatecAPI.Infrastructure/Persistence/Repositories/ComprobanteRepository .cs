@@ -534,6 +534,19 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
             sql, new { ComprobanteId = comprobanteId }, _transaction);
     }
 
+    public async Task<IReadOnlyDictionary<int, int>> GetItemDetalleIdMapAsync(int comprobanteId)
+    {
+        var sql = @"
+            SELECT item AS Item, detalleID AS DetalleId
+            FROM comprobantedetalle
+            WHERE comprobanteId = @ComprobanteId";
+
+        var filas = await _connection.QueryAsync<(int Item, int DetalleId)>(
+            sql, new { ComprobanteId = comprobanteId }, _transaction);
+
+        return filas.ToDictionary(f => f.Item, f => f.DetalleId);
+    }
+
     public async Task<IEnumerable<Cuota>> GetCuotasByIdAsync(int comprobanteId)
     {
         var sql = @"

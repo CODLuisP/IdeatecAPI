@@ -549,10 +549,17 @@ public class ComprobanteService : IComprobanteService
             // Evita que se emita una venta sin respaldo de stock (sobreventa).
             if (dto.StockItems is { Count: > 0 })
             {
+                // Resuelve, en un solo viaje, a qué detalleID quedó cada línea recién
+                // insertada, para que el kardex pueda distinguir (p.ej.) la venta de un
+                // paquete de la venta de su producto base en vez de fusionarlas.
+                var itemADetalleId = await _unitOfWork.Comprobantes.GetItemDetalleIdMapAsync(newComprobanteId);
+
                 foreach (var it in dto.StockItems)
                 {
                     it.ReferenciaTipo = "COMPROBANTE";
                     it.ReferenciaId = newComprobanteId;
+                    if (it.Item is int item && itemADetalleId.TryGetValue(item, out var detalleId))
+                        it.ComprobanteDetalleId = detalleId;
                 }
                 await _productoService.DescontarStockEnTransaccionAsync(dto.StockItems, "SALIDA_VENTA");
             }

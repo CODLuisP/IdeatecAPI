@@ -31,12 +31,14 @@ public interface IInventarioLoteRepository : IRepository<InventarioLote>
     Task<int> AplicarConsumoPepsAsync(
         IReadOnlyDictionary<int, decimal> consumoPorLote,
         IReadOnlyList<KardexMovimientoConDetalle> movimientos);
-    Task<IEnumerable<KardexMovimiento>> GetKardexAsync(int sucursalProductoId, DateTime? desde, DateTime? hasta);
+    // productoId (opcional) filtra a solo las líneas atribuibles a ese producto (útil para ver
+    // el kardex de un paquete específico, que comparte sucursalProductoId con su producto base).
+    Task<IEnumerable<KardexMovimientoResuelto>> GetKardexAsync(int sucursalProductoId, int? productoId, DateTime? desde, DateTime? hasta);
     Task<bool> ExisteLoteSaldoInicialAsync(int sucursalProductoId);
     Task<KardexMovimiento?> GetUltimoMovimientoSalidaPorReferenciaAsync(string referenciaTipo, int referenciaId, int sucursalProductoId);
     Task<IEnumerable<KardexMovimiento>> GetMovimientosPorReferenciaAsync(string referenciaTipo, int referenciaId);
     Task<IEnumerable<RentabilidadProductoDTO>> GetRentabilidadPorProductoAsync(int sucursalId, DateTime? desde, DateTime? hasta);
-    Task<IEnumerable<RentabilidadDiariaDTO>> GetRentabilidadDiariaAsync(int sucursalProductoId, DateTime? desde, DateTime? hasta);
+    Task<IEnumerable<RentabilidadDiariaDTO>> GetRentabilidadDiariaAsync(int sucursalId, int productoId, DateTime? desde, DateTime? hasta);
     /// <summary>Utilidad bruta de toda la sucursal en una ventana de tiempo, opcionalmente de un solo usuario. Para el corte de caja.</summary>
     Task<RentabilidadDiariaDTO> GetRentabilidadDiaSucursalAsync(int sucursalId, DateTime desde, DateTime hasta, int? usuarioId);
     Task<IEnumerable<InventarioLote>> GetByCompraProveedorIdAsync(int compraProveedorId);

@@ -19,15 +19,18 @@ public class InventarioController : ControllerBase
         _logger = logger;
     }
 
-    // GET api/inventario/kardex/{sucursalProductoId}?desde=&hasta=
+    // GET api/inventario/kardex/{sucursalProductoId}?productoId=&desde=&hasta=
+    // productoId (opcional) filtra a solo las líneas de ese producto: un paquete comparte
+    // sucursalProductoId con su producto base (no tiene lotes propios), así que sin este
+    // filtro ver el kardex de un paquete específico mostraría todo el kardex del base.
     [HttpGet("kardex/{sucursalProductoId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetKardexAsync(int sucursalProductoId, [FromQuery] DateTime? desde, [FromQuery] DateTime? hasta)
+    public async Task<IActionResult> GetKardexAsync(int sucursalProductoId, [FromQuery] int? productoId, [FromQuery] DateTime? desde, [FromQuery] DateTime? hasta)
     {
         try
         {
-            var kardex = await _inventarioPepsService.GetKardexAsync(sucursalProductoId, desde, hasta);
+            var kardex = await _inventarioPepsService.GetKardexAsync(sucursalProductoId, productoId, desde, hasta);
             return Ok(kardex ?? []);
         }
         catch (Exception ex)
@@ -107,20 +110,22 @@ public class InventarioController : ControllerBase
         }
     }
 
-    // GET api/inventario/rentabilidad/producto/{sucursalProductoId}/detalle?desde=&hasta=
-    [HttpGet("rentabilidad/producto/{sucursalProductoId:int}/detalle")]
+    // GET api/inventario/rentabilidad/sucursal/{sucursalId}/producto/{productoId}/detalle?desde=&hasta=
+    // productoId (no sucursalProductoId) identifica la fila: tras separar la venta de un paquete
+    // de su producto base, ambos pueden compartir el mismo sucursalProductoID destino.
+    [HttpGet("rentabilidad/sucursal/{sucursalId:int}/producto/{productoId:int}/detalle")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetRentabilidadDiariaAsync(int sucursalProductoId, [FromQuery] DateTime? desde, [FromQuery] DateTime? hasta)
+    public async Task<IActionResult> GetRentabilidadDiariaAsync(int sucursalId, int productoId, [FromQuery] DateTime? desde, [FromQuery] DateTime? hasta)
     {
         try
         {
-            var detalle = await _inventarioPepsService.GetRentabilidadDiariaAsync(sucursalProductoId, desde, hasta);
+            var detalle = await _inventarioPepsService.GetRentabilidadDiariaAsync(sucursalId, productoId, desde, hasta);
             return Ok(detalle ?? []);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error al obtener el detalle diario de rentabilidad del SucursalProductoId {SucursalProductoId}", sucursalProductoId);
+            _logger.LogError(ex, "Error al obtener el detalle diario de rentabilidad del ProductoId {ProductoId} en la sucursal {SucursalId}", productoId, sucursalId);
             return StatusCode(StatusCodes.Status500InternalServerError, new
             {
                 mensaje = "Ocurrió un error al obtener el detalle de rentabilidad.",

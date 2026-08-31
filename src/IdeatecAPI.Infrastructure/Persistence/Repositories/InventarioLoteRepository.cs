@@ -206,10 +206,10 @@ public class InventarioLoteRepository : DapperRepository<InventarioLote>, IInven
     {
         var sqlHeader = @"
             INSERT INTO kardex_movimiento
-                (sucursalProductoID, tipoMovimiento, referenciaTipo, referenciaID, cantidad,
+                (sucursalProductoID, tipoMovimiento, referenciaTipo, referenciaID, comprobanteDetalleID, cantidad,
                  costoUnitarioPromedio, costoTotal, saldoCantidadPost, saldoValorPost, fechaMovimiento, idUsuario)
             VALUES
-                (@SucursalProductoId, @TipoMovimiento, @ReferenciaTipo, @ReferenciaId, @Cantidad,
+                (@SucursalProductoId, @TipoMovimiento, @ReferenciaTipo, @ReferenciaId, @ComprobanteDetalleId, @Cantidad,
                  @CostoUnitarioPromedio, @CostoTotal, @SaldoCantidadPost, @SaldoValorPost, @FechaMovimiento, @IdUsuario);
             SELECT LAST_INSERT_ID();";
 
@@ -257,14 +257,14 @@ public class InventarioLoteRepository : DapperRepository<InventarioLote>, IInven
         var sqlCabeceras = ConstruirInsertMasivo(
             "kardex_movimiento",
             [
-                "sucursalProductoID", "tipoMovimiento", "referenciaTipo", "referenciaID", "cantidad",
+                "sucursalProductoID", "tipoMovimiento", "referenciaTipo", "referenciaID", "comprobanteDetalleID", "cantidad",
                 "costoUnitarioPromedio", "costoTotal", "saldoCantidadPost", "saldoValorPost", "fechaMovimiento", "idUsuario"
             ],
             [.. movimientos],
             m =>
             [
                 m.Movimiento.SucursalProductoId, m.Movimiento.TipoMovimiento, m.Movimiento.ReferenciaTipo,
-                m.Movimiento.ReferenciaId, m.Movimiento.Cantidad, m.Movimiento.CostoUnitarioPromedio,
+                m.Movimiento.ReferenciaId, m.Movimiento.ComprobanteDetalleId, m.Movimiento.Cantidad, m.Movimiento.CostoUnitarioPromedio,
                 m.Movimiento.CostoTotal, m.Movimiento.SaldoCantidadPost, m.Movimiento.SaldoValorPost,
                 m.Movimiento.FechaMovimiento, m.Movimiento.IdUsuario
             ],
@@ -342,6 +342,7 @@ public class InventarioLoteRepository : DapperRepository<InventarioLote>, IInven
                 parametros.Add($"tm{i}", m.TipoMovimiento);
                 parametros.Add($"rt{i}", m.ReferenciaTipo);
                 parametros.Add($"ri{i}", m.ReferenciaId);
+                parametros.Add($"cd{i}", m.ComprobanteDetalleId);
                 parametros.Add($"ca{i}", m.Cantidad);
                 parametros.Add($"cu{i}", m.CostoUnitarioPromedio);
                 parametros.Add($"ct{i}", m.CostoTotal);
@@ -350,7 +351,7 @@ public class InventarioLoteRepository : DapperRepository<InventarioLote>, IInven
                 parametros.Add($"fm{i}", m.FechaMovimiento);
                 parametros.Add($"iu{i}", m.IdUsuario);
 
-                tuplas.Add($"(@sp{i}, @tm{i}, @rt{i}, @ri{i}, @ca{i}, @cu{i}, @ct{i}, @sc{i}, @sv{i}, @fm{i}, @iu{i})");
+                tuplas.Add($"(@sp{i}, @tm{i}, @rt{i}, @ri{i}, @cd{i}, @ca{i}, @cu{i}, @ct{i}, @sc{i}, @sv{i}, @fm{i}, @iu{i})");
             }
 
             // MySQL asigna IDs consecutivos a las filas de un unico INSERT multi-fila y
@@ -358,7 +359,7 @@ public class InventarioLoteRepository : DapperRepository<InventarioLote>, IInven
             // releer la tabla. ROW_COUNT() confirma que entraron todas antes de usarlos.
             var sql = $@"
                 INSERT INTO kardex_movimiento
-                    (sucursalProductoID, tipoMovimiento, referenciaTipo, referenciaID, cantidad,
+                    (sucursalProductoID, tipoMovimiento, referenciaTipo, referenciaID, comprobanteDetalleID, cantidad,
                      costoUnitarioPromedio, costoTotal, saldoCantidadPost, saldoValorPost, fechaMovimiento, idUsuario)
                 VALUES {string.Join(", ", tuplas)};
                 SELECT LAST_INSERT_ID() AS PrimerId, ROW_COUNT() AS Filas;";
@@ -393,7 +394,35 @@ public class InventarioLoteRepository : DapperRepository<InventarioLote>, IInven
         return [.. movimientos.Select(m => m.Movimiento)];
     }
 
-    public async Task<IEnumerable<KardexMovimiento>> GetKardexAsync(int sucursalProductoId, DateTime? desde, DateTime? hasta)
+    // Fila cruda de GetKardexAsync: cabecera del kardex (ledger físico, en unidades base)
+    // más la resolución de qué se vendió realmente en esa línea, igual que en
+    // RentabilidadFilasSql. Se mapea a mano (no con multi-mapping de Dapper) porque casi
+    // todas las columnas van al mismo nivel plano.
+    private sealed class KardexFilaCruda
+    {
+        public int KardexMovimientoId { get; set; }
+        public int SucursalProductoId { get; set; }
+        public string TipoMovimiento { get; set; } = string.Empty;
+        public string? ReferenciaTipo { get; set; }
+        public int? ReferenciaId { get; set; }
+        public int? ComprobanteDetalleId { get; set; }
+        public decimal Cantidad { get; set; }
+        public decimal? CostoUnitarioPromedio { get; set; }
+        public decimal? CostoTotal { get; set; }
+        public decimal SaldoCantidadPost { get; set; }
+        public decimal SaldoValorPost { get; set; }
+        public DateTime FechaMovimiento { get; set; }
+        public int? IdUsuario { get; set; }
+        public int LotesConsumidos { get; set; }
+        public int? ProductoId { get; set; }
+        public string? NomProducto { get; set; }
+        public string? Codigo { get; set; }
+        public bool EsPaquete { get; set; }
+        public decimal? CantidadVenta { get; set; }
+        public decimal? CostoVenta { get; set; }
+    }
+
+    public async Task<IEnumerable<KardexMovimientoResuelto>> GetKardexAsync(int sucursalProductoId, int? productoId, DateTime? desde, DateTime? hasta)
     {
         var sql = @"
             SELECT
@@ -402,6 +431,7 @@ public class InventarioLoteRepository : DapperRepository<InventarioLote>, IInven
                 km.tipoMovimiento        AS TipoMovimiento,
                 km.referenciaTipo        AS ReferenciaTipo,
                 km.referenciaID          AS ReferenciaId,
+                km.comprobanteDetalleID  AS ComprobanteDetalleId,
                 km.cantidad              AS Cantidad,
                 km.costoUnitarioPromedio AS CostoUnitarioPromedio,
                 km.costoTotal            AS CostoTotal,
@@ -409,14 +439,55 @@ public class InventarioLoteRepository : DapperRepository<InventarioLote>, IInven
                 km.saldoValorPost        AS SaldoValorPost,
                 km.fechaMovimiento       AS FechaMovimiento,
                 km.idUsuario             AS IdUsuario,
-                (SELECT COUNT(*) FROM kardex_movimiento_lote kml WHERE kml.kardexMovimientoID = km.kardexMovimientoID) AS LotesConsumidos
+                (SELECT COUNT(*) FROM kardex_movimiento_lote kml WHERE kml.kardexMovimientoID = km.kardexMovimientoID) AS LotesConsumidos,
+                COALESCE(cd.productoId, sp.productoID)         AS ProductoId,
+                COALESCE(pv.nomProducto, pb.nomProducto)       AS NomProducto,
+                COALESCE(pv.codigo, pb.codigo)                 AS Codigo,
+                COALESCE(pv.esPaquete, FALSE)                  AS EsPaquete,
+                COALESCE(cd.cantidad, km.cantidad)             AS CantidadVenta,
+                CASE WHEN pv.esPaquete = TRUE THEN cd.cantidad * COALESCE(sppaq.ultimoPrecioCompra, 0)
+                     ELSE km.costoTotal END                    AS CostoVenta
             FROM kardex_movimiento km
+            INNER JOIN sucursalproducto sp ON sp.sucursalProductoID = km.sucursalProductoID
+            INNER JOIN producto pb ON pb.productoID = sp.productoID
+            LEFT JOIN comprobantedetalle cd ON cd.detalleID = km.comprobanteDetalleID
+            LEFT JOIN producto pv ON pv.productoID = cd.productoId
+            LEFT JOIN sucursalproducto sppaq ON sppaq.productoID = cd.productoId AND sppaq.sucursalID = sp.sucursalID
             WHERE km.sucursalProductoID = @SucursalProductoId
+            AND (@ProductoId IS NULL OR COALESCE(cd.productoId, sp.productoID) = @ProductoId)
             AND (@Desde IS NULL OR km.fechaMovimiento >= @Desde)
             AND (@Hasta IS NULL OR km.fechaMovimiento <= @Hasta)
             ORDER BY km.fechaMovimiento ASC, km.kardexMovimientoID ASC;";
 
-        return await _connection.QueryAsync<KardexMovimiento>(sql, new { SucursalProductoId = sucursalProductoId, Desde = desde, Hasta = FinDeDia(hasta) }, _transaction);
+        var filas = await _connection.QueryAsync<KardexFilaCruda>(
+            sql, new { SucursalProductoId = sucursalProductoId, ProductoId = productoId, Desde = desde, Hasta = FinDeDia(hasta) }, _transaction);
+
+        return filas.Select(f => new KardexMovimientoResuelto
+        {
+            Movimiento = new KardexMovimiento
+            {
+                KardexMovimientoId = f.KardexMovimientoId,
+                SucursalProductoId = f.SucursalProductoId,
+                TipoMovimiento = f.TipoMovimiento,
+                ReferenciaTipo = f.ReferenciaTipo,
+                ReferenciaId = f.ReferenciaId,
+                ComprobanteDetalleId = f.ComprobanteDetalleId,
+                Cantidad = f.Cantidad,
+                CostoUnitarioPromedio = f.CostoUnitarioPromedio,
+                CostoTotal = f.CostoTotal,
+                SaldoCantidadPost = f.SaldoCantidadPost,
+                SaldoValorPost = f.SaldoValorPost,
+                FechaMovimiento = f.FechaMovimiento,
+                IdUsuario = f.IdUsuario,
+                LotesConsumidos = f.LotesConsumidos
+            },
+            ProductoId = f.ProductoId,
+            NomProducto = f.NomProducto,
+            Codigo = f.Codigo,
+            EsPaquete = f.EsPaquete,
+            CantidadVenta = f.CantidadVenta ?? f.Cantidad,
+            CostoVenta = f.CostoVenta
+        });
     }
 
     public async Task<bool> ExisteLoteSaldoInicialAsync(int sucursalProductoId)
@@ -439,6 +510,7 @@ public class InventarioLoteRepository : DapperRepository<InventarioLote>, IInven
                 km.tipoMovimiento        AS TipoMovimiento,
                 km.referenciaTipo        AS ReferenciaTipo,
                 km.referenciaID          AS ReferenciaId,
+                km.comprobanteDetalleID  AS ComprobanteDetalleId,
                 km.cantidad              AS Cantidad,
                 km.costoUnitarioPromedio AS CostoUnitarioPromedio,
                 km.costoTotal            AS CostoTotal,
@@ -470,6 +542,7 @@ public class InventarioLoteRepository : DapperRepository<InventarioLote>, IInven
                 km.tipoMovimiento        AS TipoMovimiento,
                 km.referenciaTipo        AS ReferenciaTipo,
                 km.referenciaID          AS ReferenciaId,
+                km.comprobanteDetalleID  AS ComprobanteDetalleId,
                 km.cantidad              AS Cantidad,
                 km.costoUnitarioPromedio AS CostoUnitarioPromedio,
                 km.costoTotal            AS CostoTotal,
@@ -486,89 +559,128 @@ public class InventarioLoteRepository : DapperRepository<InventarioLote>, IInven
             new { ReferenciaTipo = referenciaTipo, ReferenciaId = referenciaId }, _transaction);
     }
 
+    // Costo (COGS) sale del Kardex PEPS de las salidas por venta; el ingreso se toma de
+    // comprobantedetalle (con IGV incluido, vía totalVentaItem). Se incluyen comprobantes
+    // tributarios aceptados/pendientes y Notas de Venta (tipoComprobante 'NV', estadoSunat
+    // 'NO_APLICA' porque no tributan ante SUNAT) para que toda venta real (facture o no)
+    // cuente como ingreso.
+    //
+    // Un movimiento de Kardex puede venir de dos "eras":
+    //  - Nueva (km.comprobanteDetalleID no es NULL): se une directo a su línea de venta
+    //    (comprobantedetalle), así que un paquete/sixpack aparece con SU PROPIO productoId
+    //    (el del paquete, no el del producto base) y su propia cantidad en unidades de venta
+    //    (1, 2, 3 paquetes...). Su costo NO sale del PEPS del producto base (esas unidades
+    //    comparten lotes con ventas sueltas de costos distintos y no reflejan lo que el
+    //    negocio considera que le cuesta el paquete), sino del último precio de compra que el
+    //    propio paquete tiene configurado en su fila de sucursalproducto (mismo campo que ya
+    //    usa ProductoService al editar/crear el paquete). Un producto normal (no paquete) sigue
+    //    usando el costo PEPS real de esa línea, que sí es exacto porque no comparte lotes.
+    //  - Legado (km.comprobanteDetalleID es NULL, movimientos previos a este campo): no hay
+    //    forma de saber a qué línea pertenecían, así que se mantiene el comportamiento anterior
+    //    (todo remapeado al producto base, costo PEPS) para no alterar el historial ya registrado.
+    private const string RentabilidadFilasSql = @"
+        SELECT
+            cd.productoId                     AS productoId,
+            km.sucursalProductoID             AS sucursalProductoId,
+            pv.nomProducto                     AS nomProducto,
+            pv.codigo                          AS codigo,
+            COALESCE(pv.esPaquete, FALSE)       AS esPaquete,
+            cd.cantidad                        AS cantidadVendida,
+            cd.totalVentaItem                  AS ingreso,
+            CASE WHEN pv.esPaquete = TRUE THEN cd.cantidad * COALESCE(sppaq.ultimoPrecioCompra, 0)
+                 ELSE km.costoTotal END        AS costoTotal,
+            km.fechaMovimiento                 AS fechaMovimiento,
+            km.referenciaID                    AS referenciaId,
+            sp.sucursalID                       AS sucursalId
+        FROM kardex_movimiento km
+        INNER JOIN comprobantedetalle cd ON cd.detalleID = km.comprobanteDetalleID
+        INNER JOIN producto pv ON pv.productoID = cd.productoId
+        INNER JOIN sucursalproducto sp ON sp.sucursalProductoID = km.sucursalProductoID
+        LEFT JOIN sucursalproducto sppaq ON sppaq.productoID = cd.productoId AND sppaq.sucursalID = sp.sucursalID
+        WHERE km.tipoMovimiento = 'SALIDA_VENTA'
+        AND km.referenciaTipo = 'COMPROBANTE'
+        AND km.comprobanteDetalleID IS NOT NULL
+
+        UNION ALL
+
+        SELECT
+            sp.productoID                     AS productoId,
+            km.sucursalProductoID             AS sucursalProductoId,
+            p.nomProducto                      AS nomProducto,
+            p.codigo                           AS codigo,
+            FALSE                               AS esPaquete,
+            km.cantidad                        AS cantidadVendida,
+            COALESCE(ventas.ingreso, 0)        AS ingreso,
+            km.costoTotal                      AS costoTotal,
+            km.fechaMovimiento                 AS fechaMovimiento,
+            km.referenciaID                    AS referenciaId,
+            sp.sucursalID                       AS sucursalId
+        FROM kardex_movimiento km
+        INNER JOIN sucursalproducto sp ON sp.sucursalProductoID = km.sucursalProductoID
+        INNER JOIN producto p ON p.productoID = sp.productoID
+        LEFT JOIN (
+            SELECT cd.comprobanteId, COALESCE(vp.productoBaseId, cd.productoId) AS productoId, SUM(cd.totalVentaItem) AS ingreso
+            FROM comprobantedetalle cd
+            INNER JOIN comprobante c ON c.comprobanteID = cd.comprobanteId
+            INNER JOIN producto vp ON vp.productoID = cd.productoId
+            WHERE (
+                (c.tipoComprobante <> 'NV' AND c.estadoSunat IN ('ACEPTADO', 'ACEPTADO_CON_OBSERVACIONES', 'PENDIENTE'))
+                OR (c.tipoComprobante = 'NV' AND c.estadoSunat = 'NO_APLICA')
+            )
+            GROUP BY cd.comprobanteId, COALESCE(vp.productoBaseId, cd.productoId)
+        ) ventas ON ventas.comprobanteId = km.referenciaID AND ventas.productoId = sp.productoID
+        WHERE km.tipoMovimiento = 'SALIDA_VENTA'
+        AND km.referenciaTipo = 'COMPROBANTE'
+        AND km.comprobanteDetalleID IS NULL";
+
     public async Task<IEnumerable<RentabilidadProductoDTO>> GetRentabilidadPorProductoAsync(int sucursalId, DateTime? desde, DateTime? hasta)
     {
-        // Costo (COGS) sale del Kardex PEPS de las salidas por venta; el ingreso se toma de
-        // comprobantedetalle (con IGV incluido, vía totalVentaItem) cruzando por comprobante+producto.
-        // Se incluyen comprobantes tributarios aceptados/pendientes y Notas de Venta (tipoComprobante
-        // 'NV', estadoSunat 'NO_APLICA' porque no tributan ante SUNAT) para que toda venta real
-        // (facture o no) cuente como ingreso.
-        // Nota: en productos tipo paquete, el costo PEPS queda registrado en el producto BASE
-        // (por diseño, el stock/lotes viven ahí), mientras que la venta se registra sobre el
-        // productoId del paquete. Por eso el subquery de ingreso remapea cada venta de un
-        // paquete (productoBaseId no nulo) hacia su producto base antes de cruzar con el Kardex.
-        var sql = @"
+        var sql = $@"
             SELECT
-                sp.productoID                    AS ProductoId,
-                MAX(sp.sucursalProductoID)        AS SucursalProductoId,
-                p.nomProducto                     AS NomProducto,
-                p.codigo                          AS Codigo,
-                SUM(km.cantidad)                  AS CantidadVendida,
-                COALESCE(SUM(ventas.ingreso), 0)   AS IngresoVentas,
-                SUM(km.costoTotal)                AS CostoVentas
-            FROM kardex_movimiento km
-            INNER JOIN sucursalproducto sp ON sp.sucursalProductoID = km.sucursalProductoID
-            INNER JOIN producto p ON p.productoID = sp.productoID
+                resultado.productoId              AS ProductoId,
+                MAX(resultado.sucursalProductoId) AS SucursalProductoId,
+                MAX(resultado.nomProducto)        AS NomProducto,
+                MAX(resultado.codigo)             AS Codigo,
+                MAX(resultado.esPaquete)          AS EsPaquete,
+                SUM(resultado.cantidadVendida)    AS CantidadVendida,
+                SUM(resultado.ingreso)            AS IngresoVentas,
+                SUM(resultado.costoTotal)         AS CostoVentas
+            FROM ({RentabilidadFilasSql}) resultado
             -- Excluye comprobantes anulados: una venta anulada no debe contar como venta real
             -- en rentabilidad (ni su costo ni su ingreso), aunque el Kardex sí conserve el
             -- movimiento original y su reversión para trazabilidad.
-            INNER JOIN comprobante cv ON cv.comprobanteID = km.referenciaID AND cv.estadoSunat <> 'ANULADO'
-            LEFT JOIN (
-                SELECT cd.comprobanteId, COALESCE(vp.productoBaseId, cd.productoId) AS productoId, SUM(cd.totalVentaItem) AS ingreso
-                FROM comprobantedetalle cd
-                INNER JOIN comprobante c ON c.comprobanteID = cd.comprobanteId
-                INNER JOIN producto vp ON vp.productoID = cd.productoId
-                WHERE (
-                    (c.tipoComprobante <> 'NV' AND c.estadoSunat IN ('ACEPTADO', 'ACEPTADO_CON_OBSERVACIONES', 'PENDIENTE'))
-                    OR (c.tipoComprobante = 'NV' AND c.estadoSunat = 'NO_APLICA')
-                )
-                GROUP BY cd.comprobanteId, COALESCE(vp.productoBaseId, cd.productoId)
-            ) ventas ON ventas.comprobanteId = km.referenciaID AND ventas.productoId = sp.productoID
-            WHERE km.tipoMovimiento = 'SALIDA_VENTA'
-            AND km.referenciaTipo = 'COMPROBANTE'
-            AND sp.sucursalID = @SucursalId
-            AND (@Desde IS NULL OR km.fechaMovimiento >= @Desde)
-            AND (@Hasta IS NULL OR km.fechaMovimiento <= @Hasta)
-            GROUP BY sp.productoID, p.nomProducto, p.codigo
-            ORDER BY p.nomProducto ASC;";
+            INNER JOIN comprobante cv ON cv.comprobanteID = resultado.referenciaId AND cv.estadoSunat <> 'ANULADO'
+            WHERE resultado.sucursalId = @SucursalId
+            AND (@Desde IS NULL OR resultado.fechaMovimiento >= @Desde)
+            AND (@Hasta IS NULL OR resultado.fechaMovimiento <= @Hasta)
+            GROUP BY resultado.productoId
+            ORDER BY NomProducto ASC;";
 
         return await _connection.QueryAsync<RentabilidadProductoDTO>(sql, new { SucursalId = sucursalId, Desde = desde, Hasta = FinDeDia(hasta) }, _transaction);
     }
 
-    public async Task<IEnumerable<RentabilidadDiariaDTO>> GetRentabilidadDiariaAsync(int sucursalProductoId, DateTime? desde, DateTime? hasta)
+    // Acotada a un único (sucursalId, productoId) -en vez de sucursalProductoId- porque, tras
+    // separar la venta de un paquete de su producto base, ambos pueden compartir el mismo
+    // sucursalProductoID destino (el stock PEPS del paquete vive en el producto base): sólo
+    // productoId identifica sin ambigüedad la fila del reporte que el usuario expandió.
+    public async Task<IEnumerable<RentabilidadDiariaDTO>> GetRentabilidadDiariaAsync(int sucursalId, int productoId, DateTime? desde, DateTime? hasta)
     {
-        // Misma lógica de costo/ingreso que GetRentabilidadPorProductoAsync, pero agrupada por día
-        // y acotada a un único sucursalProductoId, para graficar la evolución de costo/utilidad.
-        var sql = @"
+        var sql = $@"
             SELECT
-                DATE(km.fechaMovimiento)          AS Fecha,
-                SUM(km.cantidad)                  AS CantidadVendida,
-                COALESCE(SUM(ventas.ingreso), 0)   AS IngresoVentas,
-                SUM(km.costoTotal)                AS CostoVentas
-            FROM kardex_movimiento km
-            -- Excluye comprobantes anulados del gráfico, igual que en GetRentabilidadPorProductoAsync.
-            INNER JOIN comprobante cv ON cv.comprobanteID = km.referenciaID AND cv.estadoSunat <> 'ANULADO'
-            LEFT JOIN (
-                SELECT cd.comprobanteId, COALESCE(vp.productoBaseId, cd.productoId) AS productoId, SUM(cd.totalVentaItem) AS ingreso
-                FROM comprobantedetalle cd
-                INNER JOIN comprobante c ON c.comprobanteID = cd.comprobanteId
-                INNER JOIN producto vp ON vp.productoID = cd.productoId
-                WHERE (
-                    (c.tipoComprobante <> 'NV' AND c.estadoSunat IN ('ACEPTADO', 'ACEPTADO_CON_OBSERVACIONES', 'PENDIENTE'))
-                    OR (c.tipoComprobante = 'NV' AND c.estadoSunat = 'NO_APLICA')
-                )
-                GROUP BY cd.comprobanteId, COALESCE(vp.productoBaseId, cd.productoId)
-            ) ventas ON ventas.comprobanteId = km.referenciaID
-                AND ventas.productoId = (SELECT sp.productoID FROM sucursalproducto sp WHERE sp.sucursalProductoID = km.sucursalProductoID)
-            WHERE km.tipoMovimiento = 'SALIDA_VENTA'
-            AND km.referenciaTipo = 'COMPROBANTE'
-            AND km.sucursalProductoID = @SucursalProductoId
-            AND (@Desde IS NULL OR km.fechaMovimiento >= @Desde)
-            AND (@Hasta IS NULL OR km.fechaMovimiento <= @Hasta)
-            GROUP BY DATE(km.fechaMovimiento)
-            ORDER BY DATE(km.fechaMovimiento) ASC;";
+                DATE(resultado.fechaMovimiento)   AS Fecha,
+                SUM(resultado.cantidadVendida)    AS CantidadVendida,
+                SUM(resultado.ingreso)            AS IngresoVentas,
+                SUM(resultado.costoTotal)         AS CostoVentas
+            FROM ({RentabilidadFilasSql}) resultado
+            INNER JOIN comprobante cv ON cv.comprobanteID = resultado.referenciaId AND cv.estadoSunat <> 'ANULADO'
+            WHERE resultado.sucursalId = @SucursalId
+            AND resultado.productoId = @ProductoId
+            AND (@Desde IS NULL OR resultado.fechaMovimiento >= @Desde)
+            AND (@Hasta IS NULL OR resultado.fechaMovimiento <= @Hasta)
+            GROUP BY DATE(resultado.fechaMovimiento)
+            ORDER BY DATE(resultado.fechaMovimiento) ASC;";
 
-        return await _connection.QueryAsync<RentabilidadDiariaDTO>(sql, new { SucursalProductoId = sucursalProductoId, Desde = desde, Hasta = FinDeDia(hasta) }, _transaction);
+        return await _connection.QueryAsync<RentabilidadDiariaDTO>(sql, new { SucursalId = sucursalId, ProductoId = productoId, Desde = desde, Hasta = FinDeDia(hasta) }, _transaction);
     }
 
     public async Task<RentabilidadDiariaDTO> GetRentabilidadDiaSucursalAsync(int sucursalId, DateTime desde, DateTime hasta, int? usuarioId)

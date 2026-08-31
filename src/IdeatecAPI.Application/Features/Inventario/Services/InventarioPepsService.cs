@@ -23,13 +23,13 @@ public interface IInventarioPepsService
     Task DevolverAFifoAsync(int sucursalProductoId, decimal cantidad, decimal? costoUnitarioRespaldo,
         string? referenciaTipo, int? referenciaId, int? idUsuario);
 
-    Task<IEnumerable<KardexMovimientoDTO>> GetKardexAsync(int sucursalProductoId, DateTime? desde, DateTime? hasta);
+    Task<IEnumerable<KardexMovimientoDTO>> GetKardexAsync(int sucursalProductoId, int? productoId, DateTime? desde, DateTime? hasta);
     Task<StockValorizadoDTO> GetStockValorizadoAsync(int sucursalProductoId, string? nomProducto = null, string? codigo = null);
     Task<IEnumerable<StockValorizadoDTO>> GetStockValorizadoSucursalAsync(int sucursalId);
     Task<bool> ExisteLoteSaldoInicialAsync(int sucursalProductoId);
     Task<int> RegistrarSaldoInicialAsync(IEnumerable<RegistrarSaldoInicialDTO> items);
     Task<IEnumerable<RentabilidadProductoDTO>> GetRentabilidadPorProductoAsync(int sucursalId, DateTime? desde, DateTime? hasta);
-    Task<IEnumerable<RentabilidadDiariaDTO>> GetRentabilidadDiariaAsync(int sucursalProductoId, DateTime? desde, DateTime? hasta);
+    Task<IEnumerable<RentabilidadDiariaDTO>> GetRentabilidadDiariaAsync(int sucursalId, int productoId, DateTime? desde, DateTime? hasta);
     Task<RetirarVencidosResultDTO> RetirarLotesVencidosAsync(int? sucursalProductoId = null, int? idUsuario = null);
     Task<IEnumerable<LoteVencidoDTO>> GetLotesVencidosReporteAsync(int? sucursalId = null);
     Task<ActualizarFechaVencimientoResultDTO> ActualizarFechaVencimientoLoteAsync(int inventarioLoteId, DateTime? fechaVencimiento, bool confirmar = false);
@@ -206,6 +206,7 @@ public class InventarioPepsService : IInventarioPepsService
                     TipoMovimiento = consumo.TipoMovimiento,
                     ReferenciaTipo = consumo.ReferenciaTipo,
                     ReferenciaId = consumo.ReferenciaId,
+                    ComprobanteDetalleId = consumo.ComprobanteDetalleId,
                     Cantidad = consumo.Cantidad,
                     CostoUnitarioPromedio = costoUnitarioPromedio,
                     CostoTotal = costoTotal,
@@ -272,23 +273,30 @@ public class InventarioPepsService : IInventarioPepsService
             referenciaId: referenciaId);
     }
 
-    public async Task<IEnumerable<KardexMovimientoDTO>> GetKardexAsync(int sucursalProductoId, DateTime? desde, DateTime? hasta)
+    public async Task<IEnumerable<KardexMovimientoDTO>> GetKardexAsync(int sucursalProductoId, int? productoId, DateTime? desde, DateTime? hasta)
     {
-        var movimientos = await _unitOfWork.InventarioLotes.GetKardexAsync(sucursalProductoId, desde, hasta);
+        var movimientos = await _unitOfWork.InventarioLotes.GetKardexAsync(sucursalProductoId, productoId, desde, hasta);
         return movimientos.Select(m => new KardexMovimientoDTO
         {
-            KardexMovimientoId = m.KardexMovimientoId,
-            SucursalProductoId = m.SucursalProductoId,
-            TipoMovimiento = m.TipoMovimiento,
-            ReferenciaTipo = m.ReferenciaTipo,
-            ReferenciaId = m.ReferenciaId,
-            Cantidad = m.Cantidad,
-            CostoUnitarioPromedio = m.CostoUnitarioPromedio,
-            CostoTotal = m.CostoTotal,
-            SaldoCantidadPost = m.SaldoCantidadPost,
-            SaldoValorPost = m.SaldoValorPost,
-            FechaMovimiento = m.FechaMovimiento,
-            LotesConsumidos = m.LotesConsumidos
+            KardexMovimientoId = m.Movimiento.KardexMovimientoId,
+            SucursalProductoId = m.Movimiento.SucursalProductoId,
+            TipoMovimiento = m.Movimiento.TipoMovimiento,
+            ReferenciaTipo = m.Movimiento.ReferenciaTipo,
+            ReferenciaId = m.Movimiento.ReferenciaId,
+            ComprobanteDetalleId = m.Movimiento.ComprobanteDetalleId,
+            Cantidad = m.Movimiento.Cantidad,
+            CostoUnitarioPromedio = m.Movimiento.CostoUnitarioPromedio,
+            CostoTotal = m.Movimiento.CostoTotal,
+            SaldoCantidadPost = m.Movimiento.SaldoCantidadPost,
+            SaldoValorPost = m.Movimiento.SaldoValorPost,
+            FechaMovimiento = m.Movimiento.FechaMovimiento,
+            LotesConsumidos = m.Movimiento.LotesConsumidos,
+            ProductoId = m.ProductoId,
+            NomProducto = m.NomProducto,
+            Codigo = m.Codigo,
+            EsPaquete = m.EsPaquete,
+            CantidadVenta = m.CantidadVenta,
+            CostoVenta = m.CostoVenta
         });
     }
 
@@ -354,9 +362,9 @@ public class InventarioPepsService : IInventarioPepsService
         return await _unitOfWork.InventarioLotes.GetRentabilidadPorProductoAsync(sucursalId, desde, hasta);
     }
 
-    public async Task<IEnumerable<RentabilidadDiariaDTO>> GetRentabilidadDiariaAsync(int sucursalProductoId, DateTime? desde, DateTime? hasta)
+    public async Task<IEnumerable<RentabilidadDiariaDTO>> GetRentabilidadDiariaAsync(int sucursalId, int productoId, DateTime? desde, DateTime? hasta)
     {
-        return await _unitOfWork.InventarioLotes.GetRentabilidadDiariaAsync(sucursalProductoId, desde, hasta);
+        return await _unitOfWork.InventarioLotes.GetRentabilidadDiariaAsync(sucursalId, productoId, desde, hasta);
     }
 
     public async Task<int> RegistrarSaldoInicialAsync(IEnumerable<RegistrarSaldoInicialDTO> items)

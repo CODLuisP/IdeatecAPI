@@ -1,0 +1,31 @@
+-- =====================================================================
+-- Índice para el lookup (productoID, sucursalID) sobre sucursalproducto.
+--
+-- Los cambios de "rentabilidad separa paquete de producto base" agregaron un
+-- join nuevo con este patrón, tanto en GetRentabilidadPorProductoAsync /
+-- GetRentabilidadDiariaAsync (RentabilidadFilasSql) como en el nuevo
+-- GetKardexAsync enriquecido:
+--
+--     LEFT JOIN sucursalproducto sppaq
+--         ON sppaq.productoID = cd.productoId AND sppaq.sucursalID = sp.sucursalID
+--
+-- que se ejecuta una vez POR FILA de kardex/rentabilidad devuelta (no una vez
+-- por reporte). Este mismo patrón (productoID + sucursalID) ya lo usaba código
+-- existente antes de este cambio (ExisteEnSucursalAsync, GetProductoByIdAsync,
+-- ActualizarCostoSinStockAsync, RegistrarCompraStockAsync, etc. en
+-- ProductoRepository.cs), así que este índice también acelera esas rutas —
+-- no es exclusivo del cambio nuevo.
+--
+-- No se encontró en el repo una definición de sucursalproducto con UNIQUE o
+-- índice sobre (productoID, sucursalID) — de hecho ExisteEnSucursalAsync hace
+-- un COUNT(*) manual antes de insertar en vez de confiar en una restricción de
+-- BD, lo que sugiere que ese lookup no está indexado hoy. Verificar antes de
+-- aplicar, por si ya existe con otro nombre:
+--
+--     SHOW INDEX FROM sucursalproducto WHERE Key_name = 'idx_sucursalproducto_producto_sucursal';
+--
+-- MySQL no soporta CREATE INDEX IF NOT EXISTS (ver sql/011_indice_vencimiento_lote.sql).
+-- =====================================================================
+
+CREATE INDEX idx_sucursalproducto_producto_sucursal
+    ON sucursalproducto (productoID, sucursalID);
