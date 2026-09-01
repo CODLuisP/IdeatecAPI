@@ -395,8 +395,9 @@ public class ComprobanteHtmlService : IComprobanteHtmlService
         {
             if (tipoComprobante == "01")
                 sb.Append($"<tr><td>Cta. BN</td><td>{HE(det.CuentaBancoDetraccion ?? "-")}</td></tr>");
-            sb.Append($"<tr><td>% Detrac.</td><td>{det.PorcentajeDetraccion:F2}%</td></tr>");
-            sb.Append($"<tr><td>Monto</td><td>{Fmt(det.MontoDetraccion ?? 0, moneda)}</td></tr>");
+            sb.Append($"<tr><td>% Detrac.</td><td>{det.PorcentajeDetraccion:F0}%</td></tr>");
+            var montoRedondeado = Math.Round(det.MontoDetraccion ?? 0, 0);
+            sb.Append($"<tr><td>Monto</td><td>{(moneda == "USD" ? "$" : "S/")} {montoRedondeado:F0}</td></tr>");
         }
         sb.Append("</table>");
         return sb.ToString();

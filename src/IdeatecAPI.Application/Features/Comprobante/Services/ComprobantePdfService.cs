@@ -22,6 +22,53 @@ public class ComprobantePdfService : IComprobantePdfService
     private static readonly string ColorTexto = "#1A1A1A";
     private static readonly string ColorTextoSuave = "#4A5568";
 
+    private static readonly Dictionary<string, string> BienesDetraccion = new()
+    {
+        ["001"] = "Azúcar",
+        ["002"] = "Arroz pilado",
+        ["003"] = "Alcohol etílico",
+        ["004"] = "Recursos hidrobiológicos",
+        ["005"] = "Maíz amarillo duro",
+        ["006"] = "Algodón",
+        ["007"] = "Caña de azúcar",
+        ["008"] = "Madera",
+        ["009"] = "Arena y piedra",
+        ["010"] = "Residuos, subproductos, desechos",
+        ["011"] = "Bienes del inciso A del Apéndice I IGV",
+        ["012"] = "Intermediación laboral y tercerización",
+        ["013"] = "Animales vivos",
+        ["014"] = "Carnes y despojos comestibles",
+        ["015"] = "Aceite de pescado",
+        ["016"] = "Harina, polvo y pellets de pescado",
+        ["017"] = "Embarcaciones pesqueras",
+        ["018"] = "Leche",
+        ["023"] = "Oro gravado con IGV",
+        ["024"] = "Páprika",
+        ["025"] = "Espárragos",
+        ["026"] = "Minerales no auríferos",
+        ["027"] = "Bienes exonerados del IGV",
+        ["028"] = "Oro y demás minerales metálicos exonerados",
+        ["030"] = "Contratos de construcción",
+        ["031"] = "Oro – D. Leg. N.° 1126",
+        ["032"] = "Minerales metálicos no auríferos – D. Leg. N.° 1126",
+        ["033"] = "Bien inmueble gravado con IGV",
+        ["034"] = "Servicios gravados con IGV",
+        ["035"] = "Servicios de transporte de bienes por vía terrestre",
+        ["036"] = "Servicios de transporte público de pasajeros",
+        ["037"] = "Demás servicios gravados con IGV",
+        ["039"] = "Madera aserrada y flores",
+        ["040"] = "Aceitunas",
+    };
+
+    private static readonly Dictionary<string, string> MediosPagoDetraccion = new()
+    {
+        ["001"] = "Depósito en cuenta",
+        ["002"] = "Giro",
+        ["003"] = "Transferencia de fondos",
+        ["004"] = "Orden de pago",
+        ["005"] = "Tarjeta de débito",
+    };
+
     public ComprobantePdfService(IUnitOfWork unitOfWork, ITipoCambioService tipoCambioService)
     {
         _unitOfWork = unitOfWork;
@@ -573,12 +620,12 @@ public class ComprobantePdfService : IComprobantePdfService
                 if (tipoComprobante == "01")
                     TicketFilaTotal(col, "Cta. BN", det.CuentaBancoDetraccion ?? "-");
 
-                TicketFilaTotal(col, "% Detrac.", $"{det.PorcentajeDetraccion:F2}%");
+                TicketFilaTotal(col, "% Detrac.", $"{det.PorcentajeDetraccion:F0}%");
 
                 var montoSoles = moneda == "USD" && tipoCambioOficial.HasValue
-                    ? Math.Round((det.MontoDetraccion ?? 0) * tipoCambioOficial.Value, 2)
-                    : (det.MontoDetraccion ?? 0);
-                TicketFilaTotal(col, "Monto", $"S/ {montoSoles:F2}");
+                    ? Math.Round((det.MontoDetraccion ?? 0) * tipoCambioOficial.Value, 0)
+                    : Math.Round(det.MontoDetraccion ?? 0, 0);
+                TicketFilaTotal(col, "Monto", $"S/ {montoSoles:F0}");
             }
         });
     }
@@ -928,7 +975,7 @@ public class ComprobantePdfService : IComprobantePdfService
                 // Izquierda
                 row.RelativeItem(5).Column(left =>
                 {
-                    if (detracciones.Any())
+                    if (detracciones.Any() && empresa.Ruc != "20512134832")
                         left.Item().PaddingTop(6)
                             .Element(lc => BuildSeccionDetraccion(lc, detracciones, moneda, c.TipoComprobante, tipoCambioOficial));
 
@@ -939,24 +986,31 @@ public class ComprobantePdfService : IComprobantePdfService
                             .Element(lc => BuildSeccionMediosPago(lc, c, pagos, cuotas, moneda));
                     }
 
-                    // SPOT para RUC 20512134832 cuando Spot es true
-                    if (empresa.Ruc == "20512134832" && c.Spot == true)
+                    // Detracción para RUC 20512134832: siempre con el formato enriquecido (Leyenda, Bien o Servicio, etc.)
+                    if (empresa.Ruc == "20512134832" && detracciones.Any())
                     {
                         // Contenido editable desde el front (null = usar valor por defecto, "" = ocultar la línea)
+                        var detSpot = detracciones.FirstOrDefault();
+
+                        var codigoBien = detSpot?.CodigoBienDetraccion ?? "019";
+                        var descripcionBien = BienesDetraccion.TryGetValue(codigoBien, out var db) ? db : "Arrendamiento de bienes";
+
+                        var codigoMedio = detSpot?.CodigoMedioPago ?? "001";
+                        var descripcionMedio = MediosPagoDetraccion.TryGetValue(codigoMedio, out var dm) ? dm : "Depósito en cuenta";
+
                         var spotLeyenda = c.SpotLeyenda ?? "Leyenda: Operación sujeta al SPOT con el Gobierno Central";
-                        var spotBienServicio = c.SpotBienServicio ?? "Bien o Servicio: 019 Arrendamiento de bienes";
-                        var spotMedioPago = c.SpotMedioPago ?? "Medio de pago: 001 Depósito en cuenta";
-                        var spotCuentaBanco = c.SpotCuentaBanco ?? "N° Cta. Banco de la Nación: 00068273250";
+                        var spotBienServicio = c.SpotBienServicio ?? $"Bien o Servicio: {codigoBien} {descripcionBien}";
+                        var spotMedioPago = c.SpotMedioPago ?? $"Medio de pago: {codigoMedio} {descripcionMedio}";
+                        var spotCuentaBanco = c.SpotCuentaBanco ?? $"N° Cta. Banco de la Nación: {detSpot?.CuentaBancoDetraccion ?? "00068273250"}";
 
                         // -1 = el usuario dejó el porcentaje en blanco: se oculta la línea pero
-                        // el monto se sigue calculando con el 10% por defecto.
+                        // el monto se sigue mostrando con el % realmente registrado en la detracción.
                         var mostrarPorcentaje = c.SpotPorcentaje is null or >= 0;
-                        var spotPorcentaje = c.SpotPorcentaje is >= 0 ? c.SpotPorcentaje.Value : 10m;
+                        var spotPorcentaje = c.SpotPorcentaje is >= 0 ? c.SpotPorcentaje.Value : (detSpot?.PorcentajeDetraccion ?? 12m);
 
-                        var montoSpotBase = (c.ImporteTotal ?? 0) * (spotPorcentaje / 100m);
                         var montoSpotSoles = moneda == "USD" && tipoCambioOficial.HasValue
-                            ? Math.Round(montoSpotBase * tipoCambioOficial.Value, 0, MidpointRounding.AwayFromZero)
-                            : Math.Round(montoSpotBase, 0, MidpointRounding.AwayFromZero);
+                            ? Math.Round((detSpot?.MontoDetraccion ?? 0) * tipoCambioOficial.Value, 0, MidpointRounding.AwayFromZero)
+                            : Math.Round(detSpot?.MontoDetraccion ?? 0, 0, MidpointRounding.AwayFromZero);
 
                         left.Item().PaddingTop(6).Column(spotCol =>
                         {
@@ -1137,12 +1191,12 @@ public class ComprobantePdfService : IComprobantePdfService
                         if (tipoComprobante == "01")
                             FilaPago(d, "Cta. Banco de la Nación", det.CuentaBancoDetraccion ?? "-");
 
-                        FilaPago(d, "% Detracción", $"{det.PorcentajeDetraccion:F2}%");
+                        FilaPago(d, "% Detracción", $"{det.PorcentajeDetraccion:F0}%");
 
                         var montoSoles = moneda == "USD" && tipoCambioOficial.HasValue
-                            ? Math.Round((det.MontoDetraccion ?? 0) * tipoCambioOficial.Value, 2)
-                            : (det.MontoDetraccion ?? 0);
-                        FilaPago(d, "Monto Detracción", $"S/ {montoSoles:F2}");
+                            ? Math.Round((det.MontoDetraccion ?? 0) * tipoCambioOficial.Value, 0)
+                            : Math.Round(det.MontoDetraccion ?? 0, 0);
+                        FilaPago(d, "Monto Detracción", $"S/ {montoSoles:F0}");
 
                         if (!string.IsNullOrEmpty(det.Observacion))
                             d.Item().Text($"Obs.: {det.Observacion}").FontSize(7).FontColor(ColorTextoSuave);
