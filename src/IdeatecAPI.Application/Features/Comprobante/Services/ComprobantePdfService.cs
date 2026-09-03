@@ -42,6 +42,7 @@ public class ComprobantePdfService : IComprobantePdfService
         ["016"] = "Harina, polvo y pellets de pescado",
         ["017"] = "Embarcaciones pesqueras",
         ["018"] = "Leche",
+        ["019"] = "Arrendamiento de bienes muebles",
         ["023"] = "Oro gravado con IGV",
         ["024"] = "Páprika",
         ["025"] = "Espárragos",
@@ -498,11 +499,14 @@ public class ComprobantePdfService : IComprobantePdfService
             }
 
             // 8. TIPO DE PAGO
-            col.Item().PaddingTop(3)
-                .Element(pc => BuildSeccionPagosTicket(pc, c, pagos, cuotas, moneda, c.TotalComisionPagoTarjeta));
+            if (!detracciones.Any())
+            {
+                col.Item().PaddingTop(3)
+                    .Element(pc => BuildSeccionPagosTicket(pc, c, pagos, cuotas, moneda, c.TotalComisionPagoTarjeta));
 
-            col.Item().PaddingTop(2).LineHorizontal(0.5f).LineColor(ColorAzulMarino);
-            col.Item().Height(6);
+                col.Item().PaddingTop(2).LineHorizontal(0.5f).LineColor(ColorAzulMarino);
+                col.Item().Height(6);
+            }
 
             // 9. DETRACCIÓN
             if (detracciones.Any())
@@ -975,65 +979,12 @@ public class ComprobantePdfService : IComprobantePdfService
                 // Izquierda
                 row.RelativeItem(5).Column(left =>
                 {
-                    if (detracciones.Any() && empresa.Ruc != "20512134832")
+                    if (detracciones.Any())
                         left.Item().PaddingTop(6)
                             .Element(lc => BuildSeccionDetraccion(lc, detracciones, moneda, c.TipoComprobante, tipoCambioOficial));
-
-                    // Medios de pago — encima del QR (solo si NO es el RUC 20512134832)
-                    if (empresa.Ruc != "20512134832")
-                    {
+                    else
                         left.Item().PaddingTop(6)
                             .Element(lc => BuildSeccionMediosPago(lc, c, pagos, cuotas, moneda));
-                    }
-
-                    // Detracción para RUC 20512134832: siempre con el formato enriquecido (Leyenda, Bien o Servicio, etc.)
-                    if (empresa.Ruc == "20512134832" && detracciones.Any())
-                    {
-                        // Contenido editable desde el front (null = usar valor por defecto, "" = ocultar la línea)
-                        var detSpot = detracciones.FirstOrDefault();
-
-                        var codigoBien = detSpot?.CodigoBienDetraccion ?? "019";
-                        var descripcionBien = BienesDetraccion.TryGetValue(codigoBien, out var db) ? db : "Arrendamiento de bienes";
-
-                        var codigoMedio = detSpot?.CodigoMedioPago ?? "001";
-                        var descripcionMedio = MediosPagoDetraccion.TryGetValue(codigoMedio, out var dm) ? dm : "Depósito en cuenta";
-
-                        var spotLeyenda = c.SpotLeyenda ?? "Leyenda: Operación sujeta al SPOT con el Gobierno Central";
-                        var spotBienServicio = c.SpotBienServicio ?? $"Bien o Servicio: {codigoBien} {descripcionBien}";
-                        var spotMedioPago = c.SpotMedioPago ?? $"Medio de pago: {codigoMedio} {descripcionMedio}";
-                        var spotCuentaBanco = c.SpotCuentaBanco ?? $"N° Cta. Banco de la Nación: {detSpot?.CuentaBancoDetraccion ?? "00068273250"}";
-
-                        // -1 = el usuario dejó el porcentaje en blanco: se oculta la línea pero
-                        // el monto se sigue mostrando con el % realmente registrado en la detracción.
-                        var mostrarPorcentaje = c.SpotPorcentaje is null or >= 0;
-                        var spotPorcentaje = c.SpotPorcentaje is >= 0 ? c.SpotPorcentaje.Value : (detSpot?.PorcentajeDetraccion ?? 12m);
-
-                        var montoSpotSoles = moneda == "USD" && tipoCambioOficial.HasValue
-                            ? Math.Round((detSpot?.MontoDetraccion ?? 0) * tipoCambioOficial.Value, 0, MidpointRounding.AwayFromZero)
-                            : Math.Round(detSpot?.MontoDetraccion ?? 0, 0, MidpointRounding.AwayFromZero);
-
-                        left.Item().PaddingTop(6).Column(spotCol =>
-                        {
-                            spotCol.Item().PaddingTop(2)
-                                .Background(ColorGrisClaro).Border(1).BorderColor(ColorGrisBorde)
-                                .Padding(5).Column(d =>
-                                {
-                                    if (!string.IsNullOrEmpty(spotLeyenda))
-                                        d.Item().Text(spotLeyenda).FontSize(9);
-                                    if (!string.IsNullOrEmpty(spotBienServicio))
-                                        d.Item().Text(spotBienServicio).FontSize(9);
-                                    if (!string.IsNullOrEmpty(spotMedioPago))
-                                        d.Item().Text(spotMedioPago).FontSize(9);
-                                    if (!string.IsNullOrEmpty(spotCuentaBanco))
-                                        d.Item().Text(spotCuentaBanco).FontSize(9);
-                                    if (mostrarPorcentaje)
-                                        d.Item().Text($"Porcentaje de detracción: {spotPorcentaje:0.##}%")
-                                            .FontSize(9);
-                                    d.Item().Text($"Monto detracción: S/ {montoSpotSoles:F0}")
-                                        .FontSize(9).Bold();
-                                });
-                        });
-                    }
 
                     // QR (solo para comprobantes electrónicos SUNAT)
                     if (c.TipoComprobante != "NV" && !string.IsNullOrEmpty(empresa.Ruc))
@@ -1188,6 +1139,20 @@ public class ComprobantePdfService : IComprobantePdfService
                 {
                     foreach (var det in detracciones)
                     {
+                        d.Item().Text("Leyenda: Operación sujeta al SPOT con el Gobierno Central").FontSize(8);
+
+                        if (!string.IsNullOrEmpty(det.CodigoBienDetraccion))
+                        {
+                            var descBien = BienesDetraccion.TryGetValue(det.CodigoBienDetraccion, out var db) ? db : det.CodigoBienDetraccion;
+                            d.Item().Text($"Bien o Servicio: {det.CodigoBienDetraccion} {descBien}").FontSize(8);
+                        }
+
+                        if (!string.IsNullOrEmpty(det.CodigoMedioPago))
+                        {
+                            var descMedio = MediosPagoDetraccion.TryGetValue(det.CodigoMedioPago, out var dm) ? dm : det.CodigoMedioPago;
+                            d.Item().Text($"Medio de pago: {det.CodigoMedioPago} {descMedio}").FontSize(8);
+                        }
+
                         if (tipoComprobante == "01")
                             FilaPago(d, "Cta. Banco de la Nación", det.CuentaBancoDetraccion ?? "-");
 

@@ -308,7 +308,7 @@ public class ComprobanteHtmlService : IComprobanteHtmlService
 
             {(detracciones.Any() ? "<hr>" + detracHtml : "")}
 
-            {pagosHtml}
+            {(detracciones.Any() ? "" : pagosHtml)}
 
             <hr>
 
