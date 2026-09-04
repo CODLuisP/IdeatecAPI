@@ -486,84 +486,15 @@ public class SireService : ISireService
         return comprobantes;
     }
 
-    // Empareja las columnas del encabezado de la propuesta RCE por NOMBRE (no por posición fija). A diferencia
-    // de ExtraerComprobantesDeZip (RVIE, que usa el Anexo N°2 de la RS 112-2021/SUNAT ya conocido), el layout
-    // exacto del Anexo N°8 de la RS 040-2022/SUNAT para el archivo de compras no está publicado como tabla
-    // descargable y trae columnas adicionales (proveedor, detracción, retención, crédito fiscal, etc.) que no
-    // existen en Ventas, así que asumir las mismas posiciones sería incorrecto. Cada campo prueba, en orden,
-    // listas de palabras clave (ya normalizadas: sin tildes, minúsculas, sin espacios/puntuación) hasta hallar
-    // una columna del encabezado que las contenga y que ningún otro campo haya tomado ya.
-    private static readonly (string Campo, string[][] Candidatos)[] ColumnasCompras =
-    {
-        ("ruc", new[] { new[] { "numrucproveedor" }, new[] { "ruc" } }),
-        ("razonSocial", new[] { new[] { "razonsocialproveedor" }, new[] { "apellidosnombres", "razonsocial" }, new[] { "razonsocial" } }),
-        ("periodo", new[] { new[] { "periodotributario" }, new[] { "periodo" } }),
-        ("car", new[] { new[] { "codigocar" }, new[] { "carsunat" }, new[] { "car" } }),
-        ("fechaEmision", new[] { new[] { "fechaemision" } }),
-        ("tipoComprobante", new[] { new[] { "tipocpdoc" }, new[] { "tipocomprobante" }, new[] { "tipodocumento" } }),
-        ("serie", new[] { new[] { "seriedelcdp" }, new[] { "serie" } }),
-        ("numero", new[] { new[] { "nrocpodoc" }, new[] { "numerocp" }, new[] { "numero" } }),
-        ("baseImponible", new[] { new[] { "baseimponible" } }),
-        ("igv", new[] { new[] { "igv" } }),
-        ("exonerado", new[] { new[] { "exonerad" } }),
-        ("inafecto", new[] { new[] { "inafect" } }),
-        ("total", new[] { new[] { "importetotal" }, new[] { "totalcp" }, new[] { "total" } }),
-        ("moneda", new[] { new[] { "moneda" } }),
-        ("tipoCambio", new[] { new[] { "tipocambio" } }),
-        ("estado", new[] { new[] { "estadocomprobante" }, new[] { "estado" } }),
-        ("inconsistencia", new[] { new[] { "inconsistenc" } }),
-    };
-
-    private static string NormalizarEncabezado(string texto)
-    {
-        var descompuesto = texto.Normalize(NormalizationForm.FormD);
-        var sb = new StringBuilder();
-        foreach (var c in descompuesto)
-        {
-            if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark && char.IsLetterOrDigit(c))
-                sb.Append(char.ToLowerInvariant(c));
-        }
-        return sb.ToString();
-    }
-
-    // Retorna null si ni siquiera pudo ubicar la columna de RUC del proveedor: sin ella no hay forma
-    // confiable de distinguir el encabezado de una fila de datos real, y seguir sería adivinar a ciegas.
-    private static Dictionary<string, int>? MapearColumnasCompras(string[] encabezado)
-    {
-        var normalizado = encabezado.Select(NormalizarEncabezado).ToArray();
-        var usados = new HashSet<int>();
-        var mapa = new Dictionary<string, int>();
-
-        foreach (var (campo, candidatos) in ColumnasCompras)
-        {
-            foreach (var palabras in candidatos)
-            {
-                var encontrado = -1;
-                for (var i = 0; i < normalizado.Length; i++)
-                {
-                    if (usados.Contains(i)) continue;
-                    if (palabras.All(p => normalizado[i].Contains(p)))
-                    {
-                        encontrado = i;
-                        break;
-                    }
-                }
-
-                if (encontrado >= 0)
-                {
-                    mapa[campo] = encontrado;
-                    usados.Add(encontrado);
-                    break;
-                }
-            }
-        }
-
-        return mapa.ContainsKey("ruc") ? mapa : null;
-    }
-
-    private static string? ObtenerCampoCompras(string[] campos, Dictionary<string, int> mapa, string campo)
-        => mapa.TryGetValue(campo, out var idx) && idx < campos.Length ? campos[idx].Trim() : null;
-
+    // Índices de columna verificados contra un archivo real de propuesta RCE descargado en producción
+    // (2026-09, RUC 20512134832, periodo 202608). El encabezado real es:
+    // RUC|Apellidos y Nombres o Razón social|Periodo|CAR SUNAT|Fecha de emisión|Fecha Vcto/Pago|Tipo CP/Doc.|
+    // Serie del CDP|Año|Nro CP o Doc. Nro Inicial (Rango)|Nro Final (Rango)|Tipo Doc Identidad|Nro Doc Identidad|
+    // Apellidos Nombres/ Razón Social|BI Gravado DG|IGV / IPM DG|BI Gravado DGNG|IGV / IPM DGNG|BI Gravado DNG|
+    // IGV / IPM DNG|Valor Adq. NG|ISC|ICBPER|Otros Trib/ Cargos|Total CP|Moneda|Tipo de Cambio|...|Est. Comp.|Incal|CLU1..39
+    // A diferencia del RVIE, los campos 0-1 son el RUC/razón social del GENERADOR (la propia empresa, constante
+    // en todas las filas) y no del proveedor: el proveedor está en los campos 11-13. Además "BI Gravado"/"IGV"
+    // vienen partidos en 3 pares según el destino de la adquisición (DG/DGNG/DNG) en vez de una sola columna.
     private List<SireComprobanteCompraDto> ExtraerComprobantesComprasDeZip(byte[] zipBytes)
     {
         var comprobantes = new List<SireComprobanteCompraDto>();
@@ -576,47 +507,47 @@ public class SireService : ISireService
             return comprobantes;
 
         using var reader = new StreamReader(entry.Open(), System.Text.Encoding.Latin1);
-        var primeraLinea = reader.ReadLine();
-        if (string.IsNullOrWhiteSpace(primeraLinea))
-            return comprobantes;
-
-        var mapa = MapearColumnasCompras(primeraLinea.Split('|'));
-        if (mapa is null)
-        {
-            _logger.LogWarning("[SIRE][RCE] No se pudo identificar la columna de RUC en el encabezado del archivo de propuesta de compras; se omite el parseo.");
-            return comprobantes;
-        }
-
         string? linea;
+        var esPrimeraLinea = true;
         while ((linea = reader.ReadLine()) is not null)
         {
+            if (esPrimeraLinea)
+            {
+                esPrimeraLinea = false;
+                continue; // encabezado
+            }
             if (string.IsNullOrWhiteSpace(linea)) continue;
 
             var campos = linea.Split('|');
-            var ruc = ObtenerCampoCompras(campos, mapa, "ruc");
-            if (string.IsNullOrWhiteSpace(ruc) || ruc.Length != 11 || !ruc.All(char.IsDigit)) continue;
+            if (campos.Length < 41) continue;
 
-            var tipoCambioTexto = ObtenerCampoCompras(campos, mapa, "tipoCambio");
+            var rucProveedor = campos[12].Trim();
+            if (string.IsNullOrWhiteSpace(rucProveedor)) continue;
+
+            var tipoCambioTexto = campos[26].Trim();
+            var incal = campos[40].Trim();
 
             comprobantes.Add(new SireComprobanteCompraDto
             {
-                RucProveedor = ruc,
-                RazonSocialProveedor = ObtenerCampoCompras(campos, mapa, "razonSocial"),
-                Periodo = ObtenerCampoCompras(campos, mapa, "periodo"),
-                CarSunat = ObtenerCampoCompras(campos, mapa, "car"),
-                FechaEmision = ObtenerCampoCompras(campos, mapa, "fechaEmision"),
-                TipoComprobante = ObtenerCampoCompras(campos, mapa, "tipoComprobante"),
-                Serie = ObtenerCampoCompras(campos, mapa, "serie"),
-                Numero = ObtenerCampoCompras(campos, mapa, "numero"),
-                BaseImponible = ParseDecimal(ObtenerCampoCompras(campos, mapa, "baseImponible") ?? ""),
-                Igv = ParseDecimal(ObtenerCampoCompras(campos, mapa, "igv") ?? ""),
-                MtoExonerado = ParseDecimal(ObtenerCampoCompras(campos, mapa, "exonerado") ?? ""),
-                MtoInafecto = ParseDecimal(ObtenerCampoCompras(campos, mapa, "inafecto") ?? ""),
-                ImporteTotal = ParseDecimal(ObtenerCampoCompras(campos, mapa, "total") ?? ""),
-                CodMoneda = ObtenerCampoCompras(campos, mapa, "moneda"),
-                TipoCambio = string.IsNullOrWhiteSpace(tipoCambioTexto) ? null : ParseDecimal(tipoCambioTexto),
-                Activo = EsComprobanteActivo(ObtenerCampoCompras(campos, mapa, "estado") ?? ""),
-                Inconsistencias = ObtenerCampoCompras(campos, mapa, "inconsistencia")
+                RucProveedor = rucProveedor,                          // campo 13: Nro Doc Identidad (proveedor)
+                RazonSocialProveedor = campos[13].Trim(),              // campo 14: Apellidos Nombres/Razón Social (proveedor)
+                Periodo = campos[2].Trim(),                            // campo 3: Periodo
+                CarSunat = campos[3].Trim(),                           // campo 4: CAR SUNAT
+                FechaEmision = campos[4].Trim(),                       // campo 5: Fecha de emisión
+                TipoComprobante = campos[6].Trim(),                    // campo 7: Tipo CP/Doc.
+                Serie = campos[7].Trim(),                              // campo 8: Serie del CDP
+                Numero = campos[9].Trim(),                             // campo 10: Nro CP o Doc.
+                BaseImponible = ParseDecimal(campos[14]) + ParseDecimal(campos[16]) + ParseDecimal(campos[18]), // BI Gravado DG+DGNG+DNG
+                Igv = ParseDecimal(campos[15]) + ParseDecimal(campos[17]) + ParseDecimal(campos[19]),           // IGV/IPM DG+DGNG+DNG
+                MtoExonerado = 0, // No existe un campo equivalente en el layout de compras
+                MtoInafecto = ParseDecimal(campos[20]),                // campo 21: Valor Adq. NG (no gravadas)
+                ImporteTotal = ParseDecimal(campos[24]),               // campo 25: Total CP
+                CodMoneda = campos[25].Trim(),                         // campo 26: Moneda
+                TipoCambio = string.IsNullOrWhiteSpace(tipoCambioTexto) ? null : ParseDecimal(tipoCambioTexto), // campo 27: Tipo de Cambio
+                // Campo 40 "Est. Comp." (Anexo N°1, Tabla 14): 1=Activo, 2=Baja, 3=Revertido, 4=Anulado,
+                // 5=Autorizado, 6=No Autorizado.
+                Activo = EsComprobanteActivo(campos[39]),              // campo 40: Est. Comp.
+                Inconsistencias = !string.IsNullOrWhiteSpace(incal) && incal != "0" ? incal : null // campo 41: Incal
             });
         }
 
