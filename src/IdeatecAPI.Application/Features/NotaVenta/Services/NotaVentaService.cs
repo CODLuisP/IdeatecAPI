@@ -12,6 +12,7 @@ public interface INotaVentaService
     Task<NotaVentaResponse> GenerarNotaVentaAsync(GenerarNotaVentaDTO dto);
     Task<IEnumerable<ListarComprobanteDTO>> ListarNotasVentaAsync(int sucursalId, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null);
     Task<NotaVentaResponse> AnularNotaVentaAsync(int comprobanteId, string? motivo, int? usuarioId);
+    Task<NotaVentaResponse> DevolverItemNotaVentaAsync(int comprobanteId, int detalleId, decimal cantidad, string? motivo, int? usuarioId);
 }
 
 public class NotaVentaResponse
@@ -271,6 +272,87 @@ public class NotaVentaService : INotaVentaService
             {
                 Exitoso        = true,
                 Mensaje        = "Nota de venta anulada correctamente.",
+                ComprobanteId  = comprobanteId,
+                NumeroCompleto = comprobante.NumeroCompleto
+            };
+        }
+        catch
+        {
+            _unitOfWork.Rollback();
+            throw;
+        }
+    }
+
+    public async Task<NotaVentaResponse> DevolverItemNotaVentaAsync(int comprobanteId, int detalleId, decimal cantidad, string? motivo, int? usuarioId)
+    {
+        if (cantidad <= 0)
+            throw new InvalidOperationException("La cantidad a devolver debe ser mayor a 0.");
+
+        var comprobante = await _unitOfWork.Comprobantes.GetComprobanteByIdAsync(comprobanteId)
+            ?? throw new KeyNotFoundException("Nota de venta no encontrada.");
+
+        if (comprobante.TipoComprobante != "NV")
+            throw new InvalidOperationException("Solo se pueden devolver artículos de notas de venta desde esta operación.");
+
+        if (comprobante.EstadoSunat == "ANULADO")
+            throw new InvalidOperationException("La nota de venta ya se encuentra anulada.");
+
+        var detalles = (await _unitOfWork.Comprobantes.GetDetallesByIdAsync(comprobanteId)).ToList();
+        var detalle = detalles.FirstOrDefault(d => d.DetalleId == detalleId)
+            ?? throw new KeyNotFoundException("El artículo indicado no pertenece a esta nota de venta.");
+
+        if (cantidad > detalle.Cantidad)
+            throw new InvalidOperationException("La cantidad a devolver no puede superar la cantidad vendida.");
+
+        // No se permite devolver por completo el único artículo que sigue activo: para eso
+        // está "Anular venta". Así se garantiza que Anular siempre se encuentre, como mucho,
+        // con líneas ya llevadas a 0 individualmente, nunca con la única línea viva.
+        var itemsActivos = detalles.Where(d => d.Cantidad > 0).ToList();
+        if (itemsActivos.Count == 1 && itemsActivos[0].DetalleId == detalleId && cantidad == detalle.Cantidad)
+            throw new InvalidOperationException("No puedes devolver el único artículo de la nota; usa \"Anular venta\" para anularla por completo.");
+
+        _unitOfWork.BeginTransaction();
+        try
+        {
+            await _productoService.RevertirStockPorDetalleEnTransaccionAsync(detalleId, cantidad, "COMPROBANTE", comprobanteId);
+
+            var nuevaCantidad = detalle.Cantidad - cantidad;
+            var factor = detalle.Cantidad == 0 ? 0 : nuevaCantidad / detalle.Cantidad;
+            var nuevoValorVenta = Math.Round((detalle.ValorVenta ?? 0) * factor, 2);
+            var nuevoTotalVentaItem = Math.Round((detalle.TotalVentaItem ?? 0) * factor, 2);
+            var nuevoDescuentoTotal = Math.Round((detalle.DescuentoTotal ?? 0) * factor, 2);
+
+            await _unitOfWork.Comprobantes.ActualizarCantidadDetalleAsync(detalleId, nuevaCantidad, nuevoValorVenta, nuevoTotalVentaItem, nuevoDescuentoTotal);
+            await _unitOfWork.Comprobantes.RecalcularTotalesComprobanteAsync(comprobanteId, usuarioId);
+
+            // El medio de pago registrado (Efectivo, Yape, etc.) no se ajusta solo: se le resta
+            // exactamente lo que bajó el total, empezando por el primer pago registrado, hasta
+            // agotar la diferencia (igual que se le devolvería el cambio en caja).
+            var montoADescontar = (detalle.TotalVentaItem ?? 0) - nuevoTotalVentaItem;
+            if (montoADescontar > 0)
+            {
+                var pagos = await _unitOfWork.Comprobantes.GetPagosByIdAsync(comprobanteId);
+                foreach (var pago in pagos)
+                {
+                    if (montoADescontar <= 0)
+                        break;
+
+                    var montoActual = pago.Monto ?? 0;
+                    var reduccion = Math.Min(montoActual, montoADescontar);
+                    if (reduccion <= 0)
+                        continue;
+
+                    await _unitOfWork.Comprobantes.ActualizarMontoPagoAsync(pago.PagoId, montoActual - reduccion);
+                    montoADescontar -= reduccion;
+                }
+            }
+
+            _unitOfWork.Commit();
+
+            return new NotaVentaResponse
+            {
+                Exitoso        = true,
+                Mensaje        = "Artículo devuelto correctamente.",
                 ComprobanteId  = comprobanteId,
                 NumeroCompleto = comprobante.NumeroCompleto
             };

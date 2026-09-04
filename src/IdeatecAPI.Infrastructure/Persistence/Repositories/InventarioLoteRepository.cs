@@ -559,6 +559,32 @@ public class InventarioLoteRepository : DapperRepository<InventarioLote>, IInven
             new { ReferenciaTipo = referenciaTipo, ReferenciaId = referenciaId }, _transaction);
     }
 
+    public async Task<KardexMovimiento?> GetMovimientoPorComprobanteDetalleAsync(int comprobanteDetalleId)
+    {
+        var sql = @"
+            SELECT
+                km.kardexMovimientoID    AS KardexMovimientoId,
+                km.sucursalProductoID    AS SucursalProductoId,
+                km.tipoMovimiento        AS TipoMovimiento,
+                km.referenciaTipo        AS ReferenciaTipo,
+                km.referenciaID          AS ReferenciaId,
+                km.comprobanteDetalleID  AS ComprobanteDetalleId,
+                km.cantidad              AS Cantidad,
+                km.costoUnitarioPromedio AS CostoUnitarioPromedio,
+                km.costoTotal            AS CostoTotal,
+                km.saldoCantidadPost     AS SaldoCantidadPost,
+                km.saldoValorPost        AS SaldoValorPost,
+                km.fechaMovimiento       AS FechaMovimiento,
+                km.idUsuario             AS IdUsuario
+            FROM kardex_movimiento km
+            WHERE km.comprobanteDetalleID = @ComprobanteDetalleId
+            AND km.tipoMovimiento = 'SALIDA_VENTA'
+            LIMIT 1;";
+
+        return await _connection.QueryFirstOrDefaultAsync<KardexMovimiento>(sql,
+            new { ComprobanteDetalleId = comprobanteDetalleId }, _transaction);
+    }
+
     // Costo (COGS) sale del Kardex PEPS de las salidas por venta; el ingreso se toma de
     // comprobantedetalle (con IGV incluido, vía totalVentaItem). Se incluyen comprobantes
     // tributarios aceptados/pendientes y Notas de Venta (tipoComprobante 'NV', estadoSunat
@@ -600,6 +626,9 @@ public class InventarioLoteRepository : DapperRepository<InventarioLote>, IInven
         WHERE km.tipoMovimiento = 'SALIDA_VENTA'
         AND km.referenciaTipo = 'COMPROBANTE'
         AND km.comprobanteDetalleID IS NOT NULL
+        -- Una línea devuelta por completo (cd.cantidad quedó en 0 tras la devolución de ítem)
+        -- no debe seguir contando como venta en rentabilidad: ni su costo ni su ingreso.
+        AND cd.cantidad > 0
 
         UNION ALL
 

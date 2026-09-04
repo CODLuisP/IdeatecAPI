@@ -72,6 +72,33 @@ public class NotaVentaController : ControllerBase
         }
     }
 
+    [HttpPatch("{id}/detalle/{detalleId}/devolver")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> DevolverItemNotaVenta(int id, int detalleId, [FromBody] DevolverItemNotaVentaDTO dto)
+    {
+        try
+        {
+            var resultado = await _notaVentaService.DevolverItemNotaVentaAsync(id, detalleId, dto.Cantidad, dto.Motivo, dto.UsuarioId);
+            return Ok(resultado);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { mensaje = ex.Message });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { mensaje = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al devolver artículo {DetalleId} de la nota de venta {ComprobanteId}", detalleId, id);
+            return StatusCode(StatusCodes.Status500InternalServerError, new { mensaje = "Error interno al devolver el artículo.", detalle = ex.Message });
+        }
+    }
+
     [HttpGet("sucursal/{sucursalId}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]

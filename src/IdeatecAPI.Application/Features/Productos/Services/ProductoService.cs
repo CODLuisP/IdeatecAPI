@@ -32,6 +32,9 @@ public interface IProductoService
     // devolver), esta consulta el Kardex por referencia y revierte exactamente lo que salió,
     // sin importar si hubo redirección a producto base por paquete.
     Task RevertirStockPorReferenciaEnTransaccionAsync(string referenciaTipo, int referenciaId);
+    // Revierte el stock de UNA sola línea de venta (devolución parcial de ítem de Nota de
+    // Venta), en la transacción que ya abrió el llamador.
+    Task RevertirStockPorDetalleEnTransaccionAsync(int comprobanteDetalleId, decimal cantidad, string referenciaTipo, int referenciaId);
     Task<bool> EliminarSucursalProductoAsync(int sucursalProductoId);
     Task<byte[]> GenerarReporteExcelAsync(ReporteProductoFiltroDTO filtro);
 }
@@ -592,24 +595,61 @@ public class ProductoService : IProductoService
 
         foreach (var mov in movimientos.Where(m => m.TipoMovimiento == "SALIDA_VENTA"))
         {
+            // Si esta línea ya tuvo una devolución parcial de ítem, comprobantedetalle.cantidad
+            // quedó reducido a lo que aún sigue "vendido" (no a la cantidad original del
+            // kardex). Revertir sobre esa cantidad vigente evita devolver dos veces el mismo
+            // stock cuando luego se anula el resto del comprobante.
+            var cantidadARevertir = mov.Cantidad;
+            if (mov.ComprobanteDetalleId is int detalleId)
+            {
+                var detalle = await _unitOfWork.Comprobantes.GetDetalleByIdAsync(detalleId);
+                cantidadARevertir = detalle?.Cantidad ?? mov.Cantidad;
+                if (cantidadARevertir <= 0)
+                    continue;
+            }
+
             var producto = await _unitOfWork.Productos.GetInfoConversionBySucursalProductoIdAsync(mov.SucursalProductoId);
             if (producto?.SucursalProducto == null)
                 throw new InvalidOperationException($"No se encontró el producto asociado al movimiento de stock {mov.KardexMovimientoId} para revertir.");
 
             var sucursalId = producto.SucursalProducto.SucursalId;
 
-            var resultado = await _unitOfWork.Productos.DevolverStockAsync(producto.ProductoId, sucursalId, mov.Cantidad);
+            var resultado = await _unitOfWork.Productos.DevolverStockAsync(producto.ProductoId, sucursalId, cantidadARevertir);
             if (!resultado)
                 throw new InvalidOperationException($"No se pudo revertir el stock del producto {producto.ProductoId} en la sucursal {sucursalId}.");
 
             await _inventarioPepsService.DevolverAFifoAsync(
                 mov.SucursalProductoId,
-                mov.Cantidad,
+                cantidadARevertir,
                 producto.SucursalProducto.UltimoPrecioCompra,
                 referenciaTipo,
                 referenciaId,
                 idUsuario: null);
         }
+    }
+
+    public async Task RevertirStockPorDetalleEnTransaccionAsync(int comprobanteDetalleId, decimal cantidad, string referenciaTipo, int referenciaId)
+    {
+        var mov = await _unitOfWork.InventarioLotes.GetMovimientoPorComprobanteDetalleAsync(comprobanteDetalleId)
+            ?? throw new InvalidOperationException($"No se encontró el movimiento de stock del detalle {comprobanteDetalleId}.");
+
+        var producto = await _unitOfWork.Productos.GetInfoConversionBySucursalProductoIdAsync(mov.SucursalProductoId);
+        if (producto?.SucursalProducto == null)
+            throw new InvalidOperationException($"No se encontró el producto asociado al movimiento de stock {mov.KardexMovimientoId} para revertir.");
+
+        var sucursalId = producto.SucursalProducto.SucursalId;
+
+        var resultado = await _unitOfWork.Productos.DevolverStockAsync(producto.ProductoId, sucursalId, cantidad);
+        if (!resultado)
+            throw new InvalidOperationException($"No se pudo devolver el stock del producto {producto.ProductoId} en la sucursal {sucursalId}.");
+
+        await _inventarioPepsService.DevolverAFifoAsync(
+            mov.SucursalProductoId,
+            cantidad,
+            producto.SucursalProducto.UltimoPrecioCompra,
+            referenciaTipo,
+            referenciaId,
+            idUsuario: null);
     }
 
     public async Task<bool> EliminarSucursalProductoAsync(int sucursalProductoId)
