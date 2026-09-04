@@ -36,7 +36,9 @@ public class DashboardResponseDto
 public class RendimientoVentasDto
 {
     public DateTime Fecha { get; set; }
-    public decimal TotalVentas { get; set; }
+    public decimal TotalVentas { get; set; }       // Facturas + boletas (01 + 03)
+    public decimal TotalNotasVenta { get; set; }   // Notas de Venta (NV) del día
+    public decimal TotalComision { get; set; }     // Comisión por pago con tarjeta del día
 }
 
 public class ComprobanteRecienteDto

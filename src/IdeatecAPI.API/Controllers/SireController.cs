@@ -178,6 +178,40 @@ public class SireController : ControllerBase
         return Ok(resultado);
     }
 
+    // RCE (Registro de Compras Electrónico): comprobantes que otras empresas emitieron a favor del RUC consultado.
+    // Solo consulta/descarga; no forma parte del flujo de aceptar propuesta / cerrar mes (exclusivo de RVIE).
+    [HttpGet("rce/periodos")]
+    public async Task<IActionResult> ConsultarPeriodosRce([FromQuery] string ruc)
+    {
+        if (string.IsNullOrWhiteSpace(ruc))
+            return BadRequest(new { mensaje = "El parámetro ruc es requerido." });
+
+        var empresa = await ValidarEmpresaAsync(ruc);
+        if (empresa is null)
+            return NotFound(new { mensaje = "Empresa no encontrada o sin credenciales SIRE configuradas." });
+
+        var resultado = await _sireService.ConsultarPeriodosRceAsync(
+            empresa.Ruc, empresa.SolUsuario!, empresa.SolClave!, empresa.ClientId!, empresa.ClientSecret!);
+
+        return Ok(resultado);
+    }
+
+    [HttpGet("rce/propuesta/{perTributario}/comprobantes")]
+    public async Task<IActionResult> DescargarPropuestaCompras(string perTributario, [FromQuery] string ruc)
+    {
+        if (string.IsNullOrWhiteSpace(ruc))
+            return BadRequest(new { mensaje = "El parámetro ruc es requerido." });
+
+        var empresa = await ValidarEmpresaAsync(ruc);
+        if (empresa is null)
+            return NotFound(new { mensaje = "Empresa no encontrada o sin credenciales SIRE configuradas." });
+
+        var resultado = await _sireService.DescargarPropuestaComprasAsync(
+            empresa.Ruc, empresa.SolUsuario!, empresa.SolClave!, empresa.ClientId!, empresa.ClientSecret!, perTributario);
+
+        return Ok(resultado);
+    }
+
     [HttpGet("historial")]
     public async Task<IActionResult> GetHistorial([FromQuery] string ruc)
     {

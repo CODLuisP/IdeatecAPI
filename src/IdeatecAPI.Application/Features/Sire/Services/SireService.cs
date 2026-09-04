@@ -16,10 +16,10 @@ public class SireService : ISireService
     private const string UrlToken = "https://api-seguridad.sunat.gob.pe/v1/clientessol/{0}/oauth2/token/";
     private const string UrlPeriodos = "https://api-sire.sunat.gob.pe/v1/contribuyente/migeigv/libros/rvierce/padron/web/omisos/140000/periodos";
     private const string UrlExportaPropuesta = "https://api-sire.sunat.gob.pe/v1/contribuyente/migeigv/libros/rvie/propuesta/web/propuesta/{0}/exportapropuesta?codTipoArchivo=0";
-    // Manual v30 §5.16: codLibro y codOrigenEnvio son obligatorios
-    private const string UrlConsultaEstadoTicket = "https://api-sire.sunat.gob.pe/v1/contribuyente/migeigv/libros/rvierce/gestionprocesosmasivos/web/masivo/consultaestadotickets?perIni={0}&perFin={0}&page=1&perPage=20&numTicket={1}&codLibro=140000&codOrigenEnvio=2";
-    // Manual v30 §5.17: codTipoArchivoReporte viene dinámico de la respuesta 5.16 (archivoReporte[0].codTipoAchivoReporte)
-    private const string UrlArchivoReporte = "https://api-sire.sunat.gob.pe/v1/contribuyente/migeigv/libros/rvierce/gestionprocesosmasivos/web/masivo/archivoreporte?nomArchivoReporte={0}&codTipoArchivoReporte={1}&codLibro=140000&perTributario={2}&codProceso={3}&numTicket={4}";
+    // Manual v30 §5.16: codLibro y codOrigenEnvio son obligatorios. {2}=codLibro (140000 RVIE / 080000 RCE, Manual SIRE_Compras v27 §5.31)
+    private const string UrlConsultaEstadoTicket = "https://api-sire.sunat.gob.pe/v1/contribuyente/migeigv/libros/rvierce/gestionprocesosmasivos/web/masivo/consultaestadotickets?perIni={0}&perFin={0}&page=1&perPage=20&numTicket={1}&codLibro={2}&codOrigenEnvio=2";
+    // Manual v30 §5.17: codTipoArchivoReporte viene dinámico de la respuesta 5.16 (archivoReporte[0].codTipoAchivoReporte). {5}=codLibro (Manual SIRE_Compras v27 §5.32)
+    private const string UrlArchivoReporte = "https://api-sire.sunat.gob.pe/v1/contribuyente/migeigv/libros/rvierce/gestionprocesosmasivos/web/masivo/archivoreporte?nomArchivoReporte={0}&codTipoArchivoReporte={1}&codLibro={5}&perTributario={2}&codProceso={3}&numTicket={4}";
     private const string UrlAceptaPropuesta = "https://api-sire.sunat.gob.pe/v1/contribuyente/migeigv/libros/rvie/propuesta/web/propuesta/{0}/aceptapropuesta";
     private const string UrlRegistraPreliminar = "https://api-sire.sunat.gob.pe/v1/contribuyente/migeigv/libros/rvierce/gestionlibro/web/registroslibros/{0}/registrapreliminar";
     // Manual v30 §5.13: DELETE, elimina de la propuesta (antes de aceptar)
@@ -31,6 +31,15 @@ public class SireService : ISireService
     private const string UrlImportarPreliminar = "https://api-sire.sunat.gob.pe/v1/contribuyente/migeigv/libros/rvierce/receptorpreliminar/web/preliminar/upload";
     // Manual v30 §5.12: PUT, solo aplica sobre la propuesta (antes de aceptar)
     private const string UrlEditarTipoCambioIndividual = "https://api-sire.sunat.gob.pe/v1/contribuyente/migeigv/libros/rvie/propuesta/web/propuesta/{0}/complementoindividual";
+
+    // RCE (Registro de Compras Electrónico) - Manual SIRE_Compras v27. Solo se implementa consulta/descarga
+    // (comprobantes que otras empresas emitieron a favor del RUC), no el flujo de aceptar/cerrar de RVIE.
+    private const string CodLibroRvie = "140000";
+    private const string CodLibroRce = "080000";
+    // Manual SIRE_Compras v27 §5.33: mismo endpoint que UrlPeriodos, parametrizado por codLibro
+    private const string UrlPeriodosPorLibro = "https://api-sire.sunat.gob.pe/v1/contribuyente/migeigv/libros/rvierce/padron/web/omisos/{0}/periodos";
+    // Manual SIRE_Compras v27 §5.34: genera el ticket para descargar la propuesta de compras (txt, codTipoArchivo=0)
+    private const string UrlExportaPropuestaCompras = "https://api-sire.sunat.gob.pe/v1/contribuyente/migeigv/libros/rce/propuesta/web/propuesta/{0}/exportacioncomprobantepropuesta?codTipoArchivo=0&codOrigenEnvio=2";
 
     private static readonly int[] TicketRetryDelays = { 2000, 3000, 5000, 5000, 8000, 8000, 10000, 10000 };
 
@@ -147,6 +156,127 @@ public class SireService : ISireService
         }
     }
 
+    public async Task<SirePeriodosResponse> ConsultarPeriodosRceAsync(
+        string ruc, string solUsuario, string solClave, string clienteId, string clientSecret)
+    {
+        var token = await ObtenerTokenAsync(ruc, solUsuario, solClave, clienteId, clientSecret);
+        if (string.IsNullOrEmpty(token))
+            return new SirePeriodosResponse { Success = false, Mensaje = "No se pudo obtener el token de autenticación" };
+
+        try
+        {
+            var url = string.Format(UrlPeriodosPorLibro, CodLibroRce);
+            var client = _httpClientFactory.CreateClient();
+            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Add("Authorization", $"Bearer {token}");
+            request.Headers.Add("User-Agent", UserAgent);
+            request.Headers.Add("Accept", "application/json");
+
+            var response = await client.SendAsync(request);
+            var content = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("[SIRE][RCE] Error consultando periodos: {Status} {Content}", response.StatusCode, content);
+                return new SirePeriodosResponse { Success = false, Mensaje = ExtraerMensajeErrorSunat(response.StatusCode, content), RespuestaCruda = content };
+            }
+
+            var ejercicios = new List<SireEjercicioDto>();
+            using var doc = JsonDocument.Parse(content);
+
+            if (doc.RootElement.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var ejercicio in doc.RootElement.EnumerateArray())
+                {
+                    if (!ejercicio.TryGetProperty("lisPeriodos", out var lisPeriodos)
+                        || lisPeriodos.ValueKind != JsonValueKind.Array)
+                        continue;
+
+                    var periodosDelAnio = new List<SirePeriodoDto>();
+                    foreach (var item in lisPeriodos.EnumerateArray())
+                    {
+                        periodosDelAnio.Add(new SirePeriodoDto
+                        {
+                            Periodo = item.TryGetProperty("perTributario", out var p) ? p.GetString() : null,
+                            Estado = item.TryGetProperty("desEstado", out var e) ? e.GetString() : null,
+                            Descripcion = item.TryGetProperty("codEstado", out var d) ? d.GetString() : null
+                        });
+                    }
+
+                    var anio = periodosDelAnio
+                        .FirstOrDefault(p => !string.IsNullOrEmpty(p.Periodo) && p.Periodo!.Length >= 4)
+                        ?.Periodo?.Substring(0, 4);
+
+                    ejercicios.Add(new SireEjercicioDto { Anio = anio, Periodos = periodosDelAnio });
+                }
+            }
+
+            return new SirePeriodosResponse { Success = true, Ejercicios = ejercicios, RespuestaCruda = content };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[SIRE][RCE] Error consultando periodos");
+            return new SirePeriodosResponse { Success = false, Mensaje = ex.Message };
+        }
+    }
+
+    public async Task<SireDescargarPropuestaComprasResponse> DescargarPropuestaComprasAsync(
+        string ruc, string solUsuario, string solClave, string clienteId, string clientSecret,
+        string perTributario)
+    {
+        var token = await ObtenerTokenAsync(ruc, solUsuario, solClave, clienteId, clientSecret);
+        if (string.IsNullOrEmpty(token))
+            return new SireDescargarPropuestaComprasResponse { Success = false, Mensaje = "No se pudo obtener el token de autenticación" };
+
+        try
+        {
+            var url = string.Format(UrlExportaPropuestaCompras, perTributario);
+            var client = _httpClientFactory.CreateClient();
+            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Add("Authorization", $"Bearer {token}");
+            request.Headers.Add("User-Agent", UserAgent);
+            request.Headers.Add("Accept", "application/json");
+
+            var response = await client.SendAsync(request);
+            var content = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("[SIRE][RCE] Error exportando propuesta {Periodo}: {Status} {Content}", perTributario, response.StatusCode, content);
+                return new SireDescargarPropuestaComprasResponse { Success = false, Mensaje = ExtraerMensajeErrorSunat(response.StatusCode, content) };
+            }
+
+            string? numTicket;
+            using (var doc = JsonDocument.Parse(content))
+            {
+                numTicket = doc.RootElement.TryGetProperty("numTicket", out var t) ? t.GetString() : null;
+            }
+
+            if (string.IsNullOrEmpty(numTicket))
+                return new SireDescargarPropuestaComprasResponse { Success = false, Mensaje = "SUNAT no devolvió un ticket para exportar la propuesta de compras" };
+
+            var (nomArchivoReporte, codTipoArchivoReporte, codProcesoTicket, mensajeEspera) =
+                await EsperarTicketTerminadoAsync(token, perTributario, numTicket, CodLibroRce);
+            if (string.IsNullOrEmpty(nomArchivoReporte))
+                return new SireDescargarPropuestaComprasResponse { Success = false, Mensaje = mensajeEspera, NumTicket = numTicket };
+
+            var tokenDescarga = await ObtenerTokenAsync(ruc, solUsuario, solClave, clienteId, clientSecret) ?? token;
+
+            var (zipBytes, errorDescarga) = await DescargarArchivoReporteAsync(
+                tokenDescarga, nomArchivoReporte, codTipoArchivoReporte, perTributario, codProcesoTicket ?? "01", numTicket, CodLibroRce);
+            if (zipBytes is null)
+                return new SireDescargarPropuestaComprasResponse { Success = false, Mensaje = errorDescarga, NumTicket = numTicket };
+
+            var comprobantes = ExtraerComprobantesComprasDeZip(zipBytes);
+            return new SireDescargarPropuestaComprasResponse { Success = true, NumTicket = numTicket, Comprobantes = comprobantes };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[SIRE][RCE] Error descargando propuesta de compras {Periodo}", perTributario);
+            return new SireDescargarPropuestaComprasResponse { Success = false, Mensaje = ex.Message };
+        }
+    }
+
     private async Task<string?> ExportarPropuestaAsync(string token, string perTributario)
     {
         var url = string.Format(UrlExportaPropuesta, perTributario);
@@ -172,9 +302,9 @@ public class SireService : ISireService
     // Manual v30 Anexo III - codEstadoProceso: 01=Cargado, 02=Validando, 03=Error, 04=Procesado OK, 05=En proceso, 06=Terminado
     // Retorna: (nomArchivoReporte, codTipoArchivoReporte, codProceso, mensaje)
     private async Task<(string? NomArchivoReporte, string? CodTipoArchivoReporte, string? CodProceso, string Mensaje)> EsperarTicketTerminadoAsync(
-        string token, string perTributario, string numTicket)
+        string token, string perTributario, string numTicket, string codLibro = CodLibroRvie)
     {
-        var url = string.Format(UrlConsultaEstadoTicket, perTributario, numTicket);
+        var url = string.Format(UrlConsultaEstadoTicket, perTributario, numTicket, codLibro);
         var client = _httpClientFactory.CreateClient();
 
         foreach (var delay in TicketRetryDelays)
@@ -256,10 +386,10 @@ public class SireService : ISireService
     // Manual v30 §5.17: codTipoArchivoReporte viene de archivoReporte[0].codTipoAchivoReporte del ticket
     // Si es null, se envía "null" según indicación del manual
     private async Task<(byte[]? Bytes, string? Error)> DescargarArchivoReporteAsync(
-        string token, string nomArchivoReporte, string? codTipoArchivoReporte, string perTributario, string codProceso, string numTicket)
+        string token, string nomArchivoReporte, string? codTipoArchivoReporte, string perTributario, string codProceso, string numTicket, string codLibro = CodLibroRvie)
     {
         var codTipo = string.IsNullOrEmpty(codTipoArchivoReporte) ? "null" : codTipoArchivoReporte;
-        var url = string.Format(UrlArchivoReporte, nomArchivoReporte, codTipo, perTributario, codProceso, numTicket);
+        var url = string.Format(UrlArchivoReporte, nomArchivoReporte, codTipo, perTributario, codProceso, numTicket, codLibro);
         var client = _httpClientFactory.CreateClient();
 
         const int intentos = 2;
@@ -350,6 +480,143 @@ public class SireService : ISireService
                 // texto literal como variantes de compatibilidad.
                 Activo = EsComprobanteActivo(campos[34]),
                 Inconsistencias = campos.Length > 38 && !string.IsNullOrWhiteSpace(campos[38]) ? campos[38] : null // campo 39: Incal
+            });
+        }
+
+        return comprobantes;
+    }
+
+    // Empareja las columnas del encabezado de la propuesta RCE por NOMBRE (no por posición fija). A diferencia
+    // de ExtraerComprobantesDeZip (RVIE, que usa el Anexo N°2 de la RS 112-2021/SUNAT ya conocido), el layout
+    // exacto del Anexo N°8 de la RS 040-2022/SUNAT para el archivo de compras no está publicado como tabla
+    // descargable y trae columnas adicionales (proveedor, detracción, retención, crédito fiscal, etc.) que no
+    // existen en Ventas, así que asumir las mismas posiciones sería incorrecto. Cada campo prueba, en orden,
+    // listas de palabras clave (ya normalizadas: sin tildes, minúsculas, sin espacios/puntuación) hasta hallar
+    // una columna del encabezado que las contenga y que ningún otro campo haya tomado ya.
+    private static readonly (string Campo, string[][] Candidatos)[] ColumnasCompras =
+    {
+        ("ruc", new[] { new[] { "numrucproveedor" }, new[] { "ruc" } }),
+        ("razonSocial", new[] { new[] { "razonsocialproveedor" }, new[] { "apellidosnombres", "razonsocial" }, new[] { "razonsocial" } }),
+        ("periodo", new[] { new[] { "periodotributario" }, new[] { "periodo" } }),
+        ("car", new[] { new[] { "codigocar" }, new[] { "carsunat" }, new[] { "car" } }),
+        ("fechaEmision", new[] { new[] { "fechaemision" } }),
+        ("tipoComprobante", new[] { new[] { "tipocpdoc" }, new[] { "tipocomprobante" }, new[] { "tipodocumento" } }),
+        ("serie", new[] { new[] { "seriedelcdp" }, new[] { "serie" } }),
+        ("numero", new[] { new[] { "nrocpodoc" }, new[] { "numerocp" }, new[] { "numero" } }),
+        ("baseImponible", new[] { new[] { "baseimponible" } }),
+        ("igv", new[] { new[] { "igv" } }),
+        ("exonerado", new[] { new[] { "exonerad" } }),
+        ("inafecto", new[] { new[] { "inafect" } }),
+        ("total", new[] { new[] { "importetotal" }, new[] { "totalcp" }, new[] { "total" } }),
+        ("moneda", new[] { new[] { "moneda" } }),
+        ("tipoCambio", new[] { new[] { "tipocambio" } }),
+        ("estado", new[] { new[] { "estadocomprobante" }, new[] { "estado" } }),
+        ("inconsistencia", new[] { new[] { "inconsistenc" } }),
+    };
+
+    private static string NormalizarEncabezado(string texto)
+    {
+        var descompuesto = texto.Normalize(NormalizationForm.FormD);
+        var sb = new StringBuilder();
+        foreach (var c in descompuesto)
+        {
+            if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark && char.IsLetterOrDigit(c))
+                sb.Append(char.ToLowerInvariant(c));
+        }
+        return sb.ToString();
+    }
+
+    // Retorna null si ni siquiera pudo ubicar la columna de RUC del proveedor: sin ella no hay forma
+    // confiable de distinguir el encabezado de una fila de datos real, y seguir sería adivinar a ciegas.
+    private static Dictionary<string, int>? MapearColumnasCompras(string[] encabezado)
+    {
+        var normalizado = encabezado.Select(NormalizarEncabezado).ToArray();
+        var usados = new HashSet<int>();
+        var mapa = new Dictionary<string, int>();
+
+        foreach (var (campo, candidatos) in ColumnasCompras)
+        {
+            foreach (var palabras in candidatos)
+            {
+                var encontrado = -1;
+                for (var i = 0; i < normalizado.Length; i++)
+                {
+                    if (usados.Contains(i)) continue;
+                    if (palabras.All(p => normalizado[i].Contains(p)))
+                    {
+                        encontrado = i;
+                        break;
+                    }
+                }
+
+                if (encontrado >= 0)
+                {
+                    mapa[campo] = encontrado;
+                    usados.Add(encontrado);
+                    break;
+                }
+            }
+        }
+
+        return mapa.ContainsKey("ruc") ? mapa : null;
+    }
+
+    private static string? ObtenerCampoCompras(string[] campos, Dictionary<string, int> mapa, string campo)
+        => mapa.TryGetValue(campo, out var idx) && idx < campos.Length ? campos[idx].Trim() : null;
+
+    private List<SireComprobanteCompraDto> ExtraerComprobantesComprasDeZip(byte[] zipBytes)
+    {
+        var comprobantes = new List<SireComprobanteCompraDto>();
+
+        using var zipStream = new MemoryStream(zipBytes);
+        using var archive = new ZipArchive(zipStream, ZipArchiveMode.Read);
+
+        var entry = archive.Entries.FirstOrDefault(e => e.Name.EndsWith(".txt", StringComparison.OrdinalIgnoreCase));
+        if (entry is null)
+            return comprobantes;
+
+        using var reader = new StreamReader(entry.Open(), System.Text.Encoding.Latin1);
+        var primeraLinea = reader.ReadLine();
+        if (string.IsNullOrWhiteSpace(primeraLinea))
+            return comprobantes;
+
+        var mapa = MapearColumnasCompras(primeraLinea.Split('|'));
+        if (mapa is null)
+        {
+            _logger.LogWarning("[SIRE][RCE] No se pudo identificar la columna de RUC en el encabezado del archivo de propuesta de compras; se omite el parseo.");
+            return comprobantes;
+        }
+
+        string? linea;
+        while ((linea = reader.ReadLine()) is not null)
+        {
+            if (string.IsNullOrWhiteSpace(linea)) continue;
+
+            var campos = linea.Split('|');
+            var ruc = ObtenerCampoCompras(campos, mapa, "ruc");
+            if (string.IsNullOrWhiteSpace(ruc) || ruc.Length != 11 || !ruc.All(char.IsDigit)) continue;
+
+            var tipoCambioTexto = ObtenerCampoCompras(campos, mapa, "tipoCambio");
+
+            comprobantes.Add(new SireComprobanteCompraDto
+            {
+                RucProveedor = ruc,
+                RazonSocialProveedor = ObtenerCampoCompras(campos, mapa, "razonSocial"),
+                Periodo = ObtenerCampoCompras(campos, mapa, "periodo"),
+                CarSunat = ObtenerCampoCompras(campos, mapa, "car"),
+                FechaEmision = ObtenerCampoCompras(campos, mapa, "fechaEmision"),
+                TipoComprobante = ObtenerCampoCompras(campos, mapa, "tipoComprobante"),
+                Serie = ObtenerCampoCompras(campos, mapa, "serie"),
+                Numero = ObtenerCampoCompras(campos, mapa, "numero"),
+                BaseImponible = ParseDecimal(ObtenerCampoCompras(campos, mapa, "baseImponible") ?? ""),
+                Igv = ParseDecimal(ObtenerCampoCompras(campos, mapa, "igv") ?? ""),
+                MtoExonerado = ParseDecimal(ObtenerCampoCompras(campos, mapa, "exonerado") ?? ""),
+                MtoInafecto = ParseDecimal(ObtenerCampoCompras(campos, mapa, "inafecto") ?? ""),
+                ImporteTotal = ParseDecimal(ObtenerCampoCompras(campos, mapa, "total") ?? ""),
+                CodMoneda = ObtenerCampoCompras(campos, mapa, "moneda"),
+                TipoCambio = string.IsNullOrWhiteSpace(tipoCambioTexto) ? null : ParseDecimal(tipoCambioTexto),
+                Activo = EsComprobanteActivo(ObtenerCampoCompras(campos, mapa, "estado") ?? ""),
+                Inconsistencias = ObtenerCampoCompras(campos, mapa, "inconsistencia")
             });
         }
 

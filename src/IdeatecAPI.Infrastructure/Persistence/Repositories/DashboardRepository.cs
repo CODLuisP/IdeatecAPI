@@ -166,11 +166,29 @@ public class DashboardRepository : IDashboardRepository
                                 THEN c.importeTotal * c.tipoCambio
                                 ELSE c.importeTotal END
                         ELSE 0 END
-                ), 0) AS TotalVentas
+                ), 0) AS TotalVentas,
+
+                -- Notas de Venta (NV) del día, igual criterio que TotalNotasVentaDelDia
+                COALESCE(SUM(
+                    CASE WHEN c.tipoComprobante = 'NV' AND c.estadoSunat != 'ANULADO'
+                        THEN CASE WHEN c.tipoMoneda = 'USD'
+                                THEN c.importeTotal * c.tipoCambio
+                                ELSE c.importeTotal END
+                        ELSE 0 END
+                ), 0) AS TotalNotasVenta,
+
+                -- Comisión por pago con tarjeta del día, igual criterio que TotalComisionTarjetaDelDia
+                COALESCE(SUM(
+                    CASE WHEN c.tipoComprobante IN ('01','03','NV')
+                            AND c.estadoSunat NOT IN ('RECHAZADO','ANULADO')
+                        THEN CASE WHEN c.tipoMoneda = 'USD'
+                                THEN c.totalComisionPagoTarjeta * c.tipoCambio
+                                ELSE c.totalComisionPagoTarjeta END
+                        ELSE 0 END
+                ), 0) AS TotalComision
             FROM comprobante c
             WHERE {whereBase}
-            AND c.tipoComprobante IN ('01','03')
-            AND c.estadoSunat NOT IN ('RECHAZADO')
+            AND c.tipoComprobante IN ('01','03','NV')
             AND c.fechaEmision >= @Hace7Dias
             AND c.fechaEmision <= @Hoy
             GROUP BY c.fechaEmision

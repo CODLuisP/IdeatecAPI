@@ -30,4 +30,12 @@ public interface ISireService
     Task<SireEditarTipoCambioResponse> EditarTipoCambioAsync(
         string ruc, string solUsuario, string solClave, string clienteId, string clientSecret,
         string perTributario, SireEditarTipoCambioDto datos);
+
+    // RCE (Registro de Compras Electrónico): comprobantes que otras empresas emitieron a favor del RUC consultado.
+    Task<SirePeriodosResponse> ConsultarPeriodosRceAsync(
+        string ruc, string solUsuario, string solClave, string clienteId, string clientSecret);
+
+    Task<SireDescargarPropuestaComprasResponse> DescargarPropuestaComprasAsync(
+        string ruc, string solUsuario, string solClave, string clienteId, string clientSecret,
+        string perTributario);
 }

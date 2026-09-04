@@ -134,3 +134,34 @@ public class SireEditarTipoCambioResponse
     public bool Success { get; set; }
     public string? Mensaje { get; set; }
 }
+
+// RCE (Registro de Compras Electrónico) - comprobantes emitidos por proveedores a favor del RUC del contribuyente.
+// Solo consulta/descarga: no forma parte del flujo de aceptar/cerrar (eso es exclusivo de RVIE).
+public class SireComprobanteCompraDto
+{
+    public string? RucProveedor { get; set; }
+    public string? RazonSocialProveedor { get; set; }
+    public string? Periodo { get; set; }
+    public string? CarSunat { get; set; }
+    public string? FechaEmision { get; set; }
+    public string? TipoComprobante { get; set; }
+    public string? Serie { get; set; }
+    public string? Numero { get; set; }
+    public decimal BaseImponible { get; set; }
+    public decimal Igv { get; set; }
+    public decimal MtoExonerado { get; set; }
+    public decimal MtoInafecto { get; set; }
+    public decimal ImporteTotal { get; set; }
+    public string? CodMoneda { get; set; }
+    public decimal? TipoCambio { get; set; }
+    public bool Activo { get; set; }
+    public string? Inconsistencias { get; set; }
+}
+
+public class SireDescargarPropuestaComprasResponse
+{
+    public bool Success { get; set; }
+    public string? Mensaje { get; set; }
+    public string? NumTicket { get; set; }
+    public List<SireComprobanteCompraDto> Comprobantes { get; set; } = new();
+}

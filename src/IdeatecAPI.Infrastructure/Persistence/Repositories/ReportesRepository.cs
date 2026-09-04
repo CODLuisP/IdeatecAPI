@@ -531,59 +531,6 @@ public class ReportesRepository : IReportesRepository
             _               => (desdeActual.AddDays(-duracion), hastaActual.AddDays(-duracion)),
         };
     }
-        public async Task<IEnumerable<Comprobante>> GetListadoParaReportesAsync(
-        string ruc,
-        string? codEstablecimiento = null,
-        DateTime? fechaDesde = null,
-        DateTime? fechaHasta = null,
-        int? usuarioCreacion = null,
-        string? clienteNumDoc = null,
-        int? limit = null,
-        string filtroNV = "excluir")
-        {
-        var sql = BaseSelectReportes + $@"
-            WHERE c.empresaRuc = @Ruc
-            AND c.estadoSunat NOT IN ('PENDIENTE')
-            AND (@CodEstablecimiento IS NULL OR c.establecimientoAnexo = @CodEstablecimiento)
-            AND (@UsuarioCreacion IS NULL OR c.usuarioCreacion = @UsuarioCreacion)
-            AND (@ClienteNumDoc IS NULL OR c.clienteNumDoc = @ClienteNumDoc)
-            {BuildFiltroNV(filtroNV)}
-            AND (
-                -- Facturas y boletas: filtrar por su propia fecha
-                (c.tipoComprobante NOT IN ('07','08')
-                    AND (@FechaDesde IS NULL OR c.fechaEmision >= @FechaDesde)
-                    AND (@FechaHasta IS NULL OR c.fechaEmision <= @FechaHasta))
-                OR
-                -- Notas: emitidas en el rango
-                (c.tipoComprobante IN ('07','08')
-                    AND (@FechaDesde IS NULL OR c.fechaEmision >= @FechaDesde)
-                    AND (@FechaHasta IS NULL OR c.fechaEmision <= @FechaHasta))
-                OR
-                -- Notas: cuyo doc afectado está en el rango (aunque la nota sea de otro día)
-                (c.tipoComprobante IN ('07','08')
-                    AND c.comprobanteAfectadoID IS NOT NULL
-                    AND EXISTS (
-                        SELECT 1 FROM comprobante ca
-                        WHERE ca.comprobanteID = c.comprobanteAfectadoID
-                        AND (@FechaDesde IS NULL OR ca.fechaEmision >= @FechaDesde)
-                        AND (@FechaHasta IS NULL OR ca.fechaEmision <= @FechaHasta)
-                    ))
-            )
-            ORDER BY c.fechaEmision DESC"
-            + (limit.HasValue ? " LIMIT @Limit" : "");
-
-        return await _connection.QueryAsync<Comprobante>(sql, new
-        {
-            Ruc = ruc,
-            CodEstablecimiento = codEstablecimiento,
-            FechaDesde = fechaDesde,
-            FechaHasta = fechaHasta,
-            UsuarioCreacion = usuarioCreacion,
-            ClienteNumDoc = clienteNumDoc,
-            Limit = limit
-        }, _transaction);
-    }
-
     public async Task<IEnumerable<ProductoTopDTO>> GetProductosTopAsync(
         string ruc,
         string? codEstablecimiento = null,
