@@ -36,16 +36,6 @@ public interface IReportesRepository
         DateTime? hasta,
         int? usuarioId);
     
-    Task<IEnumerable<Comprobante>> GetListadoParaReportesAsync(
-        string ruc,
-        string? codEstablecimiento = null,
-        DateTime? fechaDesde = null,
-        DateTime? fechaHasta = null,
-        int? usuarioCreacion = null,
-        string? clienteNumDoc = null,
-        int? limit = null,
-        string filtroNV = "excluir");
-
     Task<IEnumerable<ProductoTopDTO>> GetProductosTopAsync(
         string ruc,
         string? codEstablecimiento = null,

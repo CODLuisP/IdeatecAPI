@@ -24,17 +24,6 @@ public interface IReportesService
         int sucursalId, string periodo, DateTime? desde,
         DateTime? hasta, int? usuarioId);
 
-    // ── Listado comprobantes para reportes ────────────────────────────────────
-    Task<IEnumerable<ListarComprobanteDTO>> GetListadoParaReportesAsync(
-        string ruc,
-        string? codEstablecimiento = null,
-        DateTime? fechaDesde = null,
-        DateTime? fechaHasta = null,
-        int? usuarioCreacion = null,
-        string? clienteNumDoc = null,
-        int? limit = null,
-        string filtroNV = "excluir");
-
     // ── Productos top ─────────────────────────────────────────────────────────
     Task<IEnumerable<ProductoTopDTO>> GetProductosTopAsync(
         string ruc,
@@ -48,17 +37,6 @@ public interface IReportesService
         string filtroNV = "excluir");
 
     // ── Excel ─────────────────────────────────────────────────────────────────
-    Task<byte[]> ExportarListadoReportesExcelAsync(
-        string titulo,
-        string ruc,
-        string? codEstablecimiento = null,
-        DateTime? fechaDesde = null,
-        DateTime? fechaHasta = null,
-        int? usuarioCreacion = null,
-        string? clienteNumDoc = null,
-        int? limit = null,
-        string filtroNV = "excluir");
-
     Task<byte[]> ExportarProductosTopExcelAsync(
         string titulo,
         string ruc,
@@ -103,13 +81,6 @@ public interface IReportesService
         string filtroNV = "excluir");
 
     // ── PDF versions ──────────────────────────────────────────────────────────
-    Task<byte[]> ExportarListadoPdfAsync(
-        string titulo, string ruc,
-        string? codEstablecimiento = null, DateTime? fechaDesde = null,
-        DateTime? fechaHasta = null, int? usuarioCreacion = null,
-        string? clienteNumDoc = null, int? limit = null,
-        string filtroNV = "excluir");
-
     Task<byte[]> ExportarProductosTopPdfAsync(
         string titulo, string ruc,
         string? codEstablecimiento = null, DateTime? fechaDesde = null,
@@ -202,30 +173,6 @@ public class ReportesService : IReportesService
             sucursalId, periodo, desde, hasta, usuarioId);
     }
 
-    // ── Listado comprobantes para reportes ────────────────────────────────────
-    public async Task<IEnumerable<ListarComprobanteDTO>> GetListadoParaReportesAsync(
-        string ruc,
-        string? codEstablecimiento = null,
-        DateTime? fechaDesde = null,
-        DateTime? fechaHasta = null,
-        int? usuarioCreacion = null,
-        string? clienteNumDoc = null,
-        int? limit = null,
-        string filtroNV = "excluir")
-    {
-        DateTime? desde = fechaDesde?.Date;
-        DateTime? hasta = fechaDesde.HasValue
-            ? (fechaHasta.HasValue
-                ? fechaHasta.Value.Date.AddDays(1).AddSeconds(-1)
-                : fechaDesde.Value.Date.AddDays(1).AddSeconds(-1))
-            : null;
-
-        var comprobantes = await _unitOfWork.Reportes.GetListadoParaReportesAsync(
-            ruc, codEstablecimiento, desde, hasta, usuarioCreacion, clienteNumDoc, limit, filtroNV);
-
-        return comprobantes.Select(MapToListarDto);
-    }
-
     // ── Productos top ─────────────────────────────────────────────────────────
     public async Task<IEnumerable<ProductoTopDTO>> GetProductosTopAsync(
         string ruc,
@@ -248,27 +195,6 @@ public class ReportesService : IReportesService
         return await _unitOfWork.Reportes.GetProductosTopAsync(
             ruc, codEstablecimiento, desde, hasta,
             usuarioCreacion, clienteNumDoc, limit, orderBy, filtroNV);
-    }
-
-    // ── Excel Listado ─────────────────────────────────────────────────────────
-    public async Task<byte[]> ExportarListadoReportesExcelAsync(
-        string titulo,
-        string ruc,
-        string? codEstablecimiento = null,
-        DateTime? fechaDesde = null,
-        DateTime? fechaHasta = null,
-        int? usuarioCreacion = null,
-        string? clienteNumDoc = null,
-        int? limit = null,
-        string filtroNV = "excluir")
-    {
-        var datos = await GetListadoParaReportesAsync(
-            ruc, codEstablecimiento, fechaDesde, fechaHasta,
-            usuarioCreacion, clienteNumDoc, limit, filtroNV);
-
-        return await _excelService.ExportarListadoReportesAsync(
-            titulo, datos, ruc, codEstablecimiento,
-            fechaDesde, fechaHasta, usuarioCreacion, clienteNumDoc);
     }
 
     // ── Excel Productos Top ───────────────────────────────────────────────────
@@ -359,20 +285,6 @@ public class ReportesService : IReportesService
         return await _excelService.ExportarControlCajaAsync(
             titulo, dtos, ruc, codEstablecimiento,
             fechaDesde, fechaHasta, usuarioCreacion, clienteNumDoc);
-    }
-
-    // ── PDF Listado ───────────────────────────────────────────────────────────
-    public async Task<byte[]> ExportarListadoPdfAsync(
-        string titulo, string ruc,
-        string? codEstablecimiento = null, DateTime? fechaDesde = null,
-        DateTime? fechaHasta = null, int? usuarioCreacion = null,
-        string? clienteNumDoc = null, int? limit = null,
-        string filtroNV = "excluir")
-    {
-        var datos = await GetListadoParaReportesAsync(
-            ruc, codEstablecimiento, fechaDesde, fechaHasta, usuarioCreacion, clienteNumDoc, limit, filtroNV);
-        return await _pdfService.ExportarListadoPdfAsync(
-            titulo, datos, ruc, codEstablecimiento, fechaDesde, fechaHasta, usuarioCreacion, clienteNumDoc);
     }
 
     // ── PDF Productos Top ─────────────────────────────────────────────────────

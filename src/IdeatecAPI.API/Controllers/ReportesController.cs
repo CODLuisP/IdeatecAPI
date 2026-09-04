@@ -157,76 +157,6 @@ public class ReportesController : ControllerBase
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // LISTADO COMPROBANTES
-    // ─────────────────────────────────────────────────────────────────────────
-
-    [HttpGet("listado/{ruc}")]
-    [ProducesResponseType(typeof(IEnumerable<ListarComprobanteDTO>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetListado(
-        string ruc,
-        [FromQuery] string? codEstablecimiento = null,
-        [FromQuery] DateTime? fechaDesde = null,
-        [FromQuery] DateTime? fechaHasta = null,
-        [FromQuery] int? usuarioCreacion = null,
-        [FromQuery] string? clienteNumDoc = null,
-        [FromQuery] int? limit = null,
-        [FromQuery] string filtroNV = "excluir")
-    {
-        try
-        {
-            var result = await _reportesService.GetListadoParaReportesAsync(
-                ruc, codEstablecimiento, fechaDesde, fechaHasta, usuarioCreacion, clienteNumDoc, limit, filtroNV);
-            return Ok(result);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error al obtener listado reportes RUC {Ruc}", ruc);
-            return StatusCode(500, new { mensaje = "Error al obtener listado.", detalle = ex.Message });
-        }
-    }
-
-    /// <param name="formato">excel (default) | pdf</param>
-    [HttpGet("listado/{ruc}/excel")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> ExportarListadoExcel(
-        string ruc,
-        [FromQuery] string titulo = "Reporte de Comprobantes",
-        [FromQuery] string? codEstablecimiento = null,
-        [FromQuery] DateTime? fechaDesde = null,
-        [FromQuery] DateTime? fechaHasta = null,
-        [FromQuery] int? usuarioCreacion = null,
-        [FromQuery] string? clienteNumDoc = null,
-        [FromQuery] int? limit = null,
-        [FromQuery] string formato = "excel",
-        [FromQuery] string filtroNV = "excluir")
-    {
-        try
-        {
-            if (formato.ToLower() == "pdf")
-            {
-                var pdf = await _reportesService.ExportarListadoPdfAsync(
-                    titulo, ruc, codEstablecimiento, fechaDesde, fechaHasta,
-                    usuarioCreacion, clienteNumDoc, limit, filtroNV);
-                return File(pdf, "application/pdf", $"comprobantes-{ruc}-{DateTime.Now:yyyyMMdd}.pdf");
-            }
-
-            var bytes = await _reportesService.ExportarListadoReportesExcelAsync(
-                titulo, ruc, codEstablecimiento, fechaDesde, fechaHasta,
-                usuarioCreacion, clienteNumDoc, limit, filtroNV);
-            return File(bytes,
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                $"comprobantes-{ruc}-{DateTime.Now:yyyyMMdd}.xlsx");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error al exportar listado RUC {Ruc}", ruc);
-            return StatusCode(500, new { mensaje = "Error al generar archivo.", detalle = ex.Message });
-        }
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
     // PRODUCTOS TOP
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -437,7 +367,6 @@ public class ReportesController : ControllerBase
     }
 
     [HttpGet("control-caja/{ruc}/ticket-html")]
-    [HttpGet("control-caja/{ruc}/ticket")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> ExportarControlCajaTicketHtml(
