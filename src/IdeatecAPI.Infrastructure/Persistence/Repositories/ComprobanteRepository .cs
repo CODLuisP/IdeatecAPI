@@ -410,6 +410,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
             SELECT comprobanteId AS ComprobanteId, COUNT(*) AS Cantidad
             FROM comprobantedetalle
             WHERE comprobanteId IN @Ids
+            AND cantidad > 0
             GROUP BY comprobanteId;";
 
         var filas = await _connection.QueryAsync<(int ComprobanteId, int Cantidad)>(sql, new { Ids = ids }, _transaction);
@@ -522,13 +523,14 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
     public async Task<IEnumerable<ComprobanteDetalle>> GetDetallesByIdAsync(int comprobanteId)
     {
         var sql = @"
-            SELECT 
-                comprobanteId, trabajadorID, item, productoId, codigo, descripcion, cantidad,
+            SELECT
+                detalleID AS DetalleId, comprobanteId, trabajadorID, item, productoId, codigo, descripcion, cantidad,
                 unidadMedida, precioUnitario, tipoAfectacionIGV, porcentajeIGV,
                 montoIGV, baseIgv, codigoTipoDescuento, descuentoUnitario, descuentoTotal,
                 valorVenta, precioVenta, totalVentaItem, icbper, factorIcbper
             FROM comprobantedetalle
-            WHERE comprobanteId = @ComprobanteId";
+            WHERE comprobanteId = @ComprobanteId
+            AND cantidad > 0";
 
         return await _connection.QueryAsync<ComprobanteDetalle>(
             sql, new { ComprobanteId = comprobanteId }, _transaction);
@@ -547,6 +549,77 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
         return filas.ToDictionary(f => f.Item, f => f.DetalleId);
     }
 
+    public async Task<ComprobanteDetalle?> GetDetalleByIdAsync(int detalleId)
+    {
+        var sql = @"
+            SELECT
+                detalleID AS DetalleId, comprobanteId, trabajadorID, item, productoId, codigo, descripcion, cantidad,
+                unidadMedida, precioUnitario, tipoAfectacionIGV, porcentajeIGV,
+                montoIGV, baseIgv, codigoTipoDescuento, descuentoUnitario, descuentoTotal,
+                valorVenta, precioVenta, totalVentaItem, icbper, factorIcbper
+            FROM comprobantedetalle
+            WHERE detalleID = @DetalleId";
+
+        return await _connection.QueryFirstOrDefaultAsync<ComprobanteDetalle>(
+            sql, new { DetalleId = detalleId }, _transaction);
+    }
+
+    public async Task ActualizarCantidadDetalleAsync(int detalleId, decimal nuevaCantidad, decimal nuevoValorVenta, decimal nuevoTotalVentaItem, decimal nuevoDescuentoTotal)
+    {
+        var sql = @"
+            UPDATE comprobantedetalle SET
+                cantidad       = @NuevaCantidad,
+                valorVenta     = @NuevoValorVenta,
+                totalVentaItem = @NuevoTotalVentaItem,
+                descuentoTotal = @NuevoDescuentoTotal
+            WHERE detalleID = @DetalleId";
+
+        await _connection.ExecuteAsync(sql, new
+        {
+            DetalleId          = detalleId,
+            NuevaCantidad      = nuevaCantidad,
+            NuevoValorVenta    = nuevoValorVenta,
+            NuevoTotalVentaItem = nuevoTotalVentaItem,
+            NuevoDescuentoTotal = nuevoDescuentoTotal
+        }, _transaction);
+    }
+
+    public async Task RecalcularTotalesComprobanteAsync(int comprobanteId, int? usuarioId)
+    {
+        var sql = @"
+            UPDATE comprobante c
+            INNER JOIN (
+                SELECT comprobanteId,
+                       COALESCE(SUM(valorVenta), 0)     AS ValorVenta,
+                       COALESCE(SUM(totalVentaItem), 0) AS ImporteTotal,
+                       COALESCE(SUM(descuentoTotal), 0) AS TotalDescuentos
+                FROM comprobantedetalle
+                WHERE comprobanteId = @ComprobanteId
+                GROUP BY comprobanteId
+            ) t ON t.comprobanteId = c.comprobanteID
+            SET c.valorVenta         = t.ValorVenta,
+                c.subTotal           = t.ValorVenta,
+                c.totalDescuentos    = t.TotalDescuentos,
+                c.importeTotal       = t.ImporteTotal,
+                c.usuarioModificacion = @UsuarioId,
+                c.fechaModificacion   = @Fecha
+            WHERE c.comprobanteID = @ComprobanteId";
+
+        await _connection.ExecuteAsync(sql, new
+        {
+            ComprobanteId = comprobanteId,
+            UsuarioId     = usuarioId,
+            Fecha         = AhoraLima()
+        }, _transaction);
+    }
+
+    public async Task ActualizarMontoPagoAsync(int pagoId, decimal nuevoMonto)
+    {
+        var sql = @"UPDATE pago SET monto = @NuevoMonto WHERE pagoID = @PagoId";
+
+        await _connection.ExecuteAsync(sql, new { PagoId = pagoId, NuevoMonto = nuevoMonto }, _transaction);
+    }
+
     public async Task<IEnumerable<Cuota>> GetCuotasByIdAsync(int comprobanteId)
     {
         var sql = @"
@@ -563,7 +636,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
     public async Task<IEnumerable<Pago>> GetPagosByIdAsync(int comprobanteId)
     {
         var sql = @"
-            SELECT 
+            SELECT
                 pagoID         AS PagoId,
                 comprobanteID  AS ComprobanteId,
                 medioPago      AS MedioPago,
@@ -573,7 +646,8 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
                 entidadFinanciera AS EntidadFinanciera,
                 observaciones  AS Observaciones
             FROM pago
-            WHERE comprobanteID = @ComprobanteId";
+            WHERE comprobanteID = @ComprobanteId
+            ORDER BY pagoID ASC";
 
         return await _connection.QueryAsync<Pago>(
             sql,
@@ -637,7 +711,7 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
     )> GetDatosCompletosByComprobanteIdAsync(int comprobanteId)
     {
         var sql = @"
-            SELECT cd.comprobanteId, cd.trabajadorID, cd.item, cd.productoId, cd.codigo, cd.descripcion, cd.cantidad,
+            SELECT cd.detalleID AS DetalleId, cd.comprobanteId, cd.trabajadorID, cd.item, cd.productoId, cd.codigo, cd.descripcion, cd.cantidad,
                    cd.unidadMedida, cd.precioUnitario, cd.tipoAfectacionIGV, cd.porcentajeIGV,
                    cd.montoIGV, cd.baseIgv, cd.codigoTipoDescuento, cd.descuentoUnitario, cd.descuentoTotal,
                    cd.valorVenta, cd.precioVenta, cd.totalVentaItem, cd.icbper, cd.factorIcbper,
@@ -646,7 +720,8 @@ public class ComprobanteRepository : DapperRepository<Comprobante>, IComprobante
             FROM comprobantedetalle cd
             LEFT JOIN trabajador t ON t.id = cd.trabajadorID
             LEFT JOIN producto p ON p.productoId = cd.productoId
-            WHERE cd.comprobanteId = @Id;
+            WHERE cd.comprobanteId = @Id
+            AND cd.cantidad > 0;
 
             SELECT pagoID AS PagoId, comprobanteID AS ComprobanteId, medioPago AS MedioPago,
                    monto AS Monto, fechaPago AS FechaPago, numeroOperacion AS NumeroOperacion,

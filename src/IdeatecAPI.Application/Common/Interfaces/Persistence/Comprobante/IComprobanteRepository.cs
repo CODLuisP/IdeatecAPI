@@ -61,4 +61,13 @@ public interface IComprobanteRepository : IRepository<Comprobante>
     Task<IEnumerable<Comprobante>> GetNotasVentaBySucursalAsync(string empresaRuc, string codEstablecimiento, DateTime? fechaDesde, DateTime? fechaHasta, int? limit = null, int? offset = null);
     /// <summary>Mapa item (número de línea) → detalleID, para atar cada movimiento de kardex a su línea de venta exacta justo después de insertar el comprobante.</summary>
     Task<IReadOnlyDictionary<int, int>> GetItemDetalleIdMapAsync(int comprobanteId);
+
+    /// <summary>Una sola línea de detalle por su DetalleId, para devoluciones parciales de ítem.</summary>
+    Task<ComprobanteDetalle?> GetDetalleByIdAsync(int detalleId);
+    /// <summary>Ajusta cantidad y montos de una línea de detalle tras una devolución parcial (nunca borra la fila, para no romper el historial de Kardex/Rentabilidad).</summary>
+    Task ActualizarCantidadDetalleAsync(int detalleId, decimal nuevaCantidad, decimal nuevoValorVenta, decimal nuevoTotalVentaItem, decimal nuevoDescuentoTotal);
+    /// <summary>Recalcula los totales del comprobante sumando directo desde comprobantedetalle, tras una devolución parcial de ítem.</summary>
+    Task RecalcularTotalesComprobanteAsync(int comprobanteId, int? usuarioId);
+    /// <summary>Ajusta el monto de un pago ya registrado, para reflejar una devolución parcial de ítem.</summary>
+    Task ActualizarMontoPagoAsync(int pagoId, decimal nuevoMonto);
 }

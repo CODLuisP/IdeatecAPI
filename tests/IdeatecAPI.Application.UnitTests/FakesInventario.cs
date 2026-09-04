@@ -142,6 +142,7 @@ internal sealed class FakeInventarioLoteRepository : IInventarioLoteRepository
     public Task<bool> ExisteLoteSaldoInicialAsync(int sucursalProductoId) => NoUsado<Task<bool>>();
     public Task<KardexMovimiento?> GetUltimoMovimientoSalidaPorReferenciaAsync(string referenciaTipo, int referenciaId, int sucursalProductoId) => NoUsado<Task<KardexMovimiento?>>();
     public Task<IEnumerable<KardexMovimiento>> GetMovimientosPorReferenciaAsync(string referenciaTipo, int referenciaId) => NoUsado<Task<IEnumerable<KardexMovimiento>>>();
+    public Task<KardexMovimiento?> GetMovimientoPorComprobanteDetalleAsync(int comprobanteDetalleId) => NoUsado<Task<KardexMovimiento?>>();
     public Task<IEnumerable<RentabilidadProductoDTO>> GetRentabilidadPorProductoAsync(int sucursalId, DateTime? desde, DateTime? hasta) => NoUsado<Task<IEnumerable<RentabilidadProductoDTO>>>();
     public Task<IEnumerable<RentabilidadDiariaDTO>> GetRentabilidadDiariaAsync(int sucursalId, int productoId, DateTime? desde, DateTime? hasta) => NoUsado<Task<IEnumerable<RentabilidadDiariaDTO>>>();
     public Task<RentabilidadDiariaDTO> GetRentabilidadDiaSucursalAsync(int sucursalId, DateTime desde, DateTime hasta, int? usuarioId) => NoUsado<Task<RentabilidadDiariaDTO>>();
