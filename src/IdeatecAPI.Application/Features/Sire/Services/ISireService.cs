@@ -38,4 +38,16 @@ public interface ISireService
     Task<SireDescargarPropuestaComprasResponse> DescargarPropuestaComprasAsync(
         string ruc, string solUsuario, string solClave, string clienteId, string clientSecret,
         string perTributario);
+
+    Task<SireAceptarPropuestaResponse> AceptarPropuestaRceAsync(
+        string ruc, string solUsuario, string solClave, string clienteId, string clientSecret,
+        string perTributario);
+
+    Task<SireRegistrarPreliminarResponse> RegistrarPreliminarRceAsync(
+        string ruc, string solUsuario, string solClave, string clienteId, string clientSecret,
+        string perTributario);
+
+    Task<SireEliminarComprobanteResponse> EliminarComprobanteRceAsync(
+        string ruc, string solUsuario, string solClave, string clienteId, string clientSecret,
+        string perTributario, bool enPreliminar, List<SireComprobanteEliminarDto> comprobantes);
 }

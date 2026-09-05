@@ -40,6 +40,14 @@ public class SireService : ISireService
     private const string UrlPeriodosPorLibro = "https://api-sire.sunat.gob.pe/v1/contribuyente/migeigv/libros/rvierce/padron/web/omisos/{0}/periodos";
     // Manual SIRE_Compras v27 §5.34: genera el ticket para descargar la propuesta de compras (txt, codTipoArchivo=0)
     private const string UrlExportaPropuestaCompras = "https://api-sire.sunat.gob.pe/v1/contribuyente/migeigv/libros/rce/propuesta/web/propuesta/{0}/exportacioncomprobantepropuesta?codTipoArchivo=0&codOrigenEnvio=2";
+    // Manual SIRE_Compras v28 §5.2: a diferencia de RVIE, RCE tiene su propia URL de aceptar propuesta (no comparte "rvie/propuesta/...")
+    private const string UrlAceptaPropuestaRce = "https://api-sire.sunat.gob.pe/v1/contribuyente/migeigv/libros/rce/propuesta/web/registroslibros/{0}/aceptarpropuesta";
+    // Manual SIRE_Compras v28 §5.4: URL propia de RCE para registrar preliminar (distinta de rvierce/gestionlibro/... de RVIE)
+    private const string UrlRegistraPreliminarRce = "https://api-sire.sunat.gob.pe/v1/contribuyente/migeigv/libros/rce/preliminar/web/registroslibros/{0}/registrapreliminares";
+    // Manual SIRE_Compras v28 §5.15: DELETE, elimina de la propuesta (antes de aceptar). Body es un array plano (igual que RVIE)
+    private const string UrlEliminarComprobantePropuestaRce = "https://api-sire.sunat.gob.pe/v1/contribuyente/migeigv/libros/rce/propuesta/web/propuestarce/{0}";
+    // Manual SIRE_Compras v28 §5.16: POST, elimina del preliminar. Body va envuelto en la clave "detalleAjustes"
+    private const string UrlEliminarComprobantePreliminarRce = "https://api-sire.sunat.gob.pe/v1/contribuyente/migeigv/libros/rce/preliminar/web/comprobanteslibroscompras/{0}/eliminacomprobante";
 
     private static readonly int[] TicketRetryDelays = { 2000, 3000, 5000, 5000, 8000, 8000, 10000, 10000 };
 
@@ -274,6 +282,164 @@ public class SireService : ISireService
         {
             _logger.LogError(ex, "[SIRE][RCE] Error descargando propuesta de compras {Periodo}", perTributario);
             return new SireDescargarPropuestaComprasResponse { Success = false, Mensaje = ex.Message };
+        }
+    }
+
+    public async Task<SireAceptarPropuestaResponse> AceptarPropuestaRceAsync(
+        string ruc, string solUsuario, string solClave, string clienteId, string clientSecret,
+        string perTributario)
+    {
+        var token = await ObtenerTokenAsync(ruc, solUsuario, solClave, clienteId, clientSecret);
+        if (string.IsNullOrEmpty(token))
+            return new SireAceptarPropuestaResponse { Success = false, Mensaje = "No se pudo obtener el token de autenticación" };
+
+        try
+        {
+            var url = string.Format(UrlAceptaPropuestaRce, perTributario);
+            var client = _httpClientFactory.CreateClient();
+            var request = new HttpRequestMessage(HttpMethod.Post, url);
+            request.Headers.Add("Authorization", $"Bearer {token}");
+            request.Headers.Add("User-Agent", UserAgent);
+            request.Headers.Add("Accept", "application/json");
+
+            var response = await client.SendAsync(request);
+            var content = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("[SIRE][RCE] Error aceptando propuesta {Periodo}: {Status} {Content}", perTributario, response.StatusCode, content);
+                return new SireAceptarPropuestaResponse { Success = false, Mensaje = ExtraerMensajeErrorSunat(response.StatusCode, content), RespuestaCruda = content };
+            }
+
+            string? numTicket = null;
+            if (!string.IsNullOrWhiteSpace(content) && content.Trim() != "null")
+            {
+                try
+                {
+                    using var doc = JsonDocument.Parse(content);
+                    numTicket = doc.RootElement.ValueKind == JsonValueKind.Object && doc.RootElement.TryGetProperty("numTicket", out var t)
+                        ? t.GetString()
+                        : null;
+                }
+                catch (JsonException) { /* respuesta no JSON, se trata como éxito vacío */ }
+            }
+
+            return new SireAceptarPropuestaResponse { Success = true, NumTicket = numTicket, RespuestaCruda = content };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[SIRE][RCE] Error aceptando propuesta {Periodo}", perTributario);
+            return new SireAceptarPropuestaResponse { Success = false, Mensaje = ex.Message };
+        }
+    }
+
+    public async Task<SireRegistrarPreliminarResponse> RegistrarPreliminarRceAsync(
+        string ruc, string solUsuario, string solClave, string clienteId, string clientSecret,
+        string perTributario)
+    {
+        var token = await ObtenerTokenAsync(ruc, solUsuario, solClave, clienteId, clientSecret);
+        if (string.IsNullOrEmpty(token))
+            return new SireRegistrarPreliminarResponse { Success = false, Mensaje = "No se pudo obtener el token de autenticación" };
+
+        try
+        {
+            var url = string.Format(UrlRegistraPreliminarRce, perTributario);
+            var client = _httpClientFactory.CreateClient();
+            var request = new HttpRequestMessage(HttpMethod.Post, url);
+            request.Headers.Add("Authorization", $"Bearer {token}");
+            request.Headers.Add("User-Agent", UserAgent);
+            request.Headers.Add("Accept", "application/json");
+
+            var response = await client.SendAsync(request);
+            var content = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("[SIRE][RCE] Error registrando preliminar {Periodo}: {Status} {Content}", perTributario, response.StatusCode, content);
+                return new SireRegistrarPreliminarResponse { Success = false, Mensaje = ExtraerMensajeErrorSunat(response.StatusCode, content), RespuestaCruda = content };
+            }
+
+            // Manual SIRE_Compras v28 §5.4: si la respuesta trae numTicket debe esperarse hasta codEstadoProceso 06=Terminado
+            if (!string.IsNullOrWhiteSpace(content) && content.Trim() != "null")
+            {
+                try
+                {
+                    using var doc = JsonDocument.Parse(content);
+                    if (doc.RootElement.ValueKind == JsonValueKind.Object
+                        && doc.RootElement.TryGetProperty("numTicket", out var t)
+                        && !string.IsNullOrEmpty(t.GetString()))
+                    {
+                        var numTicket = t.GetString()!;
+                        var (_, _, _, mensajeTicket) = await EsperarTicketTerminadoAsync(token, perTributario, numTicket, CodLibroRce);
+                        var exitoso = mensajeTicket == "Terminado";
+                        return new SireRegistrarPreliminarResponse
+                        {
+                            Success = exitoso,
+                            Mensaje = exitoso ? "Periodo cerrado correctamente" : mensajeTicket,
+                            RespuestaCruda = content
+                        };
+                    }
+                }
+                catch (JsonException)
+                {
+                    // Respuesta no es JSON válido, se trata como éxito vacío
+                }
+            }
+
+            return new SireRegistrarPreliminarResponse { Success = true, Mensaje = "Periodo cerrado correctamente", RespuestaCruda = content };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[SIRE][RCE] Error registrando preliminar {Periodo}", perTributario);
+            return new SireRegistrarPreliminarResponse { Success = false, Mensaje = ex.Message };
+        }
+    }
+
+    public async Task<SireEliminarComprobanteResponse> EliminarComprobanteRceAsync(
+        string ruc, string solUsuario, string solClave, string clienteId, string clientSecret,
+        string perTributario, bool enPreliminar, List<SireComprobanteEliminarDto> comprobantes)
+    {
+        var token = await ObtenerTokenAsync(ruc, solUsuario, solClave, clienteId, clientSecret);
+        if (string.IsNullOrEmpty(token))
+            return new SireEliminarComprobanteResponse { Success = false, Mensaje = "No se pudo obtener el token de autenticación" };
+
+        try
+        {
+            var url = string.Format(enPreliminar ? UrlEliminarComprobantePreliminarRce : UrlEliminarComprobantePropuestaRce, perTributario);
+            var detalle = comprobantes.Select(c => new
+            {
+                numSerieCDP = c.NumSerieCDP,
+                numCDP = c.NumCDP,
+                codCar = c.CodCar,
+                codTipoCDP = c.CodTipoCDP
+            });
+            // Manual SIRE_Compras v28: §5.15 (propuesta) espera un array plano; §5.16 (preliminar) lo envuelve en "detalleAjustes"
+            object body = enPreliminar ? new { detalleAjustes = detalle } : detalle;
+
+            var client = _httpClientFactory.CreateClient();
+            var request = new HttpRequestMessage(enPreliminar ? HttpMethod.Post : HttpMethod.Delete, url)
+            {
+                Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json")
+            };
+            request.Headers.Add("Authorization", $"Bearer {token}");
+            request.Headers.Add("User-Agent", UserAgent);
+            request.Headers.Add("Accept", "application/json");
+
+            var response = await client.SendAsync(request);
+            var content = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("[SIRE][RCE] Error eliminando comprobante {Periodo}: {Status} {Content}", perTributario, response.StatusCode, content);
+                return new SireEliminarComprobanteResponse { Success = false, Mensaje = ExtraerMensajeErrorSunat(response.StatusCode, content) };
+            }
+
+            return new SireEliminarComprobanteResponse { Success = true, Mensaje = "Comprobante eliminado correctamente" };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[SIRE][RCE] Error eliminando comprobante {Periodo}", perTributario);
+            return new SireEliminarComprobanteResponse { Success = false, Mensaje = ex.Message };
         }
     }
 

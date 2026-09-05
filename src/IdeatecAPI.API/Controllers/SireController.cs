@@ -212,6 +212,57 @@ public class SireController : ControllerBase
         return Ok(resultado);
     }
 
+    [HttpPost("rce/aceptar-propuesta/{perTributario}")]
+    public async Task<IActionResult> AceptarPropuestaRce(string perTributario, [FromQuery] string ruc)
+    {
+        if (string.IsNullOrWhiteSpace(ruc))
+            return BadRequest(new { mensaje = "El parámetro ruc es requerido." });
+
+        var empresa = await ValidarEmpresaAsync(ruc);
+        if (empresa is null)
+            return NotFound(new { mensaje = "Empresa no encontrada o sin credenciales SIRE configuradas." });
+
+        var resultado = await _sireService.AceptarPropuestaRceAsync(
+            empresa.Ruc, empresa.SolUsuario!, empresa.SolClave!, empresa.ClientId!, empresa.ClientSecret!, perTributario);
+
+        return Ok(resultado);
+    }
+
+    [HttpPost("rce/cerrar/{perTributario}")]
+    public async Task<IActionResult> RegistrarPreliminarRce(string perTributario, [FromQuery] string ruc)
+    {
+        if (string.IsNullOrWhiteSpace(ruc))
+            return BadRequest(new { mensaje = "El parámetro ruc es requerido." });
+
+        var empresa = await ValidarEmpresaAsync(ruc);
+        if (empresa is null)
+            return NotFound(new { mensaje = "Empresa no encontrada o sin credenciales SIRE configuradas." });
+
+        var resultado = await _sireService.RegistrarPreliminarRceAsync(
+            empresa.Ruc, empresa.SolUsuario!, empresa.SolClave!, empresa.ClientId!, empresa.ClientSecret!, perTributario);
+
+        return Ok(resultado);
+    }
+
+    [HttpDelete("rce/propuesta/{perTributario}/comprobantes")]
+    public async Task<IActionResult> EliminarComprobanteRce(
+        string perTributario, [FromQuery] string ruc, [FromQuery] bool enPreliminar,
+        [FromBody] List<SireComprobanteEliminarDto> comprobantes)
+    {
+        if (string.IsNullOrWhiteSpace(ruc))
+            return BadRequest(new { mensaje = "El parámetro ruc es requerido." });
+
+        var empresa = await ValidarEmpresaAsync(ruc);
+        if (empresa is null)
+            return NotFound(new { mensaje = "Empresa no encontrada o sin credenciales SIRE configuradas." });
+
+        var resultado = await _sireService.EliminarComprobanteRceAsync(
+            empresa.Ruc, empresa.SolUsuario!, empresa.SolClave!, empresa.ClientId!, empresa.ClientSecret!,
+            perTributario, enPreliminar, comprobantes);
+
+        return Ok(resultado);
+    }
+
     [HttpGet("historial")]
     public async Task<IActionResult> GetHistorial([FromQuery] string ruc)
     {
